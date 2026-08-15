@@ -1,0 +1,12 @@
+{
+  "stages": ["exposure", "whitebalance", "tone", "colorcal", "stylize", "refine"],
+  "params": {
+    "exposure": {"mode": "auto"},
+    "whitebalance": {"mode": "as_shot"},
+    "tone": {"profile_curve": false, "contrast": 0.2, "shoulder": 0.45},
+    "colorcal": {"saturation": 0.12, "vibrance": 0.15},
+    "stylize": {},
+    "refine": {"sharpen": 0.35}
+  },
+  "output": {"quality": 95}
+}

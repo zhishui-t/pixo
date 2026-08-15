@@ -1,0 +1,24 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# ---- rawlab 验收产物 / 一次性调试脚本(不纳入版本控制)----
+rawlab/out/
+rawlab/debug/
+
+# ---- 无关残留(DSH 会话日志与脚本 / 前端插件 / playwright)----
+pw-test/
+node_modules/
+dsh-*.log
+dsh-*.log.out
+dsh-*.err.log
+dsh-*.out.log
+dsh-*.ps1
+package.json
+package-lock.json
+vitest.config.ts
+apply.spec.ts

@@ -1,0 +1,1334 @@
+[
+ {
+  "id": "style_portra",
+  "type": "style",
+  "title": "Kodak Portra 胶片人像",
+  "tags": [
+   "portra",
+   "胶片",
+   "人像",
+   "肤色"
+  ],
+  "text": "柯达 Portra 胶片模拟, 肤色通透自然, 柔和高光, 适合人像",
+  "content": {
+   "style_id": "style_portra"
+  },
+  "fingerprint": {
+   "portrait": 0.9,
+   "nature": 0.2,
+   "night": 0.0,
+   "saturated": 0.3,
+   "neutral": 0.6
+  }
+ },
+ {
+  "id": "style_velvia",
+  "type": "style",
+  "title": "富士 Velvia 高饱和风光",
+  "tags": [
+   "velvia",
+   "风光",
+   "高饱和",
+   "富士"
+  ],
+  "text": "富士 Velvia 反转片模拟, 高饱和高对比, 绿植/天空色彩浓郁, 适合风光",
+  "content": {
+   "style_id": "style_velvia"
+  },
+  "fingerprint": {
+   "portrait": 0.1,
+   "nature": 0.9,
+   "night": 0.0,
+   "saturated": 0.95,
+   "neutral": 0.2
+  }
+ },
+ {
+  "id": "style_classic_neg",
+  "type": "style",
+  "title": "富士 Classic Negative 复古",
+  "tags": [
+   "classic",
+   "复古",
+   "胶片",
+   "富士"
+  ],
+  "text": "富士 Classic Negative 模拟, 低饱和暖调, 复古电影感, 适合街拍/人文",
+  "content": {
+   "style_id": "style_classic_neg"
+  },
+  "fingerprint": {
+   "portrait": 0.5,
+   "nature": 0.4,
+   "night": 0.3,
+   "saturated": 0.3,
+   "neutral": 0.7
+  }
+ },
+ {
+  "id": "style_astia",
+  "type": "style",
+  "title": "富士 Astia 柔和人像",
+  "tags": [
+   "astia",
+   "富士",
+   "柔和",
+   "人像"
+  ],
+  "text": "富士 Astia 模拟, 柔和中间调, 肤色自然, 适合室内人像",
+  "content": {
+   "style_id": "style_astia"
+  },
+  "fingerprint": {
+   "portrait": 0.8,
+   "nature": 0.3,
+   "night": 0.0,
+   "saturated": 0.5,
+   "neutral": 0.7
+  }
+ },
+ {
+  "id": "style_mono",
+  "type": "style",
+  "title": "黑白影调",
+  "tags": [
+   "黑白",
+   "mono",
+   "影调",
+   "艺术"
+  ],
+  "text": "黑白胶片模拟, 去色保留影调层次, 适合纪实/艺术/强光影",
+  "content": {
+   "style_id": "style_mono"
+  },
+  "fingerprint": {
+   "portrait": 0.5,
+   "nature": 0.3,
+   "night": 0.2,
+   "saturated": 0.0,
+   "neutral": 1.0
+  }
+ },
+ {
+  "id": "style_teal_orange",
+  "type": "style",
+  "title": "青橙电影感",
+  "tags": [
+   "teal",
+   "orange",
+   "电影",
+   "青橙"
+  ],
+  "text": "青橙对比风格, 阴影偏青高光偏橙, 电影质感, 适合夜景/城市",
+  "content": {
+   "style_id": "style_teal_orange"
+  },
+  "fingerprint": {
+   "portrait": 0.3,
+   "nature": 0.2,
+   "night": 0.8,
+   "saturated": 0.7,
+   "neutral": 0.3
+  }
+ },
+ {
+  "id": "style_cinetone",
+  "type": "style",
+  "title": "松下电影色调",
+  "tags": [
+   "cinetone",
+   "松下",
+   "电影",
+   "肤色"
+  ],
+  "text": "松下 Cinetone 模拟, 电影肤色还原, 自然过渡, 适合视频/人像",
+  "content": {
+   "style_id": "style_cinetone"
+  },
+  "fingerprint": {
+   "portrait": 0.7,
+   "nature": 0.3,
+   "night": 0.3,
+   "saturated": 0.5,
+   "neutral": 0.8
+  }
+ },
+ {
+  "id": "style_bleach",
+  "type": "style",
+  "title": "漂白风格",
+  "tags": [
+   "bleach",
+   "漂白",
+   "硬朗",
+   "城市"
+  ],
+  "text": "漂白风格, 强对比深降饱和, 冷调硬朗, 适合城市/工业/叙事",
+  "content": {
+   "style_id": "style_bleach"
+  },
+  "fingerprint": {
+   "portrait": 0.2,
+   "nature": 0.2,
+   "night": 0.6,
+   "saturated": 0.1,
+   "neutral": 0.5
+  }
+ },
+ {
+  "id": "tone_daylight",
+  "type": "tone_rule",
+  "title": "晴日顺光",
+  "tags": [
+   "晴天",
+   "顺光",
+   "日光"
+  ],
+  "text": "晴日顺光: 主体亮度充足, 曝光目标 115 可达, 高光注意保护 (p95 预测)",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "tone_backlight",
+  "type": "tone_rule",
+  "title": "逆光",
+  "tags": [
+   "逆光",
+   "背光",
+   "剪影"
+  ],
+  "text": "逆光: 主体偏暗是氛围, 不强行提亮主体; 优先提阴影保高光, 曝光修正负向减半",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "tone_underexposed",
+  "type": "tone_rule",
+  "title": "极端欠曝",
+  "tags": [
+   "欠曝",
+   "暗",
+   "低照度"
+  ],
+  "text": "极端欠曝 (中位<60): 提亮受限 (高光保护), 主体无法达标时标记人工审核",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "tone_overexposed",
+  "type": "tone_rule",
+  "title": "过曝",
+  "tags": [
+   "过曝",
+   "高光",
+   "溢出"
+  ],
+  "text": "过曝: 高光溢出>3%, 曝光负向修正减半, 压高光保细节",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "tone_indoors",
+  "type": "tone_rule",
+  "title": "室内弱光",
+  "tags": [
+   "室内",
+   "弱光",
+   "钨丝灯"
+  ],
+  "text": "室内弱光: 白平衡用相机 As Shot, 曝光目标 115, 注意 ISO 噪点",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "tone_cloudy",
+  "type": "tone_rule",
+  "title": "阴天散射光",
+  "tags": [
+   "阴天",
+   "散射",
+   "柔和"
+  ],
+  "text": "阴天: 光线柔和对比低, 曝光目标 115 可达, 可适当加对比",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_skin_warm",
+  "type": "color_rule",
+  "title": "肤色偏黄修正",
+  "tags": [
+   "肤色",
+   "偏黄",
+   "暖"
+  ],
+  "text": "肤色 b>20: 降饱和/微调, 目标 b 12-20 自然带; 用 HSL 橙通道",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_skin_cool",
+  "type": "color_rule",
+  "title": "肤色偏红修正",
+  "tags": [
+   "肤色",
+   "偏红",
+   "品红"
+  ],
+  "text": "肤色 a>25: 降红饱和, 目标 a 14-22; 防品红",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_sky_cyan",
+  "type": "color_rule",
+  "title": "天空偏青",
+  "tags": [
+   "天空",
+   "偏青",
+   "青"
+  ],
+  "text": "天空 b 过大: 压蓝/青通道, 保持自然蓝",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_green_teal",
+  "type": "color_rule",
+  "title": "绿植偏青",
+  "tags": [
+   "绿植",
+   "偏青",
+   "青绿"
+  ],
+  "text": "绿植 a 过负: 微调绿通道, 目标 a -20~-30 自然绿",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_gray_neutral",
+  "type": "color_rule",
+  "title": "灰阶中性",
+  "tags": [
+   "灰阶",
+   "中性",
+   "白平衡"
+  ],
+  "text": "灰阶 a/b 应≈0: 偏差大时先检查白平衡, 再查矩阵链路",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_lut_domain",
+  "type": "color_rule",
+  "title": "LUT 色彩域",
+  "tags": [
+   "LUT",
+   "色彩域",
+   "sRGB"
+  ],
+  "text": "LUT 必须在 sRGB gamma 域查表; 线性域直套肤色 RMS 0.094 不可接受",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_warmth_direction",
+  "type": "color_rule",
+  "title": "冷暖方向",
+  "tags": [
+   "冷暖",
+   "色温",
+   "方向"
+  ],
+  "text": "b>0 偏黄(暖) b<0 偏蓝(冷); a>0 偏红(暖) a<0 偏绿(冷); 修正方向看偏差符号",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_skin_band",
+  "type": "color_rule",
+  "title": "肤色自然带",
+  "tags": [
+   "肤色",
+   "Lab",
+   "自然带"
+  ],
+  "text": "自然肤色 Lab 参考: a 14-22, b 12-20; 超出带先查白平衡再调通道",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_sky_natural",
+  "type": "color_rule",
+  "title": "天空自然蓝",
+  "tags": [
+   "天空",
+   "自然蓝",
+   "Lab"
+  ],
+  "text": "自然天空 Lab: b -20~-40 (偏蓝), a 接近 0; b 过负显假蓝",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_green_natural",
+  "type": "color_rule",
+  "title": "绿植自然绿",
+  "tags": [
+   "绿植",
+   "自然绿",
+   "Lab"
+  ],
+  "text": "自然绿植 Lab: a -20~-30, b 10~25 (黄绿); a 过负显青黑",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_highlight_warm",
+  "type": "color_rule",
+  "title": "高光冷暖",
+  "tags": [
+   "高光",
+   "冷暖",
+   "层次"
+  ],
+  "text": "高光区偏暖(皮肤/灯光)是自然, 偏冷显脏; 用通道曲线微调高光端点",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_shadow_cool",
+  "type": "color_rule",
+  "title": "阴影冷暖",
+  "tags": [
+   "阴影",
+   "冷暖",
+   "层次"
+  ],
+  "text": "阴影区轻微偏冷(蓝)是胶片感, 过冷显脏; 适度提蓝保层次",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_complement",
+  "type": "color_rule",
+  "title": "互补色修正",
+  "tags": [
+   "互补色",
+   "偏色",
+   "修正"
+  ],
+  "text": "偏黄加蓝、偏蓝加黄、偏绿加品红、偏品红加绿: 用互补色中和偏色",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "color_sat_trim",
+  "type": "color_rule",
+  "title": "饱和修剪",
+  "tags": [
+   "饱和",
+   "修剪",
+   "层次"
+  ],
+  "text": "高饱和场景先修剪单通道溢出 (如红通道 >250) 再调全局, 防色块",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_histogram",
+  "type": "experience",
+  "title": "直方图读图",
+  "tags": [
+   "直方图",
+   "曝光",
+   "影调"
+  ],
+  "text": "直方图: 左堆=欠曝右堆=过曝; 中间调决定整体亮度; 高光裁切在 255 尖峰",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_curve_s",
+  "type": "experience",
+  "title": "S 曲线",
+  "tags": [
+   "曲线",
+   "对比度",
+   "S曲线"
+  ],
+  "text": "S 曲线增强对比: 暗部下压亮部提升, 中点锚定; 过度 S 曲线损失灰阶过渡",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_white_balance",
+  "type": "experience",
+  "title": "白平衡原则",
+  "tags": [
+   "白平衡",
+   "色温",
+   "偏色"
+  ],
+  "text": "白平衡不猜: 保留相机 As Shot; 偏色先查 WB 再动矩阵",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_highlight_protect",
+  "type": "experience",
+  "title": "高光保护",
+  "tags": [
+   "高光",
+   "保护",
+   "溢出"
+  ],
+  "text": "高光溢出>3% 时负向修正减半; 提亮用 p95 预测防拉爆",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_shadow_recovery",
+  "type": "experience",
+  "title": "暗部恢复",
+  "tags": [
+   "暗部",
+   "阴影",
+   "恢复"
+  ],
+  "text": "暗部裁切<5 即可; 极端欠曝提亮会引入噪点, 权衡处理",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_noise",
+  "type": "experience",
+  "title": "噪点控制",
+  "tags": [
+   "噪点",
+   "ISO",
+   "降噪"
+  ],
+  "text": "高 ISO 噪点多: 暗部提亮放大噪点; 先降噪再提亮",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_sharpness",
+  "type": "experience",
+  "title": "锐化原则",
+  "tags": [
+   "锐化",
+   "清晰度",
+   "细节"
+  ],
+  "text": "锐化在降噪后; 边缘锐化为主, 避免过度锐化出现光晕",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_skin_retouch",
+  "type": "experience",
+  "title": "肤色修图流程",
+  "tags": [
+   "肤色",
+   "修图",
+   "流程"
+  ],
+  "text": "肤色: 白平衡→曝光→肤色 Lab 检测→HSL 橙通道微调; 目标 a14-22 b12-20",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_saturation",
+  "type": "experience",
+  "title": "饱和度控制",
+  "tags": [
+   "饱和度",
+   "色彩",
+   "自然"
+  ],
+  "text": "饱和度宁少勿多; 全局饱和过高损失层次, 局部通道调整更自然",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_lut_selection",
+  "type": "experience",
+  "title": "LUT 选型",
+  "tags": [
+   "LUT",
+   "选型",
+   "风格"
+  ],
+  "text": "人像→Portra/Astia, 风光→Velvia, 街拍→ClassicNeg, 夜景→TealOrange",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_exposure_target",
+  "type": "experience",
+  "title": "曝光目标",
+  "tags": [
+   "曝光",
+   "目标",
+   "115"
+  ],
+  "text": "主体目标亮度 115 (0-255): 人脸优先, 无脸用全图中位",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_batch_strategy",
+  "type": "experience",
+  "title": "批量策略",
+  "tags": [
+   "批量",
+   "策略",
+   "效率"
+  ],
+  "text": "批量: 诊断用 half_size (0.8s), 最终输出全尺寸; 曝光闭环≤3轮",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_wb_as_shot",
+  "type": "experience",
+  "title": "As Shot 白平衡",
+  "tags": [
+   "白平衡",
+   "As Shot",
+   "相机"
+  ],
+  "text": "相机 As Shot 白平衡与 Nikon MakerNote WhiteBalanceRBCoeff 一致, 直接可用",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_dcp_forward",
+  "type": "experience",
+  "title": "DCP ForwardMatrix",
+  "tags": [
+   "DCP",
+   "ForwardMatrix",
+   "色彩"
+  ],
+  "text": "DCP 渲染必须用 ForwardMatrix (行和=D50 白点), 不是 ColorMatrix (输出 StdA 需额外适配)",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_dcp_illuminant",
+  "type": "experience",
+  "title": "校准照明体",
+  "tags": [
+   "DCP",
+   "照明体",
+   "StdA"
+  ],
+  "text": "Z5 II DCP tag C65A=17 即校准照明体 StdA (2856K); 影响矩阵应用方式",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_raw_linear",
+  "type": "experience",
+  "title": "raw 线性域",
+  "tags": [
+   "raw",
+   "线性",
+   "色彩域"
+  ],
+  "text": "rawpy ColorSpace.raw 输出线性相机 RGB; 曝光在线性域乘 2^ev 物理正确",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_gamma_lut",
+  "type": "experience",
+  "title": "gamma 查表",
+  "tags": [
+   "gamma",
+   "性能",
+   "查表"
+  ],
+  "text": "gamma 编码用 16bit 查表 (65536 项) 替代逐像素幂, 0.65s→0.12s",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_half_size",
+  "type": "experience",
+  "title": "half_size 诊断",
+  "tags": [
+   "half_size",
+   "性能",
+   "诊断"
+  ],
+  "text": "诊断/闭环用 half_size (0.8s/张), 最终输出全尺寸; 满足 <2s 验收",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_yoloe_gpu",
+  "type": "experience",
+  "title": "YOLOE GPU 检测",
+  "tags": [
+   "YOLOE",
+   "GPU",
+   "主体"
+  ],
+  "text": "YOLOE-26L GPU 0.5s/张; 加载 13s 一次性; 人脸优先确定主体亮度",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_lut_domain_srgb",
+  "type": "experience",
+  "title": "LUT 色彩域",
+  "tags": [
+   "LUT",
+   "sRGB",
+   "域"
+  ],
+  "text": "LUT 在 sRGB gamma 域查表; 线性域直套肤色 RMS 0.094 不可接受",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_lut_256cube",
+  "type": "experience",
+  "title": "LUT 256³ 查表",
+  "tags": [
+   "LUT",
+   "查表",
+   "性能"
+  ],
+  "text": "LUT 应用预计算 256³ 表 (50MB, 建表 16s 一次), 之后 half_size 0.2s",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_lut_strength",
+  "type": "experience",
+  "title": "LUT 强度",
+  "tags": [
+   "LUT",
+   "强度",
+   "混合"
+  ],
+  "text": "LUT 强度 0-1 线性混合原图与 LUT 输出, 强度 50% 色彩介于中间",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_snow",
+  "type": "experience",
+  "title": "雪景曝光",
+  "tags": [
+   "雪景",
+   "曝光",
+   "白"
+  ],
+  "text": "雪景整体亮: 主体亮度可能已高, 负向修正防高光溢出; 白平衡偏蓝正常",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_night",
+  "type": "experience",
+  "title": "夜景曝光",
+  "tags": [
+   "夜景",
+   "曝光",
+   "灯光"
+  ],
+  "text": "夜景: 灯光高光易溢出, 主体暗是氛围; 曝光以主体为准, 高光保护优先",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_portrait_wb",
+  "type": "experience",
+  "title": "人像白平衡",
+  "tags": [
+   "人像",
+   "白平衡",
+   "肤色"
+  ],
+  "text": "人像白平衡以肤色为准: 室内暖光保留 As Shot, 混合光手动校正肤色带",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_architecture",
+  "type": "experience",
+  "title": "建筑曝光",
+  "tags": [
+   "建筑",
+   "曝光",
+   "线条"
+  ],
+  "text": "建筑: 天空高光保护, 主体亮度以立面为准; 强透视注意边缘",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_0",
+  "type": "experience",
+  "title": "流程-先整体后局部",
+  "tags": [
+   "流程",
+   "整体",
+   "局部"
+  ],
+  "text": "先修整体 (白平衡/曝光/影调) 再局部 (肤色/背景/细节)",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_1",
+  "type": "experience",
+  "title": "流程-非破坏",
+  "tags": [
+   "流程",
+   "非破坏"
+  ],
+  "text": "参数化修改优先, 像素级操作最后做 (导出衍生图)",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_2",
+  "type": "experience",
+  "title": "调色-少即是多",
+  "tags": [
+   "调色",
+   "克制"
+  ],
+  "text": "色彩调整宁少勿多, 每次调整检查是否过度",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_3",
+  "type": "experience",
+  "title": "调色-先色温后色调",
+  "tags": [
+   "调色",
+   "色温",
+   "色调"
+  ],
+  "text": "先校正色温再动色调, 避免双重偏色",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_4",
+  "type": "experience",
+  "title": "直方图-曝光判读",
+  "tags": [
+   "直方图",
+   "曝光"
+  ],
+  "text": "直方图左堆=欠曝右堆=过曝, 中间分布=曝光合理",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_5",
+  "type": "experience",
+  "title": "直方图-裁切识别",
+  "tags": [
+   "直方图",
+   "裁切"
+  ],
+  "text": "255 尖峰=高光裁切, 0 堆积=暗部裁切",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_6",
+  "type": "experience",
+  "title": "白平衡-中性参照",
+  "tags": [
+   "白平衡",
+   "中性"
+  ],
+  "text": "用中性灰区域校准白平衡, 没有灰卡用已知白色物体",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_7",
+  "type": "experience",
+  "title": "白平衡-偏色方向",
+  "tags": [
+   "白平衡",
+   "互补色"
+  ],
+  "text": "偏黄加蓝, 偏蓝加黄, 偏绿加品红, 用互补色修正",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_8",
+  "type": "experience",
+  "title": "曝光-主体优先",
+  "tags": [
+   "曝光",
+   "主体"
+  ],
+  "text": "曝光以主体为准, 背景可取舍; 逆光主体暗是氛围",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_9",
+  "type": "experience",
+  "title": "曝光-宽容度",
+  "tags": [
+   "曝光",
+   "宽容度",
+   "噪点"
+  ],
+  "text": "RAW 高光恢复优于暗部; 暗部提亮易噪点",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_10",
+  "type": "experience",
+  "title": "曲线-影调分区",
+  "tags": [
+   "曲线",
+   "影调"
+  ],
+  "text": "曲线分高光/中间调/阴影三段调整, 互相影响",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_11",
+  "type": "experience",
+  "title": "曲线-通道曲线",
+  "tags": [
+   "曲线",
+   "通道"
+  ],
+  "text": "通道曲线修偏色 (Red/Green/Blue), 比 HSL 更可控",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_12",
+  "type": "experience",
+  "title": "HSL-色相调整",
+  "tags": [
+   "HSL",
+   "色相"
+  ],
+  "text": "HSL 调色相改色调方向, 饱和度改浓度, 明度改亮暗",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_13",
+  "type": "experience",
+  "title": "HSL-局部通道",
+  "tags": [
+   "HSL",
+   "通道",
+   "肤色"
+  ],
+  "text": "肤色用橙通道, 天空用蓝通道, 绿植用绿通道",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_14",
+  "type": "experience",
+  "title": "校准-灰平衡",
+  "tags": [
+   "校准",
+   "灰平衡"
+  ],
+  "text": "灰阶中性是色彩校准的第一步, 灰阶偏色全图偏色",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_15",
+  "type": "experience",
+  "title": "校准-肤色参考",
+  "tags": [
+   "校准",
+   "肤色",
+   "Lab"
+  ],
+  "text": "肤色 Lab 参考带 a14-22 b12-20, 超出先查白平衡",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_16",
+  "type": "experience",
+  "title": "蒙版-局部调整",
+  "tags": [
+   "蒙版",
+   "局部"
+  ],
+  "text": "局部调整用蒙版隔离, 避免影响全局",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_17",
+  "type": "experience",
+  "title": "蒙版-边缘羽化",
+  "tags": [
+   "蒙版",
+   "羽化"
+  ],
+  "text": "蒙版边缘羽化避免生硬过渡",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_18",
+  "type": "experience",
+  "title": "细节-先降噪后锐化",
+  "tags": [
+   "细节",
+   "降噪",
+   "锐化"
+  ],
+  "text": "降噪在锐化前, 否则锐化放大噪点",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_19",
+  "type": "experience",
+  "title": "细节-锐化适度",
+  "tags": [
+   "细节",
+   "锐化"
+  ],
+  "text": "边缘锐化为主, 过度锐化出现光晕/颗粒",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_20",
+  "type": "experience",
+  "title": "风格-色彩统一",
+  "tags": [
+   "风格",
+   "色彩"
+  ],
+  "text": "风格化先定色彩基调 (冷暖/饱和), 再叠加质感",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "exp_21",
+  "type": "experience",
+  "title": "风格-颗粒质感",
+  "tags": [
+   "风格",
+   "颗粒"
+  ],
+  "text": "胶片颗粒提升质感, 但高 ISO 图慎加",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_portra_选型",
+  "type": "experience",
+  "title": "portra 选型指南",
+  "tags": [
+   "portra",
+   "选型"
+  ],
+  "text": "人像/婚礼选 Portra: 肤色通透高光柔",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_portra_适用",
+  "type": "experience",
+  "title": "portra 适用指南",
+  "tags": [
+   "portra",
+   "适用"
+  ],
+  "text": "Portra 适合室内暖光人像, 高光不刺眼",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_portra_避坑",
+  "type": "experience",
+  "title": "portra 避坑指南",
+  "tags": [
+   "portra",
+   "避坑"
+  ],
+  "text": "Portra 在强光下过曝易偏暖, 注意高光保护",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_velvia_选型",
+  "type": "experience",
+  "title": "velvia 选型指南",
+  "tags": [
+   "velvia",
+   "选型"
+  ],
+  "text": "风光/自然选 Velvia: 饱和对比强",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_velvia_适用",
+  "type": "experience",
+  "title": "velvia 适用指南",
+  "tags": [
+   "velvia",
+   "适用"
+  ],
+  "text": "Velvia 绿植/天空浓郁, 阴天效果佳",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_velvia_避坑",
+  "type": "experience",
+  "title": "velvia 避坑指南",
+  "tags": [
+   "velvia",
+   "避坑"
+  ],
+  "text": "Velvia 高饱和对肤色不友好, 人像慎用",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_classic_neg_选型",
+  "type": "experience",
+  "title": "classic_neg 选型指南",
+  "tags": [
+   "classic_neg",
+   "选型"
+  ],
+  "text": "街拍/人文选 ClassicNeg: 复古低饱和",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_classic_neg_适用",
+  "type": "experience",
+  "title": "classic_neg 适用指南",
+  "tags": [
+   "classic_neg",
+   "适用"
+  ],
+  "text": "ClassicNeg 暖调复古, 阴天氛围好",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_classic_neg_避坑",
+  "type": "experience",
+  "title": "classic_neg 避坑指南",
+  "tags": [
+   "classic_neg",
+   "避坑"
+  ],
+  "text": "ClassicNeg 低饱和, 色彩丰富场景会显平淡",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_astia_选型",
+  "type": "experience",
+  "title": "astia 选型指南",
+  "tags": [
+   "astia",
+   "选型"
+  ],
+  "text": "室内人像选 Astia: 柔和过渡",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_astia_适用",
+  "type": "experience",
+  "title": "astia 适用指南",
+  "tags": [
+   "astia",
+   "适用"
+  ],
+  "text": "Astia 肤色自然, 适合棚拍/室内",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_astia_避坑",
+  "type": "experience",
+  "title": "astia 避坑指南",
+  "tags": [
+   "astia",
+   "避坑"
+  ],
+  "text": "Astia 对比偏柔, 硬光场景会显平淡",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_mono_选型",
+  "type": "experience",
+  "title": "mono 选型指南",
+  "tags": [
+   "mono",
+   "选型"
+  ],
+  "text": "纪实/光影选黑白: 强化形状对比",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_mono_适用",
+  "type": "experience",
+  "title": "mono 适用指南",
+  "tags": [
+   "mono",
+   "适用"
+  ],
+  "text": "黑白适合强光影/纹理/建筑线条",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_mono_避坑",
+  "type": "experience",
+  "title": "mono 避坑指南",
+  "tags": [
+   "mono",
+   "避坑"
+  ],
+  "text": "黑白去色后靠影调, 前期曝光要准",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_teal_orange_选型",
+  "type": "experience",
+  "title": "teal_orange 选型指南",
+  "tags": [
+   "teal_orange",
+   "选型"
+  ],
+  "text": "夜景/城市选青橙: 电影感",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_teal_orange_适用",
+  "type": "experience",
+  "title": "teal_orange 适用指南",
+  "tags": [
+   "teal_orange",
+   "适用"
+  ],
+  "text": "青橙对比适合灯光夜景/现代建筑",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_teal_orange_避坑",
+  "type": "experience",
+  "title": "teal_orange 避坑指南",
+  "tags": [
+   "teal_orange",
+   "避坑"
+  ],
+  "text": "青橙过度显俗, 幅度控制 50% 内",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_cinetone_选型",
+  "type": "experience",
+  "title": "cinetone 选型指南",
+  "tags": [
+   "cinetone",
+   "选型"
+  ],
+  "text": "视频/人像选 Cinetone: 电影肤色",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_cinetone_适用",
+  "type": "experience",
+  "title": "cinetone 适用指南",
+  "tags": [
+   "cinetone",
+   "适用"
+  ],
+  "text": "Cinetone 肤色过渡自然, 适合混合光",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_cinetone_避坑",
+  "type": "experience",
+  "title": "cinetone 避坑指南",
+  "tags": [
+   "cinetone",
+   "避坑"
+  ],
+  "text": "Cinetone 低饱和场景显灰",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_bleach_选型",
+  "type": "experience",
+  "title": "bleach 选型指南",
+  "tags": [
+   "bleach",
+   "选型"
+  ],
+  "text": "城市/工业选漂白: 硬朗冷调",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_bleach_适用",
+  "type": "experience",
+  "title": "bleach 适用指南",
+  "tags": [
+   "bleach",
+   "适用"
+  ],
+  "text": "漂白适合强叙事/工业/街头",
+  "content": {},
+  "fingerprint": null
+ },
+ {
+  "id": "sv_bleach_避坑",
+  "type": "experience",
+  "title": "bleach 避坑指南",
+  "tags": [
+   "bleach",
+   "避坑"
+  ],
+  "text": "漂白降饱和过度损失色彩信息",
+  "content": {},
+  "fingerprint": null
+ }
+]
