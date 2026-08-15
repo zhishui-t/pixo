@@ -14,9 +14,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from rawlab.dcp import load_dcp
-from rawlab.debug.batch_iter import camera_preview
+from rawlab.tools.batch_iter import camera_preview
 
-DCP = r"C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Camera\Nikon Z 5 2\Nikon Z 5 2 Camera Standard.dcp"
+DEFAULT_DCP = r"C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Camera\Nikon Z 5 2\Nikon Z 5 2 Camera Standard.dcp"
+DEFAULT_RAW_DIRS = [r"K:\data\photo\0711\raw", r"K:\data\photo\2026春节"]
 OUT = Path(__file__).resolve().parent.parent / "out" / "contact_sheet"
 
 
@@ -43,16 +44,23 @@ def main():
     ap.add_argument("--mode", default="engine", choices=["baseline", "engine"])
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--start", type=int, default=0)
+    ap.add_argument("--dcp", default=os.environ.get("RAWLAB_DCP", DEFAULT_DCP))
+    ap.add_argument("--raw-dir", action="append", default=None, help="RAW 目录, 可多次指定")
     args = ap.parse_args()
 
-    prof = load_dcp(DCP)
+    prof = load_dcp(args.dcp)
     if args.mode == "engine":
         from rawlab.engine import build_default_pipeline
         pipe = build_default_pipeline(prof=prof)
 
-    d1 = sorted(glob.glob(os.path.join(r"K:\data\photo\0711\raw", "*.NEF")))
-    d2 = sorted(glob.glob(os.path.join(r"K:\data\photo\2026春节", "*.NEF")))
-    files = (d1 + d2)[args.start: args.start + args.n]
+    raw_dirs = args.raw_dir
+    if not raw_dirs:
+        env = os.environ.get("RAWLAB_RAW_DIRS")
+        raw_dirs = [d for d in env.split(";") if d] if env else DEFAULT_RAW_DIRS
+    files = []
+    for d in raw_dirs:
+        files.extend(sorted(glob.glob(os.path.join(d, "*.NEF"))))
+    files = files[args.start: args.start + args.n]
 
     img_dir = OUT / args.mode
     img_dir.mkdir(parents=True, exist_ok=True)

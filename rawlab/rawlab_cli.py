@@ -29,7 +29,8 @@ from rawlab.vision_report import build_vision_report
 from rawlab.vision_bridge import get_detector
 import cv2
 
-DCP = r"C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Camera\Nikon Z 5 2\Nikon Z 5 2 Camera Standard.dcp"
+DCP = os.environ.get("RAWLAB_DCP",
+                     r"C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Camera\Nikon Z 5 2\Nikon Z 5 2 Camera Standard.dcp")
 OUT_ROOT = Path(__file__).resolve().parent / "out"
 
 

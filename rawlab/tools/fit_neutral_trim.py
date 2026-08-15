@@ -20,7 +20,8 @@ from rawlab.dcp import load_dcp
 from rawlab.engine import build_default_pipeline
 from rawlab.tools.verify_l1 import l1_metrics, BANDS
 
-DCP = r"C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Camera\Nikon Z 5 2\Nikon Z 5 2 Camera Standard.dcp"
+DEFAULT_DCP = r"C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Camera\Nikon Z 5 2\Nikon Z 5 2 Camera Standard.dcp"
+DEFAULT_RAW_DIRS = [r"K:\data\photo\0711\raw", r"K:\data\photo\2026春节"]
 
 
 def main():
@@ -28,14 +29,21 @@ def main():
     ap.add_argument("--n_fit", type=int, default=30)
     ap.add_argument("--n_val", type=int, default=10)
     ap.add_argument("--start", type=int, default=0)
+    ap.add_argument("--dcp", default=os.environ.get("RAWLAB_DCP", DEFAULT_DCP))
+    ap.add_argument("--raw-dir", action="append", default=None, help="RAW 目录, 可多次指定")
     args = ap.parse_args()
 
-    prof = load_dcp(DCP)
-    # 两个数据集各取一半, 保证拟合/验证覆盖不同光照分布
-    d1 = sorted(glob.glob(os.path.join(r"K:\data\photo\0711\raw", "*.NEF")))
-    d2 = sorted(glob.glob(os.path.join(r"K:\data\photo\2026春节", "*.NEF")))
+    prof = load_dcp(args.dcp)
+    raw_dirs = args.raw_dir
+    if not raw_dirs:
+        env = os.environ.get("RAWLAB_RAW_DIRS")
+        raw_dirs = [d for d in env.split(";") if d] if env else DEFAULT_RAW_DIRS
+    # 各目录各取一半, 保证拟合/验证覆盖不同光照分布
+    files = []
+    for d in raw_dirs:
+        files.extend(sorted(glob.glob(os.path.join(d, "*.NEF"))))
     n_half = (args.n_fit + args.n_val + 1) // 2
-    files = d1[: n_half] + d2[: n_half]
+    files = files[: n_half * len(raw_dirs)]
     files = files[args.start: args.start + args.n_fit + args.n_val]
     fit_files, val_files = files[: args.n_fit], files[args.n_fit:]
 
