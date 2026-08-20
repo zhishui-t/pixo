@@ -15,13 +15,17 @@ from typing import Any, Dict, Optional
 
 from .core import Pipeline
 
-# 默认管线顺序 (用户定稿: 曝光矫正 → 色彩矫正 → 影调重塑 → 色彩校准 → 风格化 → 精修)
-DEFAULT_STAGES = ["exposure", "whitebalance", "tone", "colorcal", "stylize", "refine"]
+# 默认管线顺序: 曝光 → 白平衡 → HueSatMap(默认关, 线性域、tone 前) → 影调
+# → 清晰度(质感, 基座开) → 色彩校准(肤色保护) → 磨皮(仅人像, wants 门控)
+# → 风格化(LUT) → 精修
+DEFAULT_STAGES = ["exposure", "whitebalance", "huesat", "tone", "clarity",
+                  "colorcal", "calibration", "hsl", "split_tone",
+                  "skin", "stylize", "refine"]
 
 
 def build_default_pipeline(prof=None, style_lut=None,
                            params: Optional[Dict[str, Dict[str, Any]]] = None) -> Pipeline:
-    """默认管线: 六阶段全链, 参数可覆盖。style_lut 非空时注入 stylize Stage。"""
+    """默认管线: 七阶段全链, 参数可覆盖。style_lut 非空时注入 stylize Stage。"""
     # 触发注册: 导入 stages 包 (装饰器注册所有插件)
     from . import stages as _  # noqa: F401
     p = dict(params or {})

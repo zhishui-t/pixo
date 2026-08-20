@@ -37,9 +37,12 @@ def _region_stats(mask: np.ndarray, chan: np.ndarray) -> float:
 
 
 def build_vision_report(bgr8: np.ndarray,
-                        use_clip: bool = False) -> Dict:
+                        use_clip: bool = False,
+                        subject_boxes=None, face_boxes=None) -> Dict:
     """生成视觉语义报告 (bgr8: 渲染后的 BGR 图)。
 
+    subject_boxes / face_boxes: 预检测的归一化 [l,t,r,b] 框 (注入时跳过内部
+    YOLOE 检测 —— RetouchAgent 反馈轮复用会话框, 避免每轮重复检测)。
     Returns: 结构化 dict, 字段见计划书 §5.2。
     """
     t0 = time.time()
@@ -50,20 +53,32 @@ def build_vision_report(bgr8: np.ndarray,
 
     report: Dict = {}
 
-    # ── 主体 (YOLOE) ──
+    # ── 主体 (YOLOE; 或注入的预检测框) ──
     t1 = time.time()
-    try:
-        subj, faces = detect_subjects(bgr8)
+    subjects = []
+    if subject_boxes is not None or face_boxes is not None:
+        subj = list(subject_boxes or [])
+        faces = list(face_boxes or [])
         subjects = [{
             "box": [round(v, 4) for v in b] if b else [],
             "type": "person" if i < len(faces) else "object",
         } for i, b in enumerate(subj[:5])]
-        # YOLOE 只给 box, 需 label; 简化: 人脸框优先
         if faces:
             subjects = [{"box": [round(v, 4) for v in b], "type": "person"}
                         for b in faces[:3]]
-    except Exception:
-        subjects = []
+    else:
+        try:
+            subj, faces = detect_subjects(bgr8)
+            subjects = [{
+                "box": [round(v, 4) for v in b] if b else [],
+                "type": "person" if i < len(faces) else "object",
+            } for i, b in enumerate(subj[:5])]
+            # YOLOE 只给 box, 需 label; 简化: 人脸框优先
+            if faces:
+                subjects = [{"box": [round(v, 4) for v in b], "type": "person"}
+                            for b in faces[:3]]
+        except Exception:
+            subjects = []
     report["subject"] = {
         "count": len(subjects),
         "persons": len(faces),

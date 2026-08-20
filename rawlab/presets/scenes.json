@@ -1,0 +1,42 @@
+{
+  "portrait": {
+    "params": {
+      "tone": {"contrast": 0.08},
+      "refine": {"sharpen": 0.2},
+      "skin": {"enabled": true, "strength": 0.5}
+    },
+    "lut": null
+  },
+  "landscape": {
+    "params": {
+      "tone": {"contrast": 0.18},
+      "colorcal": {"saturation": 0.15}
+    },
+    "lut": null
+  },
+  "night": {
+    "params": {
+      "tone": {"contrast": 0.06}
+    },
+    "lut": null
+  },
+  "street": {
+    "params": {
+      "tone": {"contrast": 0.12}
+    },
+    "lut": null
+  },
+  "food": {
+    "params": {
+      "tone": {"contrast": 0.1},
+      "colorcal": {"saturation": 0.1}
+    },
+    "lut": null
+  },
+  "mono": {
+    "params": {
+      "colorcal": {"saturation": -1.0}
+    },
+    "lut": null
+  }
+}

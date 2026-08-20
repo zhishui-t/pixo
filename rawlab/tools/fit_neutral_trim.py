@@ -47,8 +47,12 @@ def main():
     files = files[args.start: args.start + args.n_fit + args.n_val]
     fit_files, val_files = files[: args.n_fit], files[args.n_fit:]
 
-    # 1) 拟合集: 无曲线渲染 → 逐层中性
-    pipe = build_default_pipeline(prof=prof)
+    # 1) 拟合集: **关闭 colorcal** 渲染 (测真实未校正漂移; 若带旧校正拟合
+    #    测的是"旧校正后的残差", 新曲线会失效)。逐层中性 → 校正曲线 = -中位。
+    from rawlab.engine.core import Pipeline
+    from rawlab.engine import stages as _stages  # noqa: F401 触发注册
+    pipe = Pipeline(stages=["exposure", "whitebalance", "tone", "stylize", "refine"])
+    pipe.prof = prof
     band_a, band_b = [[] for _ in BANDS], [[] for _ in BANDS]
     for i, f in enumerate(fit_files):
         try:
@@ -80,13 +84,14 @@ def main():
         json.dump(cal, fh, ensure_ascii=False, indent=1)
     print(f"标定写入: {cal_file}")
 
-    # 2) 验证集: 套曲线渲染, 用**固定掩码** (trim 前的中性像素) 测真实校正位移
+    # 2) 验证集: 用**固定掩码** (校正前的中性像素) 测真实校正位移:
+    #    pre = 无 colorcal 管线; post = 默认管线 (标定已加载)。
     pipe2 = build_default_pipeline(prof=prof)
     worst_a, worst_b = [], []
     for i, f in enumerate(val_files):
         try:
-            pre = pipe.run_file(f, half_size=True)      # 无 trim (拟合管线)
-            post = pipe2.run_file(f, half_size=True)    # 有 trim (标定已加载)
+            pre = pipe.run_file(f, half_size=True)      # 无 colorcal (未校正)
+            post = pipe2.run_file(f, half_size=True)    # 有 colorcal (标定已加载)
             pre_lab = cv2.cvtColor(pre, cv2.COLOR_RGB2LAB).astype(np.float32)
             c0 = np.sqrt((pre_lab[:, :, 1] - 128) ** 2 + (pre_lab[:, :, 2] - 128) ** 2)
             fix_mask = c0 < 12

@@ -1,9 +1,10 @@
 {
-  "stages": ["exposure", "whitebalance", "tone", "colorcal", "stylize", "refine"],
+  "stages": ["exposure", "whitebalance", "huesat", "tone", "colorcal", "stylize", "refine"],
   "params": {
     "exposure": {"mode": "auto"},
     "whitebalance": {"mode": "as_shot"},
-    "tone": {"profile_curve": false, "contrast": 0.12, "shoulder": 0.35},
+    "tone": {"profile_curve": false, "eotf": "srgb"},
+    "huesat": {"enabled": false},
     "colorcal": {},
     "stylize": {},
     "refine": {}

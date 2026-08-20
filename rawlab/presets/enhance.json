@@ -1,0 +1,17 @@
+{
+  "stages": ["exposure", "whitebalance", "tone", "huesat", "dehaze", "clarity",
+             "colorcal", "skin", "stylize", "refine"],
+  "params": {
+    "exposure": {"mode": "auto"},
+    "whitebalance": {"mode": "as_shot"},
+    "tone": {"use_filmic": true, "contrast": 0.25, "toe": 0.12, "shoulder": 0.35,
+             "brightness": 0.35},
+    "huesat": {"enabled": false},
+    "dehaze": {"enabled": false, "strength": 0.30, "radius": 15},
+    "clarity": {"enabled": true, "strength": 0.45},
+    "colorcal": {"vibrance": 0.35, "saturation": 0.12},
+    "skin": {"enabled": true, "strength": 0.4},
+    "refine": {"sharpen": 0.35, "chroma_denoise": 0.8, "highlight_desat": 0.5}
+  },
+  "output": {"quality": 95}
+}

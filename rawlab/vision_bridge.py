@@ -5,14 +5,15 @@
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 import numpy as np
 
-# guanlan 项目路径 (复用其模型与模块)
-_GUANLAN_ROOT = r"K:\work\project\guanlan"
+# guanlan 项目路径 (复用其模型与模块; 环境变量 RAWLAB_GUANLAN_ROOT 优先, 旧值仅作回退)
+_GUANLAN_ROOT = os.environ.get("RAWLAB_GUANLAN_ROOT", r"K:\work\project\guanlan")
 if _GUANLAN_ROOT not in sys.path:
     sys.path.insert(0, _GUANLAN_ROOT)
 if str(Path(_GUANLAN_ROOT) / "src") not in sys.path:

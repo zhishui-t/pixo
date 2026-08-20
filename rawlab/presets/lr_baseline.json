@@ -1,0 +1,273 @@
+{
+  "dcp": "rawlab\\profiles\\Nikon Z 5 2 RawLab LR Baseline.dcp",
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "huesat",
+    "tone",
+    "clarity",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "baseline",
+      "baseline_ev_curve": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.35,
+          0.0
+        ],
+        [
+          1.41,
+          0.12
+        ],
+        [
+          1.5,
+          0.0
+        ],
+        [
+          1.79,
+          0.0
+        ],
+        [
+          2.287,
+          0.0
+        ],
+        [
+          2.39,
+          -0.35
+        ],
+        [
+          2.6,
+          -0.35
+        ]
+      ],
+      "baseline_scene_ev": [
+        [
+          1.7,
+          2.0,
+          -2.9,
+          -2.0,
+          -0.4
+        ]
+      ]
+    },
+    "whitebalance": {
+      "warmth": 0.9,
+      "warmth_b0": 1.79,
+      "warmth_b1": 2.287,
+      "warmth_r_slope": 0.05,
+      "warmth_g_slope": 0.1,
+      "warmth_b_slope": 0.2,
+      "trim": [
+        1.0,
+        1.05,
+        0.9
+      ],
+      "warmth_curve": [
+        [
+          1.22,
+          0.78,
+          1.0,
+          1.0
+        ],
+        [
+          1.79,
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          2.287,
+          1.04,
+          1.1,
+          0.79
+        ],
+        [
+          2.4,
+          1.05,
+          1.05,
+          0.94
+        ],
+        [
+          2.47,
+          1.07,
+          1.05,
+          0.84
+        ]
+      ]
+    },
+    "huesat": {
+      "enabled": false,
+      "warm_highlight_sat": 3.3,
+      "warm_sat_spot_scale": 2.2
+    },
+    "tone": {
+      "profile_curve": true,
+      "eotf": "srgb",
+      "brightness": 0.0,
+      "highlight_compress_curve": [
+        [
+          1.0,
+          0
+        ],
+        [
+          1.39,
+          0.05
+        ],
+        [
+          1.43,
+          0.05
+        ],
+        [
+          1.6,
+          0
+        ],
+        [
+          2.0,
+          0
+        ],
+        [
+          3.0,
+          0
+        ]
+      ]
+    },
+    "colorcal": {
+      "neutral_mode": "off",
+      "saturation": 0.0,
+      "scene_trim": [
+        [
+          1.25,
+          1.28,
+          2.36,
+          2.4,
+          -4.0,
+          14.0
+        ]
+      ],
+      "scene_skin_trim": [
+        [
+          1.39,
+          1.43,
+          -2.0,
+          -4.0
+        ],
+        [
+          1.78,
+          1.8,
+          -4.0,
+          0.0
+        ]
+      ],
+      "scene_hue": [
+        [
+          1.78,
+          1.8,
+          2.0
+        ],
+        [
+          2.36,
+          2.37,
+          3.0
+        ],
+        [
+          2.38,
+          2.4,
+          3.0
+        ]
+      ]
+    },
+    "refine": {
+      "highlight_desat": 0.25,
+      "warm_sat_curve": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.3,
+          0.0
+        ],
+        [
+          1.34,
+          0.2
+        ],
+        [
+          1.4,
+          0.5
+        ],
+        [
+          1.45,
+          0.5
+        ],
+        [
+          1.5,
+          0.0
+        ],
+        [
+          1.6,
+          0.0
+        ]
+      ],
+      "warm_sat_spot": [
+        [
+          1.75,
+          1.8,
+          0.7
+        ]
+      ],
+      "warm_hue_curve": [
+        [
+          1.0,
+          0
+        ],
+        [
+          1.39,
+          3.0
+        ],
+        [
+          1.43,
+          3.0
+        ],
+        [
+          1.6,
+          0
+        ],
+        [
+          2.0,
+          0
+        ],
+        [
+          2.287,
+          -2.0
+        ],
+        [
+          2.32,
+          6.0
+        ],
+        [
+          2.4,
+          6.0
+        ],
+        [
+          2.6,
+          0
+        ]
+      ],
+      "sharpen": 0.0
+    },
+    "clarity": {
+      "enabled": false
+    },
+    "skin": {
+      "enabled": false
+    }
+  }
+}

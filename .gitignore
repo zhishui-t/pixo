@@ -22,3 +22,6 @@ package.json
 package-lock.json
 vitest.config.ts
 apply.spec.ts
+
+# 其他 DSH 会话残留临时脚本
+*.mjs

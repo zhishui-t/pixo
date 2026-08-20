@@ -19,6 +19,7 @@ from __future__ import annotations
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
@@ -99,6 +100,10 @@ class Stage(ABC):
     order: int = 100
     domain_in: Optional[str] = None   # None = 任意域
     domain_out: Optional[str] = None
+    # 参数 schema: {"<name>": {"type": "float"|"int"|"str"|"bool"|"float_or_str",
+    #                          "min": .., "max": .., "choices": [...]}}
+    # 各字段均可选; float_or_str 额外放行数值向量 (如 whitebalance 手动 [r,g,b] 系数)。
+    param_schema: Dict[str, dict] = {}
 
     def __init__(self, params: Optional[Dict[str, Any]] = None):
         defaults = self.default_params()
@@ -116,8 +121,82 @@ class Stage(ABC):
 
     # ---- 便捷工具 ----
     def p(self, ctx: StageContext, key: str, default=None):
-        """取本 Stage 参数: 外部覆盖 > 实例参数 > 默认。"""
-        return ctx.params_for(self.name).get(key, self.params.get(key, default))
+        """取本 Stage 参数: 外部覆盖 > 实例参数 > 默认; 声明 param_schema 时校验。
+
+        仅当本 Stage 声明了该参数的 schema 且取到的值非 None 时执行校验;
+        非法抛 ValueError (信息含 stage 名、参数名、值、约束)。
+        """
+        value = ctx.params_for(self.name).get(key, self.params.get(key, default))
+        schema = self.param_schema.get(key)
+        if schema and value is not None:
+            self._validate_param(key, value, schema)
+        return value
+
+    @staticmethod
+    def _is_numeric_seq(v) -> bool:
+        """是否为非空数值向量/嵌套数值向量 (whitebalance 手动 [r,g,b] 系数、
+        warmth_curve [[wb_B,r,g,b],...] 等); 递归接受列表/元组嵌套。"""
+        if isinstance(v, (list, tuple)) and len(v) > 0:
+            return all(Stage._is_numeric_seq(x)
+                       if isinstance(x, (list, tuple))
+                       else (isinstance(x, Real) and not isinstance(x, bool))
+                       for x in v)
+        return False
+
+    def _curve_dict_check(self, v) -> bool:
+        """user_curve 类 dict 结构预检: 合法返回 True; 未知键/非点集挂 raise ValueError。
+
+        数值不做深校验 (交给 _apply_user_curve 等); 只查: dict 非空、键合法、
+        每个键值为非空 [[x,y],...] 点集 (list/tuple)。
+        """
+        allowed = {"rgb", "red", "green", "blue", "luminance"}
+        if not isinstance(v, dict) or not v:
+            return False
+        unknown = set(v) - allowed
+        if unknown:
+            raise ValueError(
+                f"[{self.name}] 参数含未知曲线键 {sorted(unknown)}; 合法键: {sorted(allowed)}")
+        for k, pts in v.items():
+            if not isinstance(pts, (list, tuple)) or len(pts) == 0:
+                raise ValueError(
+                    f"[{self.name}] 曲线键 '{k}' 需为非空 [[x,y],...] 点集")
+        return True
+
+    def _validate_param(self, key: str, value, schema: dict) -> None:
+        """按 param_schema 校验单个参数; 非法抛 ValueError (信息含约束)。"""
+        typ = schema.get("type")
+        numeric = isinstance(value, Real) and not isinstance(value, bool)
+        ok = True
+        if typ == "float":
+            ok = numeric
+        elif typ == "int":
+            ok = isinstance(value, Integral) and not isinstance(value, bool)
+        elif typ == "str":
+            ok = isinstance(value, str)
+        elif typ == "bool":
+            ok = isinstance(value, bool)
+        elif typ == "float_or_str":
+            # 数值 / 字符串都放行; 另放行数值向量 (手动系数); dict 走曲线结构预检
+            # (非法曲线 dict 由 _curve_dict_check 抛 ValueError); range 只对数值生效
+            ok = numeric or isinstance(value, str) or self._is_numeric_seq(value)
+            # 空容器 (list/tuple/dict) = no-op, 放行
+            if not ok and isinstance(value, (list, tuple, dict)) and len(value) == 0:
+                ok = True
+            if not ok and isinstance(value, dict):
+                ok = self._curve_dict_check(value)
+        if not ok:
+            raise ValueError(
+                f"[{self.name}] 参数 '{key}' 非法: 值 {value!r} 类型不符, 期望 {typ}")
+        if numeric:
+            if "min" in schema and value < schema["min"]:
+                raise ValueError(
+                    f"[{self.name}] 参数 '{key}' 非法: 值 {value!r} 小于下限 {schema['min']}")
+            if "max" in schema and value > schema["max"]:
+                raise ValueError(
+                    f"[{self.name}] 参数 '{key}' 非法: 值 {value!r} 大于上限 {schema['max']}")
+        if "choices" in schema and value not in schema["choices"]:
+            raise ValueError(
+                f"[{self.name}] 参数 '{key}' 非法: 值 {value!r} 不在允许值 {schema['choices']}")
 
     def run(self, ctx: StageContext) -> StageResult:
         """统一执行入口 (Pipeline 调用): 校验域 → process → 记录。"""
@@ -197,6 +276,23 @@ class Pipeline:
         return [{"name": s.name, "order": s.order,
                  "domain_in": s.domain_in, "domain_out": s.domain_out,
                  "enabled": True} for s in self.stages]
+
+    def to_config(self) -> Dict[str, Any]:
+        """导出当前管线为可重建的配置 dict (pipeline_from_config 的反函数)。
+
+        - name   : 管线名
+        - stages : [s.name for s in self.stages] (按执行顺序)
+        - params : self.params 深拷贝 (不共享引用, 改导出不影响原管线)
+        - output : (getattr output 或 {}) 深拷贝
+        JSON 可序列化 (json.dumps 可直接用)。可由 pipeline_from_config 重建。
+        """
+        import copy
+        return {
+            "name": self.name,
+            "stages": [s.name for s in self.stages],
+            "params": copy.deepcopy(self.params),
+            "output": copy.deepcopy(getattr(self, "output", {}) or {}),
+        }
 
     def run(self, ctx: StageContext, probe_dir: Optional[Path] = None) -> np.ndarray:
         """执行全链, 返回最终图像。probe_dir 非空时逐 Stage 落盘中间图。"""
