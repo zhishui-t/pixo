@@ -40,7 +40,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from .tone import apply_hue_sat_map, srgb_decode, srgb_encode
+from .tone import (
+    apply_hue_sat_map as _apply_hue_sat_map_table,
+    srgb_decode,
+    srgb_encode,
+)
 
 # HSV 与 RGB 互转用全范围 float 约定: H ∈ [0, 360), S/V ∈ [0, 1]
 _H_MIN = 0.0
@@ -336,7 +340,7 @@ def apply_hue_sat_map_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> n
     table, dims, encoding = get_hue_sat_table(prof)
     if table is None or strength <= 0.0:
         return pp
-    return apply_hue_sat_map(pp, table, dims, encoding, strength)
+    return _apply_hue_sat_map_table(pp, table, dims, encoding, strength)
 
 
 def apply_look_table_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:
@@ -344,7 +348,7 @@ def apply_look_table_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> np
     table, dims, encoding = get_look_table(prof)
     if table is None or strength <= 0.0:
         return pp
-    return apply_hue_sat_map(pp, table, dims, encoding, strength)
+    return _apply_hue_sat_map_table(pp, table, dims, encoding, strength)
 
 
 def apply_look_table(rgb_linear: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:

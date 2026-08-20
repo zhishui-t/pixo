@@ -23,10 +23,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from rawlux.core.resample import dng_resample  # noqa: F401
-
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
+
+from rawlux.core.resample import dng_resample  # noqa: F401
 from rawlab.dcp import load_dcp
 from rawlab.engine.huesat import apply_hue_sat_map_prophoto, apply_look_table_prophoto
 
