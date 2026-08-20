@@ -22,6 +22,8 @@ from . import color_cal         # noqa: F401
 from . import skin              # noqa: F401
 from . import style             # noqa: F401
 from . import refine            # noqa: F401
+from . import calibration      # noqa: F401
+from . import hsl              # noqa: F401
 from . import split_tone        # noqa: F401
 
 from .exposure import ExposureStage
@@ -37,10 +39,13 @@ from .color_cal import ColorCalStage
 from .skin import SkinStage
 from .style import StylizeStage
 from .refine import RefineStage
+from .calibration import CalibrationStage
+from .hsl import HslStage
 from .split_tone import SplitToneStage
 
 __all__ = [
     "ExposureStage", "WhiteBalanceStage", "HueSatStage", "ToneStage",
     "ClarityStage", "DehazeStage", "DenoiseStage", "SharpenStage", "VibranceStage",
-    "ColorCalStage", "SkinStage", "StylizeStage", "RefineStage", "SplitToneStage",
+    "ColorCalStage", "CalibrationStage", "HslStage", "SkinStage", "StylizeStage",
+    "RefineStage", "SplitToneStage",
 ]

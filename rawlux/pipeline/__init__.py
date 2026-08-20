@@ -1,37 +1,5 @@
-"""rawlux.pipeline —— 管线框架 (兼容层)。
-
-目标结构 (迁移完成后的原生实现):
-  context.py  StageContext / StageParams / StageResult
-  graph.py    Stage / Pipeline / register_stage / available_stages / DOMAIN_*
-  base.py     render_base.py (DCP 底座渲染)
-  presets.py  参数 Schema/预设 (DEFAULT_STAGES / build_default_pipeline / ...)
-
-当前阶段: 各子模块均为 rawlab.engine 的兼容回指针, old import 保持可用。
-"""
-from . import context, graph, base, presets  # noqa: F401
-from .context import StageContext, StageParams, StageResult  # noqa: F401
-from .graph import (  # noqa: F401
-    Stage,
-    Pipeline,
-    register_stage,
-    available_stages,
-    STAGE_REGISTRY,
-    DOMAIN_LINEAR_CAM,
-    DOMAIN_LINEAR_RGB,
-    DOMAIN_GAMMA_RGB,
-)
-from .base import (  # noqa: F401
-    camera_key,
-    load_camera_cache,
-    find_camera_entry,
-    render_dcp_linear,
-)
-from .presets import (  # noqa: F401
-    DEFAULT_STAGES,
-    build_default_pipeline,
-    pipeline_from_config,
-    attach_prof,
-)
+"""rawlux.pipeline —— 管线框架 (惰性导出, 避免与 rawlab shim 循环 import)。"""
+import importlib as _importlib
 
 __all__ = [
     "context", "graph", "base", "presets",
@@ -41,3 +9,24 @@ __all__ = [
     "camera_key", "load_camera_cache", "find_camera_entry", "render_dcp_linear",
     "DEFAULT_STAGES", "build_default_pipeline", "pipeline_from_config", "attach_prof",
 ]
+
+_SUBMODULES = {
+    "context": ("StageContext", "StageParams", "StageResult"),
+    "graph": ("Stage", "Pipeline", "register_stage", "available_stages",
+              "STAGE_REGISTRY", "DOMAIN_LINEAR_CAM", "DOMAIN_LINEAR_RGB",
+              "DOMAIN_GAMMA_RGB"),
+    "base": ("camera_key", "load_camera_cache", "find_camera_entry",
+             "render_dcp_linear"),
+    "presets": ("DEFAULT_STAGES", "build_default_pipeline",
+                "pipeline_from_config", "attach_prof"),
+}
+
+
+def __getattr__(name):
+    if name in _SUBMODULES:
+        return _importlib.import_module(f".{name}", __name__)
+    for mod, names in _SUBMODULES.items():
+        if name in names:
+            module = _importlib.import_module(f".{mod}", __name__)
+            return getattr(module, name)
+    raise AttributeError(f"module 'rawlux.pipeline' has no attribute {name!r}")
