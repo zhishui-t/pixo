@@ -64,6 +64,10 @@ def test_l2_golden_manifest_exists():
         "按 FUNCTION_GATE_SPEC §6 阻塞合并")
 
 
+def test_p1_7_perf_gate_file_exists():
+    assert (_GATE_DIR / "test_gate_e2e_perf.py").exists(), "P1-7 性能门禁文件缺失"
+
+
 def test_l3_e2e_ab_file_exists():
     assert (_GATE_DIR / "test_gate_e2e_ab.py").exists(), "L3 A-B 门禁文件缺失"
 

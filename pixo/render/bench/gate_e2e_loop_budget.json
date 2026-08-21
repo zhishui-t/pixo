@@ -1,0 +1,7 @@
+{
+  "schema": "pixo-e2e-loop-budget-v1",
+  "single_photo_max_seconds": 30.0,
+  "batch_per_minute_min": 2.0,
+  "batch_workers": 2,
+  "description": "P1-7 性能门禁预算：真实 NEF 单张闭环 <=30s，2 worker 批量 >=2 张/分钟。"
+}

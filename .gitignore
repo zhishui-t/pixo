@@ -25,6 +25,7 @@ apply.spec.ts
 
 # 其他 DSH 会话残留临时脚本
 *.mjs
+!pixo/dsh/*.mjs
 
 # ---- C++ native build artifacts ----
 pixo/render/native/build/
@@ -37,3 +38,7 @@ pixo/render/native/build*/
 
 # pixo.render decode disk cache
 pixo/render/bench/cache/
+
+# ---- Pixo frontend (Web UI) ----
+!frontend/package.json
+!frontend/package-lock.json
