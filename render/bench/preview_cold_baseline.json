@@ -1,0 +1,182 @@
+{
+  "schema": "render-bench-preview-v1.6",
+  "raw": "K:\\dsh-share\\dng_verify\\DSC_5607.dng",
+  "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+  "native_available": true,
+  "runs": 1,
+  "warmup": 0,
+  "mode": "cold",
+  "edges": {
+    "1024": {
+      "long_edge": 1024,
+      "mode": "cold",
+      "shape8": [
+        682,
+        1024,
+        3
+      ],
+      "dtype8": "uint8",
+      "shape16": [
+        682,
+        1024,
+        3
+      ],
+      "dtype16": "uint16",
+      "runs": 1,
+      "imread_ms": 0.8518000831827521,
+      "decode_ms": 1013.1205999059603,
+      "stage_total_ms": 435.5983999557793,
+      "stage_ms": {
+        "clarity": 14.332200051285326,
+        "colorcal": 236.39410000760108,
+        "exposure": 40.28149996884167,
+        "refine": 41.59869998693466,
+        "skin": 63.87319997884333,
+        "tone": 14.871299965307117,
+        "whitebalance": 24.247399996966124
+      },
+      "total_ms": 1517.0317000010982,
+      "samples_total_ms": [
+        1517.0317
+      ],
+      "samples_decode_ms": [
+        1013.1206
+      ],
+      "last_stage_ms": {
+        "exposure": 40.28149996884167,
+        "whitebalance": 24.247399996966124,
+        "tone": 14.871299965307117,
+        "clarity": 14.332200051285326,
+        "colorcal": 236.39410000760108,
+        "skin": 63.87319997884333,
+        "refine": 41.59869998693466
+      },
+      "ab": {
+        "long_edge": 1024,
+        "shape": [
+          682,
+          1024,
+          3
+        ],
+        "per_channel": {
+          "r": {
+            "p50": 1.0,
+            "p99": 10.0,
+            "max": 42.0
+          },
+          "g": {
+            "p50": 1.0,
+            "p99": 9.0,
+            "max": 38.0
+          },
+          "b": {
+            "p50": 1.0,
+            "p99": 10.0,
+            "max": 56.0
+          },
+          "all": {
+            "p50": 1.0,
+            "p99": 10.0,
+            "max": 56.0
+          }
+        },
+        "pass": true,
+        "limits": {
+          "p50": 2.0,
+          "p99": 10.0
+        }
+      },
+      "limits": {
+        "decode_ms": 1500.0,
+        "total_ms": 2000.0
+      },
+      "pass_perf": true
+    },
+    "2048": {
+      "long_edge": 2048,
+      "mode": "cold",
+      "shape8": [
+        1364,
+        2048,
+        3
+      ],
+      "dtype8": "uint8",
+      "shape16": [
+        1364,
+        2048,
+        3
+      ],
+      "dtype16": "uint16",
+      "runs": 1,
+      "imread_ms": 1.092800055630505,
+      "decode_ms": 1274.5328999590129,
+      "stage_total_ms": 840.7511999830604,
+      "stage_ms": {
+        "clarity": 46.33839998859912,
+        "colorcal": 275.69989999756217,
+        "exposure": 113.58420003671199,
+        "refine": 146.2650999892503,
+        "skin": 89.64610006660223,
+        "tone": 62.98399996012449,
+        "whitebalance": 106.23349994421005
+      },
+      "total_ms": 2231.036200071685,
+      "samples_total_ms": [
+        2231.0362
+      ],
+      "samples_decode_ms": [
+        1274.5329
+      ],
+      "last_stage_ms": {
+        "exposure": 113.58420003671199,
+        "whitebalance": 106.23349994421005,
+        "tone": 62.98399996012449,
+        "clarity": 46.33839998859912,
+        "colorcal": 275.69989999756217,
+        "skin": 89.64610006660223,
+        "refine": 146.2650999892503
+      },
+      "ab": {
+        "long_edge": 2048,
+        "shape": [
+          1364,
+          2048,
+          3
+        ],
+        "per_channel": {
+          "r": {
+            "p50": 1.0,
+            "p99": 9.0,
+            "max": 47.0
+          },
+          "g": {
+            "p50": 1.0,
+            "p99": 9.0,
+            "max": 46.0
+          },
+          "b": {
+            "p50": 1.0,
+            "p99": 10.0,
+            "max": 43.0
+          },
+          "all": {
+            "p50": 1.0,
+            "p99": 10.0,
+            "max": 47.0
+          }
+        },
+        "pass": true,
+        "limits": {
+          "p50": 2.0,
+          "p99": 10.0
+        }
+      },
+      "limits": {
+        "decode_ms": 1500.0,
+        "total_ms": 3000.0
+      },
+      "pass_perf": true
+    }
+  },
+  "pass": true
+}

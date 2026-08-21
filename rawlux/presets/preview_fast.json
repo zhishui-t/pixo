@@ -1,9 +1,0 @@
-{
-  "stages": ["exposure", "whitebalance", "huesat", "tone"],
-  "params": {
-    "exposure": {"mode": "auto"},
-    "whitebalance": {"mode": "as_shot"},
-    "huesat": {"enabled": false},
-    "tone": {"profile_curve": false, "eotf": "srgb", "brightness": 0.5}
-  }
-}

@@ -25,3 +25,15 @@ apply.spec.ts
 
 # 其他 DSH 会话残留临时脚本
 *.mjs
+
+# ---- C++ native build artifacts ----
+render/native/build/
+render/_native/*.dll
+render/_native/*.so
+render/_native/*.pyd
+
+# Extra native build dirs
+render/native/build*/
+
+# pixo.render decode disk cache
+render/bench/cache/

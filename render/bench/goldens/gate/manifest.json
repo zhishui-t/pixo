@@ -1,0 +1,250 @@
+{
+  "schema": "render-gate-golden-v1",
+  "long_edge": 512,
+  "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+  "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+  "features": {
+    "exposure": {
+      "feature": "exposure",
+      "params": {
+        "exposure": {
+          "mode": 0.7,
+          "max_ev": 2.5,
+          "rolloff_knee": 0.9
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\exposure\\output_u8.npy",
+        "u16": "gate\\exposure\\output_u16.npy"
+      },
+      "sha256_u8": "fa7a78483dca201ae2168651fb1aa31eaee0b73ec57cd1904cc0f636d591c8fa",
+      "sha256_u16": "6b2f393dbb36709f00a0b9cb3a82a9537cd2daf00fb9adf69e04d101a4f156a2",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    },
+    "whitebalance": {
+      "feature": "whitebalance",
+      "params": {
+        "whitebalance": {
+          "mode": "manual",
+          "temp": 5500.0,
+          "tint": 5.0
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\whitebalance\\output_u8.npy",
+        "u16": "gate\\whitebalance\\output_u16.npy"
+      },
+      "sha256_u8": "62f41d3ecbc824fa2781827c0f27052ecc8e18bf97ee1f89fc10c7772904249f",
+      "sha256_u16": "46df0a22e6a355da282ffa73116a0e78538df8bc6c4a040e52a547a6f8277b07",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    },
+    "tone": {
+      "feature": "tone",
+      "params": {
+        "tone": {
+          "contrast": 0.3,
+          "brightness": 0.5,
+          "highlights": 0.2,
+          "shadows": 0.2,
+          "whites": 0.1,
+          "blacks": -0.1
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\tone\\output_u8.npy",
+        "u16": "gate\\tone\\output_u16.npy"
+      },
+      "sha256_u8": "25d8242c3bbccf07e626a2ce31c7c196ca111f123de065bffb32c1e9397c90ac",
+      "sha256_u16": "a8c88d90912db1fda36cec6176e60e0b892f864f5a920ade37c626c45e60dd9b",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    },
+    "hsl": {
+      "feature": "hsl",
+      "params": {
+        "hsl": {
+          "enabled": true,
+          "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45, \"hue_shift\": 5.0, \"saturation\": 10.0, \"luminance\": 5.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45, \"hue_shift\": -3.0, \"saturation\": 8.0, \"luminance\": 2.0}]"
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\hsl\\output_u8.npy",
+        "u16": "gate\\hsl\\output_u16.npy"
+      },
+      "sha256_u8": "f817c9f0d2841af1df7a5a36312f9889b801ea68b7fa8af08d4b7569a11557df",
+      "sha256_u16": "dbb9b331025bd0e5177afde4d4d7d7aaf908dad5ce1a26cbb091a524f967a914",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    },
+    "split_tone": {
+      "feature": "split_tone",
+      "params": {
+        "split_tone": {
+          "enabled": true,
+          "shadows_hue": 45.0,
+          "shadows_sat": 30.0,
+          "highlights_hue": 210.0,
+          "highlights_sat": 20.0,
+          "balance": 0.5,
+          "strength": 0.8
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\split_tone\\output_u8.npy",
+        "u16": "gate\\split_tone\\output_u16.npy"
+      },
+      "sha256_u8": "e2756e6867eabde9baeda4ff2d49589ce4267a3b54dda0549414677cc4d2b240",
+      "sha256_u16": "27f015848f8963c644673e71d79e8c632cc0a05c6aef9ee128a8585099a23a1e",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    },
+    "calibration": {
+      "feature": "calibration",
+      "params": {
+        "calibration": {
+          "enabled": true,
+          "shadow_tint": 5.0,
+          "red_hue": 5.0,
+          "red_sat": 10.0,
+          "green_hue": -3.0,
+          "green_sat": 5.0,
+          "blue_hue": 2.0,
+          "blue_sat": 8.0
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\calibration\\output_u8.npy",
+        "u16": "gate\\calibration\\output_u16.npy"
+      },
+      "sha256_u8": "3c5d730cab70cd7358a145b24bd4a88dd5804b7b4d477eee5ad439fb6ccefd0d",
+      "sha256_u16": "714965092887bade779bd045d1ce8fec149b3b9f546d827538e032fa7951de8a",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    },
+    "skin": {
+      "feature": "skin",
+      "params": {
+        "skin": {
+          "enabled": true,
+          "strength": 0.5
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\skin\\output_u8.npy",
+        "u16": "gate\\skin\\output_u16.npy"
+      },
+      "sha256_u8": "d064066fd7240a180fc90a684f7c8f1692df602d75bed5c8e1ead9476b219769",
+      "sha256_u16": "49d93d5a82aa1e0e20bd1246e794ca659ac004ce12f082c1e60d62c1ab522bd2",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    },
+    "refine": {
+      "feature": "refine",
+      "params": {
+        "refine": {
+          "sharpen": 0.6,
+          "chroma_denoise": 1.2,
+          "highlight_desat": 0.8
+        }
+      },
+      "long_edge": 512,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\RawFlow\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate\\refine\\output_u8.npy",
+        "u16": "gate\\refine\\output_u16.npy"
+      },
+      "sha256_u8": "c013e510936fea8b09c7ed0f86c96facdddc3920d5b49573aa54e4c88e5c7fad",
+      "sha256_u16": "a3c6397ed5959674e3a9f5672ef7e9fd64e6897517deb30f8e11688d01429f74",
+      "shape_u8": [
+        341,
+        512,
+        3
+      ],
+      "shape_u16": [
+        341,
+        512,
+        3
+      ]
+    }
+  }
+}

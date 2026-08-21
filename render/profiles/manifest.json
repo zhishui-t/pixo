@@ -1,0 +1,28 @@
+{
+  "camera": "Nikon Z 5 2",
+  "default_lr_preset": "lr_baseline",
+  "targets": {
+    "lr_camera_standard_v2": {
+      "preset": "render/presets/lr_baseline.json",
+      "dcp": "render/profiles/Nikon Z 5 2 RawLab LR Baseline.dcp",
+      "truth": "render/out/profile_fit/lr_corpus_camera_standard",
+      "camera_profile": "Camera Standard v2"
+    },
+    "lr_adobe_standard_v2": {
+      "preset": "render/presets/lr_adobe_standard_baseline.json",
+      "dcp": "render/profiles/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "truth": "render/out/profile_fit/lr_corpus",
+      "camera_profile": "Adobe Standard v2"
+    },
+    "camera_preview": {
+      "preset": "render/presets/preview_baseline.json",
+      "dcp": "render/profiles/Nikon Z 5 2 RawLab Preview Baseline.dcp",
+      "truth": "rawpy.extract_thumb()"
+    }
+  },
+  "policy": {
+    "truth_hierarchy": ["camera_preview", "lr_camera_standard_v2", "lr_adobe_standard_v2"],
+    "no_profile_mixing": true,
+    "lr_export_requires_camera_profile_pin": true
+  }
+}
