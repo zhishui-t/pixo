@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "models": [
+    {
+      "name": "YOLOE-26L-seg",
+      "provider": "Ultralytics",
+      "license": "AGPL-3.0",
+      "files": [
+        "yoloe-26l-seg.pt",
+        "mobileclip2_b.ts"
+      ],
+      "usage": "internal_development_only",
+      "isolation_file": "render/vision/segmenters/yoloe.py",
+      "notes": "AGPL-3.0 仅供内部研发使用；产品化/对外分发前必须替换为 Apache/MIT 模型或购买 Ultralytics 企业授权。该模型只允许通过 Segmenter 接口调用，不允许其它模块直接 import ultralytics/torch。"
+    }
+  ]
+}

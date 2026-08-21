@@ -1,5 +1,6 @@
-# rawlab 运行时依赖
+# Pixo render 运行时依赖
 # 安装: pip install -r requirements.txt
 rawpy>=0.23
 numpy>=1.26
 opencv-python>=4.8
+exifread>=3.5

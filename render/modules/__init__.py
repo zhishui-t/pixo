@@ -11,6 +11,7 @@ dehaze / denoise / sharpen / vibrance / colorcal / skin / stylize / refine。
 """
 from . import exposure          # noqa: F401
 from . import white_balance     # noqa: F401
+from . import compose           # noqa: F401
 from . import huesat            # noqa: F401
 from . import tone_map          # noqa: F401
 from . import clarity           # noqa: F401
@@ -28,6 +29,7 @@ from . import split_tone        # noqa: F401
 
 from .exposure import ExposureStage
 from .white_balance import WhiteBalanceStage
+from .compose import ComposeStage
 from .huesat import HueSatStage
 from .tone_map import ToneStage
 from .clarity import ClarityStage
@@ -44,7 +46,7 @@ from .hsl import HslStage
 from .split_tone import SplitToneStage
 
 __all__ = [
-    "ExposureStage", "WhiteBalanceStage", "HueSatStage", "ToneStage",
+    "ExposureStage", "WhiteBalanceStage", "ComposeStage", "HueSatStage", "ToneStage",
     "ClarityStage", "DehazeStage", "DenoiseStage", "SharpenStage", "VibranceStage",
     "ColorCalStage", "CalibrationStage", "HslStage", "SkinStage", "StylizeStage",
     "RefineStage", "SplitToneStage",

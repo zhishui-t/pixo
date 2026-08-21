@@ -14,10 +14,11 @@ pytestmark = pytest.mark.gate
 _GATE_DIR = Path(__file__).resolve().parent
 _GOLDEN_MANIFEST = _GATE_DIR.parent / "goldens" / "gate" / "manifest.json"
 
-# 12 个调整 feature 的 L0 门禁文件（文件名必须与矩阵一致）。
+# 13 个调整 feature 的 L0 门禁文件（文件名必须与矩阵一致）。
 _L0_FILES = {
     "exposure": "test_gate_exposure.py",
     "whitebalance": "test_gate_whitebalance.py",
+    "compose": "test_gate_compose.py",
     "curves/tone": "test_gate_curves.py",
     "huesat": "test_gate_huesat.py",
     "clarity": "test_gate_clarity.py",

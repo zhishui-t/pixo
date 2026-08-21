@@ -168,10 +168,11 @@ def test_probe_files_written(tmp_path):
 
     pipe.run(ctx, probe_dir=tmp_path)
 
-    # 实际执行链: exposure → whitebalance → tone → clarity → colorcal → refine
-    # (huesat/stylize/skin 被 wants 跳过, 不落盘)
-    for fname in ("01_exposure.jpg", "02_whitebalance.jpg", "03_tone.jpg",
-                  "04_clarity.jpg", "05_colorcal.jpg", "06_refine.jpg"):
+    # 实际执行链: exposure → whitebalance → compose → tone → clarity → colorcal
+    # → refine (huesat/stylize/skin 被 wants 跳过, 不落盘)
+    for fname in ("01_exposure.jpg", "02_whitebalance.jpg", "03_compose.jpg",
+                  "04_tone.jpg", "05_clarity.jpg", "06_colorcal.jpg",
+                  "07_refine.jpg"):
         assert (tmp_path / fname).exists(), f"缺少 probe 文件 {fname}"
 
 
@@ -190,16 +191,17 @@ def test_preset_loads_and_describe_order():
 
 
 def test_default_stages_contains_huesat():
-    # Phase 1 集成: 默认链扩为 12 段 (新增 calibration/hsl/split_tone, 默认 no-op)
-    assert DEFAULT_STAGES == ["exposure", "whitebalance", "huesat", "tone",
-                              "clarity", "colorcal", "calibration", "hsl",
-                              "split_tone", "skin", "stylize", "refine"]
+    # P0-1 集成: 默认链扩为 13 段 (compose 插在 whitebalance 后; calibration/hsl/split_tone 默认 no-op)
+    assert DEFAULT_STAGES == ["exposure", "whitebalance", "compose", "huesat",
+                              "tone", "clarity", "colorcal", "calibration",
+                              "hsl", "split_tone", "skin", "stylize", "refine"]
 
 
 def test_stage_orders_renumbered():
     orders = {s: cls.order for s, cls in available_stages().items()}
     assert orders["exposure"] == 10
     assert orders["whitebalance"] == 20
+    assert orders["compose"] == 22
     assert orders["huesat"] == 25
     assert orders["tone"] == 30
     assert orders["colorcal"] == 50

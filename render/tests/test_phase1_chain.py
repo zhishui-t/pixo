@@ -1,4 +1,4 @@
-"""Phase 1 集成: 默认 12 段链与旧 9 段链逐位一致 + 新增 Stage 注册/order。"""
+"""Phase 1 集成: 默认 13 段链与旧 9 段链逐位一致 + 新增 Stage 注册/order。"""
 from __future__ import annotations
 
 import numpy as np
@@ -45,21 +45,21 @@ def _run_chain(stages, prof):
     return ctx.image
 
 
-def test_default_chain_12_vs_9_pixel_identical():
-    """默认 12 段链与旧 9 段链像素输出逐位一致 (新增 Stage 默认 wants=False)。"""
+def test_default_chain_13_vs_9_pixel_identical():
+    """默认 13 段链与旧 9 段链像素输出逐位一致 (新增 Stage 默认 no-op/恒等)。"""
     prof = _profile()
     out9 = _run_chain(OLD_9, prof)
-    out12 = _run_chain(DEFAULT_STAGES, prof)
-    assert out9.shape == out12.shape
-    diff = float(np.abs(out9 - out12).max())
-    assert diff == 0.0, f"默认链 9 段 vs 12 段输出不一致 max|Δ|={diff}"
+    out13 = _run_chain(DEFAULT_STAGES, prof)
+    assert out9.shape == out13.shape
+    diff = float(np.abs(out9 - out13).max())
+    assert diff == 0.0, f"默认链 9 段 vs 13 段输出不一致 max|Δ|={diff}"
 
 
-def test_default_chain_contains_12_stages():
-    assert len(DEFAULT_STAGES) == 12
-    assert DEFAULT_STAGES == ["exposure", "whitebalance", "huesat", "tone",
-                              "clarity", "colorcal", "calibration", "hsl",
-                              "split_tone", "skin", "stylize", "refine"]
+def test_default_chain_contains_13_stages():
+    assert len(DEFAULT_STAGES) == 13
+    assert DEFAULT_STAGES == ["exposure", "whitebalance", "compose", "huesat",
+                              "tone", "clarity", "colorcal", "calibration",
+                              "hsl", "split_tone", "skin", "stylize", "refine"]
 
 
 def test_phase1_stages_registered_order_increasing():
