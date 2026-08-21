@@ -1,0 +1,47 @@
+{
+  "dcp": "K:\\work\\project\\pixo\\pixo\\render\\profiles\\Nikon Z 5 2 RawLab Preview Baseline.dcp",
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "huesat",
+    "tone",
+    "clarity",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "baseline"
+    },
+    "whitebalance": {
+      "warmth": 0.9,
+      "warmth_b0": 1.79,
+      "warmth_b1": 2.287,
+      "warmth_r_slope": 0.0,
+      "warmth_g_slope": 0.1,
+      "warmth_b_slope": 0.26,
+      "trim": [
+        0.77529,
+        1.06815,
+        0.8966
+      ]
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "tone": {
+      "profile_curve": true,
+      "eotf": "srgb",
+      "brightness": 0.0
+    },
+    "colorcal": {
+      "neutral_mode": "off",
+      "saturation": -0.0
+    },
+    "refine": {
+      "highlight_desat": 0.25
+    }
+  }
+}

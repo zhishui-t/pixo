@@ -13,8 +13,8 @@ import pytest
 pytestmark = [pytest.mark.gate, pytest.mark.gate_e2e]
 
 _RAW_PATH = os.environ.get("RAW_PATH", "")
-_DCP = Path(__file__).resolve().parents[2] / "profiles" / \
-    "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
+_DCP = (Path(__file__).resolve().parents[3] / "pixo" / "render"
+                / "profiles" / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp")
 
 
 @pytest.mark.skipif(not _RAW_PATH, reason="RAW_PATH not set")

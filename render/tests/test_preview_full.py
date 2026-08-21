@@ -17,7 +17,7 @@ import render.api as api
 from render.api import Renderer
 from render.pipeline.context import DOMAIN_GAMMA_RGB
 
-_DCP = r"K:\work\project\RawFlow\render\profiles\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
+_DCP = r"K:\work\project\pixo\pixo\render\profiles\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 
 
 class _FakeRaw:

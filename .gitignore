@@ -27,13 +27,13 @@ apply.spec.ts
 *.mjs
 
 # ---- C++ native build artifacts ----
-render/native/build/
-render/_native/*.dll
-render/_native/*.so
-render/_native/*.pyd
+pixo/render/native/build/
+pixo/render/_native/*.dll
+pixo/render/_native/*.so
+pixo/render/_native/*.pyd
 
 # Extra native build dirs
-render/native/build*/
+pixo/render/native/build*/
 
 # pixo.render decode disk cache
-render/bench/cache/
+pixo/render/bench/cache/

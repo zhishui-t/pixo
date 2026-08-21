@@ -230,7 +230,7 @@ def test_yoloe_segmenter_converts_rgb_float_to_bgr_uint8() -> None:
 
 def test_agpl_imports_isolated_in_yoloe_only() -> None:
     """AGPL 隔离：render/vision 内只有 yoloe.py 直接 import torch/ultralytics。"""
-    vision_dir = Path(__file__).resolve().parents[2] / "vision"
+    vision_dir = (Path(__file__).resolve().parents[2] / "pixo" / "vision")
     allowed = vision_dir / "segmenters" / "yoloe.py"
     forbidden_imports = {
         "ultralytics",
