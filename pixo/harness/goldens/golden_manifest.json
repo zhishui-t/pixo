@@ -1,0 +1,202 @@
+{
+  "schema": "pixo-goldens-v0",
+  "version": "0.1.0",
+  "samples": [
+    {
+      "photo_id": "syn_exposure_001",
+      "type": "exposure",
+      "input": {
+        "path": null,
+        "hash": null,
+        "synthetic": true,
+        "generator": "pixo.harness.goldens.samples",
+        "seed": 1,
+        "frames": []
+      },
+      "mask_ref": {
+        "face": "synthetic:face_ellipse",
+        "sky": "synthetic:sky_band",
+        "plant": "synthetic:plant_band"
+      },
+      "expected_metrics": {
+        "global.mean_luminance": 153.38,
+        "global.highlight_clip_ratio": 0.193793,
+        "global.shadow_clip_ratio": 0.003472,
+        "global.contrast": 0.5278,
+        "regions.face.mean_luminance": 207.01,
+        "regions.face.area_ratio": 0.188694,
+        "regions.sky.mean_luminance": 138.65,
+        "regions.sky.area_ratio": 0.395833,
+        "regions.plant.mean_luminance": 158.15,
+        "regions.plant.area_ratio": 0.447917
+      },
+      "version": "0.1.0",
+      "available": true,
+      "skip_reason": null
+    },
+    {
+      "photo_id": "syn_skin_001",
+      "type": "skin",
+      "input": {
+        "path": null,
+        "hash": null,
+        "synthetic": true,
+        "generator": "pixo.harness.goldens.samples",
+        "seed": 2,
+        "frames": []
+      },
+      "mask_ref": {
+        "face": "synthetic:face_ellipse",
+        "sky": "synthetic:sky_band",
+        "plant": "synthetic:plant_band"
+      },
+      "expected_metrics": {
+        "global.mean_luminance": 134.78,
+        "global.highlight_clip_ratio": 0.0,
+        "global.shadow_clip_ratio": 0.0,
+        "global.contrast": 0.1565,
+        "regions.face.mean_luminance": 164.89,
+        "regions.face.area_ratio": 0.188694,
+        "regions.sky.mean_luminance": 131.38,
+        "regions.sky.area_ratio": 0.395833,
+        "regions.plant.mean_luminance": 133.71,
+        "regions.plant.area_ratio": 0.447917
+      },
+      "version": "0.1.0",
+      "available": true,
+      "skip_reason": null
+    },
+    {
+      "photo_id": "syn_scene_001",
+      "type": "scene",
+      "input": {
+        "path": null,
+        "hash": null,
+        "synthetic": true,
+        "generator": "pixo.harness.goldens.samples",
+        "seed": 3,
+        "frames": []
+      },
+      "mask_ref": {
+        "face": "synthetic:face_ellipse",
+        "sky": "synthetic:sky_band",
+        "plant": "synthetic:plant_band"
+      },
+      "expected_metrics": {
+        "global.mean_luminance": 116.93,
+        "global.highlight_clip_ratio": 0.0,
+        "global.shadow_clip_ratio": 0.208333,
+        "global.contrast": 0.5679,
+        "regions.face.mean_luminance": 74.93,
+        "regions.face.area_ratio": 0.188694,
+        "regions.sky.mean_luminance": 176.76,
+        "regions.sky.area_ratio": 0.395833,
+        "regions.plant.mean_luminance": 104.84,
+        "regions.plant.area_ratio": 0.447917
+      },
+      "version": "0.1.0",
+      "available": true,
+      "skip_reason": null
+    },
+    {
+      "photo_id": "syn_burst_001",
+      "type": "burst",
+      "input": {
+        "path": null,
+        "hash": null,
+        "synthetic": true,
+        "generator": "pixo.harness.goldens.samples",
+        "seed": 4,
+        "frames": []
+      },
+      "mask_ref": {
+        "face": "synthetic:face_ellipse",
+        "sky": "synthetic:sky_band",
+        "plant": "synthetic:plant_band"
+      },
+      "expected_metrics": {
+        "global.mean_luminance": 124.54,
+        "global.highlight_clip_ratio": 0.0,
+        "global.shadow_clip_ratio": 0.056858,
+        "global.contrast": 0.5339,
+        "regions.face.mean_luminance": 82.47,
+        "regions.face.area_ratio": 0.188694,
+        "regions.sky.mean_luminance": 184.35,
+        "regions.sky.area_ratio": 0.395833,
+        "regions.plant.mean_luminance": 112.48,
+        "regions.plant.area_ratio": 0.447917
+      },
+      "version": "0.1.0",
+      "available": true,
+      "skip_reason": null
+    },
+    {
+      "photo_id": "raw_exposure_placeholder_001",
+      "type": "exposure",
+      "input": {
+        "path": "K:/data/pixo/goldens/exposure_001.NEF",
+        "hash": null,
+        "synthetic": false,
+        "generator": null,
+        "seed": null,
+        "frames": []
+      },
+      "mask_ref": {},
+      "expected_metrics": {},
+      "version": "0.1.0",
+      "available": false,
+      "skip_reason": "raw_missing"
+    },
+    {
+      "photo_id": "raw_skin_placeholder_001",
+      "type": "skin",
+      "input": {
+        "path": "K:/data/pixo/goldens/skin_001.NEF",
+        "hash": null,
+        "synthetic": false,
+        "generator": null,
+        "seed": null,
+        "frames": []
+      },
+      "mask_ref": {},
+      "expected_metrics": {},
+      "version": "0.1.0",
+      "available": false,
+      "skip_reason": "raw_missing"
+    },
+    {
+      "photo_id": "raw_scene_placeholder_001",
+      "type": "scene",
+      "input": {
+        "path": "K:/data/pixo/goldens/scene_001.NEF",
+        "hash": null,
+        "synthetic": false,
+        "generator": null,
+        "seed": null,
+        "frames": []
+      },
+      "mask_ref": {},
+      "expected_metrics": {},
+      "version": "0.1.0",
+      "available": false,
+      "skip_reason": "raw_missing"
+    },
+    {
+      "photo_id": "raw_burst_placeholder_001",
+      "type": "burst",
+      "input": {
+        "path": "K:/data/pixo/goldens/burst_001.NEF",
+        "hash": null,
+        "synthetic": false,
+        "generator": null,
+        "seed": null,
+        "frames": []
+      },
+      "mask_ref": {},
+      "expected_metrics": {},
+      "version": "0.1.0",
+      "available": false,
+      "skip_reason": "raw_missing"
+    }
+  ]
+}
