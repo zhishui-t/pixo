@@ -4,3 +4,5 @@ rawpy>=0.23
 numpy>=1.26
 opencv-python>=4.8
 exifread>=3.5
+fastapi>=0.115
+uvicorn>=0.30
