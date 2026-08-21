@@ -836,16 +836,35 @@ def _output(decision: str, params: dict, reasons: list, rule_ids: list,
     }
 
 
+def _style_card_rules(context: dict) -> list[dict]:
+    """从 context["style_cards"] 生成风格卡片建议规则。
+
+    风格卡片优先级为 6000（style_card），低于用户锁定（10000）与
+    用户软偏好（9000），满足 P2-6 的约束。
+    """
+    raw = context.get("style_cards") or []
+    if not raw:
+        return []
+    try:
+        from pixo.know.cards import build_style_card_rules
+        return build_style_card_rules(raw)
+    except Exception:
+        # 知识层缺失/异常不应阻断 Decide，回退为空规则。
+        return []
+
+
 def decide(context: Optional[dict], rules: Optional[Iterable[dict]] = None) -> dict:
     """执行一轮确定性 Decide 决策。
 
     Args:
         context: 输入上下文，可含 metrics / params / rules / targets /
-            iteration / locked_params / preview_overflow_ratio 等。
-        rules: 显式规则列表；缺省读 ``context["rules"]``。
+            style_cards / iteration / locked_params / preview_overflow_ratio 等。
+        rules: 显式规则列表；缺省读 ``context["rules"]``，并追加
+            ``context["style_cards"]`` 生成的风格卡片建议。
     """
     context = context or {}
-    rules = rules if rules is not None else context.get("rules") or []
+    rules = list(rules) if rules is not None else list(context.get("rules") or [])
+    rules.extend(_style_card_rules(context))
 
     # FINAL_QC 回退优先
     qc_value = (

@@ -7,6 +7,20 @@
 """
 from __future__ import annotations
 
+from .batch import (
+    BatchError,
+    BatchInput,
+    BatchResult,
+    BatchGroupResult,
+    PhotoResult,
+    HardFilterConfig,
+    HardFilterResult,
+    AestheticScore,
+    AgentVerdict,
+    MockAestheticScorer,
+    MockAgentSelector,
+    BatchPipeline,
+)
 from .loop import (
     LoopError,
     LoopResult,
@@ -17,6 +31,18 @@ from .loop import (
 )
 
 __all__ = [
+    "BatchPipeline",
+    "BatchInput",
+    "BatchResult",
+    "BatchGroupResult",
+    "PhotoResult",
+    "HardFilterConfig",
+    "HardFilterResult",
+    "AestheticScore",
+    "AgentVerdict",
+    "MockAestheticScorer",
+    "MockAgentSelector",
+    "BatchError",
     "SinglePhotoLoop",
     "run_single_photo_loop",
     "SyntheticRenderBackend",
