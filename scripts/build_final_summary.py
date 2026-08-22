@@ -8,6 +8,7 @@ from pathlib import Path
 REPORT_GLOB = "exports/auto/report/auto_report_*.json"
 REFINED_GLOB = "exports/auto/refined/refined_*.json"
 FULL_SCAN_GLOB = "exports/auto/full_scan/full_scan_*.json"
+MANUAL_FALLBACK_GLOB = "exports/auto/full_scan/manual_fallback_*.json"
 OUT_JSON = Path("exports/auto/final_assessment.json")
 OUT_MD = Path("exports/auto/SUMMARY.md")
 
@@ -66,6 +67,11 @@ def main():
     best = {}
     # full_scan is authoritative (full-resolution decisions from scratch)
     for f in glob.glob(FULL_SCAN_GLOB):
+        d = json.loads(Path(f).read_text(encoding="utf-8"))
+        for p in d.get("photos", []):
+            best[p["photo_id"]] = p
+    # manual fallback is authoritative for photos it covers
+    for f in glob.glob(MANUAL_FALLBACK_GLOB):
         d = json.loads(Path(f).read_text(encoding="utf-8"))
         for p in d.get("photos", []):
             best[p["photo_id"]] = p

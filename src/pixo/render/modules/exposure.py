@@ -358,7 +358,8 @@ class ExposureStage(Stage):
         # 锚点: 由 DCP 影调曲线反推 (曲线输出中灰 ≈117 对应的线性输入)
         explicit = self.p(ctx, "target", None)
         anchor = float(explicit) if explicit is not None else curve_anchor_target(ctx.prof)
-        target = anchor + float(self.p(ctx, "target_offset"))
+        offset = float(self.p(ctx, "target_offset"))
+        target = anchor
         ev = target - float(np.median(logy))
         # 基线曝光偏移 (DCP BaselineExposureOffset): 符号按 T2 结论 ev += offset
         #   (负值使整体更暗; 见 dcp.py 0xC7A5 注释)。
@@ -381,4 +382,7 @@ class ExposureStage(Stage):
         if p_hi > 0:
             ev_hi = np.log2(1.0 / p_hi)
             ev = min(ev, ev_hi)
+        # 用户/规则曝光偏移在自动曝光与高光保护决策之后施加，
+        # 确保负向 offset 也能如实压高光、正向 offset 可主动提亮。
+        ev += offset
         return ev
