@@ -42,3 +42,6 @@ src/pixo/render/bench/cache/
 # ---- Pixo frontend (Web UI) ----
 !frontend/package.json
 !frontend/package-lock.json
+
+# Frontend generated screenshots
+frontend/screenshots/
