@@ -300,7 +300,6 @@ def _flatten_decide_params(params: dict[str, Any]) -> dict[str, Any]:
     mode = exposure.get("mode", "auto")
     if isinstance(mode, (int, float)) and not isinstance(mode, bool):
         flat["exposure_ev"] = float(mode)
-        flat["Exposure"] = float(mode)
     for key, value in params.items():
         if key not in ("exposure", "compose"):
             flat[key] = value
