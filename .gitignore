@@ -46,3 +46,6 @@ src/pixo/render/bench/cache/
 
 # Frontend generated screenshots
 frontend/screenshots/
+
+# Auto-generated photo outputs and artifacts
+exports/
