@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
 import { ActionIcon, Badge, Group, NumberInput, Paper, ScrollArea, Select, Text, UnstyledButton } from '@mantine/core';
+import { Star } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import type { ColorLabel, Photo } from '../types';
 
 const COLORS: Array<{ id: ColorLabel; label: string; bg: string }> = [
-  { id: 'red', label: '红', bg: '#e03131' },
-  { id: 'yellow', label: '黄', bg: '#f59f00' },
-  { id: 'green', label: '绿', bg: '#2f9e44' },
-  { id: 'blue', label: '蓝', bg: '#1971c2' },
-  { id: 'purple', label: '紫', bg: '#9c36b5' },
+  { id: 'red', label: '红', bg: '#ff6b6b' },
+  { id: 'yellow', label: '黄', bg: '#ffd43b' },
+  { id: 'green', label: '绿', bg: '#69db7c' },
+  { id: 'blue', label: '蓝', bg: '#4dabf7' },
+  { id: 'purple', label: '紫', bg: '#da77f2' },
 ];
 
 export function Filmstrip() {
@@ -44,8 +45,8 @@ export function Filmstrip() {
   };
 
   return (
-    <Paper radius="md" withBorder p="xs" style={{ height: 205 }}>
-      <Group gap="xs" mb="xs">
+    <Paper radius="xl" p="md" style={{ height: 220, background: 'rgba(18,24,33,0.88)', boxShadow: '0 18px 48px rgba(0,0,0,0.36)' }}>
+      <Group gap="sm" mb="sm">
         <NumberInput
           size="xs"
           placeholder="星级"
@@ -53,7 +54,8 @@ export function Filmstrip() {
           max={5}
           value={filmFilter.rating ?? ''}
           onChange={(value) => setFilmFilter({ rating: typeof value === 'number' ? value : null })}
-          w={80}
+          w={78}
+          radius="md"
         />
         <Select
           size="xs"
@@ -62,13 +64,15 @@ export function Filmstrip() {
           onChange={(value) => setFilmFilter({ color: (value as ColorLabel | null) ?? '' })}
           data={COLORS.map((c) => ({ value: c.id, label: c.label }))}
           w={90}
+          radius="md"
         />
         <Select
           size="xs"
           value={filmFilter.status}
           onChange={(value) => setFilmFilter({ status: value ?? '全部' })}
           data={['全部', 'pending', 'processing', 'accepted', 'review'].map((v) => ({ value: v, label: v }))}
-          w={110}
+          w={105}
+          radius="md"
         />
         <Select
           size="xs"
@@ -76,56 +80,61 @@ export function Filmstrip() {
           value={filmFilter.scene || null}
           onChange={(value) => setFilmFilter({ scene: value ?? '' })}
           data={['portrait', 'landscape', 'night', 'street'].map((v) => ({ value: v, label: v }))}
-          w={110}
+          w={105}
+          radius="md"
         />
         <Select
           size="xs"
           value={sortBy}
           onChange={(value) => setSortBy((value as 'name' | 'rating' | 'date') ?? 'name')}
           data={[{ value: 'name', label: '文件名' }, { value: 'rating', label: '星级' }, { value: 'date', label: '时间' }]}
-          w={95}
+          w={92}
+          radius="md"
         />
       </Group>
-      <ScrollArea style={{ height: 140 }}>
-        <Group gap="sm" wrap="nowrap" align="flex-start">
-          {visible.map((photo) => (
-            <UnstyledButton key={photo.id} onClick={() => selectPhoto(photo.id)}>
-              <Paper
-                radius="md"
-                withBorder
-                p={6}
-                w={140}
-                style={{
-                  borderColor: activePhotoId === photo.id ? 'var(--mantine-color-indigo-5)' : undefined,
-                  background: activePhotoId === photo.id ? 'rgba(99,102,241,0.10)' : undefined,
-                }}
-              >
-                <img src={photo.thumbnail} alt={photo.name} style={{ width: '100%', borderRadius: 6, aspectRatio: '3/2', objectFit: 'cover' }} />
-                <Group gap={4} mt={6}>
-                  {COLORS.map((c) => (
-                    <ActionIcon
-                      key={c.id}
-                      size="xs"
-                      variant="transparent"
-                      onClick={(e) => { e.stopPropagation(); toggleColor(photo, c.id); }}
-                      style={{ border: '1px solid var(--mantine-color-dark-4)' }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: 4, background: c.bg }} />
-                    </ActionIcon>
-                  ))}
-                </Group>
-                <Group gap={2} mt={4}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <ActionIcon key={n} size="xs" variant="transparent" onClick={(e) => { e.stopPropagation(); setPhotoRating(activeProjectId, photo.id, n); }}>
-                      <Text size="xs" c={(photo.rating ?? 0) >= n ? 'yellow.4' : 'dark.3'}>★</Text>
-                    </ActionIcon>
-                  ))}
-                </Group>
-                <Text size="xs" truncate>{photo.name}</Text>
-                {photo.burstGroup && <Badge size="xs" variant="light" color="indigo" mt={4}>{photo.burstGroup}</Badge>}
-              </Paper>
-            </UnstyledButton>
-          ))}
+      <ScrollArea style={{ height: 150 }}>
+        <Group gap="md" wrap="nowrap" align="flex-start">
+          {visible.map((photo) => {
+            const active = activePhotoId === photo.id;
+            return (
+              <UnstyledButton key={photo.id} onClick={() => selectPhoto(photo.id)}>
+                <Paper
+                  className="film-card"
+                  radius="lg"
+                  p={8}
+                  w={148}
+                  style={{
+                    background: 'rgba(22,29,40,0.94)',
+                    boxShadow: active ? '0 0 0 2px rgba(108,140,255,0.75), 0 14px 36px rgba(108,140,255,0.18)' : '0 8px 22px rgba(0,0,0,0.28)',
+                    transition: 'transform .15s ease, box-shadow .15s ease',
+                  }}
+                >
+                  <img src={photo.thumbnail} alt={photo.name} style={{ width: '100%', borderRadius: 10, aspectRatio: '3/2', objectFit: 'cover' }} />
+                  <Group gap={5} mt={8}>
+                    {COLORS.map((c) => (
+                      <ActionIcon
+                        key={c.id}
+                        size="xs"
+                        variant="transparent"
+                        onClick={(e) => { e.stopPropagation(); toggleColor(photo, c.id); }}
+                      >
+                        <span style={{ width: 10, height: 10, borderRadius: 5, background: c.bg, boxShadow: photo.colorLabel === c.id ? `0 0 8px ${c.bg}` : 'none', opacity: photo.colorLabel === c.id ? 1 : 0.65 }} />
+                      </ActionIcon>
+                    ))}
+                  </Group>
+                  <Group gap={1} mt={4}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <ActionIcon key={n} size="sm" variant="transparent" onClick={(e) => { e.stopPropagation(); setPhotoRating(activeProjectId, photo.id, n); }}>
+                        <Star size={13} fill={(photo.rating ?? 0) >= n ? '#ffd43b' : 'transparent'} color={(photo.rating ?? 0) >= n ? '#ffd43b' : '#5A6472'} />
+                      </ActionIcon>
+                    ))}
+                  </Group>
+                  <Text size="xs" truncate mt={4}>{photo.name}</Text>
+                  {photo.burstGroup && <Badge size="xs" variant="light" color="indigo" mt={4}>{photo.burstGroup}</Badge>}
+                </Paper>
+              </UnstyledButton>
+            );
+          })}
           {visible.length === 0 && <Text c="dimmed" size="sm">当前项目暂无照片</Text>}
         </Group>
       </ScrollArea>

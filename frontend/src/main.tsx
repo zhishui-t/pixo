@@ -7,27 +7,52 @@ import App from './App';
 import './styles.css';
 
 const theme = createTheme({
-  primaryColor: 'indigo',
-  defaultRadius: 'md',
+  primaryColor: 'electric',
+  primaryShade: { light: 5, dark: 5 },
+  defaultRadius: 'lg',
   fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    'Inter, "Segoe UI", "-apple-system", BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif',
   headings: {
     fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      'Inter, "Segoe UI", "-apple-system", BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontWeight: '700',
   },
   colors: {
-    indigo: [
+    electric: [
       '#eef2ff',
-      '#e0e7ff',
-      '#c7d2fe',
-      '#a5b4fc',
-      '#818cf8',
-      '#6366f1',
-      '#4f46e5',
-      '#4338ca',
-      '#3730a3',
-      '#312e81',
+      '#dce5ff',
+      '#bfcfff',
+      '#a3b8ff',
+      '#8ba5ff',
+      '#6C8CFF',
+      '#4f6ef0',
+      '#3f57c9',
+      '#2f429f',
+      '#233070',
     ],
+    dark: [
+      '#C1C7D0',
+      '#A6AFBB',
+      '#7A8494',
+      '#5A6472',
+      '#3B4452',
+      '#242D3B',
+      '#161D28',
+      '#121821',
+      '#0B0F14',
+      '#070A0E',
+    ],
+  },
+  shadows: {
+    md: '0 10px 32px rgba(0, 0, 0, 0.38)',
+    lg: '0 18px 48px rgba(0, 0, 0, 0.45)',
+  },
+  spacing: {
+    xs: '8px',
+    sm: '12px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px',
   },
 });
 

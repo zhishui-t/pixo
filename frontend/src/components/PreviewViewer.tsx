@@ -5,6 +5,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from 'react';
 import { ActionIcon, Badge, Group, Paper, SegmentedControl, Text } from '@mantine/core';
+import { Image as ImageIcon, Maximize2, Move, ZoomIn, ZoomOut } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { getOriginalSource, getPreviewSource } from '../api';
 
@@ -42,13 +43,24 @@ export function PreviewViewer() {
   };
 
   return (
-    <Paper radius="md" withBorder style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Group justify="space-between" p="xs" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
+    <Paper
+      radius="xl"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
+        background: 'rgba(11,15,20,0.82)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+      }}
+    >
+      <Group justify="space-between" p="sm" style={{ backdropFilter: 'blur(16px)', background: 'rgba(18,24,33,0.72)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         <SegmentedControl
           size="xs"
           value={viewMode}
           onChange={(value) => setViewMode(value as 'original' | 'split' | 'processed')}
           data={[{ value: 'original', label: '原图' }, { value: 'split', label: 'Split' }, { value: 'processed', label: '处理' }]}
+          radius="lg"
         />
         <Group gap="xs">
           <Badge variant="light" color="indigo" size="sm">gen #{generation}</Badge>
@@ -112,12 +124,12 @@ export function PreviewViewer() {
         )}
       </div>
 
-      <Group p="xs" gap="xs" style={{ borderTop: '1px solid var(--mantine-color-dark-4)' }}>
-        <ActionIcon variant="light" onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}>−</ActionIcon>
-        <ActionIcon variant="light" onClick={() => setZoom(Math.min(4, zoom + 0.1))}>＋</ActionIcon>
-        <ActionIcon variant="light" onClick={() => setZoom(1)}>Fit</ActionIcon>
-        <ActionIcon variant="light" onClick={() => setZoom(1)}>1:1</ActionIcon>
-        <Text size="xs" c="dimmed">滚轮缩放 / 拖拽平移 / 分屏拖动</Text>
+      <Group p="sm" gap="xs" justify="center" style={{ backdropFilter: 'blur(12px)', background: 'rgba(18,24,33,0.72)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <ActionIcon variant="light" radius="md" onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}><ZoomOut size={15} /></ActionIcon>
+        <ActionIcon variant="light" radius="md" onClick={() => setZoom(Math.min(4, zoom + 0.1))}><ZoomIn size={15} /></ActionIcon>
+        <ActionIcon variant="light" radius="md" onClick={() => setZoom(1)}><Maximize2 size={15} /></ActionIcon>
+        <ActionIcon variant="light" radius="md" onClick={() => setZoom(1)}><Move size={15} /></ActionIcon>
+        <ActionIcon variant="light" radius="md"><ImageIcon size={15} /></ActionIcon>
       </Group>
     </Paper>
   );

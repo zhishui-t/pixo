@@ -1,6 +1,6 @@
-# Pixo Frontend (Web UI v3)
+# Pixo Frontend (Web UI v4)
 
-React 18 + Vite + TypeScript + Mantine 的本地开发版 Pixo 修图工作台。
+React 18 + Vite + TypeScript + Mantine + Lucide 的现代修图工作台。
 当前不打包、不做安装包；默认使用 mock 数据，配置 `VITE_PIXO_API_URL`
 后可对接 `pixo-service`。
 
@@ -30,16 +30,17 @@ npm run dev
 VITE_PIXO_API_URL=http://localhost:9777
 ```
 
-## UI v3
+## UI v4 现代感精修
 
-- 使用 **Mantine** 专业组件库重构（`@mantine/core` + `@mantine/hooks` + Emotion）
-- `MantineProvider` 暗色主题，主色 indigo，统一字体/圆角/间距
-- `AppShell` 布局：Header / Navbar（项目列表）/ Main（预览 + 底片条）/ Aside（右侧双 Tab）
-- 项目列表：搜索、新建、切换
-- 底片条：缩略图、0-5 星、红/黄/绿/蓝/紫标签、过滤与排序
-- 风格 / AI：Mantine Card + Badge + 推荐卡 + 每项目独立聊天
-- 调整：Mantine Accordion / Slider / NumberInput 分组（直方图、基本、曲线、HSL、色彩校准、细节、分离色调）
-- 预览：Mantine SegmentedControl / ActionIcon 工具栏，保留 before/after、缩放、拖拽
+- 视觉主题：深邃近黑 `#0B0F14`，面板 `#121821 / #161D28`，电光蓝 `#6C8CFF`
+- 引入 **lucide-react** 图标，Button / ActionIcon / 操作区改为图标 + 文字
+- Mantine 全局主题：Inter 优先字体、大圆角、柔和阴影、更大留白
+- AppShell：毛玻璃 Header，项目列表渐变激活条，右侧 segmented pill Tab
+- 底片条：星级 Star 图标、颜色圆点、hover 放大、选中发光环
+- 预览区：悬浮毛玻璃工具栏、软阴影画布、Lucide 缩放/定位图标
+- 风格/AI：渐变作品卡、渐变推荐卡、现代聊天气泡
+- 调整：Mantine Accordion + Slider + NumberInput 分组，精致直方图
+- 保留全部功能：项目切换、底片条、星级/颜色、风格/AI、对话、调整、预览
 
 ## 质量检查
 
@@ -49,4 +50,4 @@ npm run build
 npm run test:e2e     # 先启动 npm run dev，再运行
 ```
 
-截图输出：`frontend/screenshots/ui_v3.png`
+截图输出：`frontend/screenshots/ui_v4.png`
