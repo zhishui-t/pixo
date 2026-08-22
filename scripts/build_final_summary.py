@@ -97,6 +97,8 @@ def main():
             "state": "ACCEPTED" if not issues else "MANUAL_REVIEW",
             "params": params,
             "after_path": after_path,
+            "before_path": str(Path("exports/auto/full_scan") / f"{pid}_before.jpg")
+                if (Path("exports/auto/full_scan") / f"{pid}_before.jpg").exists() else None,
             "mean_luminance": g.get("mean_luminance"),
             "highlight_clip_ratio": g.get("highlight_clip_ratio"),
             "shadow_clip_ratio": g.get("shadow_clip_ratio"),
@@ -117,6 +119,8 @@ def main():
         mark = "✅" if r["qualified"] else "⚠️"
         lines.append(f"## {mark} {r['photo_id']}")
         lines.append(f"- 输出: `{r['after_path']}`")
+        if r.get("before_path"):
+            lines.append(f"- 处理前预览: `{r['before_path']}`")
         lines.append(f"- 参数: `{r['params']}`")
         lines.append(f"- L={r['mean_luminance']:.0f} 高光={r['highlight_clip_ratio']:.2%} "
                      f"阴影={r['shadow_clip_ratio']:.2%} 对比={r['contrast']:.2f}")
