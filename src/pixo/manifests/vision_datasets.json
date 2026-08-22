@@ -7,7 +7,7 @@
       "id": "guanlan-calibration-synthetic",
       "name": "Guanlan AI 校准集（Subject/Scene/Focus 反例矩阵）",
       "purpose": "主体判定、场景、光圈/焦段、模糊边界等视觉规则校准",
-      "path_or_source": "K:/work/project/guanlan/datasets/calibration",
+      "path_or_source": "$GUANLAN_ROOT/datasets/calibration",
       "size": "156 JPG + 155 TXT 标注 + labels.json",
       "size_bytes": null,
       "license": "内部 AI 生成，来源模型条款需复核（doubao-seedream-5.0）",
@@ -19,7 +19,7 @@
       "id": "guanlan-landscape-yolo96",
       "name": "Guanlan Landscape YOLO 96 类数据集",
       "purpose": "风光/场景目标检测与分割标注参考（96 类含 sky/sea/mountain 等）",
-      "path_or_source": "K:/work/project/guanlan/datasets/landscape",
+      "path_or_source": "$GUANLAN_ROOT/datasets/landscape",
       "size": "train 28292 图 + val 4952 图，含 labels",
       "size_bytes": null,
       "license": "内部数据集，许可需复核；不建议直接发布",
@@ -62,18 +62,6 @@
       "publishable": false,
       "pixo_status": "planned_placeholder",
       "notes": "当前仅登记路径，不包含实际 RAW；缺文件 skip。"
-    },
-    {
-      "id": "guanlan-cleaned-training-data",
-      "name": "Guanlan 已清理模型训练数据（历史）",
-      "purpose": "YOLO/年龄性别自训数据已删除，仅记录清理决定",
-      "path_or_source": "已删除/不保留",
-      "size": null,
-      "size_bytes": null,
-      "license": "不适用",
-      "publishable": false,
-      "pixo_status": "removed_not_tracked",
-      "notes": "避免重新引入训练数据；后续统一用开放模型/合成金样本。"
     }
   ]
 }
