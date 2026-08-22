@@ -10,7 +10,6 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from .aesthetic import aesthetic_health_info
-from .context import clip_health_info
 from .geometry import horizon_health_info
 from .person import fairface_health_info
 
@@ -174,7 +173,6 @@ def vision_health(
     aesthetic_info = _safe_health(aesthetic_health_info)
     horizon_info = _safe_health(horizon_health_info)
     fairface_info = _safe_health(fairface_health_info)
-    clip_info = _safe_health(clip_health_info)
     overall_ready = bool(real_info.get("ready", False))
 
     return {
@@ -196,8 +194,6 @@ def vision_health(
             "horizon_detector": dict(horizon_info),
             "fairface": dict(fairface_info),
             "fairface_age": dict(fairface_info),
-            "clip": dict(clip_info),
-            "clip_context": dict(clip_info),
         },
         "mock_segmenter": dict(mock_info),
         "mock": dict(mock_info),
@@ -206,7 +202,6 @@ def vision_health(
         "aesthetic": dict(aesthetic_info),
         "horizon": dict(horizon_info),
         "fairface": dict(fairface_info),
-        "clip": dict(clip_info),
     }
 
 

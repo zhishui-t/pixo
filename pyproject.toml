@@ -22,7 +22,6 @@ dependencies = [
 pixo-render = []
 pixo-vision = [
     "onnxruntime>=1.16",
-    "tokenizers>=0.15",
 ]
 pixo-vision-models = [
     "torch>=2.0",

@@ -21,8 +21,6 @@ def test_vision_models_manifest_loads():
     assert "aesthetic-scorer" in ids
     assert "openai-clip-vit-base-patch32" in ids
     assert "fairface-onnx" in ids
-    assert "chinese-clip-vision-fp32-onnx" in ids
-    assert "chinese-clip-text-fp32-onnx" in ids
 
 
 def test_vision_models_fields_complete():

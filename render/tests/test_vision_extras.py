@@ -1,9 +1,9 @@
-"""P2-8 视觉关键算法补充单测。
+"""P2-8 视觉关键算法补充单测（不含 CLIP）。
 
 覆盖：
   - pixo.vision 新算法 API 可导入；
   - 水平线检测纯算法；
-  - Aesthetic/FairFace/CLIP 无模型时的懒加载与降级；
+  - Aesthetic/FairFace 无模型时的懒加载与降级；
   - vision_health 包含新增模型健康信息；
   - Aesthetic 七维评分（mock 推理）维度映射。
 """
@@ -16,7 +16,6 @@ from pixo.vision import (
     FairFaceAge,
     HorizonDetector,
     PixoAestheticScorer,
-    PixoClipContext,
     detect_horizon_angle,
     vision_health,
 )
@@ -28,7 +27,6 @@ def test_new_vision_apis_importable():
     assert PixoAestheticScorer is not None
     assert HorizonDetector is not None
     assert FairFaceAge is not None
-    assert PixoClipContext is not None
     assert callable(detect_horizon_angle)
     assert set(PIXO_DIMENSIONS) == {
         "overall", "quality", "composition", "lighting", "color",
@@ -66,22 +64,11 @@ def test_fairface_missing_model_degrades():
     assert age.health_info()["ready"] is False
 
 
-def test_clip_missing_model_degrades():
-    """CLIP 模型缺失时 classify 返回空列表。"""
-    ctx = PixoClipContext(
-        model_path="missing_clip.onnx",
-        tokenizer_path="missing_tokenizer.json",
-    )
-    img = np.zeros((64, 64, 3), dtype=np.uint8)
-    assert ctx.classify(img, ["人像", "风景"]) == []
-    assert ctx.health_info()["ready"] is False
-
-
 def test_vision_health_includes_new_models():
-    """vision_health 包含 aesthetic/horizon/fairface/clip 信息。"""
+    """vision_health 包含 aesthetic/horizon/fairface 信息。"""
     health = vision_health()
     models = health["models"]
-    for key in ("aesthetic", "horizon", "fairface", "clip"):
+    for key in ("aesthetic", "horizon", "fairface"):
         assert key in models
         assert "ready" in models[key]
     assert models["horizon"]["ready"] is True
@@ -103,7 +90,6 @@ def test_aesthetic_mock_scorer_maps_7_dimensions():
 
     class _FakeScorer:
         def __call__(self, **kwargs):
-            # 返回 7 个 [[score]] 形状的列表，模拟模型 7 个 head。
             return tuple([[[float(i)]] for i in range(1, 8)])
 
     scorer = PixoAestheticScorer(model_path="missing.pt")
@@ -116,8 +102,6 @@ def test_aesthetic_mock_scorer_maps_7_dimensions():
     result = scorer.score(img)
     assert result is not None
     assert set(result) == set(PIXO_DIMENSIONS)
-    # 内部 7 个 head 顺序: overall/technical_quality/composition/
-    # lighting/color_harmony/depth_of_field/content
     assert result["overall"] == pytest.approx(1.0)
     assert result["quality"] == pytest.approx(2.0)
     assert result["composition"] == pytest.approx(3.0)

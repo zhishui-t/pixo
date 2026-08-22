@@ -64,42 +64,6 @@
       "notes": "可商用但需署名；后续可迁 pixo/vision/person.py。"
     },
     {
-      "id": "chinese-clip-vision-fp32-onnx",
-      "name": "chinese-clip-vision-fp32.onnx",
-      "purpose": "中文语义图像编码（场景/背景/主体枚举）",
-      "path_or_source": "K:/work/project/guanlan/models/chinese-clip-vision-fp32.onnx",
-      "size": "329 MB",
-      "size_bytes": 344963070,
-      "license": "MIT / 需按 Chinese-CLIP 仓库核验",
-      "publishable": true,
-      "pixo_status": "reference_only",
-      "notes": "FP32 双塔有区分度，Pixo 暂未接入。"
-    },
-    {
-      "id": "chinese-clip-text-fp32-onnx",
-      "name": "chinese-clip-text-fp32.onnx",
-      "purpose": "中文语义文本编码（场景/背景/主体枚举）",
-      "path_or_source": "K:/work/project/guanlan/models/chinese-clip-text-fp32.onnx",
-      "size": "390 MB",
-      "size_bytes": 408491787,
-      "license": "MIT / 需按 Chinese-CLIP 仓库核验",
-      "publishable": true,
-      "pixo_status": "reference_only",
-      "notes": "与 vision fp32 成对使用；Pixo 暂未接入。"
-    },
-    {
-      "id": "chinese-clip-vision-q4f16-onnx",
-      "name": "chinese-clip-vision-q4f16.onnx",
-      "purpose": "旧版量化中文视觉编码（已弃用，保留对比）",
-      "path_or_source": "K:/work/project/guanlan/models/chinese-clip-vision-q4f16.onnx",
-      "size": "126 MB",
-      "size_bytes": 131794439,
-      "license": "MIT / 需按 Chinese-CLIP 仓库核验",
-      "publishable": true,
-      "pixo_status": "deprecated_reference",
-      "notes": "fp32 已取代；仅历史/对比用。"
-    },
-    {
       "id": "yunet-face-detector",
       "name": "face_detection_yunet_2023mar.onnx",
       "purpose": "人脸检测/关键点",

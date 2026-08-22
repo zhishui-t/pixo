@@ -26,7 +26,6 @@ from .aesthetic import (
     aesthetic_health_info,
     get_aesthetic,
 )
-from .context import PixoClipContext, clip_health_info, get_clip_context
 from .geometry import (
     HorizonDetector,
     detect_horizon_angle,
@@ -65,9 +64,6 @@ __all__ = [
     "FairFaceAge",
     "get_fairface_age",
     "fairface_health_info",
-    "PixoClipContext",
-    "get_clip_context",
-    "clip_health_info",
     "vision_health",
     "get_yoloe_segmenter",
     "VISION_PACKAGE_VERSION",
