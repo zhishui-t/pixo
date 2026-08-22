@@ -1,0 +1,139 @@
+{
+  "schema_version": "1.0",
+  "updated": "2026-08-22",
+  "description": "Pixo Vision 相关模型清单，仅登记不拷贝大文件。",
+  "models": [
+    {
+      "id": "yoloe-26l-seg",
+      "name": "YOLOE-26L-seg",
+      "purpose": "开放词汇实例分割/主体定位，输出 prompt mask",
+      "path_or_source": "K:/work/project/guanlan/models/yoloe-26l-seg.pt",
+      "size": "76 MB",
+      "size_bytes": 79417413,
+      "license": "AGPL-3.0",
+      "publishable": false,
+      "pixo_status": "adapter_in_pixo_vision_segmenters_yoloe",
+      "notes": "产品化前必须替换或购买 Ultralytics 企业授权；只允许通过 Segmenter 接口调用。"
+    },
+    {
+      "id": "mobileclip2-b",
+      "name": "mobileclip2_b.ts",
+      "purpose": "YOLOE 内置英文文本编码器，用于 prompt-free 开放词汇",
+      "path_or_source": "K:/work/project/guanlan/models/mobileclip2_b.ts",
+      "size": "243 MB",
+      "size_bytes": 253794476,
+      "license": "AGPL-3.0 / 随 Ultralytics 模型链，需单独核验",
+      "publishable": false,
+      "pixo_status": "bundled_with_yoloe_adapter",
+      "notes": "英文 CLIP 编码器，中文提示词无效；许可随模型链核验。"
+    },
+    {
+      "id": "aesthetic-scorer",
+      "name": "aesthetic_scorer.pt",
+      "purpose": "7 维美学评分（整体/技术/构图/光影/色彩/景深/内容）",
+      "path_or_source": "K:/work/project/guanlan/models/aesthetic_scorer.pt",
+      "size": "334 MB",
+      "size_bytes": 349912662,
+      "license": "需核验（来源 rsinema/aesthetic-scorer）",
+      "publishable": false,
+      "pixo_status": "migration_candidate",
+      "notes": "Pixo 后续 P2 可迁移到 pixo/vision/aesthetic.py；发布前需确认模型许可。"
+    },
+    {
+      "id": "openai-clip-vit-base-patch32",
+      "name": "openai/clip-vit-base-patch32",
+      "purpose": "aesthetic_scorer 的预训练 backbone",
+      "path_or_source": "HuggingFace 缓存 openai/clip-vit-base-patch32",
+      "size": "HuggingFace 缓存",
+      "size_bytes": null,
+      "license": "MIT（OpenAI CLIP）",
+      "publishable": true,
+      "pixo_status": "external_backbone_reference",
+      "notes": "backbone 随 HuggingFace 下载，不随 Pixo 仓库拷贝。"
+    },
+    {
+      "id": "fairface-onnx",
+      "name": "fairface.onnx",
+      "purpose": "年龄/性别/种族分类（9 组年龄桶）",
+      "path_or_source": "K:/work/project/guanlan/models/fairface.onnx",
+      "size": "82 MB",
+      "size_bytes": 85160429,
+      "license": "CC BY 4.0",
+      "publishable": true,
+      "pixo_status": "migration_candidate",
+      "notes": "可商用但需署名；后续可迁 pixo/vision/person.py。"
+    },
+    {
+      "id": "chinese-clip-vision-fp32-onnx",
+      "name": "chinese-clip-vision-fp32.onnx",
+      "purpose": "中文语义图像编码（场景/背景/主体枚举）",
+      "path_or_source": "K:/work/project/guanlan/models/chinese-clip-vision-fp32.onnx",
+      "size": "329 MB",
+      "size_bytes": 344963070,
+      "license": "MIT / 需按 Chinese-CLIP 仓库核验",
+      "publishable": true,
+      "pixo_status": "reference_only",
+      "notes": "FP32 双塔有区分度，Pixo 暂未接入。"
+    },
+    {
+      "id": "chinese-clip-text-fp32-onnx",
+      "name": "chinese-clip-text-fp32.onnx",
+      "purpose": "中文语义文本编码（场景/背景/主体枚举）",
+      "path_or_source": "K:/work/project/guanlan/models/chinese-clip-text-fp32.onnx",
+      "size": "390 MB",
+      "size_bytes": 408491787,
+      "license": "MIT / 需按 Chinese-CLIP 仓库核验",
+      "publishable": true,
+      "pixo_status": "reference_only",
+      "notes": "与 vision fp32 成对使用；Pixo 暂未接入。"
+    },
+    {
+      "id": "chinese-clip-vision-q4f16-onnx",
+      "name": "chinese-clip-vision-q4f16.onnx",
+      "purpose": "旧版量化中文视觉编码（已弃用，保留对比）",
+      "path_or_source": "K:/work/project/guanlan/models/chinese-clip-vision-q4f16.onnx",
+      "size": "126 MB",
+      "size_bytes": 131794439,
+      "license": "MIT / 需按 Chinese-CLIP 仓库核验",
+      "publishable": true,
+      "pixo_status": "deprecated_reference",
+      "notes": "fp32 已取代；仅历史/对比用。"
+    },
+    {
+      "id": "yunet-face-detector",
+      "name": "face_detection_yunet_2023mar.onnx",
+      "purpose": "人脸检测/关键点",
+      "path_or_source": "K:/work/project/guanlan/models/face_detection_yunet_2023mar.onnx",
+      "size": "228 KB",
+      "size_bytes": 232589,
+      "license": "Apache-2.0（OpenCV Zoo）",
+      "publishable": true,
+      "pixo_status": "not_integrated_yet",
+      "notes": "Pixo 人脸/闭眼检测候选。"
+    },
+    {
+      "id": "mediapipe-face-landmarker",
+      "name": "MediaPipe Face Landmarker",
+      "purpose": "人脸关键点/眼睛开合（EAR）候选",
+      "path_or_source": "MediaPipe 官方模型 face_landmarker.task（未在 guanlan/models 中）",
+      "size": "外部模型",
+      "size_bytes": null,
+      "license": "Apache-2.0",
+      "publishable": true,
+      "pixo_status": "not_integrated_yet",
+      "notes": "如集成需单独放置模型文件并登记。"
+    },
+    {
+      "id": "nima-inception-onnx",
+      "name": "NIMA Inception ONNX",
+      "purpose": "历史美学评分候选（从未下载）",
+      "path_or_source": "guanlan 配置占位 models/nima-inception.onnx",
+      "size": null,
+      "size_bytes": null,
+      "license": "未知",
+      "publishable": false,
+      "pixo_status": "not_present",
+      "notes": "未实际使用；aesthetic_scorer 已替代。"
+    }
+  ]
+}

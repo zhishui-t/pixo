@@ -7,7 +7,12 @@ import torch/ultralytics（AGPL 隔离由 render/vision/segmenters/yoloe.py
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
+
+from .aesthetic import aesthetic_health_info
+from .context import clip_health_info
+from .geometry import horizon_health_info
+from .person import fairface_health_info
 
 VISION_PACKAGE_VERSION = "0.1.0"
 MOCK_SEGMENTER_VERSION = "0.1.0"
@@ -77,6 +82,23 @@ def _model_info(
         "detail": detail,
         "model_path": model_path,
     }
+
+
+def _safe_health(factory: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """调用健康信息工厂；异常时返回 not_ready 占位。"""
+    try:
+        return dict(factory())
+    except Exception as exc:
+        return {
+            "name": "unknown",
+            "type": "real",
+            "provider": "unknown",
+            "available": False,
+            "ready": False,
+            "loaded": False,
+            "version": None,
+            "detail": f"健康信息获取失败：{exc}",
+        }
 
 
 def _normalize_real_info(info: dict[str, Any]) -> dict[str, Any]:
@@ -149,6 +171,10 @@ def vision_health(
         version=MOCK_SEGMENTER_VERSION,
         detail="合成 mask，用于测量/闭环测试；不接真实语义模型。",
     )
+    aesthetic_info = _safe_health(aesthetic_health_info)
+    horizon_info = _safe_health(horizon_health_info)
+    fairface_info = _safe_health(fairface_health_info)
+    clip_info = _safe_health(clip_health_info)
     overall_ready = bool(real_info.get("ready", False))
 
     return {
@@ -164,11 +190,23 @@ def vision_health(
             "yoloe_segmenter": dict(real_info),
             "yoloe": dict(real_info),
             "segmenter": dict(real_info),
+            "aesthetic": dict(aesthetic_info),
+            "aesthetic_scorer": dict(aesthetic_info),
+            "horizon": dict(horizon_info),
+            "horizon_detector": dict(horizon_info),
+            "fairface": dict(fairface_info),
+            "fairface_age": dict(fairface_info),
+            "clip": dict(clip_info),
+            "clip_context": dict(clip_info),
         },
         "mock_segmenter": dict(mock_info),
         "mock": dict(mock_info),
         "yoloe_segmenter": dict(real_info),
         "yoloe": dict(real_info),
+        "aesthetic": dict(aesthetic_info),
+        "horizon": dict(horizon_info),
+        "fairface": dict(fairface_info),
+        "clip": dict(clip_info),
     }
 
 

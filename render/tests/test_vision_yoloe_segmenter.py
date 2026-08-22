@@ -229,27 +229,29 @@ def test_yoloe_segmenter_converts_rgb_float_to_bgr_uint8() -> None:
 
 
 def test_agpl_imports_isolated_in_yoloe_only() -> None:
-    """AGPL 隔离：render/vision 内只有 yoloe.py 直接 import torch/ultralytics。"""
+    """AGPL 隔离：ultralytics 只允许在 yoloe.py；torch 仅允许在 yoloe/aesthetic。"""
     vision_dir = (Path(__file__).resolve().parents[2] / "pixo" / "vision")
-    allowed = vision_dir / "segmenters" / "yoloe.py"
-    forbidden_imports = {
-        "ultralytics",
-        "torch",
-    }
+    yoloe_allowed = vision_dir / "segmenters" / "yoloe.py"
+    torch_allowed_files = {yoloe_allowed, vision_dir / "aesthetic.py"}
+    forbidden_ultralytics = "ultralytics"
+    forbidden_torch = "torch"
+
+    def _assert_allowed(py_file, root):
+        if root == forbidden_ultralytics:
+            assert py_file == yoloe_allowed, (
+                f"{py_file} 不允许直接 import {root}（AGPL 隔离）"
+            )
+        if root == forbidden_torch:
+            assert py_file in torch_allowed_files, (
+                f"{py_file} 不允许直接 import {root}"
+            )
+
     for py_file in vision_dir.rglob("*.py"):
-        if py_file == allowed:
-            continue
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    root = alias.name.split(".")[0]
-                    assert root not in forbidden_imports, (
-                        f"{py_file} 不允许直接 import {alias.name}"
-                    )
+                    _assert_allowed(py_file, alias.name.split(".")[0])
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
-                    root = node.module.split(".")[0]
-                    assert root not in forbidden_imports, (
-                        f"{py_file} 不允许从 {node.module} import"
-                    )
+                    _assert_allowed(py_file, node.module.split(".")[0])

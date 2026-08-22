@@ -21,6 +21,17 @@ from .exceptions import (
     SegmenterError,
     SegmenterUnavailable,
 )
+from .aesthetic import (
+    PixoAestheticScorer,
+    aesthetic_health_info,
+    get_aesthetic,
+)
+from .context import PixoClipContext, clip_health_info, get_clip_context
+from .geometry import (
+    HorizonDetector,
+    detect_horizon_angle,
+    horizon_health_info,
+)
 from .health import VISION_PACKAGE_VERSION, get_yoloe_segmenter, vision_health
 from .measure import (
     VisionMeasure,
@@ -32,6 +43,7 @@ from .measure import (
     measure_zone_exposure,
 )
 from .mock import MockSegmenter
+from .person import FairFaceAge, fairface_health_info, get_fairface_age
 
 __all__ = [
     "Segmenter",
@@ -44,6 +56,18 @@ __all__ = [
     "measure_sharpness",
     "measure_motion_blur",
     "measure_haze",
+    "PixoAestheticScorer",
+    "get_aesthetic",
+    "aesthetic_health_info",
+    "HorizonDetector",
+    "detect_horizon_angle",
+    "horizon_health_info",
+    "FairFaceAge",
+    "get_fairface_age",
+    "fairface_health_info",
+    "PixoClipContext",
+    "get_clip_context",
+    "clip_health_info",
     "vision_health",
     "get_yoloe_segmenter",
     "VISION_PACKAGE_VERSION",

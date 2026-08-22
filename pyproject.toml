@@ -20,7 +20,14 @@ dependencies = [
 
 [project.optional-dependencies]
 pixo-render = []
-pixo-vision = []
+pixo-vision = [
+    "onnxruntime>=1.16",
+    "tokenizers>=0.15",
+]
+pixo-vision-models = [
+    "torch>=2.0",
+    "transformers>=4.30",
+]
 pixo-meta = []
 dev = [
     "pytest>=8.0",
