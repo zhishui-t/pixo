@@ -7,17 +7,17 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from render.core.color import temp_tint_to_wb
-from render.core.curves import apply_lut1d, make_base_curve_lut
-from render.core.enhance import clarity
-from render.core.hsl import hsl_adjust_rgb
-from render.core.huesat import apply_local_warm_sat
-from render.core.lut3d import LUT3D
-from render.core.skin import skin_mask
-from render.core.split_tone import split_tone_rgb
-from render.core.usercal import apply_usercal_rgb
-from render.modules.exposure import soft_highlight_rolloff
-from render.modules.refine import RefineStage
+from pixo.render.core.color import temp_tint_to_wb
+from pixo.render.core.curves import apply_lut1d, make_base_curve_lut
+from pixo.render.core.enhance import clarity
+from pixo.render.core.hsl import hsl_adjust_rgb
+from pixo.render.core.huesat import apply_local_warm_sat
+from pixo.render.core.lut3d import LUT3D
+from pixo.render.core.skin import skin_mask
+from pixo.render.core.split_tone import split_tone_rgb
+from pixo.render.core.usercal import apply_usercal_rgb
+from pixo.render.modules.exposure import soft_highlight_rolloff
+from pixo.render.modules.refine import RefineStage
 
 FEATURES = (
     "exposure", "whitebalance", "curves", "huesat", "clarity", "colorcal",
@@ -60,7 +60,7 @@ def compute(feature: str) -> np.ndarray:
     if feature == "exposure":
         return soft_highlight_rolloff(_gray_ramp() * 2.0, knee=0.9)
     if feature == "whitebalance":
-        from render.core.calibration import load_dcp
+        from pixo.render.core.calibration import load_dcp
         prof = load_dcp(_DCP_PATH)
         return temp_tint_to_wb(prof, 5000.0, 10.0).astype(np.float32)
     if feature == "curves":
@@ -74,7 +74,7 @@ def compute(feature: str) -> np.ndarray:
     if feature == "clarity":
         return clarity(_color_steps(), strength=0.3)
     if feature == "colorcal":
-        from render import _native as native
+        from pixo.render import _native as native
         if not native.available():
             raise RuntimeError("native DLL 缺失，无法生成 colorcal golden")
         u8 = (_color_steps() * 255.0 + 0.5).astype(np.uint8)

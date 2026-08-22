@@ -11,8 +11,8 @@ import cv2
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.modules.refine import RefineStage
+from pixo.render import _native as native
+from pixo.render.modules.refine import RefineStage
 
 
 @pytest.fixture()
@@ -114,7 +114,7 @@ def test_refine_apply_raises_when_native_disabled(native_disabled):
 
 def test_refine_stage_fallback_matches_native(native_required, monkeypatch):
     """native 关闭时 RefineStage 走纯 Python，输出与 native 开启一致。"""
-    from render.pipeline.context import DOMAIN_GAMMA_RGB, StageContext
+    from pixo.render.pipeline.context import DOMAIN_GAMMA_RGB, StageContext
 
     img = _img((32, 48, 3), seed=7)
     params = {"sharpen": 0.35, "chroma_denoise": 0.8, "highlight_desat": 0.6}

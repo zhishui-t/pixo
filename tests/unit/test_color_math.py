@@ -1,10 +1,10 @@
 """T1 单元测试: 色彩常量/矩阵往返精度 + sRGB EOTF 往返。
 
 覆盖对象:
-  - render.core.calibration.XYZ_D65_TO_SRGB   (XYZ(D65) → 线性 sRGB)
-  - render.core.calibration.SRGB_TO_XYZ_D65   (线性 sRGB → XYZ(D65))
-  - render.core.calibration.BRADFORD_D50_TO_D65 (色适应 D50 → D65)
-  - render.core.curves.srgb_encode (sRGB EOTF 编码, 线性 → gamma)
+  - pixo.render.core.calibration.XYZ_D65_TO_SRGB   (XYZ(D65) → 线性 sRGB)
+  - pixo.render.core.calibration.SRGB_TO_XYZ_D65   (线性 sRGB → XYZ(D65))
+  - pixo.render.core.calibration.BRADFORD_D50_TO_D65 (色适应 D50 → D65)
+  - pixo.render.core.curves.srgb_encode (sRGB EOTF 编码, 线性 → gamma)
 
 验收标准 (规格 AC-01 / AC-02):
   - 矩阵往返 (M · M⁻¹ ≈ I) 误差 < 1e-5
@@ -15,14 +15,14 @@
     本测试内置标准解码参考实现 (IEC 61966-2-1), 仅作往返校验基准,
     不引入/修改 render 的既有常量或接口。
 
-运行: python -m pytest src/render/tests/test_color_math.py -q
+运行: python -m pytest tests/test_color_math.py -q
 """
 from __future__ import annotations
 
 import numpy as np
 
-from render.core.calibration import BRADFORD_D50_TO_D65, SRGB_TO_XYZ_D65, XYZ_D65_TO_SRGB
-from render.core.curves import srgb_encode
+from pixo.render.core.calibration import BRADFORD_D50_TO_D65, SRGB_TO_XYZ_D65, XYZ_D65_TO_SRGB
+from pixo.render.core.curves import srgb_encode
 
 # ---- 验收阈值 ----
 MATRIX_TOL = 1e-5   # 矩阵往返误差上限

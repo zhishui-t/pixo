@@ -14,8 +14,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.web import export as export_mod
-from render.web.export import ExportManager
+from pixo.render.web import export as export_mod
+from pixo.render.web.export import ExportManager
 
 
 class _FakeProf:

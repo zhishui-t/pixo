@@ -51,7 +51,7 @@ HOT_PARAMS = {
 class MockProf:
     """合成图模式的最小 DcpProfile 替身 (恒等 ColorMatrix)。
 
-    字段与 src/render/tests/test_pipeline.py 的 MockProf 保持一致, 使默认管线
+    字段与 tests/test_pipeline.py 的 MockProf 保持一致, 使默认管线
     在 exposure/whitebalance 关闭时仍可完整运行。
     """
 

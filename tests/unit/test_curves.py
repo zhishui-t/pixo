@@ -5,7 +5,7 @@
   - apply_lut1d 线性插值精度 (替代最近邻 floor)
   - curve_anchor_target 锚点 (回退 log2(0.18) / 中灰 ≈117)
 
-运行: python -m pytest src/render/tests/test_curves.py -q
+运行: python -m pytest tests/test_curves.py -q
 """
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.core.calibration import DcpProfile
-from render.core.curves import (
+from pixo.render.core.calibration import DcpProfile
+from pixo.render.core.curves import (
     MID_GRAY_GAMMA,
     apply_lut1d,
     apply_lut1d_fast,
@@ -198,7 +198,7 @@ def test_curve_anchor_target_clamped():
 # ---------------------------------------------------------------------------
 
 def test_tone_stage_default_profile_curve_disabled():
-    from render.modules.tone_map import ToneStage
+    from pixo.render.modules.tone_map import ToneStage
     defaults = ToneStage().default_params()
     # 基座影调 = sRGB EOTF; ProfileToneCurve 默认关闭 (保留为 Adobe look 开关, 见 tone.py)
     assert defaults["profile_curve"] is False
@@ -207,8 +207,8 @@ def test_tone_stage_default_profile_curve_disabled():
 
 
 def test_tone_stage_applies_profile_curve():
-    from render.modules.tone_map import ToneStage
-    from render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
+    from pixo.render.modules.tone_map import ToneStage
+    from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
 
     xs = np.linspace(0.0, 1.0, 65)
     ys = np.power(xs, 1.0 / 2.2)
@@ -227,8 +227,8 @@ def test_tone_stage_applies_profile_curve():
 
 
 def test_tone_stage_fallback_srgb_when_no_curve():
-    from render.modules.tone_map import ToneStage
-    from render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB
+    from pixo.render.modules.tone_map import ToneStage
+    from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB
 
     x = np.linspace(0.0, 1.0, 64, dtype=np.float32)
     img = np.repeat(np.repeat(x[None, :, None], 16, axis=0), 3, axis=2)

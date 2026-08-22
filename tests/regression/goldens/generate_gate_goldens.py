@@ -1,8 +1,8 @@
 """Gate L2 golden 生成器（FUNCTION_GATE_SPEC §6）。
 
 用法:
-  python src/render/tests/goldens/generate_gate_goldens.py \
-      --out src/render/tests/goldens/gate
+  python tests/goldens/generate_gate_goldens.py \
+      --out tests/goldens/gate
 
 生成后必须由 reviewer 复核 diff 并更新 manifest.reviewer，不得与实现改动
 在同一次提交中静默合入。
@@ -23,7 +23,7 @@ def build_manifest(out_dir: Path) -> dict:
     manifest = {
         "schema": "render-gate-golden-v1",
         "features": {},
-        "generator": "src/render/tests/goldens/generate_gate_goldens.py",
+        "generator": "tests/goldens/generate_gate_goldens.py",
         "reviewer": "pending",
     }
     for feature in gate_cases.FEATURES:
@@ -41,7 +41,7 @@ def build_manifest(out_dir: Path) -> dict:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--out", default="src/render/tests/goldens/gate")
+    ap.add_argument("--out", default="tests/goldens/gate")
     args = ap.parse_args(argv)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)

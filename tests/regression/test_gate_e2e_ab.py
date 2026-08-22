@@ -19,8 +19,8 @@ _DCP = (Path(__file__).resolve().parents[2] / "resources" / "dcp"
 
 @pytest.mark.skipif(not _RAW_PATH, reason="RAW_PATH not set")
 def test_preview_full_ab_1024_meets_limits():
-    from render.api import Renderer
-    from render.tools.bench_preview import _ab_metrics
+    from pixo.render.api import Renderer
+    from pixo.render.tools.bench_preview import _ab_metrics
 
     renderer = Renderer(_DCP)
     result = _ab_metrics(renderer, Path(_RAW_PATH), long_edge=1024)

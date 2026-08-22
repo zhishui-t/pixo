@@ -17,8 +17,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.vision import BaseSegmenter, Segmenter, SegmenterUnavailable
-from render.vision.segmenters.yoloe import YoloeSegmenter
+from pixo.vision import BaseSegmenter, Segmenter, SegmenterUnavailable
+from pixo.vision.segmenters.yoloe import YoloeSegmenter
 
 
 class _FakeBoxes:

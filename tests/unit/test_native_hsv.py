@@ -9,8 +9,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.core.huesat import _hsv_to_rgb, _rgb_to_hsv
-from render import _native as native
+from pixo.render.core.huesat import _hsv_to_rgb, _rgb_to_hsv
+from pixo.render import _native as native
 
 F64_TOL = 0.0
 F32_TOL = 1e-6

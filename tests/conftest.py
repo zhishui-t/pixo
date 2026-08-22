@@ -1,7 +1,7 @@
 """tests 根 pytest 基建（Phase D）。
 
 职责:
-  - 确保 `import render.*` / `import pixo.*` 可用：将 src 目录插入 sys.path。
+  - 确保 `import pixo.render.*` / `import pixo.*` 可用：将 src 目录插入 sys.path。
   - 注册 e2e / regression / gate / gate_e2e markers。
 
 运行约定:

@@ -60,7 +60,7 @@ def test_native_equivalence_covers_exported_kernels():
 
 def test_l2_golden_manifest_exists():
     assert _GOLDEN_MANIFEST.exists(), (
-        "L2 golden 未建立（缺 src/render/tests/goldens/gate/manifest.json）；"
+        "L2 golden 未建立（缺 tests/goldens/gate/manifest.json）；"
         "按 FUNCTION_GATE_SPEC §6 阻塞合并")
 
 

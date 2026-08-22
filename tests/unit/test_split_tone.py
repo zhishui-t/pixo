@@ -9,9 +9,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-import render.modules  # noqa: F401  (触发 split_tone 注册)
-from render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB, available_stages
-from render.core.split_tone import split_tone_rgb
+import pixo.render.modules  # noqa: F401  (触发 split_tone 注册)
+from pixo.render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB, available_stages
+from pixo.render.core.split_tone import split_tone_rgb
 
 
 def hsv_ref(hue, s, v):

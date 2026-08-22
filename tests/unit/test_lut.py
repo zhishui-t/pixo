@@ -1,9 +1,9 @@
 """T5 单元测试: 四面体 3D LUT + .cube 1D shaper + DOMAIN。
 
 覆盖对象:
-  - render.core.lut3d.tetrahedral_interp  (四面体插值, Kasson 1993)
-  - render.core.lut3d.LUT3D / parse_cube / hald_to_lut
-  - render.core.lut (对 engine.lut3d 的兼容再导出)
+  - pixo.render.core.lut3d.tetrahedral_interp  (四面体插值, Kasson 1993)
+  - pixo.render.core.lut3d.LUT3D / parse_cube / hald_to_lut
+  - pixo.render.core.lut (对 engine.lut3d 的兼容再导出)
 
 验收标准 (规格 AC-08 / 任务 T5):
   - identity 33³ LUT 误差 0 (8bit 输出 == 输入, 位精确)
@@ -12,14 +12,14 @@
   - DOMAIN_MIN/MAX 缩放正确
   - 256³ 建表分块 (chunk) 且结果与直接 lookup 一致
 
-运行: python -m pytest src/render/tests/test_lut.py -q
+运行: python -m pytest tests/test_lut.py -q
 """
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from render.core.lut3d import LUT3D, hald_to_lut, parse_cube, tetrahedral_interp
+from pixo.render.core.lut3d import LUT3D, hald_to_lut, parse_cube, tetrahedral_interp
 
 
 # ---------------------------------------------------------------------------
@@ -298,5 +298,5 @@ def test_hald_to_lut_invalid():
 
 
 # ---------------------------------------------------------------------------
-# 8) render.core.lut 兼容再导出
+# 8) pixo.render.core.lut 兼容再导出
 # ---------------------------------------------------------------------------

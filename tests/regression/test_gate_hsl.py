@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.core.hsl import DEFAULT_BANDS, hsl_adjust_rgb
+from pixo.render.core.hsl import DEFAULT_BANDS, hsl_adjust_rgb
 
 pytestmark = pytest.mark.gate
 

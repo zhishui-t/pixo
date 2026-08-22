@@ -2,7 +2,7 @@
 
 覆盖:
   - native vs Python 参考 max|Δ| ≤ 1e-6
-  - render.core.io.decode_cfa_half(raw) 对 MockRaw 的集成
+  - pixo.render.core.io.decode_cfa_half(raw) 对 MockRaw 的集成
   - native 不可用时模块可导入、decode 调用抛 RuntimeError (回退契约)
 """
 from __future__ import annotations
@@ -10,8 +10,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.core import io
+from pixo.render import _native as native
+from pixo.render.core import io
 
 TOL = 1e-6
 

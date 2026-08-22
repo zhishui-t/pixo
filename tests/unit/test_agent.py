@@ -1,7 +1,7 @@
 """Phase C 单元测试：pixo.agent 基础行为。
 
 覆盖：
-  - import pixo.agent / render.agent
+  - import pixo.agent / pixo.agent
   - orchestrator 兼容 re-export
   - tools 注册与调用
   - burst_selection 基本选帧
@@ -32,8 +32,8 @@ def test_import_pixo_agent():
 
 
 def test_render_agent_alias():
-    """render shim 应可将 render.agent 转发到 pixo.agent。"""
-    import render.agent as render_agent
+    """render shim 应可将 pixo.agent 转发到 pixo.agent。"""
+    import pixo.agent as render_agent
     assert render_agent.call_tool == agent.call_tool
 
 

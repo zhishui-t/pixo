@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.core.enhance import _gray, clarity
+from pixo.render import _native as native
+from pixo.render.core.enhance import _gray, clarity
 
 pytestmark = pytest.mark.gate
 

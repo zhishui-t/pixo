@@ -8,9 +8,9 @@ import os
 import numpy as np
 import pytest
 
-import render.web.session as sess_mod
-from render.web.session import RawPreviewSession
-from render.pipeline.context import DOMAIN_GAMMA_RGB
+import pixo.render.web.session as sess_mod
+from pixo.render.web.session import RawPreviewSession
+from pixo.render.pipeline.context import DOMAIN_GAMMA_RGB
 
 
 class _FakeRaw:
@@ -140,7 +140,7 @@ def test_generation_prevents_old_result_reuse(session_env):
 
 
 def test_camera_wb_injected_into_stage_context(session_env, monkeypatch):
-    import render.core.io as core_io
+    import pixo.render.core.io as core_io
 
     expected = np.array([1.6, 1.0, 1.4], dtype=np.float32)
     monkeypatch.setattr(core_io, "camera_neutral_wb_cached",

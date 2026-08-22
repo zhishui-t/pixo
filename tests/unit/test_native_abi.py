@@ -1,4 +1,4 @@
-"""M5: render._native ctypes ABI / 加载契约测试。
+"""M5: pixo.render._native ctypes ABI / 加载契约测试。
 
 覆盖:
   - DLL 存在时 available()==True, version() 可安全调用
@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render import _native as native
+from pixo.render import _native as native
 
 
 @pytest.fixture()

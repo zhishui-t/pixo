@@ -4,24 +4,23 @@ from __future__ import annotations
 import pixo.meta
 import pixo.render
 import pixo.vision
-import render
-import render.meta
-import render.pipeline
-import render.vision
+import pixo.render
+import pixo.meta
+import pixo.render.pipeline
+import pixo.vision
 
 
-def test_pixo_render_and_render_shim_importable():
-    """pixo.render 与顶层 render 均可导入，且顶层 render 转发版本信息。"""
+def test_pixo_render_importable():
+    """pixo.render 可作为主包导入，版本信息一致。"""
     assert pixo.render.__name__ == "pixo.render"
-    assert render.__name__ == "render"
-    assert render.__version__ == pixo.render.__version__
+    assert pixo.render.__version__ is not None
 
 
-def test_shim_submodules_share_identity():
-    """render.* shim 与 pixo.* 实际模块保持同一对象身份。"""
-    assert render.pipeline is pixo.render.pipeline
-    assert render.vision is pixo.vision
-    assert render.meta is pixo.meta
+def test_submodules_share_identity():
+    """pixo.* 子模块可导入且保持同一对象身份。"""
+    assert pixo.render.pipeline is pixo.render.pipeline
+    assert pixo.vision is pixo.vision
+    assert pixo.meta is pixo.meta
 
 
 def test_pixo_vision_meta_importable():

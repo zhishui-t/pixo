@@ -18,8 +18,8 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from render.core.calibration import DcpProfile, load_dcp, write_dcp
-from render.core.curves import parse_profile_curve
+from pixo.render.core.calibration import DcpProfile, load_dcp, write_dcp
+from pixo.render.core.curves import parse_profile_curve
 
 _H, _S, _V = 90, 16, 16  # Adobe Camera 系列联合形态 HueSatMap dims
 
@@ -340,7 +340,7 @@ def test_load_encoding_no_default_without_data(tmp_path):
 def test_tag_names_errata():
     """low#2: 0xC726 标注官方名 ProfileLookTableData (联合形态约定写入注释);
     0xC728 不再误标 ProfileLookTableDims (注明待考); 0xC725 保留 dims 名。"""
-    from render.core.calibration import _TAG_NAMES
+    from pixo.render.core.calibration import _TAG_NAMES
     assert _TAG_NAMES[0xC726] == "ProfileLookTableData"
     assert _TAG_NAMES[0xC728] == "ProfileToneCurveData"   # 官方名 (存疑待考标注)
     assert _TAG_NAMES[0xC725] == "ProfileLookTableDims"   # 未被 0xC728 占用

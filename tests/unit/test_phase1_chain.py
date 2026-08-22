@@ -6,14 +6,14 @@ import pytest
 
 from pathlib import Path
 
-from render.core.calibration import DcpProfile
-from render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB
-from render.pipeline.graph import available_stages, STAGE_REGISTRY
-from render.pipeline.presets import Pipeline, DEFAULT_STAGES
-from render.modules.exposure import ExposureStage
-from render.modules.white_balance import WhiteBalanceStage
-from render.modules.tone_map import ToneStage
-import render.modules  # noqa: F401  (触发注册)
+from pixo.render.core.calibration import DcpProfile
+from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB
+from pixo.render.pipeline.graph import available_stages, STAGE_REGISTRY
+from pixo.render.pipeline.presets import Pipeline, DEFAULT_STAGES
+from pixo.render.modules.exposure import ExposureStage
+from pixo.render.modules.white_balance import WhiteBalanceStage
+from pixo.render.modules.tone_map import ToneStage
+import pixo.render.modules  # noqa: F401  (触发注册)
 
 
 # 真实 Nikon Z 5 II Camera Standard 矩阵 (与其它单测一致, 确定性)

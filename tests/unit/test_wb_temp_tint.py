@@ -8,11 +8,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.core.calibration import DcpProfile
-from render.core.color import (cam_to_linear_srgb_matrix, temp_tint_to_wb,
+from pixo.render.core.calibration import DcpProfile
+from pixo.render.core.color import (cam_to_linear_srgb_matrix, temp_tint_to_wb,
                                  wb_to_temp_tint)
-from render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB
-from render.modules.white_balance import WhiteBalanceStage, apply_warmth
+from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB
+from pixo.render.modules.white_balance import WhiteBalanceStage, apply_warmth
 from pathlib import Path
 
 

@@ -11,8 +11,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.vision import health as health_module
-from render.vision import (
+from pixo.vision import health as health_module
+from pixo.vision import (
     BaseSegmenter,
     EmptyImageError,
     InvalidPromptsError,

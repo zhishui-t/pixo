@@ -9,10 +9,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB, DOMAIN_LINEAR_RGB
-from render.core.hsl import hsl_adjust_rgb, DEFAULT_BANDS, _ring_mask
-from render.core.huesat import _rgb_to_hsv
-from render.modules.hsl import HslStage
+from pixo.render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB, DOMAIN_LINEAR_RGB
+from pixo.render.core.hsl import hsl_adjust_rgb, DEFAULT_BANDS, _ring_mask
+from pixo.render.core.huesat import _rgb_to_hsv
+from pixo.render.modules.hsl import HslStage
 
 
 def _band(**kw):

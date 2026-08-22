@@ -7,15 +7,15 @@
   - 未知场景 → ({}, None) 并告警
   - load_scene_presets 进程内缓存
 
-运行: python -m pytest src/render/tests/test_scene_presets.py -q
+运行: python -m pytest tests/test_scene_presets.py -q
 """
 from __future__ import annotations
 
 import pytest
 
-from render.pipeline.scene_apply import apply_scene_preset, load_scene_presets
-import render.modules as stages  # noqa: F401 触发注册
-from render.pipeline.graph import STAGE_REGISTRY
+from pixo.render.pipeline.scene_apply import apply_scene_preset, load_scene_presets
+import pixo.render.modules as stages  # noqa: F401 触发注册
+from pixo.render.pipeline.graph import STAGE_REGISTRY
 
 SCENE_IDS = ["portrait", "landscape", "night", "street", "food", "mono"]
 

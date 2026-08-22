@@ -11,14 +11,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.core.calibration import DcpProfile
-from render.core.color import cam_to_xyz, temp_tint_to_wb
-from render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM
-from render.modules.exposure import (
+from pixo.render.core.calibration import DcpProfile
+from pixo.render.core.color import cam_to_xyz, temp_tint_to_wb
+from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM
+from pixo.render.modules.exposure import (
     ExposureStage,
     _probe_linear_srgb,
 )
-import render.modules.exposure as _exposure_mod
+import pixo.render.modules.exposure as _exposure_mod
 
 # 真实 Nikon Z 5 II Camera Standard 矩阵 (与 test_exposure / test_wb_temp_tint 一致)
 _NIKON_CM1 = [1.1643, -0.653, 0.0726, -0.4355, 1.2179, 0.2449, -0.0231, 0.0811, 0.7571]

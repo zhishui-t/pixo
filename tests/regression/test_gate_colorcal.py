@@ -5,9 +5,9 @@ import cv2
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.modules.color_cal import ColorCalStage
-from render.pipeline.graph import DOMAIN_GAMMA_RGB, StageContext
+from pixo.render import _native as native
+from pixo.render.modules.color_cal import ColorCalStage
+from pixo.render.pipeline.graph import DOMAIN_GAMMA_RGB, StageContext
 
 pytestmark = pytest.mark.gate
 

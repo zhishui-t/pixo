@@ -5,11 +5,11 @@ import cv2
 import numpy as np
 import pytest
 
-import render.modules  # noqa: F401  (触发 Stage 注册)
+import pixo.render.modules  # noqa: F401  (触发 Stage 注册)
 
-from render.modules.compose import ComposeStage
-from render.pipeline import available_stages
-from render.pipeline.graph import DOMAIN_LINEAR_RGB, StageContext
+from pixo.render.modules.compose import ComposeStage
+from pixo.render.pipeline import available_stages
+from pixo.render.pipeline.graph import DOMAIN_LINEAR_RGB, StageContext
 
 pytestmark = pytest.mark.gate
 

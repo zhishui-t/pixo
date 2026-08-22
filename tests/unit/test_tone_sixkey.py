@@ -8,8 +8,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
-from render.modules.tone_map import ToneStage
+from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
+from pixo.render.modules.tone_map import ToneStage
 
 _MONO_TOL = 2e-3      # EOTF LUT(16384级最近邻)量化容差: ~1/16384
 _REGION_TOL = 0.005    # "基本不动" 区域变化阈值 (实测其他区 ≈ 0.0000)

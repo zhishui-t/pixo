@@ -165,8 +165,8 @@ def test_segmenter_unavailable_maps_to_manual_review():
 
 
 def test_functional_entry_and_render_shim():
-    """函数式入口可用，且 render.pipeline.loop shim 能导入同一实现。"""
-    from render.pipeline.loop import SinglePhotoLoop as ShimLoop
+    """函数式入口可用，且 pixo.pipeline.loop shim 能导入同一实现。"""
+    from pixo.pipeline.loop import SinglePhotoLoop as ShimLoop
 
     assert ShimLoop is SinglePhotoLoop
 

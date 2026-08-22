@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render import _native as native
+from pixo.render import _native as native
 
 
 @pytest.fixture()

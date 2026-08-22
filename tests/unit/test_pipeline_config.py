@@ -12,11 +12,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.pipeline.graph import (
+from pixo.render.pipeline.graph import (
     Pipeline, Stage, StageContext,
     DOMAIN_LINEAR_CAM, DOMAIN_GAMMA_RGB,
 )
-from render.pipeline.presets import (
+from pixo.render.pipeline.presets import (
     DEFAULT_STAGES, build_default_pipeline, pipeline_from_config,
 )
 

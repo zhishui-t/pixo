@@ -1,10 +1,10 @@
 """T2 单元测试: HueSatMap 域修复 —— 线性 ProPhoto(D50)、tone 之前。
 
 覆盖对象:
-  - render.core.color.linear_srgb_to_linear_prophoto / linear_prophoto_to_linear_srgb
-  - render.core.huesat.apply_hue_sat_map / apply_look_table (线性域输入)
-  - render.core.huesat._rgb_to_hsv / _hsv_to_rgb (float64 HSV 往返)
-  - render.modules.huesat.HueSatStage (order=25 < tone=30, domain=linear_rgb, 默认关)
+  - pixo.render.core.color.linear_srgb_to_linear_prophoto / linear_prophoto_to_linear_srgb
+  - pixo.render.core.huesat.apply_hue_sat_map / apply_look_table (线性域输入)
+  - pixo.render.core.huesat._rgb_to_hsv / _hsv_to_rgb (float64 HSV 往返)
+  - pixo.render.modules.huesat.HueSatStage (order=25 < tone=30, domain=linear_rgb, 默认关)
   - 默认全链 (huesat 关) 输出不变
 
 验收标准 (03-specification §3 AC / 任务 T2):
@@ -13,18 +13,18 @@
   - 端点断言: 黑→黑、白→白、灰→灰; 单调性: 灰阶斜坡单调、S/V 表应用单调
   - 全链默认 (huesat 关) 输出不变; stage order=25 < tone=30; domain=linear_rgb
 
-运行: python -m pytest src/render/tests/test_huesat_domain.py -q
+运行: python -m pytest tests/test_huesat_domain.py -q
 """
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from render.core.color import (
+from pixo.render.core.color import (
     linear_prophoto_to_linear_srgb,
     linear_srgb_to_linear_prophoto,
 )
-from render.core.huesat import (
+from pixo.render.core.huesat import (
     _hsv_to_rgb,
     _rgb_to_hsv,
     apply_hue_sat_map,
@@ -231,9 +231,9 @@ def test_sat_val_monotonicity():
 # ---------------------------------------------------------------------------
 
 def test_stage_order_domain():
-    from render.pipeline.graph import DOMAIN_LINEAR_RGB
-    from render.modules.huesat import HueSatStage
-    from render.modules.tone_map import ToneStage
+    from pixo.render.pipeline.graph import DOMAIN_LINEAR_RGB
+    from pixo.render.modules.huesat import HueSatStage
+    from pixo.render.modules.tone_map import ToneStage
 
     hs = HueSatStage()
     assert hs.order == 25
@@ -248,8 +248,8 @@ def test_stage_order_domain():
 # ---------------------------------------------------------------------------
 
 def _run_default_chain(prof, img, params):
-    from render.pipeline import build_default_pipeline
-    from render.pipeline.graph import DOMAIN_LINEAR_CAM, StageContext
+    from pixo.render.pipeline import build_default_pipeline
+    from pixo.render.pipeline.graph import DOMAIN_LINEAR_CAM, StageContext
 
     pipe = build_default_pipeline(prof=prof, params=params)
     ctx = StageContext("x.NEF", prof=prof, config={"stages": params})

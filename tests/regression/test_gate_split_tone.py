@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.core.split_tone import split_tone_rgb
+from pixo.render.core.split_tone import split_tone_rgb
 
 pytestmark = pytest.mark.gate
 

@@ -5,14 +5,14 @@
   - dehaze: strength=0 恒等; 合成雾图 (I = J*t + A*(1-t)) 恢复接近 J;
     输出值域 0..1
 
-运行: python -m pytest src/render/tests/test_enhance.py -q
+运行: python -m pytest tests/test_enhance.py -q
 """
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from render.core.enhance import clarity, dehaze
+from pixo.render.core.enhance import clarity, dehaze
 
 
 def test_clarity_zero_strength_identity():
@@ -28,7 +28,7 @@ def test_clarity_increases_mid_frequency_contrast():
     tex = 0.05 * np.sin(x_ / 2.0)[:, :, None]          # 中频纹理 (64,64,1)
     img = np.clip(np.repeat(base + tex, 3, axis=2), 0, 1).astype(np.float32)
     out = clarity(img, strength=0.5)
-    from render.core.enhance import _gray
+    from pixo.render.core.enhance import _gray
     before = float(np.abs(np.diff(_gray(img), axis=1)).mean())
     after = float(np.abs(np.diff(_gray(out), axis=1)).mean())
     assert after > before, f"clarity 未提升局部对比: {before:.4f} -> {after:.4f}"

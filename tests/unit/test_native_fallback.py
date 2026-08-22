@@ -1,7 +1,7 @@
 """M5: 原生缺失/不可用时的回退契约 (FR6)。
 
 验收:
-  - render._native 模块保持可导入, available()==False 时不抛 ImportError
+  - pixo.render._native 模块保持可导入, available()==False 时不抛 ImportError
   - 调用点自动回退纯 Python, 输出与原生路径等价
   - 原生函数在不可用时抛出 RuntimeError, 由调用方 try/except 捕获
 """
@@ -10,10 +10,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.pipeline import build_default_pipeline
-from render.pipeline.graph import DOMAIN_LINEAR_CAM, StageContext
-from render.core.huesat import apply_local_warm_sat
-from render import _native as native
+from pixo.render.pipeline import build_default_pipeline
+from pixo.render.pipeline.graph import DOMAIN_LINEAR_CAM, StageContext
+from pixo.render.core.huesat import apply_local_warm_sat
+from pixo.render import _native as native
 
 
 @pytest.fixture()

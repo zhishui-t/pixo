@@ -4,8 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.core.curves import (apply_lut1d, apply_lut1d_fast,
+from pixo.render import _native as native
+from pixo.render.core.curves import (apply_lut1d, apply_lut1d_fast,
                                 make_base_curve_lut, parse_profile_curve)
 
 pytestmark = pytest.mark.gate

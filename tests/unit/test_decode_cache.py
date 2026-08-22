@@ -4,8 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-import render._native as native
-import render.core.io as io
+import pixo.render._native as native
+import pixo.render.core.io as io
 
 
 class _FakeRaw:

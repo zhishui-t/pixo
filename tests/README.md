@@ -18,4 +18,4 @@ python -m pytest tests/integration -q
 python -m pytest tests/regression -q -m "gate and not gate_e2e"
 ```
 
-旧路径 `src/render/tests` 保留为兼容 shim，新代码请使用 `tests/`。
+旧路径 `tests` 保留为兼容 shim，新代码请使用 `tests/`。

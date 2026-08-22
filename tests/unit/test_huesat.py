@@ -1,8 +1,8 @@
 """T3 单元测试: DCP HueSatMap / LookTable 解码与应用。
 
 覆盖对象:
-  - render.core.huesat.decode_table / apply_table_to_hsv / apply_hue_sat_map / apply_look_table
-  - render.modules.huesat.HueSatStage (wants 门控 / 直通)
+  - pixo.render.core.huesat.decode_table / apply_table_to_hsv / apply_hue_sat_map / apply_look_table
+  - pixo.render.modules.huesat.HueSatStage (wants 门控 / 直通)
 
 验收标准 (规格 AC-09 / 任务 T3):
   - 已知偏移合成数据应用正确 (色相偏移/饱和乘数/明度乘数)
@@ -10,14 +10,14 @@
   - 无数据直通; strength=0 恒等; strength 线性混合
   - dims 回退: hue_sat_dims 缺失时用 look_table_dims (0xC725)
 
-运行: python -m pytest src/render/tests/test_huesat.py -q
+运行: python -m pytest tests/test_huesat.py -q
 """
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from render.core.huesat import (
+from pixo.render.core.huesat import (
     _hsv_to_rgb,
     _rgb_to_hsv,
     _srgb_encode_v,
@@ -25,7 +25,7 @@ from render.core.huesat import (
     apply_table_to_hsv,
     decode_table, get_hue_sat_table, get_look_table,
 )
-from render.core.color import (linear_prophoto_to_linear_srgb,
+from pixo.render.core.color import (linear_prophoto_to_linear_srgb,
                                  linear_srgb_to_linear_prophoto)
 
 
@@ -150,7 +150,7 @@ def test_apply_strength_blend():
 def test_sat_rolloff_full_smoothstep():
     """low#1: S 近中性保护区滚降跨 [0, 0.05] 完整 smoothstep (幂 6 压陡底部):
     S=0 → 0 (恒等), S=0.03 → 权重 < 0.1 (不误伤近中性亮部), S≥0.05 → 1 (全效)。"""
-    from render.core.huesat import _sat_rolloff
+    from pixo.render.core.huesat import _sat_rolloff
     assert _sat_rolloff(0.0) == 0.0
     assert _sat_rolloff(0.05) == 1.0
     assert _sat_rolloff(0.1) == 1.0
@@ -208,8 +208,8 @@ def test_look_table_passthrough_without_data():
 # ---------------------------------------------------------------------------
 
 def test_stage_wants_gating():
-    from render.pipeline.graph import StageContext
-    from render.modules.huesat import HueSatStage
+    from pixo.render.pipeline.graph import StageContext
+    from pixo.render.modules.huesat import HueSatStage
 
     stage = HueSatStage()
     ctx = StageContext("x.NEF", prof=None)
@@ -231,7 +231,7 @@ def test_stage_wants_gating():
 def test_make_hue_sat_map_per_band_val_min():
     """make_hue_sat_map 支持 4 元组 (center, halfwidth, sat, val_min):
     不同 band 可指定不同 V 窗口, 互不改变其他 band 的 V 权重。"""
-    from render.core.huesat import make_hue_sat_map
+    from pixo.render.core.huesat import make_hue_sat_map
     flat = make_hue_sat_map([(272.5, 37.5, 0.5, 0.6), (22.5, 17.5, 2.0, 0.8)])
     arr = np.asarray(flat, np.float32).reshape(16, 90, 16, 3).transpose(1, 2, 0, 3)
     # 品红带 (val_min=0.6): V=0.8 行被压缩; V=0.533 行在窗口起点 → 不变
@@ -292,8 +292,8 @@ def test_local_warm_sat_high_coverage_spot_contrast_gets_boost():
 
 def test_stage_warm_highlight_wants_and_metrics():
     """warm_highlight_sat>1 时: 无 DCP HSM 数据也要执行; 恒等 scale 仍走旧门控。"""
-    from render.pipeline.graph import StageContext
-    from render.modules.huesat import HueSatStage
+    from pixo.render.pipeline.graph import StageContext
+    from pixo.render.modules.huesat import HueSatStage
 
     prof = MockProf()
     ctx = StageContext("x.NEF", prof=prof,

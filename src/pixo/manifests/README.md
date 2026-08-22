@@ -13,5 +13,5 @@ python - <<'PY'
 from pixo.manifests import load_all_manifests
 print(load_all_manifests()['vision_models']['schema_version'])
 PY
-python -m pytest src/render/tests/test_vision_manifests.py -q
+python -m pytest tests/test_vision_manifests.py -q
 ```

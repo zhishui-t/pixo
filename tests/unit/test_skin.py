@@ -10,19 +10,19 @@
   - SkinStage.process: 磨皮生效且输出合法 float 0..1
   - colorcal: 肤色保护用椭圆掩码 (肤色色度不变, 非肤色色度按增益放大)
 
-运行: python -m pytest src/render/tests/test_skin.py -q
+运行: python -m pytest tests/test_skin.py -q
 """
 from __future__ import annotations
 
 import cv2
 import numpy as np
 
-from render.pipeline.graph import (
+from pixo.render.pipeline.graph import (
     DOMAIN_GAMMA_RGB,
     STAGE_REGISTRY,
     StageContext,
 )
-from render.core.skin import (
+from pixo.render.core.skin import (
     GUIDED_EPS,
     GUIDED_R,
     SKIN_ANGLE,
@@ -34,8 +34,8 @@ from render.core.skin import (
     skin_mask,
     skin_smooth,
 )
-from render.modules.color_cal import ColorCalStage
-from render.modules.skin import SkinStage
+from pixo.render.modules.color_cal import ColorCalStage
+from pixo.render.modules.skin import SkinStage
 
 # 肤色 RGB (test_scenes.py 同款): (210,155,130) → Lab a≈145, b≈149, 椭圆内
 _SKIN_RGB = (210, 155, 130)

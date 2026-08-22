@@ -4,8 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.modules.refine import apply_warm_sat_gamma
+from pixo.render import _native as native
+from pixo.render.modules.refine import apply_warm_sat_gamma
 
 pytestmark = pytest.mark.gate
 

@@ -119,6 +119,6 @@
       "sha256": "e2f5aa6eb36b8ae348a44cb4ba2d36066446393a9b312ab52e5351c253ec6826"
     }
   },
-  "generator": "src/render/tests/goldens/generate_gate_goldens.py",
+  "generator": "tests/goldens/generate_gate_goldens.py",
   "reviewer": "t37-reviewer (initial baseline approved by reviewer; update requires dual sign-off)"
 }

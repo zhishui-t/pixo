@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.core.lut3d import LUT3D
+from pixo.render.core.lut3d import LUT3D
 
 pytestmark = pytest.mark.gate
 

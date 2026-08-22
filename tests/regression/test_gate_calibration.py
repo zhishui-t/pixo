@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.core.usercal import apply_usercal_rgb
+from pixo.render.core.usercal import apply_usercal_rgb
 
 pytestmark = pytest.mark.gate
 

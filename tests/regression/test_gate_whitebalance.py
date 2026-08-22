@@ -4,8 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.core.color import temp_tint_to_wb
+from pixo.render import _native as native
+from pixo.render.core.color import temp_tint_to_wb
 
 pytestmark = pytest.mark.gate
 

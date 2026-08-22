@@ -4,8 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.core.huesat import apply_local_warm_sat
+from pixo.render import _native as native
+from pixo.render.core.huesat import apply_local_warm_sat
 
 pytestmark = pytest.mark.gate
 

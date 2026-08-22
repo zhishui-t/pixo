@@ -13,9 +13,9 @@ import numpy as np
 import pytest
 
 import rawpy
-import render.api as api
-from render.api import Renderer
-from render.pipeline.context import DOMAIN_GAMMA_RGB
+import pixo.render.api as api
+from pixo.render.api import Renderer
+from pixo.render.pipeline.context import DOMAIN_GAMMA_RGB
 
 _DCP = r"K:\work\project\pixo\resources\dcp\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 
@@ -54,7 +54,7 @@ def _make_renderer():
 
 
 def test_render_preview_full_uses_default_pipeline_and_native_decode(monkeypatch):
-    import render.core.io as core_io
+    import pixo.render.core.io as core_io
 
     record = []
     seen = {}
@@ -83,7 +83,7 @@ def test_render_preview_full_uses_default_pipeline_and_native_decode(monkeypatch
 
 
 def test_render_preview_full_16bit_output(monkeypatch):
-    import render.core.io as core_io
+    import pixo.render.core.io as core_io
 
     record = []
     seen = {}
@@ -102,7 +102,7 @@ def test_render_preview_full_16bit_output(monkeypatch):
 
 
 def test_render_preview_full_falls_back_to_rawpy_half(monkeypatch):
-    import render.core.io as core_io
+    import pixo.render.core.io as core_io
 
     record = []
     seen = {}
@@ -122,7 +122,7 @@ def test_render_preview_full_falls_back_to_rawpy_half(monkeypatch):
 
 
 def test_render_preview_full_resizes_to_long_edge(monkeypatch):
-    import render.core.io as core_io
+    import pixo.render.core.io as core_io
 
     record = []
     seen = {}
@@ -140,8 +140,8 @@ def test_render_preview_full_resizes_to_long_edge(monkeypatch):
 
 
 def test_render_preview_degraded_keeps_old_preview(monkeypatch):
-    import render.api as shim_api
-    from render.api import Renderer as ShimRenderer
+    import pixo.render.api as shim_api
+    from pixo.render.api import Renderer as ShimRenderer
 
     class _FakeRunFilePipe:
         def run_file(self, raw_path, half_size=False):

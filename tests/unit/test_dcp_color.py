@@ -15,7 +15,7 @@
   - 中性 spread≈1 (WB 中性 [1,1,1] → 中性 sRGB)
   - 皮肤 a/b 方向与相机一致 (CM 与 FM 路径 a、b 同号, 且为暖色)
 
-运行: python -m pytest src/render/tests/test_dcp_color.py -q
+运行: python -m pytest tests/test_dcp_color.py -q
 """
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.core.calibration import BRADFORD_D50_TO_D65, SRGB_TO_XYZ_D65, XYZ_D65_TO_SRGB, DcpProfile
-from render.core.color import (
+from pixo.render.core.calibration import BRADFORD_D50_TO_D65, SRGB_TO_XYZ_D65, XYZ_D65_TO_SRGB, DcpProfile
+from pixo.render.core.color import (
     ColorMatrixFallbackWarning,
     cam_to_linear_srgb_matrix,
     cam_to_xyz,
@@ -307,7 +307,7 @@ def test_skin_ab_direction_consistent_with_camera():
 
 def test_real_dcp_parses_new_fields():
     """加载真实 Nikon Camera Standard DCP (若存在): 校验新增字段解析。"""
-    from render.core.calibration import load_dcp
+    from pixo.render.core.calibration import load_dcp
     candidates = [
         Path(r"C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Camera\Nikon Z 5 2\Nikon Z 5 2 Camera Standard.dcp"),
     ]

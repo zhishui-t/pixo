@@ -9,7 +9,7 @@
   - preset JSON 加载 (pipeline_from_config, 顺序含 huesat)
   - Phase 1.5 reshape 空壳注册 (wants 恒 False)
 
-运行: python -m pytest src/render/tests/test_pipeline.py -q
+运行: python -m pytest tests/test_pipeline.py -q
 """
 from __future__ import annotations
 
@@ -19,15 +19,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-import render.modules as _stages  # noqa: F401  触发全部插件注册 (含 reshape)
+import pixo.render.modules as _stages  # noqa: F401  触发全部插件注册 (含 reshape)
 
-from render.pipeline import (
+from pixo.render.pipeline import (
     DEFAULT_STAGES,
     available_stages,
     build_default_pipeline,
     pipeline_from_config,
 )
-from render.pipeline.graph import (
+from pixo.render.pipeline.graph import (
     DOMAIN_GAMMA_RGB,
     DOMAIN_LINEAR_CAM,
     DOMAIN_LINEAR_RGB,
@@ -35,14 +35,14 @@ from render.pipeline.graph import (
     Stage,
     StageContext,
 )
-from render.modules.exposure import ExposureStage
-from render.modules.tone_map import ToneStage, _check_highlight_compress_curve
-from render.modules.white_balance import (
+from pixo.render.modules.exposure import ExposureStage
+from pixo.render.modules.tone_map import ToneStage, _check_highlight_compress_curve
+from pixo.render.modules.white_balance import (
     WARMTH_SLOPE_BOUNDS,
     WhiteBalanceStage,
     apply_warmth,
 )
-from render.modules.reshape import (
+from pixo.render.modules.reshape import (
     ClarityStage,
     DehazeStage,
     DenoiseStage,
@@ -344,7 +344,7 @@ def test_warmth_curve_via_stage_param():
 
 def test_exposure_vignette_linear_lift():
     """exposure vignette: 线性域径向增益, 角落亮于中心, 中心不动, k=0 恒等。"""
-    from render.modules.exposure import _vignette_lift_linear
+    from pixo.render.modules.exposure import _vignette_lift_linear
     img = np.full((60, 80, 3), 0.5, dtype=np.float32)
     out = _vignette_lift_linear(img, 0.0)
     assert np.array_equal(out, img)
@@ -370,7 +370,7 @@ def test_exposure_vignette_linear_lift():
 def test_apply_warmth_no_cct_orig():
     """死参数 cct_orig 已从 apply_warmth 签名移除 (第 4 位置参数现为 cal)。"""
     import inspect
-    import render.modules.white_balance as wb_mod
+    import pixo.render.modules.white_balance as wb_mod
     sig = inspect.signature(wb_mod.apply_warmth)
     assert "cct_orig" not in sig.parameters
     assert list(sig.parameters) == ["wb", "prof", "warmth", "cal"]

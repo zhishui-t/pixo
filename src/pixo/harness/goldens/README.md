@@ -17,7 +17,7 @@
 python -m pixo.harness.goldens.generate_manifest
 
 # 测试
-python -m pytest src/render/tests/test_goldens_v0.py -q
+python -m pytest tests/test_goldens_v0.py -q
 ```
 
 真实 RAW 路径不存在时样本 `available=False`，回归接口自动 skip。

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.core.skin import skin_mask, skin_smooth
+from pixo.render.core.skin import skin_mask, skin_smooth
 
 pytestmark = pytest.mark.gate
 

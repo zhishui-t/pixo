@@ -8,11 +8,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
-from render.core.curves import apply_lut1d_fast, curve_lut_from_points
-from render.modules.tone_map import (_apply_user_curve, _parse_user_curve_points,
+from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
+from pixo.render.core.curves import apply_lut1d_fast, curve_lut_from_points
+from pixo.render.modules.tone_map import (_apply_user_curve, _parse_user_curve_points,
                                         _RGB_WEIGHTS)
-from render.modules.tone_map import ToneStage
+from pixo.render.modules.tone_map import ToneStage
 
 
 def _stage_out(img, user_curve, base="srgb"):
@@ -195,7 +195,7 @@ def test_combined_all_three():
 # ---- 参数校验层: 非法 user_curve dict 即报错 (core._validate_param/_curve_dict_check) ----
 def test_invalid_user_curve_dict_raises_at_param_layer():
     """非法 user_curve dict 在参数校验层 (self.p) 即抛 ValueError (未知键/非点集)。"""
-    from render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB
+    from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_RGB
     for bad, match in [({"foo": [[0, 0], [1, 1]]}, "未知曲线键"),
                        ({"rgb": 123}, "点集"),
                        ({"red": []}, "点集")]:

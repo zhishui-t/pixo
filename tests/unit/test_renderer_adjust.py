@@ -10,9 +10,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.core.calibration import DcpProfile
-from render import api
-from render.api import (Renderer, RenderIntent, RawInput, RawMetadata,
+from pixo.render.core.calibration import DcpProfile
+from pixo.render import api
+from pixo.render.api import (Renderer, RenderIntent, RawInput, RawMetadata,
                                CameraCalibration)
 
 

@@ -9,9 +9,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB
-from render.core.usercal import apply_usercal_rgb
-from render.modules.calibration import CalibrationStage
+from pixo.render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB
+from pixo.render.core.usercal import apply_usercal_rgb
+from pixo.render.modules.calibration import CalibrationStage
 
 
 def _run_stage(img, params):
@@ -100,7 +100,7 @@ def test_red_sat_affects_red_not_blue():
 def test_hue_wrap_0_360_same_treatment():
     # 色相轴环状: 0° 与 360° 是同一色相 ⇒ 红段掩码对 hue≈1° 与 hue≈355° 像素
     # 给予相同处理 (mask 在 5° 与 355° 一致), red_sat 对两者效果对称。
-    from render.core.hsl import _ring_mask
+    from pixo.render.core.hsl import _ring_mask
     m = _ring_mask(np.array([1.0, 359.0], dtype=np.float64), 0.0, 60.0, 1.0)
     assert float(m[0] - m[1]) < 1e-6, "0/360 色相环绕掩码应一致"
     a = apply_usercal_rgb(np.array([[[0.9, 0.2, 0.1]]], np.float32), red_sat=80)  # H≈5°

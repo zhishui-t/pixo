@@ -6,13 +6,13 @@
   - parse_feedback: 测试表驱动 (方向/程度词/多意见同句)
   - 未识别片段报 UnknownFragment
 
-运行: python -m pytest src/render/tests/test_intents.py src/render/tests/test_feedback.py -q
+运行: python -m pytest tests/test_intents.py tests/test_feedback.py -q
 """
 from __future__ import annotations
 
 import pytest
 
-from render.pipeline.intents import (
+from pixo.render.pipeline.intents import (
     DAMPING,
     EditIntent,
     UnknownFragment,
@@ -234,7 +234,7 @@ def test_user_curve_phase1():
 
 def test_parser_emits_new_ops():
     # 清晰度/去雾等新 op 可从中文解析到 (确定性片段); 多词模糊匹配由通用规则承担
-    from render.pipeline.intents import parse_feedback
+    from pixo.render.pipeline.intents import parse_feedback
     its = parse_feedback("更清晰")
     ops = [i.op for i in its]
     assert "clarity" in ops

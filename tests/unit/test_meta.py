@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from render.meta import (
+from pixo.meta import (
     detect_burst_groups,
     extract,
     infer_lighting_context,
@@ -21,7 +21,7 @@ from render.meta import (
     parse_exif_time,
     strip_gps,
 )
-from render.meta.lighting import classify_daylight
+from pixo.meta.lighting import classify_daylight
 
 
 # ---------------------------------------------------------------------------

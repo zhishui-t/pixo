@@ -5,10 +5,10 @@ import cv2
 import numpy as np
 import pytest
 
-from render import _native as native
-from render.core.curves import apply_lut1d_fast
-from render.core.enhance import _gray, clarity
-from render.modules.exposure import soft_highlight_rolloff
+from pixo.render import _native as native
+from pixo.render.core.curves import apply_lut1d_fast
+from pixo.render.core.enhance import _gray, clarity
+from pixo.render.modules.exposure import soft_highlight_rolloff
 
 pytestmark = pytest.mark.gate
 

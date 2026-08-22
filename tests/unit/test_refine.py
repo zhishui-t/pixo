@@ -10,7 +10,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from render.modules.refine import (
+from pixo.render.modules.refine import (
     RefineStage,
     _check_warm_hue_curve,
     _check_warm_sat_curve,

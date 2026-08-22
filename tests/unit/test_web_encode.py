@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.web.encode import (encode_image, encode_jpeg, encode_png16,
+from pixo.render.web.encode import (encode_image, encode_jpeg, encode_png16,
                                encode_raw48, encode_tiff16, encode_webp)
 
 

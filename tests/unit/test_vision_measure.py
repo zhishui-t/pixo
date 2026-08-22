@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from render.vision import (
+from pixo.vision import (
     MockSegmenter,
     VisionMeasure,
     measure_global,
@@ -269,8 +269,8 @@ def test_vision_measure_custom_mask_version():
 
 
 def test_render_vision_measure_module_importable():
-    """模块路径 render.vision.measure 可作为独立模块导入。"""
-    import render.vision.measure as measure_module
+    """模块路径 pixo.vision.measure 可作为独立模块导入。"""
+    import pixo.vision.measure as measure_module
 
     assert hasattr(measure_module, "measure_global")
     assert hasattr(measure_module, "measure_region")

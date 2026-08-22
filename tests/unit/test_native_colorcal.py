@@ -13,10 +13,10 @@ import cv2
 import numpy as np
 import pytest
 
-from render.modules.color_cal import ColorCalStage
-from render.pipeline.graph import DOMAIN_GAMMA_RGB, StageContext
-from render import _native as native
-from render.core.skin import skin_mask
+from pixo.render.modules.color_cal import ColorCalStage
+from pixo.render.pipeline.graph import DOMAIN_GAMMA_RGB, StageContext
+from pixo.render import _native as native
+from pixo.render.core.skin import skin_mask
 
 _NEUTRAL_CENTERS = np.array([8, 32, 72, 128, 184, 224, 248], dtype=np.float32)
 

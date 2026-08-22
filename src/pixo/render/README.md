@@ -85,9 +85,9 @@ pipe2 = pipeline_from_config(cfg, prof=prof)
 
 ```bash
 # 全量单测（不含 e2e）
-PYTHONPATH=. python -m pytest src/render/tests -q -m 'not e2e'
+PYTHONPATH=. python -m pytest tests -q -m 'not e2e'
 # 金样本回归（数据存在时执行）
-PYTHONPATH=. python -m pytest src/render/tests -q -m regression
+PYTHONPATH=. python -m pytest tests -q -m regression
 # DNG SDK 消融（全链路 MAE）
 python src/pixo/render/tools/dng_stage3_ablation.py
 ```
@@ -102,8 +102,8 @@ un_all_tests.bat`，一条命令完成：
 
 1. Native CMake 构建（`src/pixo/render/native/build.bat`）
 2. C++ 单元测试（`src/pixo/render/native/run_tests.bat`）
-3. Python 全量单元测试（`src/render/tests`，`-m 'not e2e'`；render 为兼容 shim）
-4. 功能门禁 gate 测试（`pytest src/render/tests/gate -m gate`，失败即阻塞）
+3. Python 全量单元测试（`tests`，`-m 'not e2e'`；render 为兼容 shim）
+4. 功能门禁 gate 测试（`pytest tests/gate -m gate`，失败即阻塞）
 5. `bench_preview` 冷启动（`--warmup 0`）
 6. `bench_preview` 热启动（`--warmup 1 --runs 2`）
 

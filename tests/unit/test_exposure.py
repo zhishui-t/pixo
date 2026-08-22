@@ -9,7 +9,7 @@
   - max_ev 钳位
   - 高光保护裁切 <2%
 
-运行: python -m pytest src/render/tests/test_exposure.py -q
+运行: python -m pytest tests/test_exposure.py -q
 """
 from __future__ import annotations
 
@@ -18,10 +18,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from render.core.calibration import DcpProfile
-from render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM
-from render.core.curves import apply_lut1d, curve_anchor_target, make_power_lut
-from render.modules.exposure import (
+from pixo.render.core.calibration import DcpProfile
+from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM
+from pixo.render.core.curves import apply_lut1d, curve_anchor_target, make_power_lut
+from pixo.render.modules.exposure import (
     ExposureStage,
     _baseline_curve_ev,
     _baseline_scene_ev,
@@ -30,7 +30,7 @@ from render.modules.exposure import (
     _probe_linear_srgb,
     soft_highlight_rolloff,
 )
-import render.modules.exposure as _exposure_mod
+import pixo.render.modules.exposure as _exposure_mod
 
 
 @pytest.fixture(autouse=True)
@@ -163,7 +163,7 @@ def test_target_offset_adds_ev():
 def test_target_offset_default_loads_calibration_file(tmp_path, monkeypatch):
     """默认 target_offset 从 engine/target_offset.json 加载 (ADR-06)。"""
     import json as _json
-    import render.modules.exposure as exposure_mod
+    import pixo.render.modules.exposure as exposure_mod
 
     cal = tmp_path / "target_offset.json"
     cal.write_text(_json.dumps({"target_offset": -1.25}), encoding="utf-8")
@@ -280,7 +280,7 @@ def test_process_no_hard_clip_after_rolloff():
 # ---------------------------------------------------------------------------
 
 def test_probe_shares_cam_to_xyz_chain():
-    from render.core.color import cam_to_xyz
+    from pixo.render.core.color import cam_to_xyz
     img = np.random.default_rng(0).random((64, 64, 3)).astype(np.float32) * 0.5
     prof = _make_profile()
     ctx = _make_ctx(img, prof=prof, wb_mode="off")
