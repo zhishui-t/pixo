@@ -1,0 +1,13 @@
+{
+  "schema": "pixo-resources-models-ref-v1",
+  "source_manifests": [
+    "src/pixo/manifests/vision_models.json",
+    "src/pixo/manifests/vision_datasets.json"
+  ],
+  "segmentation": [
+    "yoloe-26l-seg.pt (AGPL-3.0, 权重不入库)"
+  ],
+  "aesthetic": [
+    "aesthetic_scorer.pt / openai-clip-vit-base-patch32 (权重不入库)"
+  ]
+}

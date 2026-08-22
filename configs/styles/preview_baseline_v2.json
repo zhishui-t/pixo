@@ -1,0 +1,47 @@
+{
+  "dcp": "resources\\dcp\\Nikon Z 5 2 RawLab Preview Baseline v2.dcp",
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "huesat",
+    "tone",
+    "clarity",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "baseline"
+    },
+    "whitebalance": {
+      "warmth": 0.9,
+      "warmth_b0": 1.79,
+      "warmth_b1": 2.287,
+      "warmth_r_slope": 0.0661,
+      "warmth_g_slope": 0.0654,
+      "warmth_b_slope": 0.05,
+      "trim": [
+        1.28713,
+        1.24007,
+        0.6828
+      ]
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "tone": {
+      "profile_curve": true,
+      "eotf": "srgb",
+      "brightness": 0.0
+    },
+    "colorcal": {
+      "neutral_mode": "off",
+      "saturation": -0.3
+    },
+    "refine": {
+      "highlight_desat": 0.25
+    }
+  }
+}

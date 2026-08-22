@@ -30,8 +30,9 @@ _BUDGET_PATH = (
     Path(__file__).resolve().parents[1] / "bench" / "gate_e2e_loop_budget.json"
 )
 _DCP_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "profiles"
+    Path(__file__).resolve().parents[4]
+    / "resources"
+    / "dcp"
     / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 )
 

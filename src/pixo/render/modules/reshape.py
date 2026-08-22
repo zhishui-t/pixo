@@ -9,7 +9,7 @@
 
 设计约定:
   - 默认 enabled=False (基座 = 复现相机, 观感层显式开启);
-  - "观感增强" 预设 (presets/enhance.json) 显式开启 dehaze/clarity + filmic +
+  - "观感增强" 预设 (configs/styles/enhance.json) 显式开启 dehaze/clarity + filmic +
     vibrance/saturation/sharpen, 目标从"像相机"切换为"好看/通透/有质感"。
 """
 from __future__ import annotations

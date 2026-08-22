@@ -4,7 +4,7 @@
 > 执行：长安小队 · 测试（t24）
 > 依据：`render/docs/PIXO_RENDER_1S_PREVIEW_DESIGN.md` v1.6 门禁
 > 数据源：`K:\dsh-share\dng_verify\DSC_5607.dng`
-> DCP：`render/profiles/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp`
+> DCP：`resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp`
 
 ## 1. 验收命令
 
@@ -15,7 +15,7 @@ python -m pytest src/render/tests -q --tb=short
 # cold/hot 双口径 + A/B
 python render/tools/bench_preview.py \
     --raw K:/dsh-share/dng_verify/DSC_5607.dng \
-    --dcp K:/work/project/pixo/src/pixo/render/profiles/Nikon\ Z\ 5\ 2\ RawLab\ LR\ Adobe\ Standard\ Baseline.dcp \
+    --dcp K:/work/project/pixo/resources/dcp/Nikon\ Z\ 5\ 2\ RawLab\ LR\ Adobe\ Standard\ Baseline.dcp \
     --edges 1024,2048 --runs 3 --warmup 1 --mode both --ab \
     --baseline render/bench/preview_v16_baseline.json
 ```

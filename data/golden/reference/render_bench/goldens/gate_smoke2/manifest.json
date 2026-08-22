@@ -1,0 +1,250 @@
+{
+  "schema": "render-gate-golden-v1",
+  "long_edge": 64,
+  "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+  "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+  "features": {
+    "exposure": {
+      "feature": "exposure",
+      "params": {
+        "exposure": {
+          "mode": 0.7,
+          "max_ev": 2.5,
+          "rolloff_knee": 0.9
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\exposure\\output_u8.npy",
+        "u16": "gate_smoke2\\exposure\\output_u16.npy"
+      },
+      "sha256_u8": "b3a57bfce6cade42955029d8f1272861a4c1a5f8447229bc3b218cf590df53f8",
+      "sha256_u16": "ffd935c0820b6680a072d9f91312f7ddb9ef21f11784c7af36246579fdb773af",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    },
+    "whitebalance": {
+      "feature": "whitebalance",
+      "params": {
+        "whitebalance": {
+          "mode": "manual",
+          "temp": 5500.0,
+          "tint": 5.0
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\whitebalance\\output_u8.npy",
+        "u16": "gate_smoke2\\whitebalance\\output_u16.npy"
+      },
+      "sha256_u8": "6587cd5209d31e4afc88b7fa4f88cc8102071d682917e3e05f5f19a3e7f8ce7d",
+      "sha256_u16": "eb656d3549950c37377e014fcd635c6115e5aaefd2f6e3fab33ff43d963a9692",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    },
+    "tone": {
+      "feature": "tone",
+      "params": {
+        "tone": {
+          "contrast": 0.3,
+          "brightness": 0.5,
+          "highlights": 0.2,
+          "shadows": 0.2,
+          "whites": 0.1,
+          "blacks": -0.1
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\tone\\output_u8.npy",
+        "u16": "gate_smoke2\\tone\\output_u16.npy"
+      },
+      "sha256_u8": "7718bd20042664e01e1c25a8ee653bdde3dec44307596818be69194c1228c8f1",
+      "sha256_u16": "ef561ee2a2506af62ec49690bdc04b0087caef336e074028e83609178c60f071",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    },
+    "hsl": {
+      "feature": "hsl",
+      "params": {
+        "hsl": {
+          "enabled": true,
+          "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45, \"hue_shift\": 5.0, \"saturation\": 10.0, \"luminance\": 5.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45, \"hue_shift\": -3.0, \"saturation\": 8.0, \"luminance\": 2.0}]"
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\hsl\\output_u8.npy",
+        "u16": "gate_smoke2\\hsl\\output_u16.npy"
+      },
+      "sha256_u8": "7ca27bd08a94ef370d695e16e2be44effa9034e23435bb243beeda725f2c4043",
+      "sha256_u16": "ab6eaa0e1c05ee07c8f5418887f3d1726040fbd24bf8130446829e6eac095017",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    },
+    "split_tone": {
+      "feature": "split_tone",
+      "params": {
+        "split_tone": {
+          "enabled": true,
+          "shadows_hue": 45.0,
+          "shadows_sat": 30.0,
+          "highlights_hue": 210.0,
+          "highlights_sat": 20.0,
+          "balance": 0.5,
+          "strength": 0.8
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\split_tone\\output_u8.npy",
+        "u16": "gate_smoke2\\split_tone\\output_u16.npy"
+      },
+      "sha256_u8": "89544213f37dcdd3ce6434d20d442888756e423a68354647f46c9ecfb8ebdfdc",
+      "sha256_u16": "1354286121ed3b7bac4cc4d37dcda74cd137da662c6b7e0dfa270d84adb945a4",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    },
+    "calibration": {
+      "feature": "calibration",
+      "params": {
+        "calibration": {
+          "enabled": true,
+          "shadow_tint": 5.0,
+          "red_hue": 5.0,
+          "red_sat": 10.0,
+          "green_hue": -3.0,
+          "green_sat": 5.0,
+          "blue_hue": 2.0,
+          "blue_sat": 8.0
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\calibration\\output_u8.npy",
+        "u16": "gate_smoke2\\calibration\\output_u16.npy"
+      },
+      "sha256_u8": "14063de77ab6bf646be73d323598b46ff8b600e2de5ee5f17b4704d803f3a7f6",
+      "sha256_u16": "c0e9f05b73fb6cff4b6af9b1ea1dfb9b0b2df5af678ad783bad428fae0512a1c",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    },
+    "skin": {
+      "feature": "skin",
+      "params": {
+        "skin": {
+          "enabled": true,
+          "strength": 0.5
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\skin\\output_u8.npy",
+        "u16": "gate_smoke2\\skin\\output_u16.npy"
+      },
+      "sha256_u8": "897bde2d544d9769e0cb41c995a997013226d7465d10c0a55d84f991b1da2826",
+      "sha256_u16": "59c7b5345ebdc48044db70081efd4fa2f2b3add81bed1f5d08f40202d4249a1c",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    },
+    "refine": {
+      "feature": "refine",
+      "params": {
+        "refine": {
+          "sharpen": 0.6,
+          "chroma_denoise": 1.2,
+          "highlight_desat": 0.8
+        }
+      },
+      "long_edge": 64,
+      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+      "files": {
+        "u8": "gate_smoke2\\refine\\output_u8.npy",
+        "u16": "gate_smoke2\\refine\\output_u16.npy"
+      },
+      "sha256_u8": "0af27d831d8bed61a36cc2e3132f7c3b76e6d06e2eacd1426709a4997e4a9f2d",
+      "sha256_u16": "5640151c708bac8719bb8550b18bb7aaf18ae41b3774a5b2612116621b513c5f",
+      "shape_u8": [
+        43,
+        64,
+        3
+      ],
+      "shape_u16": [
+        43,
+        64,
+        3
+      ]
+    }
+  }
+}

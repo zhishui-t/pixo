@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from pixo.meta import extract
-from pixo.render.decide import decide
-from pixo.render.state import PhotoStateMachine
+from pixo.decide import decide
+from pixo.state import PhotoStateMachine
 from pixo.render.web.export import ExportManager
 from pixo.render.web.session import RawPreviewSession
 from pixo.vision import MockSegmenter, VisionMeasure, vision_health
@@ -26,9 +26,9 @@ SUPPORTED_EXTENSIONS = {
 
 # 默认 DCP 路径：优先使用仓库内置 Nikon Z 5 基线。
 _DEFAULT_DCP = (
-    Path(__file__).resolve().parents[1]
-    / "render"
-    / "profiles"
+    Path(__file__).resolve().parents[3]
+    / "resources"
+    / "dcp"
     / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 )
 

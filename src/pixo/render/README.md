@@ -36,14 +36,14 @@ src/pixo/render/
     base.py            # render_dcp_linear / camera cache
     intents.py         # EditIntent / apply_intents / parse_feedback
     scene_apply.py     # 场景预设应用
-  presets/             # preview_fast / scenes / preview_baseline 等
-  profiles/            # DCP 相机配置文件
+  configs/styles/      # 风格/场景预设（已迁出至仓库顶层 configs/styles）
+  resources/dcp/       # DCP 相机配置文件（已迁出至仓库顶层 resources/dcp）
   web/                 # 8-bit/16-bit 编码与会话缓存
   tools/               # bench_preview / bench_pipeline
   bench/               # 性能基线 JSON
   docs/                # 设计/需求/规格/测试文档
   tests/               # 单元测试
-  calibration_data/    # dng_camera_cache / z5ii_neutral_trim
+  resources/camera_profiles/ # dng_camera_cache / z5ii_neutral_trim（已迁出）
 ```
 
 ## 快速开始

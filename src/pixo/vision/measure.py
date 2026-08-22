@@ -1,6 +1,6 @@
 """pixo.vision.measure —— Pixo Vision 区域/全局测量。
 
-本模块基于 cv2/numpy 实现图像测量统计，输出对齐 doc/架构设计文档.md §5.4：
+本模块基于 cv2/numpy 实现图像测量统计，输出对齐 docs/架构设计文档.md §5.4：
   - global: mean_luminance、highlight_clip_ratio、shadow_clip_ratio、
             contrast、preview_highlight_clip_estimate。
   - region: mask_id、confidence、area_ratio、reliable、mean_lab、

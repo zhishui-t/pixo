@@ -508,7 +508,8 @@ if __name__ == "__main__":
 import numpy as np
 
 # 标定文件 (fit_camera_look.py 生成)
-_CAL_FILE = Path(__file__).resolve().parents[1] / "calibration_data" / "z5ii_neutral_trim.json"
+_CAL_FILE = (Path(__file__).resolve().parents[4] / "resources"
+                  / "camera_profiles" / "z5ii_neutral_trim.json")
 _cached: Optional[dict] = None
 
 

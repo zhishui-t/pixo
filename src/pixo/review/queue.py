@@ -40,7 +40,7 @@ class ReviewQueue:
             return
         if hasattr(self.trace_store, "add_trace"):
             try:
-                from pixo.render.state.trace import TraceEvent
+                from pixo.trace import TraceEvent
 
                 self.trace_store.add_trace(TraceEvent(
                     photo_id=item.photo_id,

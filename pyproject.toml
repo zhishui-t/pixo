@@ -39,9 +39,6 @@ exclude = ["render.tests*", "pixo.render.tests*"]
 
 [tool.setuptools.package-data]
 "pixo.render" = [
-    "profiles/*.dcp",
-    "presets/*.json",
-    "calibration_data/*.json",
     "bench/*.json",
     "_native/*.dll",
     "_native/*.so",

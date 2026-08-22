@@ -1,7 +1,7 @@
 """engine.scene_apply —— 场景→风格预设注册表与应用 (阶段2, T4)。
 
 职责 (软件设计 §2 / 规格 §1):
-  - load_scene_presets() -> dict: 读 render/presets/scenes.json (进程内缓存)。
+  - load_scene_presets() -> dict: 读 configs/styles/scenes.json (进程内缓存)。
   - apply_scene_preset(scene_id) -> (params, lut): 场景参数覆盖 + 可选 LUT id;
     未知场景 → ({}, None) 并告警。
 
@@ -19,7 +19,8 @@ import warnings
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-_SCENES_FILE = Path(__file__).resolve().parents[1] / "presets" / "scenes.json"
+_SCENES_FILE = (Path(__file__).resolve().parents[4] / "configs" / "styles"
+                     / "scenes.json")
 _cache: Optional[dict] = None
 
 

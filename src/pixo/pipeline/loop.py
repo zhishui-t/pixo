@@ -25,8 +25,8 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 import cv2
 import numpy as np
 
-from pixo.render.decide import decide, qc_rollback
-from pixo.render.state import PhotoStateMachine, TraceEvent
+from pixo.decide import decide, qc_rollback
+from pixo.state import PhotoStateMachine, TraceEvent
 from pixo.vision import MockSegmenter, Segmenter, SegmenterUnavailable, VisionMeasure
 
 # 曝光参数别名与 Stage 参数映射（统一小写比较）。

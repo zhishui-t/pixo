@@ -88,7 +88,8 @@ class Renderer:
         预览目标"看得见、快": 只跑 [exposure, whitebalance, huesat, tone];
         由预设驱动 (pipeline_from_config), prof 用本 Renderer 的已加载 profile。
         """
-        preset = (Path(__file__).resolve().parent / "presets" / "preview_fast.json")
+        preset = (Path(__file__).resolve().parents[3] / "configs" / "styles"
+                     / "preview_fast.json")
         cfg = json.loads(preset.read_text(encoding="utf-8"))
         pipe = pipeline_from_config(cfg, prof=self.profile)
         return pipe.run_file(str(raw_path), half_size=half_size)

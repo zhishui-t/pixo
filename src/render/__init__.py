@@ -45,7 +45,28 @@ class _AliasFinder(importlib.abc.MetaPathFinder):
         if not fullname.startswith("render."):
             return None
         rel = fullname[len("render."):]
-        for real_name in (f"pixo.render.{rel}", f"pixo.{rel}"):
+        # 顶层已迁移/新建的 pixo.* 模块：render.* 优先指向这些顶层包。
+        top_level_map = {
+            "decide": "pixo.decide",
+            "state": "pixo.state",
+            "trace": "pixo.trace",
+            "state.trace": "pixo.trace",
+            "vision": "pixo.vision",
+            "meta": "pixo.meta",
+            "know": "pixo.know",
+            "review": "pixo.review",
+            "harness": "pixo.harness",
+            "service": "pixo.service",
+            "dsh": "pixo.dsh",
+            "manifests": "pixo.manifests",
+            "agent": "pixo.agent",
+        }
+        if rel in top_level_map:
+            ordered_names = [top_level_map[rel], f"pixo.render.{rel}"]
+        else:
+            # 渲染引擎子模块优先 pixo.render.*（如 core/modules/pipeline/api/tools/native）
+            ordered_names = [f"pixo.render.{rel}", f"pixo.{rel}"]
+        for real_name in ordered_names:
             try:
                 spec = importlib.util.find_spec(real_name)
             except (ImportError, AttributeError, ValueError):

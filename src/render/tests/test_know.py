@@ -23,7 +23,7 @@ from pixo.know import (
     style_card_to_decide_rules,
 )
 from pixo.know.cards import build_style_card_rules
-from pixo.render.decide import decide
+from pixo.decide import decide
 
 
 def test_default_graph_query_hits_scene_and_strategy():

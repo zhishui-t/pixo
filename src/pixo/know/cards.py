@@ -1,6 +1,6 @@
 """pixo.know.cards —— 风格卡片 schema 与 Decide 建议规则。
 
-风格卡片结构对齐 doc/架构设计文档.md §10.2：
+风格卡片结构对齐 docs/架构设计文档.md §10.2：
   style_id / tags / color_fingerprint / tone_fingerprint /
   known_issues / recommended_adjustments。
 

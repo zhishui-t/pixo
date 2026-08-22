@@ -32,7 +32,8 @@ if str(ROOT) not in sys.path:
 from pixo.render.api import Renderer
 from pixo.render.pipeline.presets import build_default_pipeline
 
-DEFAULT_DCP = (ROOT / "render" / "profiles"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+DEFAULT_DCP = (REPO_ROOT / "resources" / "dcp"
                / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp")
 DEFAULT_RAW = Path(r"K:\dsh-share\dng_verify\DSC_5607.dng")
 DEFAULT_EDGES = [1024, 2048]

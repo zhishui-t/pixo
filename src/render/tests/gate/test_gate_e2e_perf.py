@@ -22,8 +22,8 @@ pytestmark = pytest.mark.gate
 
 _RAW_PATH = os.environ.get("RAW_PATH", "")
 _DCP = (
-    Path(__file__).resolve().parents[3]
-    / "pixo" / "render" / "profiles"
+    Path(__file__).resolve().parents[4]
+    / "resources" / "dcp"
     / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 )
 

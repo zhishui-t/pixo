@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from render.state import (
+from pixo.state import (
     IllegalTransitionError,
     InvalidTransitionReasonError,
     PhotoStateMachine,

@@ -24,8 +24,8 @@ FEATURES = (
     "calibration", "hsl", "split_tone", "skin", "stylize", "refine",
 )
 
-_DCP_PATH = (Path(__file__).resolve().parents[3] / "pixo" / "render"
-                     / "profiles" / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp")
+_DCP_PATH = (Path(__file__).resolve().parents[4] / "resources" / "dcp"
+                     / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp")
 
 
 def _color_steps():

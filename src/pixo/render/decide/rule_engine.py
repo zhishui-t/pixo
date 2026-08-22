@@ -1,20 +1,8 @@
-"""兼容入口：``render.decide.rule_engine`` / ``pixo.render.decide.rule_engine``。"""
-from .engine import (
-    DecideError,
-    FormulaError,
-    RuleEngine,
-    decide,
-    evaluate_rules,
-    load_rules,
-    resolve_conflicts,
-)
+"""render.decide.rule_engine 兼容 shim -> pixo.decide.rule_engine。"""
+from __future__ import annotations
 
-__all__ = [
-    "DecideError",
-    "FormulaError",
-    "RuleEngine",
-    "decide",
-    "evaluate_rules",
-    "load_rules",
-    "resolve_conflicts",
-]
+import pixo.decide.rule_engine as _impl
+
+
+def __getattr__(name):
+    return getattr(_impl, name)

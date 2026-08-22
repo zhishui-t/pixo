@@ -181,8 +181,7 @@ def test_probe_files_written(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_preset_loads_and_describe_order():
-    presets = (Path(__file__).resolve().parents[2] / "pixo" / "render"
-                     / "presets")
+    presets = (Path(__file__).resolve().parents[3] / "configs" / "styles")
     cfg = json.loads((presets / "neutral.json").read_text(encoding="utf-8"))
     pipe = pipeline_from_config(cfg)
     names = [s["name"] for s in pipe.describe()]

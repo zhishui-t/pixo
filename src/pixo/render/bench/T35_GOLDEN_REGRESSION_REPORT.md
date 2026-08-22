@@ -4,16 +4,16 @@
 > 执行：长安小队 · 测试（t35）
 > 依据：`render/docs/FUNCTION_GATE_SPEC.md` §6 golden 回归（L2）
 > 数据源：真实 NEF `K:\data\photo\0711\raw\DSC_5236.NEF`
-> DCP：`render/profiles/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp`
+> DCP：`resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp`
 
 ## 1. 交付物
 
 | 文件 | 说明 |
 |---|---|
 | `render/tools/gate_golden.py` | golden 生成/对比工具（`generate` / `compare` 子命令） |
-| `render/bench/goldens/gate/manifest.json` | golden 清单（raw/dcp/params/sha256/shape） |
-| `render/bench/goldens/gate/<feature>/output_u8.npy` | 8-bit golden 输出 |
-| `render/bench/goldens/gate/<feature>/output_u16.npy` | 16-bit golden 输出 |
+| `data/golden/reference/render_bench/goldens/gate/manifest.json` | golden 清单（raw/dcp/params/sha256/shape） |
+| `data/golden/reference/render_bench/goldens/gate/<feature>/output_u8.npy` | 8-bit golden 输出 |
+| `data/golden/reference/render_bench/goldens/gate/<feature>/output_u16.npy` | 16-bit golden 输出 |
 | `render/bench/T35_GOLDEN_REGRESSION_REPORT.md` | 本报告 |
 
 覆盖 feature：`exposure`、`whitebalance`、`tone`、`hsl`、`split_tone`、`calibration`、`skin`、`refine`。
@@ -23,8 +23,8 @@
 ```bash
 python render/tools/gate_golden.py generate \
     --raw K:/data/photo/0711/raw/DSC_5236.NEF \
-    --dcp K:/work/project/pixo/src/pixo/render/profiles/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
-    --out render/bench/goldens/gate \
+    --dcp K:/work/project/pixo/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
+    --out data/golden/reference/render_bench/goldens/gate \
     --long-edge 512
 ```
 
@@ -36,8 +36,8 @@ python render/tools/gate_golden.py generate \
 ```bash
 python render/tools/gate_golden.py compare \
     --raw K:/data/photo/0711/raw/DSC_5236.NEF \
-    --dcp K:/work/project/pixo/src/pixo/render/profiles/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
-    --out render/bench/goldens/gate \
+    --dcp K:/work/project/pixo/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
+    --out data/golden/reference/render_bench/goldens/gate \
     --long-edge 512
 ```
 

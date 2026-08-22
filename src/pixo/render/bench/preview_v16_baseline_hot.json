@@ -1,7 +1,7 @@
 {
   "schema": "render-bench-preview-v1.6",
   "raw": "K:\\dsh-share\\dng_verify\\DSC_5607.dng",
-  "dcp": "K:\\work\\project\\pixo\\pixo\\render\\profiles\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+  "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
   "native_available": true,
   "runs": 3,
   "warmup": 1,

@@ -30,10 +30,11 @@ from pixo.harness.goldens import (
 )
 
 MANIFEST_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "pixo"
+    Path(__file__).resolve().parents[3]
+    / "data"
+    / "golden"
+    / "reference"
     / "harness"
-    / "goldens"
     / "golden_manifest.json"
 )
 

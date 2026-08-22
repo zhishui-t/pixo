@@ -11,7 +11,8 @@ from pathlib import Path
 from .manifest import save_manifest
 from .samples import build_manifest_dict
 
-DEFAULT_OUT = Path(__file__).with_name("golden_manifest.json")
+DEFAULT_OUT = (Path(__file__).resolve().parents[4] / "data" / "golden"
+                   / "reference" / "harness" / "golden_manifest.json")
 
 
 def main(argv: list[str] | None = None) -> int:

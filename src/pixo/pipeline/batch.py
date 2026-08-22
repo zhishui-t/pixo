@@ -21,7 +21,7 @@ from typing import Any, Callable, Sequence
 import numpy as np
 
 from pixo.meta import detect_burst_groups, extract
-from pixo.render.state import PhotoStateMachine
+from pixo.state import PhotoStateMachine
 from pixo.vision import (
     MockSegmenter,
     VisionMeasure,

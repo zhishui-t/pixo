@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from render.decide import (
+from pixo.decide import (
     RuleEngine,
     apply_rules,
     check_termination,

@@ -1,6 +1,6 @@
 """pixo.service.app —— FastAPI 本地服务应用。
 
-实现 doc/PIXO_FRONTEND_DESIGN.md §5.4 的一期 REST API，包装
+实现 docs/PIXO_FRONTEND_DESIGN.md §5.4 的一期 REST API，包装
 vision/meta/render/decide/state/trace。不实现 DSH 工具插件（P2）。
 """
 from __future__ import annotations

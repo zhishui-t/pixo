@@ -10,7 +10,8 @@ from pathlib import Path
 
 from .manifest import load_manifest
 
-DEFAULT_MANIFEST = Path(__file__).with_name("golden_manifest.json")
+DEFAULT_MANIFEST = (Path(__file__).resolve().parents[4] / "data" / "golden"
+                        / "reference" / "harness" / "golden_manifest.json")
 
 
 def main(argv: list[str] | None = None) -> int:

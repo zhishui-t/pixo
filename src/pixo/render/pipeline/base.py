@@ -30,7 +30,8 @@ def camera_key(raw_path: Union[str, Path]) -> str:
 
 def load_camera_cache(path: Union[str, Path, None] = None) -> dict:
     if path is None:
-        path = Path(__file__).resolve().parents[1] / "calibration_data" / "dng_camera_cache.json"
+        path = (Path(__file__).resolve().parents[4] / "resources"
+                    / "camera_profiles" / "dng_camera_cache.json")
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
