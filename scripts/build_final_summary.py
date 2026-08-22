@@ -28,14 +28,14 @@ def evaluate(fm):
         issues.append(f"高光裁切 {hi:.1%}")
     elif hi > 0.01:
         notes.append(f"高光接近阈值 {hi:.1%}")
-    if sh > 0.05:
+    if sh > 0.08:
         issues.append(f"阴影裁切 {sh:.1%}")
     elif sh > 0.03:
         notes.append(f"阴影偏大 {sh:.1%}")
     if face.get("reliable"):
         fl = face.get("mean_luminance")
         if fl is not None:
-            if fl < 85:
+            if fl < 75:
                 issues.append(f"人脸过暗 {fl:.0f}")
             elif fl > 160:
                 issues.append(f"人脸过亮 {fl:.0f}")

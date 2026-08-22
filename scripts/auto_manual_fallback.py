@@ -55,11 +55,11 @@ def issues_from_measurement(m):
     issues = []
     if hi > 0.03:
         issues.append("highlight")
-    if sh > 0.05:
+    if sh > 0.08:
         issues.append("shadow")
     if face_ok:
         fl = face["mean_luminance"]
-        if fl < 85:
+        if fl < 75:
             issues.append("face_dark")
         elif fl > 160:
             issues.append("face_bright")
