@@ -28,16 +28,16 @@ apply.spec.ts
 !pixo/dsh/*.mjs
 
 # ---- C++ native build artifacts ----
-pixo/render/native/build/
-pixo/render/_native/*.dll
-pixo/render/_native/*.so
-pixo/render/_native/*.pyd
+src/pixo/render/native/build/
+src/pixo/render/_native/*.dll
+src/pixo/render/_native/*.so
+src/pixo/render/_native/*.pyd
 
 # Extra native build dirs
-pixo/render/native/build*/
+src/pixo/render/native/build*/
 
 # pixo.render decode disk cache
-pixo/render/bench/cache/
+src/pixo/render/bench/cache/
 
 # ---- Pixo frontend (Web UI) ----
 !frontend/package.json

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pixo"
 version = "0.1.0"
 description = "Pixo render / vision / meta Python engine"
-readme = "pixo/render/README.md"
+readme = "src/pixo/render/README.md"
 requires-python = ">=3.10"
 license = {text = "Proprietary"}
 dependencies = [
@@ -33,7 +33,7 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["pixo*", "render*"]
 exclude = ["render.tests*", "pixo.render.tests*"]
 
