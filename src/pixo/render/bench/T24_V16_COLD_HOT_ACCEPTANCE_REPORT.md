@@ -15,7 +15,7 @@ python -m pytest src/render/tests -q --tb=short
 # cold/hot 双口径 + A/B
 python render/tools/bench_preview.py \
     --raw K:/dsh-share/dng_verify/DSC_5607.dng \
-    --dcp K:/work/project/pixo/resources/dcp/Nikon\ Z\ 5\ 2\ RawLab\ LR\ Adobe\ Standard\ Baseline.dcp \
+    --dcp $PIXO_ROOT/resources/dcp/Nikon\ Z\ 5\ 2\ RawLab\ LR\ Adobe\ Standard\ Baseline.dcp \
     --edges 1024,2048 --runs 3 --warmup 1 --mode both --ab \
     --baseline render/bench/preview_v16_baseline.json
 ```

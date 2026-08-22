@@ -1,13 +1,11 @@
-"""Pixo Vision 模型与数据集清单测试。
+"""Pixo Vision 模型清单测试。
 
-验证 vision_models.json / vision_datasets.json 可加载、字段完整。
+验证 vision_models.json 可加载、字段完整。
 """
 from __future__ import annotations
 
 from pixo.manifests import (
-    load_vision_datasets,
     load_vision_models,
-    validate_vision_datasets,
     validate_vision_models,
 )
 
@@ -35,26 +33,13 @@ def test_vision_models_fields_complete():
         assert item["pixo_status"]
 
 
-def test_vision_datasets_manifest_loads():
-    """数据集清单可加载，包含金样本与 guanlan 参考数据。"""
-    data = load_vision_datasets()
-    ids = {item["id"] for item in data["datasets"]}
-    assert "guanlan-calibration-synthetic" in ids
-    assert "guanlan-landscape-yolo96" in ids
-    assert "pixo-golden-samples-v0" in ids
-    assert "pixo-raw-golden-placeholders" in ids
-
-
-def test_vision_datasets_fields_complete():
-    """每个数据集条目包含用途/来源/许可/可发布/集成状态。"""
-    data = load_vision_datasets()
-    for item in data["datasets"]:
-        assert item["id"]
-        assert item["purpose"]
-        assert item["path_or_source"]
-        assert item["license"]
-        assert isinstance(item["publishable"], bool)
-        assert item["pixo_status"]
+def test_vision_models_no_unused_entries():
+    """模型清单只保留实际接入或随 YOLOE 必需的模型。"""
+    data = load_vision_models()
+    ids = {item["id"] for item in data["models"]}
+    assert "yunet-face-detector" not in ids
+    assert "mediapipe-face-landmarker" not in ids
+    assert "nima-inception-onnx" not in ids
 
 
 def test_missing_field_detected():
@@ -70,18 +55,6 @@ def test_missing_field_detected():
     }
     model_errors = validate_vision_models(invalid_models)
     assert any("path_or_source" in e for e in model_errors)
-
-    invalid_datasets = {
-        "schema_version": "1.0",
-        "datasets": [
-            {
-                "id": "missing-fields",
-                "purpose": "test",
-            }
-        ],
-    }
-    dataset_errors = validate_vision_datasets(invalid_datasets)
-    assert any("license" in e for e in dataset_errors)
 
 
 def test_publishable_boolean_must_be_bool():

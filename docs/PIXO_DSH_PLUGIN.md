@@ -45,7 +45,7 @@ P2-1 交付：DSH 侧的 `pixo.*` 工具薄封装。插件本身只发 HTTP 请�
    ```yaml
    - insert:
        - id: pixo-tools
-         name: 'file:///K:/work/project/pixo/pixo/dsh/pixo-tools.mjs'
+         name: 'file:///$PIXO_ROOT/pixo/dsh/pixo-tools.mjs'
          config:
            baseUrl: 'http://127.0.0.1:9777'
    ```

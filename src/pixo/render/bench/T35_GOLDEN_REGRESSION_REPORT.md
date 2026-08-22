@@ -23,7 +23,7 @@
 ```bash
 python render/tools/gate_golden.py generate \
     --raw K:/data/photo/0711/raw/DSC_5236.NEF \
-    --dcp K:/work/project/pixo/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
+    --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
     --out data/golden/reference/render_bench/goldens/gate \
     --long-edge 512
 ```
@@ -36,7 +36,7 @@ python render/tools/gate_golden.py generate \
 ```bash
 python render/tools/gate_golden.py compare \
     --raw K:/data/photo/0711/raw/DSC_5236.NEF \
-    --dcp K:/work/project/pixo/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
+    --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
     --out data/golden/reference/render_bench/goldens/gate \
     --long-edge 512
 ```

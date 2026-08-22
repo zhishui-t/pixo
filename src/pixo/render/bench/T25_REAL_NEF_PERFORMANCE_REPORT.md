@@ -12,7 +12,7 @@
 ```bash
 python render/tools/bench_preview.py \
     --raw K:/data/photo/0711/raw/DSC_5236.NEF \
-    --dcp K:/work/project/pixo/resources/dcp/Nikon\ Z\ 5\ 2\ RawLab\ LR\ Adobe\ Standard\ Baseline.dcp \
+    --dcp $PIXO_ROOT/resources/dcp/Nikon\ Z\ 5\ 2\ RawLab\ LR\ Adobe\ Standard\ Baseline.dcp \
     --edges 1024,2048 --runs 3 --warmup 1 --mode both --ab \
     --baseline render/bench/preview_v16_nef_baseline.json
 ```

@@ -4,13 +4,13 @@
   # 生成基线
   python render/tools/gate_golden.py generate \
       --raw K:/data/photo/0711/raw/DSC_5236.NEF \
-      --dcp K:/work/project/pixo/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
+      --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
       --out data/golden/reference/render_bench/goldens/gate --long-edge 512
 
   # 对比当前输出与基线
   python render/tools/gate_golden.py compare \
       --raw K:/data/photo/0711/raw/DSC_5236.NEF \
-      --dcp K:/work/project/pixo/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
+      --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
       --out data/golden/reference/render_bench/goldens/gate --long-edge 512
 
 阈值：8-bit max|Δ| ≤1/255；16-bit max|Δ| ≤1/65535（确定性路径应逐位）。

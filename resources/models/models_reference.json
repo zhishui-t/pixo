@@ -1,8 +1,7 @@
 {
   "schema": "pixo-resources-models-ref-v1",
   "source_manifests": [
-    "src/pixo/manifests/vision_models.json",
-    "src/pixo/manifests/vision_datasets.json"
+    "src/pixo/manifests/vision_models.json"
   ],
   "segmentation": [
     "yoloe-26l-seg.pt (AGPL-3.0, 权重不入库)"

@@ -23,7 +23,7 @@ __all__ = ["LUT3D", "hald_to_lut", "parse_cube", "load_lut"]
 
 
 # ── LUT 库注册 (guanlan luts/ 复用; 环境变量 PIXO_RENDER_LUT_DIR 优先, 旧值仅作回退) ──
-_LUT_DIR = Path(os.environ.get("PIXO_RENDER_LUT_DIR", r"K:\work\project\guanlan\luts"))
+_LUT_DIR = Path(os.environ.get("PIXO_RENDER_LUT_DIR", str(Path(__file__).resolve().parents[4].parent / "guanlan" / "luts")))
 
 _LUT_REGISTRY = {
     "astia": "astia.cube",

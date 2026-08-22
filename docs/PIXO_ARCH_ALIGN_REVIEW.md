@@ -3,7 +3,7 @@
 > 版本：v1.0（架构评审稿）
 > 日期：2026-08-22
 > 评审人：架构师（Pixo 团队）
-> 代码基线：`K:/work/project/pixo` @ `7c737a6 refactor: 迁移至 render 包并全量改名 RawLux -> Pixo Render`
+> 代码基线：`$PIXO_ROOT/pixo` @ `7c737a6 refactor: 迁移至 render 包并全量改名 RawLux -> Pixo Render`
 > 评审对象：`docs/架构设计文档.md`（v0.1.0rc，917 行）
 > 交付范围：差距表 / 管线顺序确认 / guanlan 复用评估 / 风险与对策 / DSH Agent 与前端打包方案 / P0-P2 路线图
 
@@ -17,7 +17,7 @@
 4. **YOLOE-26L-seg 的 AGPL-3.0 是真实产品化阻断项**：内部研发可用，对外发布必须换 Apache/MIT 模型或购买 Ultralytics 企业授权。本次方案将其严格隔离在单个 `Segmenter` 适配器内，并给出替代路线（Grounding-DINO + SAM 系等）。
 5. **单张 ≤30s、批量 ≥2 张/分钟的预算“勉强可达但有条件”**：关键优化是**分割只在构图后的 preview 上跑一次、mask 在 3 轮迭代中复用**；否则 CPU 推理的 YOLOE-26L 会把预算吃穿。全分辨率 NEF 渲染 ~10.8s 是主要成本，批量吞吐需 2 个并行 worker。
 6. **打包形态建议**：先 **Web+PWA（本地 FastAPI 服务 + DSH Web 宿主）**；桌面用 **Tauri + Python sidecar（PyInstaller）**；手机先做 **局域网远程客户端（Expo/React Native）**，不重写引擎。Flutter/原生重写不推荐。
-7. **必须立即修正的文档漂移**：render/README 基线（597 vs 当前 498 收集）、根 requirements.txt 仍写 “rawlab”、bench JSON/工具默认路径仍指向 `K:/work/project/RawFlow`。这些不影响运行但会造成后续误判。
+7. **必须立即修正的文档漂移**：render/README 基线（597 vs 当前 498 收集）、根 requirements.txt 仍写 “rawlab”、bench JSON/工具默认路径仍指向 `$PIXO_ROOT/RawFlow`。这些不影响运行但会造成后续误判。
 
 ---
 
@@ -53,7 +53,7 @@
 | `render/api` 目录 | 文档与任务描述写 `render/api`，实际是 `render/api.py` 单文件 + `render/web/*` | 命名歧义，写文档时统一为 `render.api` 模块 |
 | README 测试基线 | `render/README.md` 写 “597 passed”，当前收集 498（496 passed/1 skip/1 xfailed 口径） | 状态文档漂移 |
 | 根 requirements | 仍写 `# rawlab 运行时依赖` | 命名残留 |
-| bench/工具默认路径 | `bench/*.json`、`gate_golden.py` 示例仍指向 `K:/work/project/RawFlow/...` | 换仓后门禁示例不可复现 |
+| bench/工具默认路径 | `bench/*.json`、`gate_golden.py` 示例仍指向 `$RAWFLOW_ROOT/...` | 换仓后门禁示例不可复现 |
 | 历史文件名 | `RAWLAB_MASTER_PLAN.md`、`RAWLAB_ADJUSTMENTS_PLAN.md` 等仍存在 | 已删除 rawlab，历史文档应归档改名 |
 
 ---
