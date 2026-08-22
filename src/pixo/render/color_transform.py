@@ -1,0 +1,72 @@
+"""pixo.render.color_transform —— 色彩空间转换公开层。
+
+re-export ``pixo.render.core.color`` 与常用 sRGB/ProPhoto 转换函数。
+"""
+from __future__ import annotations
+
+from .core.color import (
+    BRADFORD_D50_TO_D65,
+    D50_XY,
+    D65_XY,
+    PROPHOTO_RGB_TO_XYZ_D50,
+    ColorMatrixFallbackWarning,
+    bradford_adapt,
+    cam_to_linear_srgb_matrix,
+    cam_to_prophoto_matrix,
+    cam_to_xyz,
+    cam_to_xyz_matrix,
+    cam_wb_to_prophoto,
+    camera_white,
+    cct_from_wb,
+    illuminant_cct,
+    interpolate_color_matrices,
+    interpolate_forward_matrix,
+    linear_prophoto_to_linear_srgb,
+    linear_prophoto_to_srgb,
+    linear_srgb_to_linear_prophoto,
+    neutral_to_xy,
+    prophoto_to_linear_srgb_matrix,
+    temp_tint_to_wb,
+    temp_tint_to_xy,
+    temp_to_xy,
+    temperature_from_xy,
+    wb_to_neutral,
+    wb_to_temp_tint,
+    xyz_to_linear_srgb,
+)
+from .core.curves import srgb_encode
+from .core.tone import apply_rgb_tone, srgb_decode
+
+__all__ = [
+    "D50_XY",
+    "D65_XY",
+    "PROPHOTO_RGB_TO_XYZ_D50",
+    "BRADFORD_D50_TO_D65",
+    "ColorMatrixFallbackWarning",
+    "illuminant_cct",
+    "bradford_adapt",
+    "interpolate_color_matrices",
+    "interpolate_forward_matrix",
+    "temperature_from_xy",
+    "wb_to_neutral",
+    "neutral_to_xy",
+    "cct_from_wb",
+    "temp_to_xy",
+    "temp_tint_to_xy",
+    "temp_tint_to_wb",
+    "wb_to_temp_tint",
+    "cam_to_xyz_matrix",
+    "cam_to_linear_srgb_matrix",
+    "camera_white",
+    "cam_to_prophoto_matrix",
+    "prophoto_to_linear_srgb_matrix",
+    "linear_prophoto_to_srgb",
+    "cam_wb_to_prophoto",
+    "cam_to_xyz",
+    "xyz_to_linear_srgb",
+    "linear_srgb_to_linear_prophoto",
+    "linear_prophoto_to_linear_srgb",
+    "srgb_encode",
+    "srgb_decode",
+    "apply_rgb_tone",
+]

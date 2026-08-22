@@ -4,8 +4,8 @@ REM
 REM 步骤：
 REM   1) src/pixo/render/native CMake 构建并拷贝 pixo_render_native.dll 到 src/pixo/render/_native/
 REM   2) src/pixo/render/native C++ 单元测试（pixo_render_native_tests.exe）
-REM   3) Python 全量单元测试（src/render/tests，不含 e2e；render 为兼容 shim）
-REM   4) 功能门禁 gate 测试（pytest -m gate，失败即阻塞）
+REM   3) Python 全量测试（tests/unit + integration + regression，不含 e2e）
+REM   4) 功能门禁 gate 测试（tests/regression，失败即阻塞）
 REM   5) bench_preview 冷启动（warmup=0）
 REM   6) bench_preview 热启动（warmup=1, runs=2）
 REM
@@ -60,7 +60,7 @@ if errorlevel 1 (
 popd
 
 echo === [3/6] Python 全量单元测试 ===
-python -m pytest src/render/tests -q -m "not e2e"
+python -m pytest tests -q -m "not e2e"
 if errorlevel 1 (
     echo [FAIL] Python tests failed
     set "SUMMARY=!SUMMARY! [3/6 FAIL]"
@@ -71,7 +71,7 @@ if errorlevel 1 (
 )
 
 echo === [4/6] 功能门禁 gate 测试（离线 L0-L2，失败阻塞） ===
-python -m pytest src/render/tests/gate -q -m "gate and not gate_e2e"
+python -m pytest tests/regression -q -m "gate and not gate_e2e"
 if errorlevel 1 (
     echo [FAIL] gate tests failed
     set "SUMMARY=!SUMMARY! [4/6 FAIL]"

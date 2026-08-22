@@ -43,3 +43,22 @@ exclude = ["render.tests*", "pixo.render.tests*"]
     "_native/*.dll",
     "_native/*.so",
 ]
+"pixo.agent" = [
+    "prompts/*.md",
+]
+
+[tool.setuptools.data-files]
+"configs/styles" = ["configs/styles/*.json"]
+"resources/dcp" = ["resources/dcp/*.dcp"]
+"resources/camera_profiles" = ["resources/camera_profiles/*.json"]
+"resources/models" = ["resources/models/*"]
+"data/golden" = ["data/golden/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "e2e: 需真实 NEF 数据的端到端测试 (无数据时 skip)",
+    "regression: 金样本/回归测试（数据存在时执行，缺失时 skip）",
+    "gate: pixo.render 功能门禁测试（失败阻塞合并）",
+    "gate_e2e: 需真实 NEF 的门禁 A-B（RAW_PATH 缺省时 skip）",
+]
