@@ -1,0 +1,12 @@
+rule_id: highlight_protect_rule_002
+priority: 20
+condition:
+  metric: preview_highlight_clip_estimate
+  op: gte
+  value: 0.025
+action:
+  param: exposure_ev
+  mode: set
+  formula: "-0.15"
+  clamp: [-0.5, 0.0]
+  conflict_policy: high_priority_wins

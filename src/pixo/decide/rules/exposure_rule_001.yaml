@@ -1,0 +1,13 @@
+rule_id: exposure_rule_001
+priority: 10
+condition:
+  metric: face_luminance
+  op: lt
+  value: 110
+action:
+  param: exposure_ev
+  formula: "2.2 * log2(target / current)"
+  target: 118
+  clamp: [-0.5, 0.5]
+  step_decay: 0.5
+  conflict_policy: high_priority_wins

@@ -1,16 +1,10 @@
-"""pixo.harness —— Pixo Harness/金样本/回归兼容入口。
+"""pixo.harness.regression —— 金样本/回归兼容入口。
 
-子模块：
-  - goldens: 金样本 manifest/schema/比较
-  - batch_render: 批量/单张渲染兼容入口
-  - metrics: 测量/性能指标兼容入口
-  - regression: 金样本回归兼容入口
-  - failure_injection: 故障注入测试工具
+复用 pixo.harness.goldens 与 render.tools.gate_golden 能力。
 """
 from __future__ import annotations
 
-from . import batch_render, failure_injection, metrics, regression
-from .goldens import (
+from pixo.harness.goldens import (
     GOLDEN_MANIFEST_VERSION,
     GOLDEN_SCHEMA,
     GoldenManifest,
@@ -25,12 +19,13 @@ from .goldens import (
     save_manifest,
     validate_manifest,
 )
+from pixo.render.tools.gate_golden import (
+    FEATURES,
+    THRESHOLD_U8,
+    THRESHOLD_U16,
+)
 
 __all__ = [
-    "batch_render",
-    "metrics",
-    "regression",
-    "failure_injection",
     "GOLDEN_SCHEMA",
     "GOLDEN_MANIFEST_VERSION",
     "GoldenManifest",
@@ -44,4 +39,7 @@ __all__ = [
     "compare_measurement",
     "compare_sample_with_run",
     "generate_synthetic_sample",
+    "FEATURES",
+    "THRESHOLD_U8",
+    "THRESHOLD_U16",
 ]
