@@ -1,4 +1,10 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
+} from 'react';
+import { ActionIcon, Badge, Group, Paper, SegmentedControl, Text } from '@mantine/core';
 import { useAppStore } from '../store/useAppStore';
 import { getOriginalSource, getPreviewSource } from '../api';
 
@@ -30,34 +36,29 @@ export function PreviewViewer() {
   const onPointerUp = () => {
     drag.current = null;
   };
-  const onWheel = (e: React.WheelEvent) => {
+  const onWheel = (e: ReactWheelEvent) => {
     const next = Math.max(0.1, Math.min(4, zoom + (e.deltaY < 0 ? 0.1 : -0.1)));
     setZoom(next);
   };
 
   return (
-    <section className="preview">
-      <div className="preview-toolbar">
-        <div className="seg">
-          <button className={viewMode === 'original' ? 'seg-active' : ''} onClick={() => setViewMode('original')}>
-            原图
-          </button>
-          <button className={viewMode === 'split' ? 'seg-active' : ''} onClick={() => setViewMode('split')}>
-            Split
-          </button>
-          <button className={viewMode === 'processed' ? 'seg-active' : ''} onClick={() => setViewMode('processed')}>
-            处理
-          </button>
-        </div>
-        <div className="preview-meta">
-          <span>gen #{generation}</span>
-          <span>zoom {Math.round(zoom * 100)}%</span>
-        </div>
-      </div>
+    <Paper radius="md" withBorder style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <Group justify="space-between" p="xs" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
+        <SegmentedControl
+          size="xs"
+          value={viewMode}
+          onChange={(value) => setViewMode(value as 'original' | 'split' | 'processed')}
+          data={[{ value: 'original', label: '原图' }, { value: 'split', label: 'Split' }, { value: 'processed', label: '处理' }]}
+        />
+        <Group gap="xs">
+          <Badge variant="light" color="indigo" size="sm">gen #{generation}</Badge>
+          <Text size="xs" c="dimmed">{Math.round(zoom * 100)}%</Text>
+        </Group>
+      </Group>
 
       <div
         className="preview-stage"
-        style={{ cursor: drag.current ? 'grabbing' : 'grab' }}
+        style={{ flex: 1, cursor: drag.current ? 'grabbing' : 'grab' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -93,7 +94,7 @@ export function PreviewViewer() {
               onPointerDown={(e) => {
                 e.stopPropagation();
                 const move = (ev: PointerEvent) => {
-                  const rect = (e.currentTarget as HTMLElement).parentElement?.getBoundingClientRect();
+                  const rect = e.currentTarget.parentElement?.getBoundingClientRect();
                   if (!rect) return;
                   setSplitPos(Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width)));
                 };
@@ -111,13 +112,13 @@ export function PreviewViewer() {
         )}
       </div>
 
-      <div className="preview-footer">
-        <button className="btn" onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}>−</button>
-        <button className="btn" onClick={() => setZoom(Math.min(4, zoom + 0.1))}>＋</button>
-        <button className="btn" onClick={() => setZoom(1)}>适应</button>
-        <button className="btn" onClick={() => setZoom(1)}>1:1</button>
-        <span className="hint">滚轮缩放 / 拖拽平移 / 分屏拖动分界线</span>
-      </div>
-    </section>
+      <Group p="xs" gap="xs" style={{ borderTop: '1px solid var(--mantine-color-dark-4)' }}>
+        <ActionIcon variant="light" onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}>−</ActionIcon>
+        <ActionIcon variant="light" onClick={() => setZoom(Math.min(4, zoom + 0.1))}>＋</ActionIcon>
+        <ActionIcon variant="light" onClick={() => setZoom(1)}>Fit</ActionIcon>
+        <ActionIcon variant="light" onClick={() => setZoom(1)}>1:1</ActionIcon>
+        <Text size="xs" c="dimmed">滚轮缩放 / 拖拽平移 / 分屏拖动</Text>
+      </Group>
+    </Paper>
   );
 }

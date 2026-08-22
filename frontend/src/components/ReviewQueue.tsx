@@ -1,3 +1,4 @@
+import { Badge, Button, Card, Group, Stack, Text, Title } from '@mantine/core';
 import { useAppStore } from '../store/useAppStore';
 
 export function ReviewQueue() {
@@ -6,28 +7,31 @@ export function ReviewQueue() {
   const setPage = useAppStore((s) => s.setPage);
 
   return (
-    <main className="page review-page">
-      <h1>人工复核队列</h1>
-      <div className="review-layout">
-        <div className="review-list">
+    <Stack gap="md">
+      <Title order={3}>人工复核队列</Title>
+      <Group align="flex-start" gap="md">
+        <Stack gap="sm" w={360}>
           {items.map((item) => (
-            <div key={item.id} className={`review-card review-${item.state}`}>
-              <div className="review-name">{item.photoName}</div>
-              <div className="review-reason">{item.reason}</div>
-              <div className="review-rules">rules: {item.ruleIds.join(', ')}</div>
-              <div className="review-actions">
-                <button className="btn btn-primary" onClick={() => markReview(item.id, 'accepted')}>接受</button>
-                <button className="btn" onClick={() => markReview(item.id, 'rejected')}>拒绝</button>
-                <button className="btn" onClick={() => setPage('workspace')}>编辑</button>
-              </div>
-            </div>
+            <Card key={item.id} radius="md" withBorder>
+              <Text fw={600}>{item.photoName}</Text>
+              <Text size="sm" c="orange.4" mt={4}>{item.reason}</Text>
+              <Group gap={4} mt={4}>
+                {item.ruleIds.map((rule) => (
+                  <Badge key={rule} size="xs" variant="light" color="orange">{rule}</Badge>
+                ))}
+              </Group>
+              <Group mt="sm">
+                <Button size="xs" onClick={() => markReview(item.id, 'accepted')}>接受</Button>
+                <Button size="xs" variant="light" onClick={() => markReview(item.id, 'rejected')}>拒绝</Button>
+                <Button size="xs" variant="subtle" onClick={() => setPage('workspace')}>编辑</Button>
+              </Group>
+            </Card>
           ))}
-        </div>
-        <div className="review-detail">
-          <div className="detail-placeholder">对比视图（原图 / 处理图）占位</div>
-          <div className="detail-placeholder">原因、rule_hits、Agent 建议展示区</div>
-        </div>
-      </div>
-    </main>
+        </Stack>
+        <Card radius="md" withBorder style={{ flex: 1 }}>
+          <Text c="dimmed">对比视图（原图 / 处理图）占位</Text>
+        </Card>
+      </Group>
+    </Stack>
   );
 }

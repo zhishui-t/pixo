@@ -1,3 +1,4 @@
+import { Badge, Group, NumberInput, Slider, Text } from '@mantine/core';
 import type { ParamPatch, Source } from '../types';
 
 interface SliderParamProps {
@@ -34,34 +35,39 @@ export function SliderParam({
   };
 
   return (
-    <div className={`slider-row ${locked ? 'locked' : ''}`}>
-      <div className="slider-label">
-        <span>{label}</span>
-        {source !== 'user' && <span className={`source-badge source-${source}`}>{source}</span>}
-        {locked && <span className="lock-badge">🔒</span>}
-      </div>
-      <div className="slider-controls">
-        <input
-          type="range"
+    <div style={{ opacity: locked ? 0.55 : 1, marginBottom: 10 }}>
+      <Group justify="space-between" mb={4}>
+        <Group gap={6}>
+          <Text size="xs">{label}</Text>
+          {source !== 'user' && <Badge size="xs" variant="light" color="indigo">{source}</Badge>}
+          {locked && <Badge size="xs" variant="light" color="red">🔒</Badge>}
+        </Group>
+        {unit && <Text size="xs" c="dimmed">{unit}</Text>}
+      </Group>
+      <Group gap="xs" align="center">
+        <Slider
+          style={{ flex: 1 }}
           value={value}
           min={min}
           max={max}
           step={step}
           disabled={locked}
-          onChange={(e) => update(Number(e.target.value))}
+          onChange={update}
+          size="sm"
+          label={(v) => v.toFixed(2)}
         />
-        <input
-          className="number-input"
-          type="number"
+        <NumberInput
+          w={76}
+          size="xs"
           value={value}
           min={min}
           max={max}
           step={step}
           disabled={locked}
-          onChange={(e) => update(Number(e.target.value))}
+          onChange={(v) => update(Number(v) || 0)}
+          hideControls
         />
-        {unit && <span className="unit">{unit}</span>}
-      </div>
+      </Group>
     </div>
   );
 }

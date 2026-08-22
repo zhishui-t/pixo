@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button, Divider, Group, Paper, ScrollArea, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { useAppStore } from '../store/useAppStore';
 
 export function ProjectList() {
@@ -19,38 +20,53 @@ export function ProjectList() {
   const visible = projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <aside className="project-list">
-      <div className="project-list-header">
-        <span>项目</span>
-        <button className="btn btn-mini" onClick={create}>新建</button>
-      </div>
-      <input
-        className="project-search"
+    <Stack gap="sm" h="100%">
+      <Group justify="space-between">
+        <Text fw={700} c="dimmed">项目</Text>
+        <Button size="compact-xs" onClick={create}>新建</Button>
+      </Group>
+      <TextInput
         placeholder="搜索项目"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => setQuery(e.currentTarget.value)}
+        size="xs"
       />
-      <div className="project-items">
-        {visible.map((project) => (
-          <button
-            key={project.id}
-            className={`project-item ${activeProjectId === project.id ? 'active' : ''}`}
-            onClick={() => selectProject(project.id)}
-          >
-            <span className="project-name">{project.name}</span>
-            <span className="project-meta">{project.photoIds.length} 张 · {project.createdAt}</span>
-          </button>
-        ))}
-      </div>
-      <div className="new-project-row">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && create()}
+      <ScrollArea style={{ flex: 1 }}>
+        <Stack gap={4}>
+          {visible.map((project) => (
+            <UnstyledButton
+              key={project.id}
+              onClick={() => selectProject(project.id)}
+              w="100%"
+            >
+              <Paper
+                p="xs"
+                radius="md"
+                withBorder
+                style={{
+                  background: activeProjectId === project.id ? 'rgba(99,102,241,0.12)' : undefined,
+                  borderColor: activeProjectId === project.id ? 'var(--mantine-color-indigo-5)' : undefined,
+                }}
+              >
+                <Text size="sm" fw={600}>{project.name}</Text>
+                <Text size="xs" c="dimmed">{project.photoIds.length} 张 · {project.createdAt}</Text>
+              </Paper>
+            </UnstyledButton>
+          ))}
+        </Stack>
+      </ScrollArea>
+      <Divider />
+      <Group gap="xs">
+        <TextInput
+          flex={1}
+          size="xs"
           placeholder="新项目名称"
+          value={name}
+          onChange={(e) => setName(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === 'Enter' && create()}
         />
-        <button className="btn btn-mini" onClick={create}>+</button>
-      </div>
-    </aside>
+        <Button size="xs" onClick={create}>+</Button>
+      </Group>
+    </Stack>
   );
 }

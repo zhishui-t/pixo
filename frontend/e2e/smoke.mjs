@@ -27,14 +27,12 @@ await check('页面标题包含 Pixo', async () => {
   if (!text.includes('Pixo')) throw new Error('body 中未找到 Pixo');
 });
 
-await check('ProjectList 渲染', async () => {
-  const count = await page.locator('.project-item').count();
-  if (count < 1) throw new Error(`project-item 数量为 ${count}`);
+await check('项目列表渲染', async () => {
+  await page.locator('text=夏末人像').first().waitFor({ timeout: 5000 });
 });
 
 await check('Filmstrip 渲染', async () => {
-  const count = await page.locator('.film-item').count();
-  if (count < 1) throw new Error(`film-item 数量为 ${count}`);
+  await page.locator('text=DSC_5236.NEF').first().waitFor({ timeout: 5000 });
 });
 
 await check('PreviewViewer 渲染', async () => {
@@ -49,8 +47,8 @@ await check('右侧 风格/AI 与 调整 Tab', async () => {
   await page.locator('text=基本').first().waitFor({ timeout: 3000 });
 });
 
-await page.screenshot({ path: 'screenshots/ui_v2.png', fullPage: true });
-console.log('Screenshot saved: screenshots/ui_v2.png');
+await page.screenshot({ path: 'screenshots/ui_v3.png', fullPage: true });
+console.log('Screenshot saved: screenshots/ui_v3.png');
 
 await browser.close();
 
