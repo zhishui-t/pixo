@@ -78,7 +78,11 @@ def ev_delta(issues, m):
     face_ok = bool(face.get("reliable") and face.get("mean_luminance") is not None)
     hi = g.get("highlight_clip_ratio") or 0
     if "highlight" in issues:
-        return -0.35 if hi > 0.10 else -0.20
+        if hi > 0.08:
+            return -0.35
+        if hi > 0.05:
+            return -0.30
+        return -0.20
     if "face_bright" in issues or (face_ok and face["mean_luminance"] > 160):
         return -0.25
     if "face_dark" in issues or (face_ok and face["mean_luminance"] < 85):
@@ -111,7 +115,7 @@ def process_one(renderer, measurer, segmenter, raw_path, max_iterations, out_dir
     final_m = None
     t0 = time.time()
     for it in range(1, max_iterations + 1):
-        params = {"exposure": {"mode": ev}}
+        params = {"exposure": {"mode": "auto", "target_offset": ev}}
         img = backend.render_full(params)
         full_masks = resize_masks(masks, img.shape[:2])
         m = measurer.measure(img, full_masks, image_id=pid,
@@ -134,7 +138,7 @@ def process_one(renderer, measurer, segmenter, raw_path, max_iterations, out_dir
             break
         ev = max(-1.5, min(1.5, ev + delta))
     else:
-        params = {"exposure": {"mode": ev}}
+        params = {"exposure": {"mode": "auto", "target_offset": ev}}
         final_img = backend.render_full(params)
         full_masks = resize_masks(masks, final_img.shape[:2])
         final_m = measurer.measure(final_img, full_masks, image_id=pid,
@@ -156,7 +160,7 @@ def process_one(renderer, measurer, segmenter, raw_path, max_iterations, out_dir
     rec = {
         "photo_id": pid,
         "raw": str(raw_path),
-        "params": {"exposure": {"mode": round(ev, 3)}},
+        "params": {"exposure": {"mode": "auto", "target_offset": round(ev, 3)}},
         "final_measurement": final_m,
         "history": history,
         "after_path": str(after_path),

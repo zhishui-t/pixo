@@ -79,7 +79,11 @@ def ev_delta(issues, m, current_ev):
     hi = g.get("highlight_clip_ratio") or 0
     mean = g.get("mean_luminance")
     if "highlight" in issues:
-        return -0.35 if hi > 0.10 else -0.20
+        if hi > 0.08:
+            return -0.35
+        if hi > 0.05:
+            return -0.30
+        return -0.20
     if "face_bright" in issues or (face_ok and face["mean_luminance"] > 160):
         return -0.25
     if "face_dark" in issues or (face_ok and face["mean_luminance"] < 85):
@@ -157,7 +161,7 @@ def main() -> None:
         final_m = None
         t0 = time.time()
         for it in range(1, args.max_iterations + 1):
-            params = {"exposure": {"mode": ev}}
+            params = {"exposure": {"mode": "auto", "target_offset": ev}}
             img = backend.render_full(params)
             full_masks = resize_masks(masks, img.shape[:2])
             m = measurer.measure(img, full_masks, image_id=pid,
@@ -188,7 +192,7 @@ def main() -> None:
             ev = new_ev
         else:
             # Loop ended by max iterations; re-render the last tried ev for a clean final.
-            params = {"exposure": {"mode": ev}}
+            params = {"exposure": {"mode": "auto", "target_offset": ev}}
             img = backend.render_full(params)
             full_masks = resize_masks(masks, img.shape[:2])
             m = measurer.measure(img, full_masks, image_id=pid,
@@ -198,7 +202,7 @@ def main() -> None:
             final_img, final_m = img, m
 
         if final_img is None:
-            params = {"exposure": {"mode": ev}}
+            params = {"exposure": {"mode": "auto", "target_offset": ev}}
             final_img = backend.render_full(params)
             full_masks = resize_masks(masks, final_img.shape[:2])
             final_m = measurer.measure(final_img, full_masks, image_id=pid)
@@ -218,7 +222,7 @@ def main() -> None:
         rec = {
             "photo_id": pid,
             "raw": raw,
-            "params": {"exposure": {"mode": round(best["ev"], 3)}},
+            "params": {"exposure": {"mode": "auto", "target_offset": round(best["ev"], 3)}},
             "final_measurement": final_m,
             "history": history,
             "after_path": str(after_path),

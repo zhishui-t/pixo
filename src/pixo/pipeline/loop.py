@@ -293,13 +293,21 @@ def _unreliable_regions(measurement: dict[str, Any]) -> list[str]:
 def _flatten_decide_params(params: dict[str, Any]) -> dict[str, Any]:
     """把嵌套管线参数转换为 Decide 使用的扁平参数。
 
-    当前只映射曝光数值；其它参数以原样平铺保留。
+    默认 auto 曝光使用 target_offset 作为可调曝光值；手动数值模式仍按
+    exposure_ev 暴露，便于兼容已有手动管线。
     """
     flat: dict[str, Any] = {}
     exposure = params.get("exposure") if isinstance(params.get("exposure"), dict) else {}
     mode = exposure.get("mode", "auto")
     if isinstance(mode, (int, float)) and not isinstance(mode, bool):
         flat["exposure_ev"] = float(mode)
+    else:
+        offset = exposure.get("target_offset")
+        if offset is not None:
+            try:
+                flat["exposure_ev"] = float(offset)
+            except (TypeError, ValueError):
+                pass
     for key, value in params.items():
         if key not in ("exposure", "compose"):
             flat[key] = value
@@ -310,12 +318,18 @@ def _apply_decide_params(
     params: dict[str, Any],
     decided_params: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """把 Decide 输出的扁平参数映射回渲染 Stage 参数。"""
+    """把 Decide 输出的扁平参数映射回渲染 Stage 参数。
+
+    自动曝光场景下，Decide 给出的 exposure_ev 视为相对自动曝光的
+    target_offset（EV），而不是把 ExposureStage 切成手动绝对 EV。
+    """
     out = copy.deepcopy(params)
     for key, value in decided_params.items():
         low = str(key).lower()
         if low in _EXPOSURE_PARAM_ALIASES:
-            out.setdefault("exposure", {})["mode"] = float(value)
+            exp = out.setdefault("exposure", {})
+            exp["mode"] = "auto"
+            exp["target_offset"] = float(value)
         else:
             out[key] = copy.deepcopy(value)
     return out
