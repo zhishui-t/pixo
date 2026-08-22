@@ -6,7 +6,7 @@ const browser = await chromium.launch({
   channel: 'msedge',
   headless: true,
 });
-const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 const results = [];
 async function check(name, fn) {
@@ -27,13 +27,14 @@ await check('页面标题包含 Pixo', async () => {
   if (!text.includes('Pixo')) throw new Error('body 中未找到 Pixo');
 });
 
-await check('TopBar 品牌显示', async () => {
-  await page.locator('text=Pixo').first().waitFor({ timeout: 5000 });
+await check('ProjectList 渲染', async () => {
+  const count = await page.locator('.project-item').count();
+  if (count < 1) throw new Error(`project-item 数量为 ${count}`);
 });
 
-await check('PhotoLibrary 渲染', async () => {
-  const count = await page.locator('.photo-card').count();
-  if (count < 1) throw new Error(`photo-card 数量为 ${count}`);
+await check('Filmstrip 渲染', async () => {
+  const count = await page.locator('.film-item').count();
+  if (count < 1) throw new Error(`film-item 数量为 ${count}`);
 });
 
 await check('PreviewViewer 渲染', async () => {
@@ -42,17 +43,18 @@ await check('PreviewViewer 渲染', async () => {
   await page.locator('text=处理').first().waitFor({ timeout: 3000 });
 });
 
-await check('参数面板/Agent 标签可切换', async () => {
-  await page.locator('text=Agent').first().click().catch(() => {});
-  await page.locator('text=DSH Agent').first().waitFor({ timeout: 3000 });
+await check('右侧 风格/AI 与 调整 Tab', async () => {
+  await page.locator('text=风格 / AI').first().waitFor({ timeout: 3000 });
+  await page.locator('text=调整').first().click().catch(() => {});
+  await page.locator('text=基本').first().waitFor({ timeout: 3000 });
 });
 
-await page.screenshot({ path: 'screenshots/smoke.png', fullPage: true });
-console.log('Screenshot saved: screenshots/smoke.png');
+await page.screenshot({ path: 'screenshots/ui_v2.png', fullPage: true });
+console.log('Screenshot saved: screenshots/ui_v2.png');
 
 await browser.close();
 
-const failed = results.filter(r => !r.ok);
+const failed = results.filter((r) => !r.ok);
 if (failed.length) {
   console.error(`\nSmoke failed: ${failed.length}/${results.length}`);
   process.exit(1);

@@ -1,4 +1,4 @@
-import type { ParamPatch, Photo } from '../types';
+import type { ParamPatch, Photo, Project, StyleCardData } from '../types';
 import {
   createPhoto as createPhotoRemote,
   getExportStatus as getExportStatusRemote,
@@ -12,6 +12,8 @@ import {
 import {
   mockCreatePhoto,
   mockGetPhotos,
+  mockGetProjects,
+  mockGetStyleCards,
   mockPatchParams,
   mockPreviewDataUrl,
   mockScanDirectory,
@@ -116,4 +118,12 @@ export function getMockCandidateList(): Array<{ path: string; name: string; size
 
 export function getMockPhotoList(): Photo[] {
   return mockGetPhotos();
+}
+
+export function fetchProjects(): Project[] {
+  return mockGetProjects();
+}
+
+export function fetchStyleCards(): StyleCardData[] {
+  return mockGetStyleCards();
 }

@@ -1,41 +1,45 @@
-import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchPhotos } from './api';
 import { useAppStore } from './store/useAppStore';
 import { TopBar } from './components/TopBar';
-import { PhotoLibrary } from './components/PhotoLibrary';
+import { ProjectList } from './components/ProjectList';
 import { PreviewViewer } from './components/PreviewViewer';
-import { InspectorTabs } from './components/InspectorTabs';
-import { Timeline } from './components/Timeline';
+import { Filmstrip } from './components/Filmstrip';
+import { StyleAiPanel } from './components/StyleAiPanel';
+import { AdjustmentsPanel } from './components/AdjustmentsPanel';
 import { ReviewQueue } from './components/ReviewQueue';
 import { SettingsPanel } from './components/SettingsPanel';
 
 export default function App() {
   const page = useAppStore((s) => s.page);
-  const setPhotos = useAppStore((s) => s.setPhotos);
-  const { data } = useQuery({
-    queryKey: ['photos'],
-    queryFn: fetchPhotos,
-    staleTime: 30_000,
-  });
-
-  useEffect(() => {
-    if (data) {
-      setPhotos(data.photos, data.backend);
-    }
-  }, [data, setPhotos]);
+  const rightTab = useAppStore((s) => s.rightTab);
+  const setRightTab = useAppStore((s) => s.setRightTab);
 
   return (
     <div className="app-shell">
       <TopBar />
       {page === 'workspace' && (
-        <div className="workspace">
-          <PhotoLibrary />
-          <div className="center-column">
+        <div className="workspace-v2">
+          <ProjectList />
+          <div className="center-v2">
             <PreviewViewer />
-            <Timeline />
+            <Filmstrip />
           </div>
-          <InspectorTabs />
+          <aside className="right-v2">
+            <div className="right-tabs">
+              <button
+                className={`right-tab ${rightTab === 'style' ? 'active' : ''}`}
+                onClick={() => setRightTab('style')}
+              >
+                风格 / AI
+              </button>
+              <button
+                className={`right-tab ${rightTab === 'adjust' ? 'active' : ''}`}
+                onClick={() => setRightTab('adjust')}
+              >
+                调整
+              </button>
+            </div>
+            {rightTab === 'style' ? <StyleAiPanel /> : <AdjustmentsPanel />}
+          </aside>
         </div>
       )}
       {page === 'review' && <ReviewQueue />}

@@ -8,6 +8,8 @@ export type PhotoStatus =
   | 'rejected'
   | 'imported';
 
+export type ColorLabel = 'red' | 'yellow' | 'green' | 'blue' | 'purple';
+
 export interface Photo {
   id: string;
   name: string;
@@ -16,7 +18,27 @@ export interface Photo {
   takenAt?: string;
   status: PhotoStatus;
   burstGroup?: string;
+  scene?: string;
+  rating?: number; // 0-5 星
+  colorLabel?: ColorLabel;
   thumbnail?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: string;
+  photoIds: string[];
+}
+
+export interface StyleCardData {
+  styleId: string;
+  name: string;
+  description: string;
+  tags: Record<string, string[]>;
+  colorFingerprint?: Record<string, unknown>;
+  toneFingerprint?: Record<string, unknown>;
+  recommendedAdjustments?: Record<string, unknown>;
 }
 
 export interface ParamPatch {
