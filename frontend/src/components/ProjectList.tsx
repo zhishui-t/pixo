@@ -23,7 +23,7 @@ export function ProjectList() {
   return (
     <Stack gap="md" h="100%">
       <Group justify="space-between">
-        <Text fw={700} c="dimmed" style={{ letterSpacing: '.04em', textTransform: 'uppercase', fontSize: 11 }}>Projects</Text>
+        <Text fw={700} c="dark.5" style={{ letterSpacing: '.04em', textTransform: 'uppercase', fontSize: 11 }}>Projects</Text>
         <Button size="compact-xs" variant="light" leftSection={<FolderPlus size={13} />} onClick={create}>
           新建
         </Button>
@@ -44,20 +44,20 @@ export function ProjectList() {
               <UnstyledButton key={project.id} onClick={() => selectProject(project.id)} w="100%">
                 <Paper
                   p="sm"
-                  radius="lg"
+                  radius="md"
                   style={{
                     position: 'relative',
                     overflow: 'hidden',
-                    background: active ? 'linear-gradient(135deg, rgba(108,140,255,0.16), rgba(108,140,255,0.04))' : 'rgba(18,24,33,0.82)',
-                    boxShadow: active ? '0 12px 28px rgba(108,140,255,0.14)' : '0 6px 18px rgba(0,0,0,0.22)',
-                    border: active ? '1px solid rgba(108,140,255,0.24)' : '1px solid rgba(255,255,255,0.04)',
+                    background: active ? 'linear-gradient(135deg, rgba(86,134,254,0.12), rgba(86,134,254,0.03))' : '#fff',
+                    boxShadow: active ? '0 8px 24px rgba(86,134,254,0.12)' : '0 2px 10px rgba(0,0,0,0.04)',
+                    border: active ? '1px solid rgba(86,134,254,0.22)' : '1px solid rgba(0,0,0,0.06)',
                   }}
                 >
                   {active && (
-                    <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 4, background: 'linear-gradient(180deg, #6C8CFF, #9AB8FF)' }} />
+                    <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 4, background: '#5686FE' }} />
                   )}
                   <Text size="sm" fw={600}>{project.name}</Text>
-                  <Text size="xs" c="dimmed" mt={2}>{project.photoIds.length} 张 · {project.createdAt}</Text>
+                  <Text size="xs" c="dark.4" mt={2}>{project.photoIds.length} 张 · {project.createdAt}</Text>
                 </Paper>
               </UnstyledButton>
             );

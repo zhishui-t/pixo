@@ -1,4 +1,4 @@
-/* 仅保留 Mantine 无法覆盖的预览/工作区自定义布局。 */
+/* 仅保留 Mantine 无法覆盖的预览/工作区自定义布局（UI v5 light）。 */
 html,
 body,
 #root {
@@ -6,29 +6,35 @@ body,
   height: 100%;
 }
 
-.right-tabs {
+.modern-pill {
   display: flex;
-  border-bottom: 1px solid var(--mantine-color-dark-4);
-  margin-bottom: 4px;
-}
-
-.right-tab {
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   flex: 1;
-  padding: 10px 6px;
+  padding: 10px 8px;
   border: none;
-  border-bottom: 2px solid transparent;
   background: transparent;
-  color: var(--mantine-color-dark-2);
+  color: #61666b;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 13px;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
 }
 
-.right-tab.active {
-  color: var(--mantine-color-indigo-4);
-  border-bottom-color: var(--mantine-color-indigo-4);
+.modern-pill.active {
+  background: #5686FE;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(86, 134, 254, 0.28);
 }
 
-/* 预览缩放/拖拽/分屏覆盖层 */
+.film-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* 预览缩放/拖拽/分屏覆盖层：画布保持深色对比 */
 .preview-stage {
   position: relative;
   overflow: hidden;
@@ -59,7 +65,7 @@ body,
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(99, 102, 241, 0.8);
+  background: rgba(86, 134, 254, 0.9);
   color: white;
   padding: 3px 8px;
   border-radius: 6px;
@@ -71,7 +77,7 @@ body,
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--mantine-color-indigo-5);
+  background: #5686FE;
   cursor: ew-resize;
   z-index: 4;
   transform: translateX(-50%);
@@ -82,7 +88,8 @@ body,
   position: absolute;
   top: 12px;
   font-size: 11px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
   padding: 3px 7px;
   border-radius: 6px;
   z-index: 3;
@@ -95,33 +102,4 @@ body,
 
 .split-right-label {
   right: 12px;
-}
-
-/* ---- UI v4 modern accents ---- */
-.modern-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex: 1;
-  padding: 10px 8px;
-  border: none;
-  background: transparent;
-  color: var(--mantine-color-dark-2);
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
-}
-
-.modern-pill.active {
-  background: linear-gradient(135deg, rgba(108,140,255,0.24), rgba(108,140,255,0.06));
-  color: #9AB8FF;
-  box-shadow: inset 0 0 0 1px rgba(108,140,255,0.18);
-}
-
-.film-card:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.42) !important;
 }

@@ -45,7 +45,7 @@ export function Filmstrip() {
   };
 
   return (
-    <Paper radius="xl" p="md" style={{ height: 220, background: 'rgba(18,24,33,0.88)', boxShadow: '0 18px 48px rgba(0,0,0,0.36)' }}>
+    <Paper radius="lg" p="md" style={{ height: 220, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 10px 36px rgba(0,0,0,0.06)' }}>
       <Group gap="sm" mb="sm">
         <NumberInput
           size="xs"
@@ -100,16 +100,17 @@ export function Filmstrip() {
               <UnstyledButton key={photo.id} onClick={() => selectPhoto(photo.id)}>
                 <Paper
                   className="film-card"
-                  radius="lg"
+                  radius="md"
                   p={8}
                   w={148}
                   style={{
-                    background: 'rgba(22,29,40,0.94)',
-                    boxShadow: active ? '0 0 0 2px rgba(108,140,255,0.75), 0 14px 36px rgba(108,140,255,0.18)' : '0 8px 22px rgba(0,0,0,0.28)',
+                    background: '#fff',
+                    border: active ? '1px solid rgba(86,134,254,0.55)' : '1px solid rgba(0,0,0,0.06)',
+                    boxShadow: active ? '0 0 0 3px rgba(86,134,254,0.14), 0 14px 32px rgba(86,134,254,0.12)' : '0 6px 18px rgba(0,0,0,0.05)',
                     transition: 'transform .15s ease, box-shadow .15s ease',
                   }}
                 >
-                  <img src={photo.thumbnail} alt={photo.name} style={{ width: '100%', borderRadius: 10, aspectRatio: '3/2', objectFit: 'cover' }} />
+                  <img src={photo.thumbnail} alt={photo.name} style={{ width: '100%', borderRadius: 8, aspectRatio: '3/2', objectFit: 'cover' }} />
                   <Group gap={5} mt={8}>
                     {COLORS.map((c) => (
                       <ActionIcon
@@ -125,7 +126,7 @@ export function Filmstrip() {
                   <Group gap={1} mt={4}>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <ActionIcon key={n} size="sm" variant="transparent" onClick={(e) => { e.stopPropagation(); setPhotoRating(activeProjectId, photo.id, n); }}>
-                        <Star size={13} fill={(photo.rating ?? 0) >= n ? '#ffd43b' : 'transparent'} color={(photo.rating ?? 0) >= n ? '#ffd43b' : '#5A6472'} />
+                        <Star size={13} fill={(photo.rating ?? 0) >= n ? '#f59e0b' : 'transparent'} color={(photo.rating ?? 0) >= n ? '#f59e0b' : '#adb5bd'} />
                       </ActionIcon>
                     ))}
                   </Group>

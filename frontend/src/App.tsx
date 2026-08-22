@@ -17,20 +17,20 @@ export default function App() {
   const backend = useAppStore((s) => s.backend);
 
   const header = (
-    <AppShell.Header style={{ backdropFilter: 'blur(12px)', background: 'rgba(11,15,20,0.72)' }}>
+    <AppShell.Header style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
       <Group h="100%" px="lg" justify="space-between">
         <Group gap="sm">
-          <Text fw={800} size="lg" style={{ letterSpacing: '-0.02em', background: 'linear-gradient(90deg, #6C8CFF, #9AB8FF)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Pixo</Text>
+          <Text fw={800} size="lg" c="dark.9" style={{ letterSpacing: '-0.02em' }}>Pixo</Text>
           <Button variant="subtle" size="xs" leftSection={<LayoutGrid size={14} />} onClick={() => setPage('workspace')}>工作区</Button>
           <Button variant="subtle" size="xs" leftSection={<Inbox size={14} />} onClick={() => setPage('review')}>复核</Button>
           <Button variant="subtle" size="xs" leftSection={<Settings size={14} />} onClick={() => setPage('settings')}>设置</Button>
         </Group>
         <Group gap="sm">
-          <Badge color={backend ? 'green' : 'orange'} variant="dot" size="sm">
+          <Badge color={backend ? 'green' : 'yellow'} variant="light" size="sm">
             {backend ? 'pixo-service' : 'mock'}
           </Badge>
           <Tooltip label="导出当前结果">
-            <Button size="xs" leftSection={<Download size={14} />}>导出</Button>
+            <Button size="xs" color="dark.9" variant="light" leftSection={<Download size={14} />}>导出</Button>
           </Tooltip>
         </Group>
       </Group>
@@ -56,10 +56,10 @@ export default function App() {
       padding="lg"
     >
       {header}
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar p="md" style={{ background: '#fff', borderRight: '1px solid rgba(0,0,0,0.06)' }}>
         <ProjectList />
       </AppShell.Navbar>
-      <AppShell.Main>
+      <AppShell.Main style={{ background: '#f7f8fa' }}>
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 104px)', gap: 20 }}>
           <div style={{ flex: 1, minHeight: 0 }}>
             <PreviewViewer />
@@ -67,8 +67,8 @@ export default function App() {
           <Filmstrip />
         </div>
       </AppShell.Main>
-      <AppShell.Aside p="md">
-        <Group gap={4} mb="md" style={{ background: 'rgba(18,24,33,0.9)', borderRadius: 16, padding: 4 }}>
+      <AppShell.Aside p="md" style={{ background: '#fff', borderLeft: '1px solid rgba(0,0,0,0.06)' }}>
+        <Group gap={4} mb="md" style={{ background: '#f1f3f5', borderRadius: 12, padding: 4 }}>
           <button
             className={`modern-pill ${rightTab === 'style' ? 'active' : ''}`}
             onClick={() => setRightTab('style')}

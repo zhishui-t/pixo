@@ -47,8 +47,8 @@ await check('右侧 风格/AI 与 调整 Tab', async () => {
   await page.locator('text=基本').first().waitFor({ timeout: 3000 });
 });
 
-await page.screenshot({ path: 'screenshots/ui_v4.png', fullPage: true });
-console.log('Screenshot saved: screenshots/ui_v4.png');
+await page.screenshot({ path: 'screenshots/ui_v5.png', fullPage: true });
+console.log('Screenshot saved: screenshots/ui_v5.png');
 
 await browser.close();
 

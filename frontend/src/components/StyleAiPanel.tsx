@@ -27,20 +27,20 @@ export function StyleAiPanel() {
   };
 
   return (
-    <Stack gap="lg" p={4}>
-      <Card radius="xl" p="md" style={{ background: 'rgba(22,29,40,0.94)', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+    <Stack gap="md" p={4}>
+      <Card radius="lg" p="md" style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 6px 22px rgba(0,0,0,0.05)' }}>
         <Group justify="space-between" mb="sm">
           <Text fw={700}>风格卡片</Text>
-          <Wand2 size={16} color="#6C8CFF" />
+          <Wand2 size={16} color="#5686FE" />
         </Group>
         <Stack gap="sm">
           {styleCards.map((card) => (
-            <Card key={card.styleId} radius="lg" padding="sm" style={{ background: 'linear-gradient(135deg, rgba(108,140,255,0.12), rgba(22,29,40,0.9))', border: '1px solid rgba(108,140,255,0.14)' }}>
+            <Card key={card.styleId} radius="md" padding="sm" style={{ background: 'linear-gradient(135deg, rgba(86,134,254,0.08), #fff)', border: '1px solid rgba(86,134,254,0.12)' }}>
               <Group justify="space-between">
                 <Text fw={600}>{card.name}</Text>
                 <Badge variant="light" color="indigo">风格</Badge>
               </Group>
-              <Text size="xs" c="dimmed" mt={4}>{card.description}</Text>
+              <Text size="xs" c="dark.4" mt={4}>{card.description}</Text>
               <Group gap={4} mt={6}>
                 {Object.entries(card.tags).map(([group, tags]) => (
                   <Badge key={group} variant="outline" size="xs" color="gray">{group}: {tags.join('/')}</Badge>
@@ -51,16 +51,16 @@ export function StyleAiPanel() {
         </Stack>
       </Card>
 
-      <Card radius="xl" p="md" style={{ background: 'rgba(22,29,40,0.94)', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+      <Card radius="lg" p="md" style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 6px 22px rgba(0,0,0,0.05)' }}>
         <Group justify="space-between" mb="sm">
           <Text fw={700}>AI 推荐</Text>
-          <Sparkles size={16} color="#9AB8FF" />
+          <Sparkles size={16} color="#5686FE" />
         </Group>
         <Stack gap="sm">
           {suggestions.map((s) => (
-            <Card key={s.id} radius="lg" padding="sm" style={{ background: 'linear-gradient(135deg, rgba(108,140,255,0.18), rgba(22,29,40,0.92))', border: '1px solid rgba(108,140,255,0.18)' }}>
+            <Card key={s.id} radius="md" padding="sm" style={{ background: 'linear-gradient(135deg, rgba(86,134,254,0.1), #fff)', border: '1px solid rgba(86,134,254,0.16)' }}>
               <Text fw={600}>{s.title}</Text>
-              <Text size="xs" c="dimmed" mt={2}>{s.reason}</Text>
+              <Text size="xs" c="dark.4" mt={2}>{s.reason}</Text>
               <Badge color="grape" variant="light" mt={4}>置信度 {Math.round(s.confidence * 100)}%</Badge>
               <Group mt={10}>
                 <Button size="xs" leftSection={<Check size={13} />} onClick={() => applyProjectSuggestion(activeProjectId, s)}>应用</Button>
@@ -73,10 +73,10 @@ export function StyleAiPanel() {
         </Stack>
       </Card>
 
-      <Card radius="xl" p="md" style={{ display: 'flex', flexDirection: 'column', flex: 1, background: 'rgba(22,29,40,0.94)', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+      <Card radius="lg" p="md" style={{ display: 'flex', flexDirection: 'column', flex: 1, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 6px 22px rgba(0,0,0,0.05)' }}>
         <Group justify="space-between" mb="sm">
           <Text fw={700}>当前项目对话</Text>
-          <MessageCircle size={16} color="#6C8CFF" />
+          <MessageCircle size={16} color="#5686FE" />
         </Group>
         <Divider mb="sm" />
         <ScrollArea style={{ flex: 1, maxHeight: 340, minHeight: 140 }} mb="sm">
@@ -87,12 +87,12 @@ export function StyleAiPanel() {
                 size="sm"
                 style={{
                   alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                  background: m.role === 'user' ? 'linear-gradient(135deg, #6C8CFF, #4f6ef0)' : 'rgba(11,15,20,0.75)',
-                  color: m.role === 'user' ? 'white' : 'var(--mantine-color-dark-1)',
+                  background: m.role === 'user' ? '#5686FE' : '#f1f3f5',
+                  color: m.role === 'user' ? 'white' : '#0f1115',
                   padding: '8px 12px',
-                  borderRadius: 14,
-                  borderBottomRightRadius: m.role === 'user' ? 4 : 14,
-                  borderBottomLeftRadius: m.role === 'agent' ? 4 : 14,
+                  borderRadius: 12,
+                  borderBottomRightRadius: m.role === 'user' ? 4 : 12,
+                  borderBottomLeftRadius: m.role === 'agent' ? 4 : 12,
                   maxWidth: '92%',
                 }}
               >
@@ -109,7 +109,7 @@ export function StyleAiPanel() {
             onChange={(e) => setText(e.currentTarget.value)}
             onKeyDown={(e) => e.key === 'Enter' && send()}
             placeholder="询问修图建议…"
-            radius="lg"
+            radius="md"
           />
           <Button size="sm" variant="light" leftSection={<Send size={14} />} onClick={send}>发送</Button>
         </Group>

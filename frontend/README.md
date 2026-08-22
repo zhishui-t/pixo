@@ -1,4 +1,4 @@
-# Pixo Frontend (Web UI v4)
+# Pixo Frontend (Web UI v5)
 
 React 18 + Vite + TypeScript + Mantine + Lucide 的现代修图工作台。
 当前不打包、不做安装包；默认使用 mock 数据，配置 `VITE_PIXO_API_URL`
@@ -30,16 +30,14 @@ npm run dev
 VITE_PIXO_API_URL=http://localhost:9777
 ```
 
-## UI v4 现代感精修
+## UI v5 浅色极简风
 
-- 视觉主题：深邃近黑 `#0B0F14`，面板 `#121821 / #161D28`，电光蓝 `#6C8CFF`
-- 引入 **lucide-react** 图标，Button / ActionIcon / 操作区改为图标 + 文字
-- Mantine 全局主题：Inter 优先字体、大圆角、柔和阴影、更大留白
-- AppShell：毛玻璃 Header，项目列表渐变激活条，右侧 segmented pill Tab
-- 底片条：星级 Star 图标、颜色圆点、hover 放大、选中发光环
-- 预览区：悬浮毛玻璃工具栏、软阴影画布、Lucide 缩放/定位图标
-- 风格/AI：渐变作品卡、渐变推荐卡、现代聊天气泡
-- 调整：Mantine Accordion + Slider + NumberInput 分组，精致直方图
+- 参考 DSH 主页浅色设计：白底、浅灰面板、极细边框、柔和阴影
+- 颜色 token：
+  - 背景 `#fff`，主文字 `#0f1115`，次级 `#61666b`
+  - 强调蓝 `#5686fe`，成功/警告/错误 `#22c55e / #f59e0b / #ec1313`
+- Mantine 切换 light 主题，预览画布保留深色对比
+- 项目列表、底片条、预览工具栏、右侧 Tab 全部适配浅色
 - 保留全部功能：项目切换、底片条、星级/颜色、风格/AI、对话、调整、预览
 
 ## 质量检查
@@ -50,4 +48,4 @@ npm run build
 npm run test:e2e     # 先启动 npm run dev，再运行
 ```
 
-截图输出：`frontend/screenshots/ui_v4.png`
+截图输出：`frontend/screenshots/ui_v5.png`

@@ -7,45 +7,45 @@ import App from './App';
 import './styles.css';
 
 const theme = createTheme({
-  primaryColor: 'electric',
+  primaryColor: 'accent',
   primaryShade: { light: 5, dark: 5 },
-  defaultRadius: 'lg',
+  defaultRadius: 'md',
   fontFamily:
-    'Inter, "Segoe UI", "-apple-system", BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif',
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif',
   headings: {
     fontFamily:
-      'Inter, "Segoe UI", "-apple-system", BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif',
-    fontWeight: '700',
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif',
+    fontWeight: '650',
   },
   colors: {
-    electric: [
-      '#eef2ff',
-      '#dce5ff',
-      '#bfcfff',
-      '#a3b8ff',
-      '#8ba5ff',
-      '#6C8CFF',
-      '#4f6ef0',
-      '#3f57c9',
-      '#2f429f',
-      '#233070',
+    accent: [
+      '#eff4ff',
+      '#dbe7ff',
+      '#bcd2ff',
+      '#9ab8ff',
+      '#7aa0ff',
+      '#5686fe',
+      '#3f6ef0',
+      '#2f57c9',
+      '#233f9c',
+      '#1b3073',
     ],
-    dark: [
-      '#C1C7D0',
-      '#A6AFBB',
-      '#7A8494',
-      '#5A6472',
-      '#3B4452',
-      '#242D3B',
-      '#161D28',
-      '#121821',
-      '#0B0F14',
-      '#070A0E',
+    gray: [
+      '#f8f9fa',
+      '#f1f3f5',
+      '#e9ecef',
+      '#dee2e6',
+      '#ced4da',
+      '#adb5bd',
+      '#868e96',
+      '#61666b',
+      '#3b3f44',
+      '#0f1115',
     ],
   },
   shadows: {
-    md: '0 10px 32px rgba(0, 0, 0, 0.38)',
-    lg: '0 18px 48px rgba(0, 0, 0, 0.45)',
+    md: '0 4px 16px rgba(0, 0, 0, 0.06)',
+    lg: '0 10px 32px rgba(0, 0, 0, 0.08)',
   },
   spacing: {
     xs: '8px',
@@ -67,7 +67,7 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="dark">
+    <MantineProvider theme={theme} defaultColorScheme="light">
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>

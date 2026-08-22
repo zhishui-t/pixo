@@ -44,27 +44,28 @@ export function PreviewViewer() {
 
   return (
     <Paper
-      radius="xl"
+      radius="lg"
       style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         overflow: 'hidden',
-        background: 'rgba(11,15,20,0.82)',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        background: '#fff',
+        border: '1px solid rgba(0,0,0,0.06)',
+        boxShadow: '0 14px 42px rgba(0,0,0,0.07)',
       }}
     >
-      <Group justify="space-between" p="sm" style={{ backdropFilter: 'blur(16px)', background: 'rgba(18,24,33,0.72)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <Group justify="space-between" p="sm" style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <SegmentedControl
           size="xs"
           value={viewMode}
           onChange={(value) => setViewMode(value as 'original' | 'split' | 'processed')}
           data={[{ value: 'original', label: '原图' }, { value: 'split', label: 'Split' }, { value: 'processed', label: '处理' }]}
-          radius="lg"
+          radius="md"
         />
         <Group gap="xs">
           <Badge variant="light" color="indigo" size="sm">gen #{generation}</Badge>
-          <Text size="xs" c="dimmed">{Math.round(zoom * 100)}%</Text>
+          <Text size="xs" c="dark.4">{Math.round(zoom * 100)}%</Text>
         </Group>
       </Group>
 
@@ -124,7 +125,7 @@ export function PreviewViewer() {
         )}
       </div>
 
-      <Group p="sm" gap="xs" justify="center" style={{ backdropFilter: 'blur(12px)', background: 'rgba(18,24,33,0.72)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+      <Group p="sm" gap="xs" justify="center" style={{ background: '#fff', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
         <ActionIcon variant="light" radius="md" onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}><ZoomOut size={15} /></ActionIcon>
         <ActionIcon variant="light" radius="md" onClick={() => setZoom(Math.min(4, zoom + 0.1))}><ZoomIn size={15} /></ActionIcon>
         <ActionIcon variant="light" radius="md" onClick={() => setZoom(1)}><Maximize2 size={15} /></ActionIcon>
