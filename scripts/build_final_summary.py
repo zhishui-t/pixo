@@ -27,8 +27,10 @@ def evaluate(fm):
         issues.append(f"高光裁切 {hi:.1%}")
     elif hi > 0.01:
         notes.append(f"高光接近阈值 {hi:.1%}")
-    if sh > 0.03:
+    if sh > 0.05:
         issues.append(f"阴影裁切 {sh:.1%}")
+    elif sh > 0.03:
+        notes.append(f"阴影偏大 {sh:.1%}")
     if face.get("reliable"):
         fl = face.get("mean_luminance")
         if fl is not None:
@@ -74,8 +76,11 @@ def main():
             best.setdefault(p["photo_id"], p)
 
     rows = []
-    for pid, p in merged.items():
+    for pid in sorted(set(merged) | set(best)):
+        p = merged.get(pid, {})
         r = best.get(pid)
+        if not r and not p:
+            continue
         fm = (r or p).get("final_measurement") or {}
         params = (r or p).get("params")
         after_path = (r or p).get("after_path") or p.get("after_path")
