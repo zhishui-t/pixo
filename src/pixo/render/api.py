@@ -191,6 +191,78 @@ class Renderer:
         lin = srgb_decode(np.asarray(disp, dtype=np.float32) / 255.0)
         return np.clip(np.asarray(lin, dtype=np.float32), 0.0, None)
 
+    def render_camera_matched(self, raw_path: Union[str, Path], long_edge: int = 1024,
+                               params: Optional[dict] = None, output_bps: int = 8,
+                               iters: int = 8) -> np.ndarray:
+        """渲染并自动用 RAW 内嵌相机预览做色彩/亮度校准。
+
+        当 DCP 色彩矩阵不够准或出现绿偏时，用相机原图作为基准，
+        迭代求解曝光偏移 + 白平衡 trim，使输出贴近相机原图。
+        返回 RGB uint8/uint16（方向按 EXIF 转正）。
+        """
+        import cv2
+        import numpy as np
+        import rawpy
+
+        raw_path = Path(raw_path)
+        base = self.render_preview_full(
+            raw_path, long_edge=512, output_bps=8,
+            params={"exposure": {"mode": 0.0},
+                    "whitebalance": {"trim": [1.0, 1.0, 1.0]}})
+        with rawpy.imread(str(raw_path)) as raw:
+            thumb = raw.extract_thumb()
+            if thumb.format == rawpy.ThumbFormat.JPEG:
+                cam = cv2.imdecode(np.frombuffer(thumb.data, np.uint8), cv2.IMREAD_COLOR)
+            else:
+                cam = thumb.data
+        cam_rgb = cv2.cvtColor(cam, cv2.COLOR_BGR2RGB)
+        try:
+            from pixo.meta import extract as _extract
+            o = int((_extract(raw_path)["capture"].get("orientation") or 1))
+            if o == 3:
+                cam_rgb = cv2.rotate(cam_rgb, cv2.ROTATE_180)
+            elif o == 6:
+                cam_rgb = cv2.rotate(cam_rgb, cv2.ROTATE_90_CLOCKWISE)
+            elif o == 8:
+                cam_rgb = cv2.rotate(cam_rgb, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        except Exception:
+            pass
+
+        target = cam_rgb.astype(np.float32).mean(axis=(0, 1))
+        base_mean = base.astype(np.float32).mean(axis=(0, 1))
+        ev = float(np.log2(target.mean() / max(base_mean.mean(), 1e-6)))
+        trim = np.array([1.0, 1.0, 1.0], dtype=np.float64)
+        for _ in range(int(iters)):
+            img = self.render_preview_full(
+                raw_path, long_edge=512, output_bps=8,
+                params={"exposure": {"mode": ev},
+                        "whitebalance": {"trim": trim.tolist()}})
+            cur = img.astype(np.float32).mean(axis=(0, 1))
+            ev += float(np.log2(target.mean() / max(cur.mean(), 1e-6)))
+            trim = trim * (target / np.maximum(cur, 1e-6))
+            trim = np.clip(trim, 0.3, 3.0)
+            ev = float(np.clip(ev, -1.5, 1.5))
+
+        final_params = dict(params or {})
+        exp = final_params.setdefault("exposure", {})
+        exp["mode"] = ev
+        wb = final_params.setdefault("whitebalance", {})
+        wb["trim"] = trim.tolist()
+        final = self.render_preview_full(
+            raw_path, long_edge=long_edge, params=final_params, output_bps=output_bps)
+        try:
+            from pixo.meta import extract as _extract
+            o = int((_extract(raw_path)["capture"].get("orientation") or 1))
+            if o == 3:
+                final = cv2.rotate(final, cv2.ROTATE_180)
+            elif o == 6:
+                final = cv2.rotate(final, cv2.ROTATE_90_CLOCKWISE)
+            elif o == 8:
+                final = cv2.rotate(final, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        except Exception:
+            pass
+        return final
+
     def render_file(self, raw_path: Union[str, Path],
                     intent: Optional[RenderIntent] = None) -> np.ndarray:
         """便捷入口: RAW 文件 -> 线性 sRGB float32。"""
