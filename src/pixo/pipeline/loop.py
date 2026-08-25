@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -28,6 +29,8 @@ import numpy as np
 from pixo.decide import decide, qc_rollback
 from pixo.state import PhotoStateMachine, TraceEvent
 from pixo.vision import MockSegmenter, Segmenter, SegmenterUnavailable, VisionMeasure
+
+logger = logging.getLogger(__name__)
 
 # 曝光参数别名与 Stage 参数映射（统一小写比较）。
 _EXPOSURE_PARAM_ALIASES = (
@@ -386,6 +389,9 @@ class SinglePhotoLoop:
         locked_params: Iterable[str] | None = None,
         manual_on_unreliable: bool = True,
         export_path: str | Path | None = None,
+        aesthetic_scorer: Callable[..., Any] | None = None,
+        aesthetic_accept_threshold: float | None = None,
+        aesthetic_stagnation_eps: float | None = None,
     ) -> None:
         self.render_backend = render_backend or renderer
         self.segmenter = segmenter
@@ -402,6 +408,18 @@ class SinglePhotoLoop:
         self.locked_params = list(locked_params or [])
         self.manual_on_unreliable = bool(manual_on_unreliable)
         self.export_path = Path(export_path) if export_path is not None else None
+        # P1b 美学维度：可注入 scorer；阈值/停滞参数缺省 None 关闭。
+        self.aesthetic_scorer = aesthetic_scorer
+        self.aesthetic_accept_threshold = (
+            float(aesthetic_accept_threshold)
+            if aesthetic_accept_threshold is not None
+            else None
+        )
+        self.aesthetic_stagnation_eps = (
+            float(aesthetic_stagnation_eps)
+            if aesthetic_stagnation_eps is not None
+            else None
+        )
 
     def _build_backend(
         self,
@@ -420,6 +438,48 @@ class SinglePhotoLoop:
             "缺少渲染后端：请传入 render_backend、image_rgb，"
             "或同时提供 raw_path 与 prof"
         )
+
+    def _score_aesthetic(
+        self,
+        image: np.ndarray,
+        masks: dict[str, np.ndarray] | None,
+    ) -> dict[str, Any] | None:
+        """可注入美学评分；无 scorer 时返回 None（跳过不计分）。
+
+        scorer 兼容两种签名：scorer(image, masks) 或 scorer(image)；
+        返回值可为 float（视为 overall）或含 overall 键的 dict。
+        """
+        if self.aesthetic_scorer is None:
+            return None
+        try:
+            raw = self.aesthetic_scorer(image, masks)
+        except TypeError:
+            # 签名回退：兼容单参 scorer(image)；回退自身的任何异常同样
+            # 只跳过本轮计分，不外溢。
+            try:
+                raw = self.aesthetic_scorer(image)
+            except TypeError as exc:
+                logger.warning("美学评分器签名不兼容，本轮跳过计分：%s", exc)
+                return None
+            except Exception as exc:
+                logger.warning("美学评分失败（单参回退），本轮跳过计分：%s", exc)
+                return None
+        except Exception as exc:
+            # 非签名类异常（OOM/权重损坏等）：记一条 warning，按“本轮无
+            # 美学分”处理并跳过，绝不让闭环终止。
+            logger.warning("美学评分异常，本轮跳过计分：%s", exc)
+            return None
+        if isinstance(raw, dict):
+            overall = raw.get("overall")
+            extra = {k: v for k, v in raw.items() if k != "overall"}
+        else:
+            overall = raw
+            extra = {}
+        if overall is None:
+            return None
+        out: dict[str, Any] = {"overall": float(overall)}
+        out.update(extra)
+        return out
 
     def _add_trace(
         self,
@@ -512,6 +572,8 @@ class SinglePhotoLoop:
         improvement_history: list[float] = []
         previous_key = None
         stop_reason: str | None = None
+        aesthetic_scores: list[float] = []
+        aesthetic_improvements: list[float] = []
 
         for iteration in range(1, max_iterations + 1):
             # 状态推进：每次迭代对应一个可前进的 State 阶段。
@@ -557,6 +619,16 @@ class SinglePhotoLoop:
             )
             measurements.append(measurement)
 
+            aesthetic = self._score_aesthetic(preview_img, masks)
+            if aesthetic is not None:
+                measurement["aesthetic"] = dict(aesthetic)
+                overall_score = aesthetic["overall"]
+                if aesthetic_scores:
+                    aesthetic_improvements.append(
+                        abs(overall_score - aesthetic_scores[-1])
+                    )
+                aesthetic_scores.append(overall_score)
+
             metrics = _metrics_for_decide(measurement)
             unreliable = _unreliable_regions(measurement)
             key = metrics.get("face_luminance") or metrics.get("mean_luminance")
@@ -579,6 +651,17 @@ class SinglePhotoLoop:
                     "preview_highlight_clip_estimate"
                 ),
                 "improvement_history": improvement_history,
+                "aesthetic": (
+                    {
+                        "overall": aesthetic_scores[-1],
+                        "scores": list(aesthetic_scores),
+                        "history": list(aesthetic_improvements),
+                        "accept_threshold": self.aesthetic_accept_threshold,
+                        "stagnation_eps": self.aesthetic_stagnation_eps,
+                    }
+                    if aesthetic_scores
+                    else None
+                ),
                 "manual_on_unreliable": self.manual_on_unreliable,
             }
             decision = decide(decide_context, self.rules)
@@ -651,6 +734,9 @@ class SinglePhotoLoop:
             render_version=self._render_version(),
             detection_version=self._detection_version(),
         )
+        final_aesthetic = self._score_aesthetic(full_img, full_masks)
+        if final_aesthetic is not None:
+            full_measurement["aesthetic"] = dict(final_aesthetic)
         return full_img, full_measurement, full_masks
 
     def _qc_outcome(

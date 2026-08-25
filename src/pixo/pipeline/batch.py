@@ -68,10 +68,14 @@ class HardFilterResult:
 
 @dataclass
 class AestheticScore:
-    """美学预筛结果（0-5 分）。"""
+    """美学预筛结果（契约域 0-5 分）。
+
+    source 标记分数出处："mock"（占位评分器）/"pixo"（真模型，经钳制映射）。
+    """
 
     overall: float
     dimensions: dict[str, float] = field(default_factory=dict)
+    source: str = "mock"
 
 
 @dataclass
@@ -243,6 +247,118 @@ class MockAestheticScorer:
                 "composition": round(composition, 3),
                 "color": round(color, 3),
             },
+            source="mock",
+        )
+
+
+
+def make_default_scorer() -> Any:
+    """构造批量流程默认美学评分器。
+
+    优先尝试真评分器（pixo.vision.aesthetic.PixoAestheticScorer，懒加载）：
+    torch/transformers 缺失、模型权重不存在或初始化异常时回退
+    MockAestheticScorer，保证坏环境不致命、批量流程永远可用。
+    """
+    try:
+        from pixo.vision.aesthetic import PixoAestheticScorer
+
+        candidate = PixoAestheticScorer()
+        if not candidate.health_info().get("available"):
+            print(
+                "[pixo.pipeline.batch] 真美学评分器不可用"
+                "(torch/transformers 缺失或权重缺失/损坏)，回退 Mock"
+            )
+            return MockAestheticScorer()
+        print("[pixo.pipeline.batch] 使用真美学评分器(PixoAestheticScorer)")
+        return _PixoScorerAdapter(candidate)
+    except Exception as exc:  # noqa: BLE001 - 真评分器不可用一律降级 Mock
+        print("[pixo.pipeline.batch] 真评分器构造异常，回退 Mock:", exc)
+        return MockAestheticScorer()
+
+
+class _PixoScorerAdapter:
+    """把 PixoAestheticScorer 适配为批量流程的评分契约。
+
+    批量侧约定 score(image_rgb, meta) -> AestheticScore | None；
+    真评分器为 score(image_rgb) -> dict[dimension, float] | None，
+    本适配器负责签名与返回类型转换（overall 缺失时取维度均值）。
+
+    量纲说明：真模型 head 输出未做标定，与契约域 [0, 5] 不同源；
+    此处仅 np.clip 到契约域防越界混入阈值比较，属粗映射而非标定。
+    健壮性：真评分器抛异常或返回空结果即永久降级为内置 Mock，
+    不再重试（_degraded），保证暗路径不崩批。
+    """
+
+    def __init__(self, scorer: Any) -> None:
+        self._scorer = scorer
+        self._mock = MockAestheticScorer()
+        self._degraded = False
+
+    @property
+    def inner(self) -> Any:
+        """底层真评分器实例。"""
+        return self._scorer
+
+    @property
+    def degraded(self) -> bool:
+        """是否已永久降级为 Mock。"""
+        return self._degraded
+
+    def _mock_score(self, image_rgb: np.ndarray) -> AestheticScore:
+        result = self._mock.score(image_rgb)
+        result.source = "mock"
+        return result
+
+    def score(
+        self,
+        image_rgb: np.ndarray,
+        meta: dict[str, Any] | None = None,
+    ) -> AestheticScore | None:
+        del meta  # 真评分器不消费 meta
+        if self._degraded:
+            return self._mock_score(image_rgb)
+        try:
+            result = self._scorer.score(image_rgb)
+        except Exception as exc:  # noqa: BLE001 - 单张失败不崩批
+            print("[pixo.pipeline.batch] 真评分器异常，永久降级为Mock:", exc)
+            self._degraded = True
+            return self._mock_score(image_rgb)
+        if not isinstance(result, dict) or not result:
+            print(
+                "[pixo.pipeline.batch] 真评分器返回空结果(None/空dict)，"
+                "永久降级为Mock"
+            )
+            self._degraded = True
+            return self._mock_score(image_rgb)
+
+        def _clamp(value: float) -> float:
+            # 未标定量纲 → 钳制到契约域 [0, 5]
+            return round(float(np.clip(float(value), 0.0, 5.0)), 3)
+
+        dims: dict[str, float] = {}
+        for name, value in result.items():
+            if name == "overall":
+                continue
+            try:
+                dims[str(name)] = _clamp(value)
+            except (TypeError, ValueError):
+                continue
+        overall_raw = result.get("overall")
+        if overall_raw is None:
+            if not dims:
+                self._degraded = True
+                print(
+                    "[pixo.pipeline.batch] 真评分器输出无可信分数，"
+                    "永久降级为Mock"
+                )
+                return self._mock_score(image_rgb)
+            overall = sum(dims.values()) / len(dims)
+        else:
+            overall = _clamp(overall_raw)
+        return AestheticScore(
+            overall=round(float(overall), 3),
+            dimensions=dims,
+            source="pixo",
         )
 
 
@@ -267,7 +383,19 @@ class MockAgentSelector:
         candidates: Sequence[tuple[BatchInput, AestheticScore]],
     ) -> dict[str, AgentVerdict]:
         """返回 photo_id -> AgentVerdict（只处理 Top N）。"""
-        ranked = sorted(candidates, key=lambda x: x[1].overall, reverse=True)[
+        usable = [
+            (item, score)
+            for item, score in candidates
+            if score is not None
+            and isinstance(getattr(score, "overall", None), (int, float))
+        ]
+        skipped = len(candidates) - len(usable)
+        if skipped:
+            print(
+                "[pixo.pipeline.batch] AgentSelector 过滤无效美学候选 %d 个"
+                % skipped
+            )
+        ranked = sorted(usable, key=lambda x: x[1].overall, reverse=True)[
             : self.top_n
         ]
         verdicts: dict[str, AgentVerdict] = {}
@@ -309,11 +437,16 @@ class BatchPipeline:
         top_n: int = 3,
     ) -> None:
         self.hard_filter_config = hard_filter_config or HardFilterConfig()
-        self.aesthetic_scorer = aesthetic_scorer or MockAestheticScorer()
+        self.aesthetic_scorer = (
+            aesthetic_scorer
+            if aesthetic_scorer is not None
+            else make_default_scorer()
+        )
         self.agent_selector = agent_selector or MockAgentSelector(top_n=top_n)
         self.segmenter = segmenter or MockSegmenter()
         self.single_photo_runner = single_photo_runner
         self.top_n = int(top_n)
+        self._none_score_count = 0  # 无分候选累计（可观测）
 
     # ---- 分组 ----
 
@@ -444,7 +577,16 @@ class BatchPipeline:
                 aesthetic: AestheticScore | None = None
                 if hard.passed and image is not None:
                     aesthetic = self.aesthetic_scorer.score(image, item.meta)
-                    candidates.append((item, aesthetic))
+                    if aesthetic is None:
+                        # 暗路径防御：无分候选绝不入排序池
+                        self._none_score_count += 1
+                        print(
+                            "[pixo.pipeline.batch] 候选 %s 美学分缺失(None)，"
+                            "跳出排序池(累计%d)"
+                            % (item.photo_id, self._none_score_count)
+                        )
+                    else:
+                        candidates.append((item, aesthetic))
                 photo_results.append(
                     self._make_photo_result(item, group_id, hard, aesthetic, None)
                 )
@@ -581,6 +723,7 @@ __all__ = [
     "AestheticScore",
     "AgentVerdict",
     "MockAestheticScorer",
+    "make_default_scorer",
     "MockAgentSelector",
     "BatchPipeline",
 ]

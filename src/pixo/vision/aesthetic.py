@@ -47,6 +47,37 @@ _DIMENSION_MAP = {
 }
 
 
+_WEIGHTS_MIN_BYTES = 1024 * 1024  # <1MB 的 .pt 必然不是有效头权重
+_probe_cache: dict[tuple[str, int, int], bool] = {}
+
+
+def _probe_weights(path: str | Path) -> bool:
+    """权重完整性探针：存在 + 最小尺寸 + torch.load 可读。
+
+    结果按 (路径, mtime, size) 缓存，避免每次健康检查重复整读大文件；
+    torch 缺失时探针直接失败（此时真评分器本就不可用）。
+    """
+    try:
+        p = Path(path)
+        st = p.stat()
+    except OSError:
+        return False
+    if st.st_size < _WEIGHTS_MIN_BYTES:
+        return False
+    key = (str(p), int(st.st_mtime), int(st.st_size))
+    if key in _probe_cache:
+        return _probe_cache[key]
+    try:
+        import torch
+
+        torch.load(str(p), map_location="cpu")
+        ok = True
+    except Exception:
+        ok = False
+    _probe_cache[key] = ok
+    return ok
+
+
 def _default_model_path() -> str:
     """解析默认美学模型路径。"""
     env = os.environ.get("PIXO_AESTHETIC_MODEL")
@@ -81,6 +112,8 @@ class PixoAestheticScorer:
         self._processor: Any = None
         self._ready = False
         self._error: str | None = None
+        self._degraded = False          # 永久降级：加载失败后不再重试
+        self._warned_score_error = False  # score 异常仅告警一次
 
     @property
     def ready(self) -> bool:
@@ -136,15 +169,22 @@ class PixoAestheticScorer:
         self._error = None
 
     def _ensure(self) -> bool:
-        """确保模型已加载；失败时降级并返回 False。"""
+        """确保模型已加载；失败即永久降级(_degraded)，后续不再重试加载。"""
         if self._ready:
             return True
+        if self._degraded:
+            return False
         try:
             self._load()
             return True
         except Exception as exc:
             self._ready = False
+            self._degraded = True
             self._error = str(exc)
+            print(
+                "[pixo.vision.aesthetic] 模型加载失败，永久降级(不再重试):",
+                exc,
+            )
             return False
 
     def score(self, image_rgb: np.ndarray) -> dict[str, float] | None:
@@ -176,7 +216,14 @@ class PixoAestheticScorer:
                 name = _DIMENSION_MAP.get(model_name, model_name)
                 result[name] = float(tensor[0][0])
             return result
-        except Exception:
+        except Exception as exc:
+            if not self._warned_score_error:
+                self._warned_score_error = True
+                print(
+                    "[pixo.vision.aesthetic] score 异常"
+                    "(仅告警一次，后续静默返回None):",
+                    exc,
+                )
             return None
 
     def health_info(self) -> dict[str, Any]:
@@ -185,7 +232,9 @@ class PixoAestheticScorer:
             "name": "AestheticScorer",
             "type": "real",
             "provider": "torch+transformers",
-            "available": _has_ml_deps() and os.path.exists(self.model_path),
+            "available": (
+                _has_ml_deps() and _probe_weights(self.model_path)
+            ),
             "ready": self._ready,
             "loaded": self._ready,
             "version": None,
