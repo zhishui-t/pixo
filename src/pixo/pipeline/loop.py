@@ -43,6 +43,19 @@ _EXPOSURE_PARAM_ALIASES = (
     "ev",
 )
 
+# 色彩规则执行位映射桥 (t51, tech_debt#10 清偿):
+#   Decide 规则语义键 -> 渲染 Stage 参数。引擎 _set_param 只把规则 param
+#   写成扁平键 ("vibrance.strength"), 管线参数按 stage 名分桶, 不经此表
+#   的点分键会落成顶层悬空键而被静默忽略。值域语义:
+#     vibrance.strength  低鲜艳提升强度, 规则域 [0.15,0.4] -> colorcal.vibrance
+#                        正向增益 (colorcal 域 [-1,1], 0=不变);
+#     saturation.adjust  高饱和回调幅度, 规则域 [-0.25,-0.1] -> colorcal.
+#                        saturation 直传 (负值=降饱和)。
+_COLOR_PARAM_ALIASES = {
+    "vibrance.strength": ("colorcal", "vibrance"),
+    "saturation.adjust": ("colorcal", "saturation"),
+}
+
 
 class LoopError(RuntimeError):
     """闭环编排错误基类。"""
@@ -386,6 +399,15 @@ def _apply_decide_params(
             exp = out.setdefault("exposure", {})
             exp["mode"] = "auto"
             exp["target_offset"] = float(value)
+        elif low in _COLOR_PARAM_ALIASES:
+            # t51 色彩规则执行位: 点分语义键翻译进 colorcal stage 桶,
+            # 不再落成顶层悬空键; 值直传 (域语义见 _COLOR_PARAM_ALIASES 注)。
+            stage, sparam = _COLOR_PARAM_ALIASES[low]
+            bucket = out.setdefault(stage, {})
+            if isinstance(bucket, dict):
+                bucket[sparam] = float(value)
+            else:
+                out[key] = copy.deepcopy(value)
         else:
             out[key] = copy.deepcopy(value)
     return out
@@ -874,13 +896,19 @@ class SinglePhotoLoop:
                                 reason=f"{len(sugg['accepted'])} 个补丁入建议态",
                                 metadata={"params": [
                                     p.get("param") for p in sugg["accepted"]
-                                    if isinstance(p, dict)]})
+                                    if isinstance(p, dict)],
+                                    "chat_latency_ms":
+                                        sugg.get("chat_latency_ms"),
+                                    "cache_hit": sugg.get("cache_hit")})
                         if sugg.get("rejected"):
                             self._add_trace(
                                 sm, event_type="agent_suggest_rejected",
                                 reason=f"{len(sugg['rejected'])} 个补丁被拒绝",
                                 metadata={"rejected": sugg["rejected"],
-                                          "reply_text": sugg["reply_text"]})
+                                          "reply_text": sugg["reply_text"],
+                                          "chat_latency_ms":
+                                              sugg.get("chat_latency_ms"),
+                                          "cache_hit": sugg.get("cache_hit")})
                 except Exception as exc:      # noqa: BLE001 - 建议链绝不阻断闭环
                     self._add_trace(
                         sm, event_type="agent_suggest_error",
