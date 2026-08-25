@@ -170,7 +170,7 @@
       "id": "e_mix_wb",
       "from": "hue_mixed_light",
       "to": "act_wb_dual",
-      "relation": "病因→动作",
+      "relation": "修正动作",
       "weight": 0.95,
       "content": "混色光源下单靠K拉不平，必须K+tint两轴分工收敛绿品残差。"
     },
@@ -178,7 +178,7 @@
       "id": "e_wb_bnd",
       "from": "act_wb_dual",
       "to": "bnd_wb_overcorrect",
-      "relation": "动作→边界",
+      "relation": "边界",
       "weight": 0.85,
       "content": "以中性灰到靶即收，过度校白抽干氛围暖意，画面发死。"
     },
@@ -186,7 +186,7 @@
       "id": "e_cast_sky",
       "from": "hue_lens_cast",
       "to": "act_sky_shift",
-      "relation": "病因→动作",
+      "relation": "修正动作",
       "weight": 0.8,
       "content": "紫边属镜头色偏的高反差表现：先去边再做蓝色相位移，顺序不能反。"
     },
@@ -194,7 +194,7 @@
       "id": "e_purple_sky",
       "from": "hue_sky_purple",
       "to": "act_sky_shift",
-      "relation": "病因→动作",
+      "relation": "修正动作",
       "weight": 0.9,
       "content": "紫边遇饱和即炸，去边之后左移蓝色相才能得到干净的天空层次。"
     },
@@ -202,7 +202,7 @@
       "id": "e_sky_bnd",
       "from": "act_sky_shift",
       "to": "bnd_sky_cyan",
-      "relation": "动作→边界",
+      "relation": "边界",
       "weight": 0.85,
       "content": "左移止步于青之前，越线天空变青绿假色并与植被抢色。"
     },
@@ -210,7 +210,7 @@
       "id": "e_veg_act",
       "from": "hue_green_veg",
       "to": "act_veg_yellow",
-      "relation": "病因→动作",
+      "relation": "修正动作",
       "weight": 0.9,
       "content": "荧光绿是数码感元凶，转黄绿加降饱和即可回归自然记忆色。"
     },
@@ -218,7 +218,7 @@
       "id": "e_veg_bnd",
       "from": "act_veg_yellow",
       "to": "bnd_veg_skin_bleed",
-      "relation": "动作→边界",
+      "relation": "边界",
       "weight": 0.8,
       "content": "绿转黄绿会拖累相邻肤色发黄，人像需蒙版隔离保护面部。"
     },
@@ -226,7 +226,7 @@
       "id": "e_skin_bnd",
       "from": "act_skin_hsl",
       "to": "bnd_skin_shift",
-      "relation": "动作→边界",
+      "relation": "边界",
       "weight": 0.95,
       "content": "肤色安全区即橙色相±5°：明度饱和可大胆，色相只许微调防塑料感。"
     },
@@ -234,7 +234,7 @@
       "id": "e_teal_skin",
       "from": "act_orange_teal",
       "to": "bnd_skin_shift",
-      "relation": "动作→边界",
+      "relation": "边界",
       "weight": 0.75,
       "content": "橙青调以肤色为橙端锚点，肤色被青污染或推向洋红即翻车。"
     },
@@ -242,7 +242,7 @@
       "id": "e_harm_teal",
       "from": "strat_harmony",
       "to": "act_orange_teal",
-      "relation": "策略→动作",
+      "relation": "策略",
       "weight": 0.8,
       "content": "橙青互补是和谐框架的对撞解，全图其余颜色须让位于这对主角。"
     },
@@ -250,7 +250,7 @@
       "id": "e_harm_veg",
       "from": "strat_harmony",
       "to": "act_veg_yellow",
-      "relation": "策略→动作",
+      "relation": "策略",
       "weight": 0.7,
       "content": "植被转黄绿既除数码感，也让绿退回邻近色环维持整体和谐。"
     }
