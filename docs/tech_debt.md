@@ -36,6 +36,9 @@
      内置斜率模型。DSC_0355 da/db 收敛至 ±6 门禁内（−12.25/+14.41 → +1.07/−3.78），
      对照 DSC_5236 不劣化。
    - 曝光标定表已升级 `(med_log2, wb_B)` 二维分键。
+   - 更新（t66）：执行位已由 `loop._COLOR_PARAM_ALIASES` 桥接 colorcal，
+     VibranceStage 占位类改为显式废弃声明（强制调用抛 NotImplementedError
+     指引迁移），转发壳 modules/vibrance.py 已删除，无残留引用。
 
 9. **0355 高光 cap**（已清偿 2026-08-25）：
    - 高光预算哨兵 ev≤log2((1-τ)/p99)，highlight_budget=0.02（相机实测 1.74%+余量）；

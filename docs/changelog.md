@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-25 — 日落批：公式守卫清零 · VibranceStage 占位处置
+
+- 公式守卫日落盘点（CI 哨兵固化）：全部 5 个规则 yaml、9 条活跃规则 condition
+  均为原生形态（metric/op/value 或 all）——clarity 迁移后已无任何 formula 条件
+  守卫；exposure_rule_001 的 log2 算术属动作公式非守卫语义，在册保留。
+  tests/unit/test_formula_guard_sunset.py 五用例固化为 CI 拦截（防回退）。
+- VibranceStage 占位处置：转发壳 modules/vibrance.py 删除，reshape 占位类改
+  显式废弃声明（NotImplementedError+docstring 指引 colorcal vibrance/saturation，
+  _COLOR_PARAM_ALIASES 桥接），注册名保留稳住 STAGE_CLASSES；废弃契约断言入
+  test_pipeline。色彩规则执行位已经由映射桥端到端生效（tech_debt#10 完全清偿）。
+- 验收：852 passed 零失败（含哨兵与废弃契约用例）。
+
 ## 2026-08-25 — 收尾批：真评分器标定 · AND/between 原生化 · clarity 迁移试点
 
 - 真评分器 12 样张分布标定：overall 为带符号原始分（实拍全负 p50=-0.47；

@@ -225,3 +225,97 @@ def test_loop_accepted_trace_carries_chat_latency(monkeypatch):
     assert evs, "应有 accepted 留痕"
     meta = evs[0].get("metadata") if isinstance(evs[0], dict)         else getattr(evs[0], "metadata", {})
     assert isinstance(meta.get("chat_latency_ms"), (int, float))
+
+
+# --- t65：llm_suggestions 观测指标暴露 ---------------------------------------
+
+def _decide_metrics(result):
+    dec = [e for e in result.trace_events
+           if (e.get("event_type") if isinstance(e, dict)
+               else getattr(e, "event_type", "")) == "decide"]
+    assert dec
+    return dec[-1]["value"]["metrics"]
+
+
+def test_accepted_suggestions_expose_observability_metrics(monkeypatch):
+    for k, v in zip(_ENV, ("http://fake", "key", "m")):
+        monkeypatch.setenv(k, v)
+
+    def fake_run_suggest(**kw):
+        return {"status": "ok",
+                "accepted": [
+                    {"param": "tone.brightness", "op": "set", "value": 0.3},
+                    {"param": "exposure.vignette", "op": "delta",
+                     "value": 0.05},
+                ],
+                "rejected": [], "reply_text": "", "source": "test",
+                "chat_latency_ms": 1.0, "cache_hit": False}
+
+    monkeypatch.setattr(suggest_mod, "run_suggest", fake_run_suggest)
+    loop = _make_loop(agent_suggest=True)
+    result = loop.run("obs_on", image_rgb=_img())
+
+    metrics = _decide_metrics(result)
+    assert metrics["llm_suggest_count"] == 2
+    assert metrics["llm_suggest_params"] == [
+        "tone.brightness", "exposure.vignette"]
+    # measurement 同步暴露（键名不含数值）
+    assert result.measurements[0]["llm_suggest_count"] == 2
+    assert result.measurements[0]["llm_suggest_params"] == [
+        "tone.brightness", "exposure.vignette"]
+
+
+def test_agent_off_leaves_metrics_absent():
+    loop = _make_loop()                       # agent_suggest 默认关
+    result = loop.run("obs_off", image_rgb=_img())
+    metrics = _decide_metrics(result)
+    assert "llm_suggest_count" not in metrics
+    assert "llm_suggest_params" not in metrics
+    assert all("llm_suggest_count" not in m for m in result.measurements)
+
+
+
+# --- t65：llm_suggestions 观测指标暴露 ---------------------------------------
+
+def _decide_metrics(result):
+    dec = [e for e in result.trace_events
+           if (e.get("event_type") if isinstance(e, dict)
+               else getattr(e, "event_type", "")) == "decide"]
+    assert dec
+    return dec[-1]["value"]["metrics"]
+
+
+def test_accepted_suggestions_expose_observability_metrics(monkeypatch):
+    for k, v in zip(_ENV, ("http://fake", "key", "m")):
+        monkeypatch.setenv(k, v)
+
+    def fake_run_suggest(**kw):
+        return {"status": "ok",
+                "accepted": [
+                    {"param": "tone.brightness", "op": "set", "value": 0.3},
+                    {"param": "exposure.vignette", "op": "delta",
+                     "value": 0.05},
+                ],
+                "rejected": [], "reply_text": "", "source": "test",
+                "chat_latency_ms": 1.0, "cache_hit": False}
+
+    monkeypatch.setattr(suggest_mod, "run_suggest", fake_run_suggest)
+    loop = _make_loop(agent_suggest=True)
+    result = loop.run("obs_on", image_rgb=_img())
+
+    metrics = _decide_metrics(result)
+    assert metrics["llm_suggest_count"] == 2
+    assert metrics["llm_suggest_params"] == [
+        "tone.brightness", "exposure.vignette"]
+    assert result.measurements[0]["llm_suggest_count"] == 2
+    assert result.measurements[0]["llm_suggest_params"] == [
+        "tone.brightness", "exposure.vignette"]
+
+
+def test_agent_off_leaves_metrics_absent():
+    loop = _make_loop()                       # agent_suggest 默认关
+    result = loop.run("obs_off", image_rgb=_img())
+    metrics = _decide_metrics(result)
+    assert "llm_suggest_count" not in metrics
+    assert "llm_suggest_params" not in metrics
+    assert all("llm_suggest_count" not in m for m in result.measurements)

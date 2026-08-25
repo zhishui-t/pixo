@@ -889,8 +889,22 @@ class SinglePhotoLoop:
                             locked_params=self.locked_params,
                         )
                         if sugg.get("status") == "ok":
-                            decide_context["llm_suggestions"] = list(
-                                sugg["accepted"])
+                            accepted_list = list(sugg["accepted"])
+                            decide_context["llm_suggestions"] = accepted_list
+                            # t65 观测指标：仅暴露数量与参数键名（不含数值），
+                            # 供未来规则 condition / 报表消费；非自动应用路径。
+                            accepted_params = [
+                                str(p.get("param"))
+                                for p in accepted_list
+                                if isinstance(p, dict)
+                            ]
+                            metrics["llm_suggest_count"] = len(accepted_list)
+                            metrics["llm_suggest_params"] = list(
+                                accepted_params)
+                            measurement["llm_suggest_count"] = len(
+                                accepted_list)
+                            measurement["llm_suggest_params"] = list(
+                                accepted_params)
                             self._add_trace(
                                 sm, event_type="agent_suggest_accepted",
                                 reason=f"{len(sugg['accepted'])} 个补丁入建议态",
