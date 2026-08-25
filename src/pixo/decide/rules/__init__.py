@@ -9,6 +9,8 @@ RULES_DIR = Path(__file__).resolve().parent
 DEFAULT_RULES = [
     RULES_DIR / "exposure_rule_001.yaml",
     RULES_DIR / "highlight_protect_rule_002.yaml",
+    RULES_DIR / "tone_clarity_rules.yaml",
+    RULES_DIR / "color_rules.yaml",
 ]
 
 __all__ = ["RULES_DIR", "DEFAULT_RULES"]

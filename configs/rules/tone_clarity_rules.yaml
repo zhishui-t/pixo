@@ -1,0 +1,73 @@
+# 影调+通透规则包 (P2)。阈值依据 docs/metrics/proxy_distribution.md
+# (t41, 12 样张: 0711 前4后2 + 春节前4后2, render_preview_full@512,
+#  compute_proxy_metrics 统一 [0,1] 域) 重推 —— 原 0.55/0.40/0.35 为
+# 拍脑袋值, 实测 haze 0.0508~0.2477 / tonal 0.3578~0.9121 恒不达。
+# 约定: condition 单 metric 单 op; 区间联合语义由公式守卫实现
+# (_eval_formula 注入全部指标); 缺失指标引擎返回 False 静默不触发。
+#
+# 阈值来源 (分位数引自该表"分位数汇总"):
+#   - dehaze 门 0.22  : haze_proxy p75=0.2260 取整保守下移;
+#                       p50=0.1633 距门限 -26%, 正常片不误触;
+#                       命中样张 5237/5238/5239/0352/0353 (浓雾簇全含)。
+#   - clarity 入口 0.12: haze_proxy p25=0.1202, 覆盖轻雾下半区。
+#   - clarity 带通上界 0.22: 开区间让位 dehaze 主导, 避免重雾双升。
+#   - tonal 守卫 0.46 : tonal_range p25=0.4636 取整; 旧线 0.35 低于
+#                       全样本 min(0.3578) 恒假 (t40 缺陷), 本线命中
+#                       平坦片 5237(0.4175)/0352(0.3578)。
+# 注: 12 样本中"平坦且轻雾"组合暂缺 (平坦片均伴高 haze 归 dehaze),
+#     clarity 带通为未来场景保留; 边界行为由
+#     tests/unit/test_tone_clarity_rules.py 双分支单测钉死。
+- rule_id: dehaze_rule_030
+  priority: 30
+  condition:
+    metric: haze_proxy
+    op: gte
+    value: 0.22            # 分布表 p75=0.2260 取整
+  action:
+    param: dehaze.strength
+    mode: delta
+    formula: "0.06"
+    clamp: [0.15, 0.45]
+    step_decay: 0.5
+    conflict_policy: high_priority_wins
+
+- rule_id: clarity_flat_rule_031
+  priority: 31
+  condition:
+    metric: haze_proxy
+    op: gte
+    value: 0.12            # 分布表 p25=0.1202
+  action:
+    param: clarity.strength
+    mode: delta
+    # 带通守卫: haze∈[0.12,0.22) 且 tonal_range<=0.46 才正步长;
+    # haze>=0.22 让位 dehaze, 高对比画面不平不加清晰度。
+    formula: "0.04 if (haze_proxy < 0.22 and tonal_range <= 0.46) else 0.0"
+    clamp: [0.10, 0.30]
+    conflict_policy: high_priority_wins
+
+- rule_id: shadow_open_rule_032
+  priority: 32
+  condition:
+    metric: shadow_clip_ratio
+    op: gte
+    value: 0.18
+  action:
+    param: tone.shadows
+    mode: delta
+    formula: "0.05"
+    clamp: [-1.0, 1.0]
+    conflict_policy: high_priority_wins
+
+- rule_id: highlight_recover_rule_033
+  priority: 33
+  condition:
+    metric: preview_highlight_clip_estimate
+    op: gte
+    value: 0.025
+  action:
+    param: tone.highlights
+    mode: set
+    formula: "-0.08"
+    clamp: [-0.15, 0.0]
+    conflict_policy: high_priority_wins

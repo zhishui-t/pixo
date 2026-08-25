@@ -1,0 +1,43 @@
+# P2 色彩规则包（t38 建，t43 按 t41 实测分布重推阈值）。
+# 指标 colorfulness_proxy 统一域后实测（docs/metrics/proxy_distribution.md，t41：
+# 12 样本 long_edge=512 全链默认参数渲染，scripts/proxy_distribution.py 可复跑）：
+#   min 3.39 / p25 4.7795 / p50 5.43 / p75 6.1292 / max 11.21。
+# 旧分界 25/70 在真实语料外恒真/恒假（t40 复盘的死码），现改为实测分位：
+#   vibrance_low <= p25(4.78)；saturation_high >= p75(6.13)。
+# 裁决（P2收口）：clamp 带维持 t38 规格值，不做分位深度分级——分级响应无 A/B 证据且 step_decay 已有迭代阻尼；P3 待办：幅度分级待真评分器实测数据。
+# 规则③ split_tone_neutral_rule 省略不变：Lab da/db 度量未产出，模板注释预留。
+# 人像框门控仍待引擎 AND 能力（单 condition 限制），见下注释。
+- rule_id: vibrance_low_rule
+  priority: 30
+  condition:
+    metric: colorfulness_proxy
+    op: le
+    value: 4.78        # = 分布表 p25(4.7795)；触发样本 6006/6007/0354
+  action:
+    param: vibrance.strength
+    value: 0.3
+    clamp: [0.15, 0.4]
+    conflict_policy: high_priority_wins
+
+- rule_id: saturation_high_rule
+  priority: 31
+  condition:
+    metric: colorfulness_proxy
+    op: ge
+    value: 6.13        # = 分布表 p75(6.1292)；触发样本 5238/0353/0355
+  action:
+    param: saturation.adjust
+    value: -0.15
+    clamp: [-0.25, -0.1]
+    conflict_policy: high_priority_wins
+
+# 预留模板（度量层补齐后启用）：
+#   - rule_id: split_tone_neutral_rule
+#     priority: 32
+#     condition: {metric: colorfulness_proxy, op: between, value: [4.78, 6.13]}
+#     action:
+#       param: split_tone.strength
+#       value: 0.2
+#       clamp: [0.1, 0.3]
+#       conflict_policy: high_priority_wins
+#     # 另需 engine AND 表达 |da|<=3 与 |db|<=3 门控。
