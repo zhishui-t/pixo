@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-25 — 高光治理批：0355 清偿与评分器接线
+
+- 曝光高光预算哨兵 ev≤log2((1−τ)/p99)，highlight_budget=0.02；标定表升维 (med, wb_B)
+  并以均值 L 为拟合目标重拟合 12 张。
+- WB 暖度曲线标定 configs/calibration/warmth_curve.json（双留出验证），0355 色度 da/db≈0。
+- 真 7 维美学评分器接入 batch 选片与 loop 终止条件（健壮回退+暗路径测试）。
+- 验收：716 passed；A/B 5236=8.3/5239=8.0/0352=14.4/0355 clip_hi 2.29%·|dL|=1.0——
+  四样张全指标达标，tech_debt #9 销账。
+
 ## 2026-08-25 — 组合批：知识图谱 · 评分接线 · 标定升级
 
 - 知识库四包 49 节点 / 37 边（capture_post 11n4e / hue 14n11e /
