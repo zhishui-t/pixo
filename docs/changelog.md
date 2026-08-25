@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-25 — 收尾批：真评分器标定 · AND/between 原生化 · clarity 迁移试点
+
+- 真评分器 12 样张分布标定：overall 为带符号原始分（实拍全负 p50=-0.47；
+  合成噪声 +0.32 反高——绝对分无跨域语义，已制度化禁止跨域比较）；
+  accept_threshold≈-0.5(p50)/stagnation_eps≈0.1 建议值入档，生产默认仍 None=关。
+- 引擎原生 condition.all（≥2 子条件 AND）与 between [lo,hi] 落地：向后兼容逐位
+  不变、lint 扩展覆盖 all 子项、命中附 matched 明细；畸形显式 DecideError。
+- clarity_flat_rule 公式带通守卫→原生 all 三子件迁移（护栏④日落首例）：42 点
+  矩阵触发集零差异；no-op 留痕条目消失属预期演进已在 yaml 注释声明。
+- 验收：845 passed；32 个收尾批新用例全绿。
+
 ## 2026-08-25 — 清偿批：色彩规则执行位实装 · 真评分器权重部署 · 治理收尾
 
 - 色彩规则端到端生效：决策键→colorcal 参数映射桥（_COLOR_PARAM_ALIASES，
