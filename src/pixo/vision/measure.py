@@ -115,6 +115,55 @@ def _preview_highlight_estimate(lum: np.ndarray) -> float:
     return _clip_ratio(pooled, HIGHLIGHT_CLIP_THRESHOLD, high=True)
 
 
+def compute_proxy_metrics(image_rgb: np.ndarray) -> dict[str, float]:
+    """P2 前置三代理指标（纯 numpy，无新依赖）。
+
+    输入契约：uint8 / 0-1 浮点 RGB；内部统一归一化到 [0,1] 后计算，
+    与输入量纲无关（t41 统一域，修复 0-255 口径失配）。
+    输出域：
+    - haze_proxy ∈ [0,1]：1-(p95-p05)/p95_gray，灰度对比度衰减度，
+      0=通透 1=浓雾（比值型，尺度不变）；p95≤ε 时记 1；
+    - colorfulness_proxy ∈ [0,100]：简化 Hasler 式（rg=R-G,
+      yb=0.5(R+G)-B），sqrt(std_rg^2+std_yb^2)+0.3*mean(|rg|,|yb|)，
+      按 [0,1] 域理论最大值 √2+0.3 归一化；
+    - tonal_range ∈ [0,1]：p95-p05（归一化灰度域）。
+
+    输入 None / 非三通道 / 空图返回空 dict——调用方据此不写缺省键。
+    """
+    if image_rgb is None:
+        return {}
+    arr = np.asarray(image_rgb)
+    if arr.ndim != 3 or arr.shape[2] < 3 or arr.size == 0:
+        return {}
+    # 统一域：_to_float_rgb 为 0-255 测量口径，此处归一到 [0,1]
+    rgb = _to_float_rgb(arr) / 255.0
+    r = rgb[..., 0]
+    g = rgb[..., 1]
+    b = rgb[..., 2]
+    gray = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    p95 = float(np.percentile(gray, 95))
+    p05 = float(np.percentile(gray, 5))
+    tonal_range = max(p95 - p05, 0.0)
+    if p95 <= 1e-6:
+        haze_proxy = 1.0
+    else:
+        haze_proxy = min(1.0, max(0.0, 1.0 - tonal_range / p95))
+    rg = r - g
+    yb = 0.5 * (r + g) - b
+    std_rg = float(np.std(rg))
+    std_yb = float(np.std(yb))
+    mean_term = 0.15 * (float(np.mean(np.abs(rg)))
+                        + float(np.mean(np.abs(yb))))
+    raw = float(np.sqrt(std_rg * std_rg + std_yb * std_yb)) + mean_term
+    norm_max = float(np.sqrt(2.0)) + 0.3
+    colorfulness_proxy = min(100.0, max(0.0, raw / norm_max * 100.0))
+    return {
+        "haze_proxy": round(haze_proxy, 4),
+        "colorfulness_proxy": round(colorfulness_proxy, 4),
+        "tonal_range": round(tonal_range, 4),
+    }
+
+
 def measure_global(image_rgb: np.ndarray) -> dict[str, float]:
     """计算全图测量指标。
 
@@ -534,6 +583,7 @@ class VisionMeasure:
 
 __all__ = [
     "VisionMeasure",
+    "compute_proxy_metrics",
     "measure_global",
     "measure_region",
     "measure_zone_exposure",
