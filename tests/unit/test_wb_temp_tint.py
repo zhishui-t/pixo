@@ -140,16 +140,111 @@ def test_default_params_unchanged_except_new_keys():
 
 
 def test_default_output_bitwise_unchanged():
-    """默认参数 (as_shot, temp/tint None) 输出与既有 as_shot+warmth 路径逐位一致。"""
+    """回退路径不变: warm_cal_file 置空时输出与既有 as_shot+warmth 路径一致。
+
+    t14 后默认缺省加载 configs/calibration/warmth_curve.json (存在时);
+    本测试显式关闭该开关, 验证 "文件缺失/关闭 -> 内置斜率模型" 的兼容行为。
+    """
     prof = _profile()
     raw_wb = np.array([1.291, 1.0, 2.287], dtype=np.float32)
     ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
-                       config={"stages": {"whitebalance": {"mode": "as_shot"}}})
+                       config={"stages": {"whitebalance": {
+                           "mode": "as_shot", "warm_cal_file": ""}}})
     ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
     WhiteBalanceStage().run(ctx)
     # 旧路径: camera_neutral_wb 之后 apply_warmth(warmth 默认 0.9)
     expected = apply_warmth(np.asarray(raw_wb, dtype=np.float32), prof, 0.9, None)
     assert ctx.state["wb_mode"] == "as_shot"
+    assert np.allclose(ctx.state["wb"], expected, atol=1e-5)
+
+
+def test_warm_cal_file_loads_knots(tmp_path):
+    """t14: warm_cal_file 指向合法标定文件 -> 其 knots 作为 warmth_curve 生效。"""
+    import json
+    knots = [[1.0, 1.0, 1.0, 1.0], [3.0, 1.2, 0.9, 0.8]]
+    f = tmp_path / "warmth_curve.json"
+    f.write_text(json.dumps({"version": 1, "type": "warmth_curve",
+                             "knots": knots}), encoding="utf-8")
+    prof = _profile()
+    ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
+                       config={"stages": {"whitebalance": {
+                           "mode": "as_shot", "warm_cal_file": str(f)}}})
+    ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
+    WhiteBalanceStage().run(ctx)
+    expected = apply_warmth(
+        np.asarray(_FakeRaw().camera_whitebalance[:3], dtype=np.float32),
+        prof, 0.9, {"curve": knots})
+    assert np.allclose(ctx.state["wb"], expected, atol=1e-5)
+
+
+def test_warm_cal_file_missing_or_invalid_falls_back(tmp_path):
+    """t14: 标定文件缺失或结点非法 -> 静默回退内置斜率模型 (行为兼容)。"""
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"knots": [[2.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]]}',
+                   encoding="utf-8")  # wb_B 递减 -> 非法
+    prof = _profile()
+    raw_wb = np.asarray([1.291, 1.0, 2.287], dtype=np.float32)
+    expected = apply_warmth(raw_wb, prof, 0.9, None)
+    for wcf in ("Z:/no/such/warmth.json", str(bad)):
+        ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
+                           config={"stages": {"whitebalance": {
+                               "mode": "as_shot", "warm_cal_file": wcf}}})
+        ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32),
+                      DOMAIN_LINEAR_CAM)
+        WhiteBalanceStage().run(ctx)
+        assert np.allclose(ctx.state["wb"], expected, atol=1e-5)
+
+
+def test_warm_cal_domain_hint_and_fallback(tmp_path, capsys):
+    """t22: 超出 _domain 打一次性提示; fallback_outside_domain=true 回退斜率模型。"""
+    import json
+    knots = [[2.4, 1.0, 1.0, 1.0], [3.0, 1.1, 1.0, 0.95]]  # 域 [2.4,3.0]
+    f = tmp_path / "warmth_curve.json"
+    f.write_text(json.dumps({"knots": knots,
+                             "_domain": {"wb_B": [2.4, 3.0]}}),
+                 encoding="utf-8")
+    prof = _profile()
+    raw_wb = np.asarray([1.291, 1.0, 2.287], dtype=np.float32)  # b=2.287 域外
+    slope = apply_warmth(raw_wb, prof, 0.9, None)
+    curved = apply_warmth(raw_wb, prof, 0.9, {"curve": knots})
+
+    def run(extra):
+        cfg = {"mode": "as_shot", "warm_cal_file": str(f)}
+        cfg.update(extra)
+        ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
+                           config={"stages": {"whitebalance": cfg}})
+        ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32),
+                      DOMAIN_LINEAR_CAM)
+        WhiteBalanceStage().run(ctx)
+        return ctx.state["wb"]
+
+    # 默认 (fallback_outside_domain=False): 域外仍用曲线, 打一次性提示
+    assert np.allclose(run({}), curved, atol=1e-5)
+    assert "超出" in capsys.readouterr().out
+    assert np.allclose(run({}), curved, atol=1e-5)   # 行为不变
+    assert "超出" not in capsys.readouterr().out      # 提示仅一次
+    # fallback_outside_domain=True: 回退内置斜率模型
+    assert np.allclose(run({"fallback_outside_domain": True}), slope, atol=1e-5)
+
+
+def test_explicit_warmth_curve_overrides_cal_file(tmp_path):
+    """t14: 显式 warmth_curve 参数优先于 warm_cal_file 加载的标定。"""
+    import json
+    f = tmp_path / "warmth_curve.json"
+    f.write_text(json.dumps({"knots": [[1.0, 1.0, 1.0, 1.0],
+                                       [3.0, 1.2, 0.9, 0.8]]}),
+                 encoding="utf-8")
+    explicit = [[1.0, 1.0, 1.0, 1.0], [3.0, 0.9, 1.05, 1.1]]
+    prof = _profile()
+    ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
+                       config={"stages": {"whitebalance": {
+                           "mode": "as_shot", "warm_cal_file": str(f),
+                           "warmth_curve": explicit}}})
+    ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
+    WhiteBalanceStage().run(ctx)
+    expected = apply_warmth(
+        np.asarray(_FakeRaw().camera_whitebalance[:3], dtype=np.float32),
+        prof, 0.9, {"curve": explicit})
     assert np.allclose(ctx.state["wb"], expected, atol=1e-5)
 
 

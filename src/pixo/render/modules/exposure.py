@@ -64,7 +64,17 @@ def _load_target_offset() -> float:
 
 
 def _load_cal_table() -> tuple | None:
-    """读场景自适应表 → (xs, ys) 严格递增 float 数组; 无表/非法 → None。"""
+    """读场景自适应曝光标定表; 无表/非法 → None。
+
+    支持两种格式 (各行长度须一致):
+      一维 [[m_log2, ev], ...]        → 返回 (xs, ys), med 列严格递增;
+      二维 [[m_log2, wb_B, ev], ...]  → 返回 (xs, ws, ys)。
+    二维语义: wb_B = 蓝/绿白平衡比 (camera_wb[2]/camera_wb[1]) —— 同一亮
+    度下钨丝灯/日光场景所需补偿 EV 不同, 以此作第二插值键。加载时按
+    (med, wb) 排序规范化 (同 med 分段内 wb 升序即可, 不要求全表严格),
+    相同 med 结点折叠取均值以保证 med 主键插值合法。结点 <3 或含非有限
+    值 → None。
+    """
     global _cached_table
     if _cached_table is None:
         _cached_table = False
@@ -72,13 +82,55 @@ def _load_cal_table() -> tuple | None:
             if _CAL_FILE.exists():
                 tbl = json.loads(_CAL_FILE.read_text(encoding="utf-8")).get("cal_table")
                 if tbl and len(tbl) >= 3:
-                    xs = np.array([t[0] for t in tbl], dtype=np.float64)
-                    ys = np.array([t[1] for t in tbl], dtype=np.float64)
-                    if np.all(np.diff(xs) > 0):
-                        _cached_table = (xs, ys)
+                    widths = {len(t) for t in tbl}
+                    if widths == {2}:
+                        rows = sorted((float(t[0]), float(t[1])) for t in tbl)
+                        xs = np.array([r[0] for r in rows], dtype=np.float64)
+                        ys = np.array([r[1] for r in rows], dtype=np.float64)
+                        if (np.all(np.diff(xs) > 0)
+                                and np.all(np.isfinite(xs))
+                                and np.all(np.isfinite(ys))):
+                            _cached_table = (xs, ys)
+                    elif widths == {3}:
+                        arr = np.array(
+                            sorted((float(t[0]), float(t[1]), float(t[2])) for t in tbl),
+                            dtype=np.float64)
+                        if np.all(np.isfinite(arr)):
+                            xs, ws, ys = [], [], []
+                            for x in np.unique(arr[:, 0]):
+                                sel = arr[arr[:, 0] == x]
+                                xs.append(float(x))
+                                ws.append(float(sel[:, 1].mean()))
+                                ys.append(float(sel[:, 2].mean()))
+                            _cached_table = (np.array(xs), np.array(ws), np.array(ys))
         except Exception:
             _cached_table = False
     return _cached_table if _cached_table else None
+
+
+def _cal_ev(med: float, table: tuple, wb_b: float | None) -> float:
+    """查标定表 EV。
+
+    一维表: 对 med 全表线性插值。
+    二维表 (最简正确版):
+      1) med 主键: 全表对 med 线性插值得基准 EV;
+      2) wb 二次: 若给出 wb_b 且 |结点med - med| <= 0.3 的邻域结点 >=2 个,
+         在邻域内按 wb_B 线性插值取代基准 (wb 越界由 np.interp 端点钳制,
+         不外推); 邻域不足或未给 wb_b → 保持 med 主键结果。
+    """
+    if len(table) == 2:
+        xs, ys = table
+        return float(np.interp(med, xs, ys))
+    xs, ws, ys = table
+    ev = float(np.interp(med, xs, ys))
+    if wb_b is None:
+        return ev
+    near = np.abs(xs - med) <= 0.3
+    if int(near.sum()) >= 2:
+        wl, yl = ws[near], ys[near]
+        order = np.argsort(wl, kind="stable")
+        return float(np.interp(wb_b, wl[order], yl[order]))
+    return ev
 
 
 def _luma_proxy(cam_rgb: np.ndarray) -> np.ndarray:
@@ -378,9 +430,17 @@ class ExposureStage(Stage):
         med = float(np.median(logy))
         table = _load_cal_table()
         if table is not None:
-            xs, ys = table
-            ev = float(np.interp(med, xs, ys))
-            ctx.state["ev_mode"] = "cal_table"
+            wb_b = None
+            if len(table) == 3:
+                wb = ctx.state.get("camera_wb")
+                if wb is not None:
+                    try:
+                        wb_b = float(wb[2]) / max(float(wb[1]), 1e-9)
+                    except Exception:
+                        wb_b = None
+            ev = _cal_ev(med, table, wb_b)
+            ctx.state["ev_mode"] = (
+                "cal_table_2d" if len(table) == 3 and wb_b is not None else "cal_table")
         else:
             ctx.state["ev_mode"] = "anchor"
         # 高光保护: 提亮后 clip_p 分位不越过白电平 (裁切预算 = 100-clip_p %),

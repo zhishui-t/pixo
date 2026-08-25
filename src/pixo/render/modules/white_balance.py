@@ -28,6 +28,10 @@
           "部分色温偏黄/偏绿" 的非线性分桶行为); 提供时优先于斜率模型,
           gain = 1 + warmth·(g_knot − 1); 增益带界 [0.5, 1.5], 结点 ≥2 且
           wb_B 严格递增, 越界 raise ValueError。
+    warm_cal_file 分桶暖度标定文件路径 (t14): 缺省 configs/calibration/
+            warmth_curve.json (fit_warmth_curve.py 产物); 文件存在时其 knots
+            作为 warmth_curve 生效, 显式 warmth_curve 参数优先; 文件缺失或
+            非法回退内置斜率模型 (行为兼容)。置空串关闭该加载。
 
 暖度模型约束 (2026-08 方案 A, 见 dsh-plan-task-p4/research/warmth-model-regularization.md):
   1. 锚点 b0=1.79 / b1=2.287 硬冻结 (0376/5236 双锚点标定; 语料暖尾仅 6 样本
@@ -38,6 +42,11 @@
      gain = [1+r_slope·s, 1+g_slope·s, 1−b_slope·s]。
 """
 from __future__ import annotations
+
+import json
+import os
+from numbers import Real
+from pathlib import Path
 
 import numpy as np
 
@@ -92,6 +101,42 @@ def _check_warmth_curve(curve) -> np.ndarray:
     if arr[:, 1:].min() < 0.5 or arr[:, 1:].max() > 1.5:
         raise ValueError("warmth_curve 增益必须在 [0.5, 1.5] 内")
     return arr
+
+
+# t14 WB 分桶治理: 每机暖度标定曲线 (scripts/fit_warmth_curve.py --write 产物)。
+#   存在时 Stage 缺省加载 (warm_cal_file 开关), 替代单一斜率模型; 缺失/非法
+#   回退斜率模型, 行为兼容。缓存键含 mtime/size, 改标定文件即时生效。
+DEFAULT_WARM_CAL_FILE = (Path(__file__).resolve().parents[4] /
+                         "configs" / "calibration" / "warmth_curve.json")
+_WARM_CAL_CACHE: dict = {}
+_WARM_DOMAIN_WARNED: set = set()
+
+
+def _load_warm_cal(path):
+    """读分桶暖度标定; 缺失/非法 -> None (Stage 回退内置斜率模型)。
+
+    JSON 格式: {"knots": [[wb_B, r, g, b], ...], "_domain": {"wb_B": [lo, hi]}}
+    (fit_warmth_curve.py --write 产物)。返回 {"curve": ndarray|None,
+    "domain": (lo, hi)|None}; 结点经 _check_warmth_curve 全量校验。
+    """
+    try:
+        st = os.stat(path)
+        key = (str(path), st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+    if key not in _WARM_CAL_CACHE:
+        curve, domain = None, None
+        try:
+            doc = json.loads(Path(path).read_text(encoding="utf-8"))
+            curve = _check_warmth_curve(doc["knots"])
+            dom = (doc.get("_domain") or {}).get("wb_B")
+            if (isinstance(dom, (list, tuple)) and len(dom) == 2
+                    and all(isinstance(x, Real) for x in dom) and dom[0] < dom[1]):
+                domain = (float(dom[0]), float(dom[1]))
+        except Exception:
+            curve, domain = None, None
+        _WARM_CAL_CACHE[key] = {"curve": curve, "domain": domain}
+    return _WARM_CAL_CACHE[key]
 
 
 def apply_warmth(wb: np.ndarray, prof, warmth: float = 1.0,
@@ -197,6 +242,12 @@ class WhiteBalanceStage(Stage):
         "warmth_r_day": {"type": "float", "min": 0.0, "max": 0.5},
         # 分桶暖度曲线 (可选): [[wb_B, r, g, b], ...] 分段线性增益
         "warmth_curve": {"type": "float_or_str"},
+        # 分桶暖度标定文件开关 (t14): 缺省指向 configs/calibration/
+        # warmth_curve.json, 文件存在即加载; 置空串关闭; 缺失回退斜率模型
+        "warm_cal_file": {"type": "str"},
+        # wb_B 超出标定 _domain 时是否回退内置斜率模型 (t22; 默认 False
+        # 保持现行为: 打一次性提示后仍用曲线, 域外由端点垫片近似承接)
+        "fallback_outside_domain": {"type": "bool"},
         # 固定线性 RGB 修整增益 [r,g,b] (色彩链路矩阵后乘, 缺省恒等)
         "trim": {"type": "float_or_str"},
         # 手动白平衡 temp(K)/tint (仅 mode=manual 使用)
@@ -209,7 +260,10 @@ class WhiteBalanceStage(Stage):
                 "warmth_b0": None, "warmth_b1": None,
                 "warmth_r_slope": None, "warmth_g_slope": None,
                 "warmth_b_slope": None, "warmth_r_day": None,
-                "warmth_curve": None, "temp": None, "tint": None, "trim": None}  # 0.9=对齐 LR 实测渲染(0376: L196/a+6/b+12)
+                "warmth_curve": None, "temp": None, "tint": None,
+                "trim": None,  # 0.9=对齐 LR 实测渲染(0376: L196/a+6/b+12)
+                "warm_cal_file": str(DEFAULT_WARM_CAL_FILE),
+                "fallback_outside_domain": False}
 
     def process(self, ctx: StageContext) -> None:
         prof = ctx.prof
@@ -258,6 +312,33 @@ class WhiteBalanceStage(Stage):
             curve = self.p(ctx, "warmth_curve", None)
             if curve is not None:
                 cal["curve"] = curve
+            else:
+                # t14 分桶暖度标定缺省加载: 文件存在即生效, 缺失/非法静默
+                # 回退内置斜率模型 (行为兼容); 显式 warmth_curve 参数优先。
+                wcf = self.p(ctx, "warm_cal_file", None)
+                if wcf:
+                    doc = _load_warm_cal(wcf)
+                    if doc and doc.get("curve") is not None:
+                        use_curve = True
+                        dom = doc.get("domain")
+                        if dom:
+                            wb_arr = np.asarray(wb, dtype=np.float32)
+                            b_now = float(wb_arr[2] / max(float(wb_arr[1]), 1e-9))
+                            lo, hi = dom
+                            if not (lo <= b_now <= hi):
+                                fb = bool(self.p(ctx, "fallback_outside_domain",
+                                                 False))
+                                if str(wcf) not in _WARM_DOMAIN_WARNED:
+                                    _WARM_DOMAIN_WARNED.add(str(wcf))
+                                    print(f"[whitebalance] wb_B={b_now:.3f} 超出暖度"
+                                          f"标定适用域 [{lo:.3f}, {hi:.3f}] ({wcf}); "
+                                          + ("回退内置斜率模型" if fb else
+                                             "仍用曲线 (域外由端点垫片近似斜率模型,"
+                                             "可设 fallback_outside_domain=true 回退)"),
+                                          flush=True)
+                                use_curve = not fb
+                        if use_curve:
+                            cal["curve"] = doc["curve"]
             wb = apply_warmth(wb, prof, warmth, cal or None)
 
         # 基座链路矩阵: camera → 线性 sRGB(D65)

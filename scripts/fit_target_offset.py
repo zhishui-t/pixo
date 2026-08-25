@@ -1,9 +1,12 @@
-"""拟合场景自适应曝光标定表 target_offset.json。
+"""拟合场景自适应曝光标定表 target_offset.json (二维 med×wb_B)。
 
 对每张 RAW: 用相机内嵌缩略图亮度为真值, 二分搜索 exposure.mode 数值 EV,
-使全链渲染的 gamma 中位亮度与之匹配; 记录 (探针中位 log2, 匹配EV) 结点。
-产物 src/pixo/render/target_offset.json 被 ExposureStage._load_cal_table()
-查表取代中灰锚定/低光启发式 (结点>=3 生效)。
+使全链渲染的 gamma 中位亮度与之匹配; 记录 (探针中位 log2, 蓝绿比 wb_B,
+匹配EV) 三元结点。wb_B = camera_neutral_wb[2]/wb[1] (G=1 归一后的 B/G),
+区分同亮度下的钨丝灯/日光场景。
+产物 src/pixo/render/target_offset.json 为 {"cal_table": [[m, wb_B, ev],
+...]} 按 (m, wb) 排序; 由 ExposureStage._load_cal_table() 加载,
+_cal_ev() 先按 med 主键插值、med 相近(±0.3)邻域内再按 wb_B 二次插值。
 
 用法: python scripts/fit_target_offset.py RAW... [--write]
 """
@@ -53,6 +56,15 @@ def probe_med_log2(p, r):
     return float(np.median(np.log2(np.maximum(y, 1e-6))))
 
 
+def scene_wb_b(p):
+    """场景白平衡蓝绿比 wb[2]/wb[1] (As Shot, G=1 归一); 与 _auto_ev 同源。"""
+    from pixo.render.core.io import camera_neutral_wb_cached
+    import rawpy
+    with rawpy.imread(str(p)) as raw:
+        wb = camera_neutral_wb_cached(raw, str(p))
+    return float(wb[2]) / max(float(wb[1]), 1e-9)
+
+
 def fit_one(p, r, target_l):
     lo, hi = -4.0, 4.0
     for _ in range(7):
@@ -78,13 +90,16 @@ if __name__ == "__main__":
         p = Path(a)
         tl = thumb_luma(p)
         m = probe_med_log2(p, r)
+        wbb = scene_wb_b(p)
         ev = fit_one(p, r, tl)
-        pts.append((m, ev))
-        print(f"{p.name}: med_log2={m:+.2f} -> EV={ev:+.2f} (thumb_L={tl:.0f})")
+        pts.append((m, wbb, ev))
+        print(f"{p.name}: med_log2={m:+.2f} wb_B={wbb:.3f} -> EV={ev:+.2f} "
+              f"(thumb_L={tl:.0f})")
     pts.sort()
     if write:
         out = Path("src/pixo/render/target_offset.json")
         out.write_text('{"cal_table": [' +
-                       ", ".join(f"[{m:.3f}, {e:.3f}]" for m, e in pts) + ']}',
+                       ", ".join(f"[{m:.3f}, {w:.3f}, {e:.3f}]"
+                                 for m, w, e in pts) + ']}',
                        encoding="utf-8")
         print("wrote", out)
