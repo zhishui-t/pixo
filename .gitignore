@@ -52,3 +52,6 @@ exports/
 
 # Agent teams 本地协作状态
 .agent-teams/
+
+# 美学评分器权重：部署期产物不捆绑（见 docs/metrics/scorer_weights_deployment.md）
+resources/models/aesthetic/*.pt

@@ -14,11 +14,13 @@
 """
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+_LOGGER = logging.getLogger(__name__)
 
 PIXO_DIMENSIONS = (
     "overall",
@@ -79,11 +81,17 @@ def _probe_weights(path: str | Path) -> bool:
 
 
 def _default_model_path() -> str:
-    """解析默认美学模型路径。"""
+    """解析默认美学模型路径。
+
+    仓库检出布局：resources/models/aesthetic/aesthetic_scorer.pt（MIT，
+    rsinema/aesthetic-scorer HF model.pt 直存）。wheel 不捆绑权重，
+    安装态请设 PIXO_AESTHETIC_MODEL 或随发行版分发该文件。
+    """
     env = os.environ.get("PIXO_AESTHETIC_MODEL")
     if env:
         return env
-    return str(Path(__file__).resolve().parents[2] / "models" / "aesthetic_scorer.pt")
+    repo_root = Path(__file__).resolve().parents[3]
+    return str(repo_root / "resources" / "models" / "aesthetic" / "aesthetic_scorer.pt")
 
 
 def _has_ml_deps() -> bool:
@@ -181,8 +189,8 @@ class PixoAestheticScorer:
             self._ready = False
             self._degraded = True
             self._error = str(exc)
-            print(
-                "[pixo.vision.aesthetic] 模型加载失败，永久降级(不再重试):",
+            _LOGGER.warning(
+                "[pixo.vision.aesthetic] 模型加载失败，永久降级(不再重试): %s",
                 exc,
             )
             return False
@@ -219,9 +227,9 @@ class PixoAestheticScorer:
         except Exception as exc:
             if not self._warned_score_error:
                 self._warned_score_error = True
-                print(
+                _LOGGER.warning(
                     "[pixo.vision.aesthetic] score 异常"
-                    "(仅告警一次，后续静默返回None):",
+                    "(仅告警一次，后续静默返回None): %s",
                     exc,
                 )
             return None

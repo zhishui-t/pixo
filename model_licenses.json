@@ -11,7 +11,28 @@
       ],
       "usage": "internal_development_only",
       "isolation_file": "render/vision/segmenters/yoloe.py",
-      "notes": "AGPL-3.0 仅供内部研发使用；产品化/对外分发前必须替换为 Apache/MIT 模型或购买 Ultralytics 企业授权。该模型只允许通过 Segmenter 接口调用，不允许其它模块直接 import ultralytics/torch。"
+      "notes": "AGPL-3.0 仅供内部研发使用；产品化/对外分发前必须替换为 Apache/MIT 模型或购买 Ultralytics 企业授权。该模型只允许通过 Segmenter 接口调用，不允许其它模块直接 import ultralytics/torch。",
+      "status": "internal_development_only"
+    },
+    {
+      "name": "aesthetic_scorer.pt",
+      "provider": "rsinema/aesthetic-scorer (Hugging Face)",
+      "license": "MIT",
+      "files": [
+        "resources/models/aesthetic/aesthetic_scorer.pt"
+      ],
+      "usage": "redistribution_allowed_with_license_notice",
+      "notes": "HF repo license:mit(README front-matter 同)。333.7MB state_dict，213键=backbone(CLIP ViT-B/32 vision tower)+7个Linear(768->1)评分头，与 pixo/vision/aesthetic.py::_Scorer 键名形状逐一对应。PARA 数据集微调。发布需附 MIT 声明。",
+      "status": "redistribution_allowed_with_license_notice"
+    },
+    {
+      "name": "openai/clip-vit-base-patch32",
+      "provider": "OpenAI (Hugging Face hub)",
+      "license": "MIT",
+      "files": [],
+      "usage": "redistribution_allowed_with_license_notice",
+      "notes": "CLIP backbone，首次运行经 transformers 自动下载(~605MB，HF 缓存 ~/.cache/huggingface)；作为 aesthetic_scorer 底座仅推理使用。",
+      "status": "redistribution_allowed_with_license_notice"
     }
   ]
 }
