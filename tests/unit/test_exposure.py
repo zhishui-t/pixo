@@ -258,8 +258,13 @@ def test_highlight_protection_caps_ev():
     p_hi = float(np.percentile(probe, 98.0))
     # 98 分位不越白 → 只有 <2% 的像素会越过白电平 (裁切预算)
     assert p_hi * (2.0 ** ev) <= 1.0 + 1e-5
-    # 该上限应真正绑定 (高光场景 ev 被压到 ev_hi)
-    assert abs(p_hi * (2.0 ** ev) - 1.0) < 1e-3
+    # 上限应真正绑定: 两道闸取最紧 —— 软帽 log2(1/p98) 与高光预算
+    # log2((1-tau)/p99) (tech_debt#9, 默认 tau=0.02)
+    p99 = float(np.percentile(probe, 99.0))
+    tau = float(ExposureStage().default_params()["highlight_budget"])
+    expected = min(np.log2(1.0 / p_hi),
+                   np.log2(max(1.0 - tau, 0.0) / max(p99, 1e-9)))
+    assert abs(ev - expected) < 1e-6
 
 
 def test_process_no_hard_clip_after_rolloff():

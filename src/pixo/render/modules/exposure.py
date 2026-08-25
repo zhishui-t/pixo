@@ -15,6 +15,13 @@
   target         显式锚点 log2 (None = 由 DCP 曲线反推)
   target_offset  每机校准偏移 (EV, 单个常量)
   clip_p         高光保护分位 (默认 98 → 裁切预算 2%)
+  highlight_budget 高光裁切预算 τ (默认 0.02): 允许进肩部/白区的探针比例,
+                 约束 ev ≤ log2((1-τ)/p99)。分位取 p99 而非 p98: 实测
+                 0355/5236/0352 三样张 p98→p99 跳变最高 +40% (5236
+                 0.178→0.250), p99 对镜面/灯光尖峰更敏感, 作裁切预算
+                 哨兵漏报更少; 与 clip_p 软帽取 min 叠加。注意平顶高光
+                 场景 (大片均匀亮部) 两种分位帽都不绑定, 该类过冲由
+                 标定表重拟合 (中位匹配) 负责 —— 见 tech_debt#9 诊断。
   max_ev         单次修正上限 (默认 2.5)
   rolloff_knee   软滚降肩部起点 (线性值, 默认 0.9)
   vignette       抗暗角强度 k ∈ [0, 0.5] (默认 0): 线性域径向增益
@@ -290,6 +297,8 @@ class ExposureStage(Stage):
         "target": {"type": "float"},                            # 显式锚点 log2
         "target_offset": {"type": "float"},
         "clip_p": {"type": "float", "min": 50.0, "max": 100.0},
+        # 高光裁切预算 τ ∈ [0, 0.2]: 0 关闭预算约束
+        "highlight_budget": {"type": "float", "min": 0.0, "max": 0.2},
         "max_ev": {"type": "float", "min": 0.1, "max": 6.0},
         "rolloff_knee": {"type": "float", "min": 0.0, "max": 1.0},
         "vignette": {"type": "float", "min": 0.0, "max": 0.5},
@@ -306,7 +315,8 @@ class ExposureStage(Stage):
 
     def default_params(self):
         return {"mode": "auto", "target": None, "target_offset": _load_target_offset(),
-                "clip_p": 98.0, "max_ev": 2.5, "rolloff_knee": 0.9,
+                "clip_p": 98.0, "highlight_budget": 0.02,
+                "max_ev": 2.5, "rolloff_knee": 0.9,
                 "vignette": 0.0, "subject_mode": "box",
                 "baseline_ev_curve": None, "baseline_scene_ev": None,
                 "low_key_keep": 0.15, "low_key_range": 2.0,
@@ -443,13 +453,23 @@ class ExposureStage(Stage):
                 "cal_table_2d" if len(table) == 3 and wb_b is not None else "cal_table")
         else:
             ctx.state["ev_mode"] = "anchor"
-        # 高光保护: 提亮后 clip_p 分位不越过白电平 (裁切预算 = 100-clip_p %),
-        # 溢出交给 soft_highlight_rolloff 肩部滚降, 不再用"减半"启发式。
+        # 高光保护两道闸:
+        #   1) 软帽: 提亮后 clip_p 分位不越白电平 log2(1/p_hi), 溢出交给
+        #      soft_highlight_rolloff 肩部承接;
+        #   2) 高光预算 (tech_debt#9): 允许 τ (highlight_budget) 比例探针
+        #      进入肩部/白区, ev ≤ log2((1-τ)/p99)。分位选 p99 的实测依据
+        #      见模块 docstring。两道取 min; 平顶高光场景二者均不绑定,
+        #      该类中位匹配过冲由标定表重拟合清偿 (0355 案例)。
         clip_p = float(self.p(ctx, "clip_p"))
         p_hi = float(np.percentile(y, clip_p))
         if p_hi > 0:
             ev_hi = np.log2(1.0 / p_hi)
             ev = min(ev, ev_hi)
+        tau = float(self.p(ctx, "highlight_budget"))
+        if tau > 0.0:
+            p_b = float(np.percentile(y, 99.0))
+            if p_b > 0:
+                ev = min(ev, np.log2(max(1.0 - tau, 0.0) / max(p_b, 1e-9)))
         # 低光保护 (ADR-06 暗场景保暗): 相机预览对暗场景保暗而非拉到中灰,
         # 中灰锚定的正向 EV 按场景暗度 smoothstep 收敛 —— med 越低保留越少,
         # 深 low_key_range 档后仅剩 low_key_keep (默认 0.15); 负向 EV 不衰减。
