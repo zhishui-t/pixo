@@ -2,7 +2,7 @@
 # (t41, 12 样张: 0711 前4后2 + 春节前4后2, render_preview_full@512,
 #  compute_proxy_metrics 统一 [0,1] 域) 重推 —— 原 0.55/0.40/0.35 为
 # 拍脑袋值, 实测 haze 0.0508~0.2477 / tonal 0.3578~0.9121 恒不达。
-# 约定: condition 单 metric 单 op; 区间联合语义由公式守卫实现
+# 约定: t59 起原生 all 条件可用; clarity 已迁原生 AND(t60 试点),
 # (_eval_formula 注入全部指标); 缺失指标引擎返回 False 静默不触发。
 #
 # 阈值来源 (分位数引自该表"分位数汇总"):
@@ -33,19 +33,27 @@
 
 - rule_id: clarity_flat_rule_031
   priority: 31
+  # 护栏④日落条款首例 (t60): 原 formula 带通守卫迁原生 all 条件,
+  # 行为等价 (同 metrics 快照触发集不变)。旧版留档一个发布周期后删:
+  #   condition: {metric: haze_proxy, op: gte, value: 0.12}
+  #   formula: "0.04 if (haze_proxy < 0.22 and tonal_range <= 0.46) else 0.0"
   condition:
-    metric: haze_proxy
-    op: gte
-    value: 0.12            # 分布表 p25=0.1202
+    all:
+      - metric: haze_proxy
+        op: gte
+        value: 0.12        # 分布表 p25=0.1202, 入口闭区间
+      - metric: haze_proxy
+        op: lt
+        value: 0.22        # dehaze 门(p75 取整), 开区间让位浓雾主导
+      - metric: tonal_range
+        op: le
+        value: 0.46        # p25=0.4636 取整, 平坦片判定(闭区间)
   action:
     param: clarity.strength
     mode: delta
-    # 带通守卫: haze∈[0.12,0.22) 且 tonal_range<=0.46 才正步长;
-    # haze>=0.22 让位 dehaze, 高对比画面不平不加清晰度。
-    formula: "0.04 if (haze_proxy < 0.22 and tonal_range <= 0.46) else 0.0"
+    formula: "0.04"
     clamp: [0.10, 0.30]
     conflict_policy: high_priority_wins
-
 - rule_id: shadow_open_rule_032
   priority: 32
   condition:

@@ -35,12 +35,16 @@ def _eval(tone_rules, metrics, params):
 
 
 def test_thresholds_come_from_distribution(tone_rules):
-    """yaml 阈值必须与分布表引用值一致 (防手滑改数)。"""
+    """yaml 阈值必须与分布表引用值一致 (防手滑改数)。t60 起 all 原生形态。"""
     assert tone_rules["dehaze_rule_030"]["condition"]["value"] == DEHAZE_LINE
-    assert tone_rules["clarity_flat_rule_031"]["condition"]["value"] == CLARITY_ENTRY
-    formula = tone_rules["clarity_flat_rule_031"]["action"]["formula"]
-    assert f"haze_proxy < {DEHAZE_LINE}" in formula
-    assert f"tonal_range <= {TONAL_GUARD}" in formula
+    subs = tone_rules["clarity_flat_rule_031"]["condition"]["all"]
+    got = {(s["metric"], s["op"], s["value"]) for s in subs}
+    assert got == {
+        ("haze_proxy", "gte", CLARITY_ENTRY),
+        ("haze_proxy", "lt", DEHAZE_LINE),
+        ("tonal_range", "le", TONAL_GUARD),
+    }
+    assert tone_rules["clarity_flat_rule_031"]["action"]["formula"] == "0.04"
 
 
 @pytest.mark.parametrize("haze", [0.2226, 0.2258, 0.2267, 0.2445, 0.2477])
@@ -56,10 +60,10 @@ def test_p50_composite_does_not_fire(tone_rules):
     res = _eval(tone_rules,
                 {"haze_proxy": HAZE_P50, "tonal_range": TONAL_P50},
                 {"dehaze.strength": 0.10, "clarity.strength": 0.15})
+    # t60 迁移后原生 all 整条不命中 -> 无条目(旧公式守卫时代的
+    # no-op 留痕条目随日落条款消失, 属预期演进)
     assert "dehaze.strength" not in res
-    # clarity 条件门过(haze>=p25)但带通守卫假 -> 按 t40 护栏 no-op 留痕:
-    # 条目存在且值精确等于现值
-    assert res["clarity.strength"]["value"] == 0.15
+    assert "clarity.strength" not in res
 
 
 def test_clarity_guard_true_path_fires(tone_rules):
@@ -77,7 +81,8 @@ def test_clarity_guard_true_path_fires(tone_rules):
 def test_clarity_guard_false_paths_are_exact_noop(tone_rules, metrics):
     cur = 0.18
     res = _eval(tone_rules, metrics, {"clarity.strength": cur})
-    assert res["clarity.strength"]["value"] == cur   # 精确 no-op 留痕
+    # t60 迁移后：守卫假 = all 条件不命中 = 直接无条目(不再有留痕条目)
+    assert "clarity.strength" not in res
 
 
 @pytest.mark.parametrize("haze,tonal,fires", [
@@ -92,7 +97,7 @@ def test_clarity_band_boundaries(tone_rules, haze, tonal, fires):
     if fires:
         assert abs(res["clarity.strength"]["value"] - (cur + 0.04)) < 1e-9
     else:
-        assert res["clarity.strength"]["value"] == cur
+        assert "clarity.strength" not in res
 
 
 def test_missing_metrics_stay_silent(tone_rules):
