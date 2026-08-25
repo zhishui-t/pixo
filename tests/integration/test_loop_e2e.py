@@ -40,8 +40,13 @@ def _dark_image() -> np.ndarray:
 
 
 def _bright_image() -> np.ndarray:
-    """高亮度合成图，用于触发 FINAL_QC 回退/人工。"""
-    return np.full((64, 64, 3), 0.8, dtype=np.float32)
+    """高亮度合成图，用于触发 FINAL_QC 回退/人工。
+
+    2026-08: 取值 0.8 依赖 tone 默认 brightness=0.5 才溢出; 该默认已按
+    标定回归为 0.25 (0.8×2^0.25≈0.95 不裁切)。改用 0.92 —— 无论该默认
+    在合理标定范围内如何变化都必然溢出, 测试意图不再绑定引擎默认值。
+    """
+    return np.full((64, 64, 3), 0.92, dtype=np.float32)
 
 
 def _black_image() -> np.ndarray:
