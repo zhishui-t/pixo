@@ -27,7 +27,9 @@ import cv2
 import numpy as np
 
 from pixo.decide import decide, qc_rollback
+from pixo.decide.engine import _locked_params
 from pixo.state import PhotoStateMachine, TraceEvent
+from pixo.render.geometry.smart_crop import suggest_crop
 from pixo.vision import MockSegmenter, Segmenter, SegmenterUnavailable, VisionMeasure
 
 logger = logging.getLogger(__name__)
@@ -98,6 +100,33 @@ class LoopResult:
         }
 
 
+def rect_px_to_norm(rect, width, height):
+    """像素矩形 [x0,y0,x1,y1] -> 归一化 [0,1]（全幅相对，排他边界）。"""
+    x0, y0, x1, y1 = (float(v) for v in rect)
+    w = max(float(width), 1.0)
+    h = max(float(height), 1.0)
+    return [
+        min(max(x0 / w, 0.0), 1.0),
+        min(max(y0 / h, 0.0), 1.0),
+        min(max(x1 / w, 0.0), 1.0),
+        min(max(y1 / h, 0.0), 1.0),
+    ]
+
+
+def rect_norm_to_px(rect, width, height):
+    """归一化矩形 -> 像素 [x0,y0,x1,y1]（int 排他边界，裁到画布内）。"""
+    x0, y0, x1, y1 = (float(v) for v in rect)
+    w = max(int(width), 1)
+    h = max(int(height), 1)
+    ix0 = int(round(min(max(x0, 0.0), 1.0) * w))
+    iy0 = int(round(min(max(y0, 0.0), 1.0) * h))
+    ix1 = int(round(min(max(x1, 0.0), 1.0) * w))
+    iy1 = int(round(min(max(y1, 0.0), 1.0) * h))
+    ix1 = min(max(ix1, ix0 + 1), w)
+    iy1 = min(max(iy1, iy0 + 1), h)
+    return [ix0, iy0, ix1, iy1]
+
+
 # ---------------------------------------------------------------------------
 # 渲染后端
 # ---------------------------------------------------------------------------
@@ -139,6 +168,11 @@ class SyntheticRenderBackend:
             img = cv2.resize(img, (new_w, new_h),
                              interpolation=cv2.INTER_AREA)
         return img
+
+    def full_size(self):
+        """全分辨率画布 (w, h)。"""
+        h, w = self.source.shape[:2]
+        return int(w), int(h)
 
     def _apply_exposure(self, img: np.ndarray, params: dict[str, Any]) -> np.ndarray:
         """把嵌套 exposure.mode 数值当作 EV 线性增益应用。"""
@@ -191,6 +225,21 @@ class RawRenderBackend:
     def __init__(self, raw_path: str | Path, prof: Any) -> None:
         self.raw_path = Path(raw_path)
         self.prof = prof
+        self._full_size_cache = None
+
+    def full_size(self):
+        """全分辨率画布 (w, h)；rawpy 元数据惰性读取并缓存。"""
+        if self._full_size_cache:
+            return self._full_size_cache
+        import rawpy
+
+        with rawpy.imread(str(self.raw_path)) as raw:
+            sizes = getattr(raw, "sizes", None)
+            w = int(getattr(sizes, "width", 0) or 0)
+            h = int(getattr(sizes, "height", 0) or 0)
+        if w > 0 and h > 0:
+            self._full_size_cache = (w, h)
+        return self._full_size_cache or (0, 0)
 
     def render_preview(
         self,
@@ -368,6 +417,12 @@ class SinglePhotoLoop:
     """单张修图闭环编排器。
 
     参数均可注入，便于单测与未来 service 复用。
+
+    构图建议契约（crop_suggest=True）：
+      用户意图的显式通道是 locked_params；未锁定的显式 compose.* 设置
+      可能在采纳建议时被覆盖（当前已知行为）：采纳为合并语义——保留
+      rotation / horizontal_flip 等既有字段，仅覆盖建议提供的 free 矩形
+      四元组，并将 mode 置为 "free" 以使矩形生效。
     """
 
     def __init__(
@@ -392,6 +447,8 @@ class SinglePhotoLoop:
         aesthetic_scorer: Callable[..., Any] | None = None,
         aesthetic_accept_threshold: float | None = None,
         aesthetic_stagnation_eps: float | None = None,
+        crop_suggest: bool = False,
+        box_provider: Callable[..., Any] | None = None,
     ) -> None:
         self.render_backend = render_backend or renderer
         self.segmenter = segmenter
@@ -420,6 +477,9 @@ class SinglePhotoLoop:
             if aesthetic_stagnation_eps is not None
             else None
         )
+        # t31 构图建议：默认关；box_provider 为原生框通道(未来 vision 升级)。
+        self.crop_suggest = bool(crop_suggest)
+        self.box_provider = box_provider
 
     def _build_backend(
         self,
@@ -480,6 +540,77 @@ class SinglePhotoLoop:
         out: dict[str, Any] = {"overall": float(overall)}
         out.update(extra)
         return out
+
+    def _boxes_from_masks(self, masks):
+        """prompt 掩码 -> 归一化外接框 (mask_bbox 精度级)。"""
+        faces: list = []
+        subjects: list = []
+        for label, mask in (masks or {}).items():
+            arr = np.asarray(mask)
+            if arr.ndim != 2 or not arr.any():
+                continue
+            ys, xs = np.nonzero(arr)
+            if xs.size == 0:
+                continue
+            h, w = arr.shape[:2]
+            rect = [
+                float(xs.min()) / float(w),
+                float(ys.min()) / float(h),
+                float(xs.max() + 1) / float(w),
+                float(ys.max() + 1) / float(h),
+            ]
+            if str(label).lower() in ("face", "faces", "person", "people"):
+                faces.append(rect)
+            else:
+                subjects.append(rect)
+        return {"faces": faces, "subjects": subjects}
+
+    def _build_crop_suggestion(self, preview_img, masks):
+        """生成构图建议；任何异常降级为 None，不阻断闭环。"""
+        try:
+            provider = self.box_provider
+            if callable(provider):
+                boxes = provider(preview_img) or {}
+                source = "native_box"
+            else:
+                boxes = self._boxes_from_masks(masks)
+                boxes["source"] = "mask_bbox"
+                source = "mask_bbox"
+            # t29 契约：suggest_crop 输入输出均为归一化 rect，直接透传。
+            best, candidates = suggest_crop(
+                preview_img, boxes, scorer=self.aesthetic_scorer
+            )
+            top3 = [
+                {
+                    "rect": [float(v) for v in c["rect"]],
+                    "ratio": c["ratio"],
+                    "score": c["score"],
+                    "fallback": bool(c.get("fallback")),
+                }
+                for c in candidates[:3]
+            ]
+            head = candidates[0] if candidates else {}
+            return {
+                "rect": [float(v) for v in best],
+                "ratio": head.get("ratio", "original"),
+                "score": float(head.get("score", 0.0)),
+                "source": source,
+                "top3": top3,
+            }
+        except Exception as exc:  # noqa: BLE001 —— 建议失败不阻断闭环
+            logger.warning("smart_crop 建议生成失败，本轮跳过：%s", exc)
+            return None
+
+    def _full_canvas_size(self, backend, fallback_w, fallback_h):
+        """查询后端全分辨率画布尺寸；未知时退回预览尺寸。"""
+        fn = getattr(backend, "full_size", None)
+        try:
+            size = fn() if callable(fn) else None
+        except Exception:
+            size = None
+        if not size or int(size[0]) <= 0 or int(size[1]) <= 0:
+            return int(fallback_w), int(fallback_h)
+        return int(size[0]), int(size[1])
 
     def _add_trace(
         self,
@@ -619,6 +750,27 @@ class SinglePhotoLoop:
             )
             measurements.append(measurement)
 
+            crop_suggestion = None
+            if self.crop_suggest:
+                crop_suggestion = self._build_crop_suggestion(
+                    preview_img, masks
+                )
+                if crop_suggestion is not None:
+                    self._add_trace(
+                        sm,
+                        event_type="crop_suggest",
+                        reason="smart_crop 构图建议",
+                        value={
+                            "iteration": iteration,
+                            "rect": crop_suggestion["rect"],
+                            "ratio": crop_suggestion["ratio"],
+                            "score": crop_suggestion["score"],
+                            "source": crop_suggestion["source"],
+                            "top3": crop_suggestion["top3"],
+                        },
+                        metadata={"iteration": iteration},
+                    )
+
             aesthetic = self._score_aesthetic(preview_img, masks)
             if aesthetic is not None:
                 measurement["aesthetic"] = dict(aesthetic)
@@ -631,6 +783,25 @@ class SinglePhotoLoop:
 
             metrics = _metrics_for_decide(measurement)
             unreliable = _unreliable_regions(measurement)
+            if self.crop_suggest:
+                # 锁定集合统一走引擎 _locked_params（与 exposure 锁定同源）；
+                # compose 域前缀判断留在接线层，不改共享引擎。
+                locked_set = _locked_params(
+                    {"locked_params": self.locked_params}
+                )
+                # 语义裁决(队长批): 前缀匹配从用户意图出发——锁定任一细粒度
+                # 键(如 compose.ratio)即视为主张构图控制权, 此时放行会改
+                # x/y/w/h 的建议等同绕过锁定; 若仅精确键匹配反而留下缺口。
+                locked_compose = any(
+                    k.lower() == "compose" or k.lower().startswith("compose.")
+                    for k in locked_set
+                )
+                avail = 1 if crop_suggestion is not None else 0
+                metrics["crop_suggestion_available"] = avail
+                metrics["compose_locked"] = 1 if locked_compose else 0
+                metrics["crop_suggestion_applicable"] = (
+                    1 if (avail and not locked_compose) else 0
+                )
             key = metrics.get("face_luminance") or metrics.get("mean_luminance")
             if key is not None:
                 if previous_key is not None:
@@ -662,6 +833,9 @@ class SinglePhotoLoop:
                     if aesthetic_scores
                     else None
                 ),
+                "crop_suggestion": (
+                    dict(crop_suggestion) if crop_suggestion else None
+                ),
                 "manual_on_unreliable": self.manual_on_unreliable,
             }
             decision = decide(decide_context, self.rules)
@@ -692,10 +866,48 @@ class SinglePhotoLoop:
                 stop_reason = decision.get("reason") or "Decide 终止"
                 break
 
-            flat_before = _flatten_decide_params(params)
-            params = _apply_decide_params(
-                params, decision.get("params") or {}
+            decided_params = dict(decision.get("params") or {})
+            adopt_crop = (
+                crop_suggestion is not None
+                and decided_params.pop("compose.apply_suggestion", None) == 1
             )
+            flat_before = _flatten_decide_params(params)
+            params = _apply_decide_params(params, decided_params)
+            if adopt_crop:
+                fw, fh = self._full_canvas_size(
+                    backend, preview_img.shape[1], preview_img.shape[0]
+                )
+                x0, y0, x1, y1 = rect_norm_to_px(
+                    crop_suggestion["rect"], fw, fh
+                )
+                # 合并而非整体覆盖：保留用户既有字段（rotation/horizontal_flip
+                # 等，尤其 auto_level 的 rotation 结果），仅以建议矩形四元组
+                # 覆盖；mode 切 free 使矩形生效（见类 docstring 契约）。
+                prev_compose = (
+                    params.get("compose")
+                    if isinstance(params.get("compose"), dict)
+                    else {}
+                )
+                params["compose"] = {
+                    **prev_compose,
+                    "mode": "free",
+                    "x": x0,
+                    "y": y0,
+                    "width": max(1, x1 - x0),
+                    "height": max(1, y1 - y0),
+                }
+                self._add_trace(
+                    sm,
+                    event_type="crop_adopted",
+                    reason="采纳 smart_crop 建议",
+                    param="compose",
+                    value={
+                        "iteration": iteration,
+                        "compose": params["compose"],
+                        "source": crop_suggestion["source"],
+                    },
+                    metadata={"iteration": iteration},
+                )
             flat_after = _flatten_decide_params(params)
             self._trace_param_updates(
                 sm,

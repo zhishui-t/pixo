@@ -1,0 +1,11 @@
+rule_id: crop_suggest_rule_003
+priority: 15
+condition:
+  metric: crop_suggestion_applicable
+  op: gte
+  value: 1
+action:
+  param: compose.apply_suggestion
+  mode: set
+  formula: "1"
+  conflict_policy: high_priority_wins
