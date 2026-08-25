@@ -19,6 +19,9 @@ from .engine import (
     load_rules,
     qc_rollback,
     resolve_conflicts,
+    register_metric_keys,
+    registered_metric_keys,
+    reset_metric_keys,
 )
 
 __all__ = [
@@ -33,4 +36,7 @@ __all__ = [
     "check_termination",
     "qc_rollback",
     "load_rules",
+    "register_metric_keys",
+    "registered_metric_keys",
+    "reset_metric_keys",
 ]

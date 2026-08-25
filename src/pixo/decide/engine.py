@@ -18,6 +18,7 @@
 """
 from __future__ import annotations
 
+import ast
 import copy
 import json
 import math
@@ -36,6 +37,9 @@ __all__ = [
     "check_termination",
     "qc_rollback",
     "load_rules",
+    "register_metric_keys",
+    "registered_metric_keys",
+    "reset_metric_keys",
 ]
 
 
@@ -138,35 +142,91 @@ def _locked_params(context: dict, explicit: Any = None) -> set:
     return {str(x) for x in _as_list(raw)}
 
 
-def load_rules(source: Any) -> list[dict]:
+def _enforce_formula_lint(rules: list, metric_keys: Any = None) -> None:
+    """按键宇宙可用性决定宽松/严格模式执行公式标识符校验。"""
+    known = set(str(k) for k in (metric_keys or ())) | registered_metric_keys()
+    if not known:
+        return  # 无键宇宙：旧调用方宽松兼容，不做加载期报错
+    problems = _lint_rule_formulas(rules, known_metric_keys=known)
+    if problems:
+        raise DecideError("规则公式标识符校验失败: " + "; ".join(problems))
+
+
+def _lint_rule_formulas(
+    rules: list,
+    known_metric_keys: Any = None,
+) -> list:
+    """扫描规则公式的标识符引用，返回问题清单（不抛错）。
+
+    白名单 = _FORMULA_FUNCS ∪ 运行时变量 ∪ 已知指标键，
+    与 _eval_formula 的运行时命名空间保持一致，避免 lint 误报。
+    """
+    allowed = set(_FORMULA_FUNCS) | set(_FORMULA_RUNTIME_VARS)
+    allowed |= {str(k) for k in (known_metric_keys or ())}
+    problems: list = []
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        action = rule.get("action") or {}
+        expr = action.get("formula")
+        if not isinstance(expr, str) or not expr.strip():
+            continue
+        rule_id = rule.get("rule_id", "unknown")
+        try:
+            tree = ast.parse(expr, mode="eval")
+        except SyntaxError as exc:
+            problems.append(f"{rule_id}: 公式语法错误 {expr!r} ({exc})")
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name):
+                name = node.id
+                if name in allowed:
+                    continue
+                problems.append(
+                    f"规则 {rule_id}: 公式引用未知标识符 {name!r} ({expr!r})"
+                )
+    return problems
+
+
+def load_rules(source: Any, *, metric_keys: Any = None) -> list[dict]:
     """加载规则。
 
     支持:
       - dict（单条规则）或 list[dict]（规则列表）;
       - JSON 文件;
       - YAML 文件（若环境中已安装 PyYAML；未安装时抛出 DecideError）。
+
+    标识符 lint（公式带通守卫护栏①）：提供 ``metric_keys``（或已通过
+    :func:`register_metric_keys` 注册键集）时，对每条规则的 action.formula
+    做加载期标识符校验——白名单外的名字直接 DecideError，把"笔误静默得
+    0.0/被吞掉"提前到加载期。未提供任何键宇宙的旧调用方保持宽松兼容。
     """
+    rules: list
     if isinstance(source, dict):
-        return [source]
-    if isinstance(source, list):
-        return [r for r in source if isinstance(r, dict)]
-    path = Path(str(source))
-    if not path.exists():
-        raise DecideError(f"规则文件不存在: {path}")
-    text = path.read_text(encoding="utf-8")
-    if path.suffix.lower() in (".yaml", ".yml"):
-        try:
-            import yaml
-        except ImportError as exc:
-            raise DecideError("加载 YAML 规则需要 PyYAML，当前未安装") from exc
-        data = yaml.safe_load(text)
+        rules = [source]
+    elif isinstance(source, list):
+        rules = [r for r in source if isinstance(r, dict)]
     else:
-        data = json.loads(text)
-    if isinstance(data, dict):
-        return [data]
-    if isinstance(data, list):
-        return [r for r in data if isinstance(r, dict)]
-    raise DecideError(f"规则文件格式不符: {path}")
+        path = Path(str(source))
+        if not path.exists():
+            raise DecideError(f"规则文件不存在: {path}")
+        file_text = path.read_text(encoding="utf-8")
+        if path.suffix.lower() in (".yaml", ".yml"):
+            try:
+                import yaml
+            except ImportError as exc:
+                raise DecideError("加载 YAML 规则需要 PyYAML，当前未安装") from exc
+            data = yaml.safe_load(file_text)
+        else:
+            data = json.loads(file_text)
+        if isinstance(data, dict):
+            rules = [data]
+        elif isinstance(data, list):
+            rules = [r for r in data if isinstance(r, dict)]
+        else:
+            raise DecideError(f"规则文件格式不符: {path}")
+    _enforce_formula_lint(rules, metric_keys)
+    return rules
 
 
 def _rule_priority(rule: dict) -> float:
@@ -276,6 +336,33 @@ def _condition_met(condition: Optional[dict], metrics: Optional[dict]) -> bool:
     if op == "in":
         return metric in _as_list(value)
     raise DecideError(f"未知条件操作符: {op!r}")
+
+
+_FORMULA_RUNTIME_VARS = frozenset({
+    "current", "param_current", "param", "metric",
+    "metric_value", "target", "value",
+})
+
+# 已注册指标键集：公式标识符 lint 的"键宇宙"。
+# 由规则包/调用方通过 register_metric_keys 注册；为空时 load_rules 走宽松模式。
+_METRIC_KEY_REGISTRY: set = set()
+
+
+def register_metric_keys(keys) -> None:
+    """注册可被公式引用的指标键（load_rules 标识符 lint 键宇宙）。"""
+    for key in keys or ():
+        if key:
+            _METRIC_KEY_REGISTRY.add(str(key))
+
+
+def reset_metric_keys() -> None:
+    """清空已注册指标键（测试辅助）。"""
+    _METRIC_KEY_REGISTRY.clear()
+
+
+def registered_metric_keys() -> set:
+    """返回当前已注册指标键快照。"""
+    return set(_METRIC_KEY_REGISTRY)
 
 
 _FORMULA_FUNCS = {
@@ -441,6 +528,18 @@ def _format_reason(rule: dict, computed: dict) -> str:
     return f"规则 {rule_id}: {param} -> {value:.4f}"
 
 
+class RuleResults(list):
+    """evaluate_rules 的结果列表（list 子类，向后兼容）。
+
+    额外携带聚合属性 ``noop_count``：公式求值结果为 0.0 的建议条数
+    （公式带通守卫护栏②，no-op 可见）。
+    """
+
+    def __init__(self, items=(), noop_count: int = 0) -> None:
+        super().__init__(items)
+        self.noop_count = int(noop_count)
+
+
 def evaluate_rules(
     rules: Iterable[dict],
     metrics: Optional[dict],
@@ -454,7 +553,8 @@ def evaluate_rules(
     context = context or {}
     params = params or {}
     locked = _locked_params(context, locked_params)
-    results: list[dict] = []
+    results: list[dict] = RuleResults()
+    noop_count = 0
 
     for rule in rules or []:
         if not isinstance(rule, dict):
@@ -472,6 +572,11 @@ def evaluate_rules(
         except DecideError:
             # 单条规则失败不拖垮整轮；由上层决定是否记录。
             continue
+        # 护栏②：公式返回 0.0 的建议视为 no-op，显式留痕可观测。
+        has_formula = bool((rule.get("action") or {}).get("formula"))
+        is_noop = bool(has_formula and computed.get("raw_value") == 0.0)
+        if is_noop:
+            noop_count += 1
         results.append({
             "rule_id": rule.get("rule_id", "unknown"),
             "priority": _rule_priority(rule),
@@ -482,7 +587,9 @@ def evaluate_rules(
             "value": computed["new_value"],
             "reason": _format_reason(rule, computed),
             "rule": rule,
+            "noop": is_noop,
         })
+    results.noop_count = noop_count
     return results
 
 
