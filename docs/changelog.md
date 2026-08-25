@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-25 — 二次构图批：auto_level 实做与主体感知 smart_crop
+
+- compose.auto_level 从占位转正：行梯度投影地平线检测（±12° 扫描/8° 钳制/
+  置信度回退），无地平线场景不动构图；几何元数据入 trace。
+- 新增 geometry/smart_crop.py：主体感知裁剪建议核心——候选网格 + 硬约束
+  （人脸全含/头留白≥10%/躯干出画分级容忍 native5%·mask8%）+ composition
+  软评分（aesthetic scorer 可注入，None 退化规则分）。
+- 闭环接线：crop_suggest 开关默认关（零行为变化已逐位验证）；建议走
+  decide_context 建议态，经 crop_suggest_rule_003 门控标量旗标采纳，
+  采纳边界单点归一化→像素且合并保留用户既有 compose 字段（不重置
+  auto_level）；box_provider 预留原生框升级通道。
+- 知识包新增构图域 photography_composition.json（10n9e，三分法/头留白/
+  视线留白/裁剪禁忌等），受控词表沿用。
+- 验收：740 passed；真实样本主体框全含 4/4、composition 分 crop≥full 4/4、
+  默认关路径逐位一致。
+
 ## 2026-08-25 — 高光治理批：0355 清偿与评分器接线
 
 - 曝光高光预算哨兵 ev≤log2((1−τ)/p99)，highlight_budget=0.02；标定表升维 (med, wb_B)
