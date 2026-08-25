@@ -29,10 +29,10 @@
 | 终止/QC 升级 | check_termination 增美学达标/停滞判定; FINAL_QC = clip + dE预算 + aesthetic>=阈值 | 真实 NEF 多轮迭代轨迹可回放 |
 
 ## Phase 2.5 知识库充实·摄影四域 (已完成)
-- 落地现状: configs/knowledge/ 四包 50 节点 37 边 (capture_post 12n4e / hue 14n11e / post2 9n9e / tone 15n13e);
+- 落地现状: configs/knowledge/ 四包 49 节点 37 边 (capture_post 11n4e / hue 14n11e / post2 9n9e / tone 15n13e);
   schema={nodes,edges}, node=id/type/label/keywords(3-6)/content(≤80字), edge=id/from/to/relation(策略|副作用|配套)/weight/content。
 - registry 自动合并: pixo.know.registry 初始化即合并包内 data/ 与仓库 configs/knowledge/ 全部 *.json 入图谱
-  (实测合并后 64 节点 46 边 = 内置 14 + 四包 50),
+  (实测合并后 63 节点 46 边 = 内置 14 + 四包 49),
   query/suggest/agent_suggestion 及 to_decide_rules/to_decide_context 开箱可用, 新增知识包零代码接入。
 - 接线规划: decide 规则命中时按关键词 query 图谱, strategy/side_effect 写进 reasons 让决策可解释;
   loop trace 记录引用的 node id 供回放审计; P3 时 RAG 检索结果注入 LLM prompt 作为决策上下文。

@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-25 — 组合批：知识图谱 · 评分接线 · 标定升级
+
+- 知识库四包 49 节点 / 37 边（capture_post 11n4e / hue 14n11e /
+  post2 9n9e / tone 15n13e）过审；`KnowledgeRegistry` 两阶段自动合并
+  内置图与 `configs/knowledge/*.json`（实测合并 63 节点 / 46 边，
+  悬空引用 0），新增知识包零代码接入。
+- 图谱健壮化：受控词表 README（type/relation 枚举）、知识包软基线测试、
+  跨包边同组发布约定（`_requires` 声明）。
+- 评分器接线：batch 选片工厂换真实 7 维美学评分器（无 torch 回退 Mock），
+  loop measure 每轮附美学维度分数。
+- 曝光标定表升维：`(med_log2, wb_B)` 二维分键——暗室与夜景中位亮度
+  相同而相机意图相反的场景得以区分。
+- WB 暖度曲线拟合（0355 偏色治理）：新增 `configs/calibration/warmth_curve.json`
+  （5 结点）与拟合脚本 `scripts/fit_warmth_curve.py`（RAW 缩略图为真值，
+  最小化 Lab da/db）；`WhiteBalanceStage` 新增 `warm_cal_file` 开关缺省加载，
+  文件缺失回退内置斜率模型。实测 DSC_0355 da −12.25→+1.07 / db +14.41→−3.78
+  （±6 门禁内），对照 DSC_5236 不劣化（da −3.23→+0.62）。
+- 全量测试 697 passed。
+
 ## 2026-08-23 — 修图质量 P0 修复与项目整理
 
 - 修复：tone `brightness` 回归标定值 0.25（原 0.5 与标定注释矛盾）；
