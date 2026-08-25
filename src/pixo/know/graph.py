@@ -103,7 +103,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
     ],
     "edges": [
         {
-            "id": "e_portrait_golden",
+            "id": "e_dg_portrait_golden",
             "from": "scene_portrait",
             "to": "light_golden_hour",
             "relation": "常见搭配",
@@ -111,7 +111,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
             "content": "人像常与黄金时刻组合，形成暖调低反差画面。",
         },
         {
-            "id": "e_golden_strategy",
+            "id": "e_dg_golden_strategy",
             "from": "light_golden_hour",
             "to": "strategy_warm_skin",
             "relation": "策略",
@@ -119,7 +119,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
             "content": "黄金时刻人像可采用暖肤色策略。",
         },
         {
-            "id": "e_portra_tone",
+            "id": "e_dg_portra_tone",
             "from": "style_kodak_portra",
             "to": "tone_soft_low_contrast",
             "relation": "影调指纹",
@@ -127,7 +127,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
             "content": "Kodak Portra 400 的影调指纹为柔和低反差。",
         },
         {
-            "id": "e_tone_side",
+            "id": "e_dg_tone_side",
             "from": "tone_soft_low_contrast",
             "to": "side_effect_warm_highlights",
             "relation": "副作用",
@@ -135,7 +135,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
             "content": "柔和低反差可能伴随高光偏黄，需注意平衡。",
         },
         {
-            "id": "e_issue_action",
+            "id": "e_dg_issue_action",
             "from": "issue_skin_green",
             "to": "action_orange_shift",
             "relation": "修正动作",
@@ -143,7 +143,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
             "content": "肤色偏绿 → 橙色相偏移修正。",
         },
         {
-            "id": "e_action_boundary",
+            "id": "e_dg_action_boundary",
             "from": "action_orange_shift",
             "to": "boundary_skin_b",
             "relation": "边界",
@@ -151,7 +151,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
             "content": "橙色相偏移需限制肤色 b 不超过 22。",
         },
         {
-            "id": "e_camera_noise",
+            "id": "e_dg_camera_noise",
             "from": "camera_nikon_z6",
             "to": "noise_iso3200",
             "relation": "噪点特性",
@@ -159,7 +159,7 @@ DEFAULT_GRAPH: dict[str, Any] = {
             "content": "Nikon Z 6 高 ISO 噪点特性 medium。",
         },
         {
-            "id": "e_noise_dcp",
+            "id": "e_dg_noise_dcp",
             "from": "noise_iso3200",
             "to": "dcp_nikon_z6",
             "relation": "降噪/DCP",

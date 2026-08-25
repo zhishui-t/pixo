@@ -1,0 +1,36 @@
+{
+  "nodes": [
+    {
+      "id": "flow_single_photo_loop",
+      "type": "workflow",
+      "label": "单图闭环流程",
+      "keywords": [
+        "闭环",
+        "loop",
+        "single photo"
+      ],
+      "content": "SinglePhotoLoop 按 感知→诊断→规则→执行→复评 推进；默认 rules=[] 时须载入 DEFAULT_RULES，循环曝光写 exposure.target_offset 而非 mode 数值。"
+    },
+    {
+      "id": "gate_perceptual_guard",
+      "type": "boundary",
+      "label": "感知门禁",
+      "keywords": [
+        "门禁",
+        "感知",
+        "guard"
+      ],
+      "content": "感知门禁在每轮执行前后对比 ΔE/亮度/对比度等指标，超阈值回滚本轮编辑，防止规则误伤。"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_flow_gate",
+      "from": "flow_single_photo_loop",
+      "to": "gate_perceptual_guard",
+      "relation": "质量保障",
+      "weight": 0.9,
+      "content": "闭环每轮执行结果须经感知门禁校验，不达标即回滚。"
+    }
+  ]
+}

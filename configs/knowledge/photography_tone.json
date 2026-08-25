@@ -1,0 +1,215 @@
+{
+  "nodes": [
+    {
+      "id": "tone_lowkey",
+      "type": "tone",
+      "label": "低调影调",
+      "keywords": ["低调", "夜景", "暗部主导", "氛围"],
+      "content": "画面以暗部与深黑为主导，保留低照度氛围。夜景必须保暗：夜的价值就在暗，整体提亮等于毁图。"
+    },
+    {
+      "id": "tone_highkey",
+      "type": "tone",
+      "label": "高调影调",
+      "keywords": ["高调", "明亮", "留白", "轻盈"],
+      "content": "以亮部为主的明快影调，大面积浅灰到白。须守住高光层次不溢出，做到白中有细节、亮而不空。"
+    },
+    {
+      "id": "tone_clarity",
+      "type": "tone",
+      "label": "通透感",
+      "keywords": ["通透", "发灰", "黑场", "高光"],
+      "content": "通透公式：黑场扎实+高光透亮+中灰干净=通透；发灰的本质是黑场上浮，先压回黑场再谈色彩。"
+    },
+    {
+      "id": "tone_dimensional",
+      "type": "tone",
+      "label": "中灰立体感",
+      "keywords": ["中灰", "局部对比", "立体", "层次"],
+      "content": "立体感来自中间调灰阶的拉开：局部对比充足则物体有体积；中灰糊成一片，画面就扁平如水洗。"
+    },
+    {
+      "id": "tone_st_blackpoint",
+      "type": "strategy",
+      "label": "黑场重定",
+      "keywords": ["黑场", "色阶", "去灰", "锚点"],
+      "content": "用曲线/色阶把画面最暗的有效像素重定到接近0的基准，直方图左端贴边，发灰感随即消失，是去灰第一步。"
+    },
+    {
+      "id": "tone_st_midgray_contrast",
+      "type": "strategy",
+      "label": "中灰对比增强",
+      "keywords": ["中灰", "局部对比", "清晰度", "立体"],
+      "content": "只在中间调区间做局部对比/清晰度，把糊在一起的灰阶拉开，产生体积与质感，且不动黑白两端。"
+    },
+    {
+      "id": "tone_st_film_scurve",
+      "type": "strategy",
+      "label": "胶片S曲线",
+      "keywords": ["S曲线", "胶片", "反差", "趾部肩部"],
+      "content": "阴影端缓降、高光端缓升的柔和S形，整体反差自然过渡，模拟胶片趾部与肩部响应，比线性硬拉对比耐看。"
+    },
+    {
+      "id": "tone_st_hl_rolloff",
+      "type": "strategy",
+      "label": "高光滚降",
+      "keywords": ["高光", "滚降", "肩部", "渐变"],
+      "content": "高光顶部做渐进压缩（肩部滚降），亮部过渡平滑无断层，接近镜头自然成像，天空与灯光不见硬边。"
+    },
+    {
+      "id": "tone_st_shadow_open",
+      "type": "strategy",
+      "label": "暗部开放vs死黑",
+      "keywords": ["暗部", "开放", "死黑", "细节"],
+      "content": "区分该黑的与丢信息的：有内容暗部适度开放保留细节；纯黑背景与剪影允许沉底，死黑只应出现在该黑处。"
+    },
+    {
+      "id": "tone_st_subject_contrast",
+      "type": "strategy",
+      "label": "题材反差适配",
+      "keywords": ["风光", "人像", "反差", "题材差异"],
+      "content": "风光吃硬朗反差：拉开灰阶突出气势与质感；人像要柔和：收敛中灰反差柔化肤质，纹理过硬会显老显糙。"
+    },
+    {
+      "id": "tone_st_midgray_anchor",
+      "type": "strategy",
+      "label": "中灰锚定(慎用)",
+      "keywords": ["中灰锚定", "18%灰", "测光", "夜景禁忌"],
+      "content": "以18%中灰为目标提亮欠曝区，白天可靠；用在夜景会把夜色推向中灰，必须先判场景照度再决定是否锚定。"
+    },
+    {
+      "id": "tone_st_lowlight_guard",
+      "type": "strategy",
+      "label": "低光保护",
+      "keywords": ["低光保护", "knee", "夜景", "保暗"],
+      "content": "低照度场景设保护阈值（knee/keep/range）限制提亮幅度，跳过或收缩中灰标定，守住夜的暗部基准。"
+    },
+    {
+      "id": "tone_se_night_washout",
+      "type": "side_effect",
+      "label": "夜景发灰(实测教训)",
+      "keywords": ["夜景", "发灰", "教训", "氛围尽毁"],
+      "content": "项目实测教训：夜景做中灰锚定提亮后，夜空变灰、灯光失层次、氛围尽毁；夜景的目标是保暗而非校到中灰。"
+    },
+    {
+      "id": "tone_se_hl_clip",
+      "type": "side_effect",
+      "label": "高光溢出削波",
+      "keywords": ["过曝", "死白", "断层", "削波"],
+      "content": "曝光或反差过头使高光越过255被削平，出现无渐变死白断层；提亮与S曲线都要盯住直方图右端不溢出。"
+    },
+    {
+      "id": "tone_se_dead_black",
+      "type": "side_effect",
+      "label": "暗部死黑",
+      "keywords": ["死黑", "细节丢失", "剪影化"],
+      "content": "压黑过猛把有信息的暗部沉成纯黑：人像发丝衣纹、夜景环境细节随之消失；死黑应是选择而不是事故。"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_tone_bp_clarity",
+      "from": "tone_st_blackpoint",
+      "to": "tone_clarity",
+      "relation": "策略",
+      "weight": 0.95,
+      "content": "黑场扎实是通透三要素之首，重定黑场是去发灰的第一动作。"
+    },
+    {
+      "id": "e_tone_mg_clarity",
+      "from": "tone_st_midgray_contrast",
+      "to": "tone_clarity",
+      "relation": "策略",
+      "weight": 0.8,
+      "content": "中灰干净对应通透第三要素，中段灰阶拉开后灰蒙感进一步消退。"
+    },
+    {
+      "id": "e_tone_mg_dim",
+      "from": "tone_st_midgray_contrast",
+      "to": "tone_dimensional",
+      "relation": "策略",
+      "weight": 0.9,
+      "content": "中间调局部对比是立体感的直接来源。"
+    },
+    {
+      "id": "e_tone_sc_dim",
+      "from": "tone_st_film_scurve",
+      "to": "tone_dimensional",
+      "relation": "策略",
+      "weight": 0.75,
+      "content": "S曲线拉开整体明暗跨度，辅助体积表达且过渡自然。"
+    },
+    {
+      "id": "e_tone_ro_highkey",
+      "from": "tone_st_hl_rolloff",
+      "to": "tone_highkey",
+      "relation": "策略",
+      "weight": 0.85,
+      "content": "高调影调大面积依赖亮部，滚降保证亮而不溢、白中有层次。"
+    },
+    {
+      "id": "e_tone_so_lowkey",
+      "from": "tone_st_shadow_open",
+      "to": "tone_lowkey",
+      "relation": "策略",
+      "weight": 0.85,
+      "content": "低调影调的暗部要分该黑与该开，开放有信息处避免一黑到底。"
+    },
+    {
+      "id": "e_tone_lg_lowkey",
+      "from": "tone_st_lowlight_guard",
+      "to": "tone_lowkey",
+      "relation": "策略",
+      "weight": 0.95,
+      "content": "低光保护直接服务夜景保暗目标，防止自动标定毁掉夜的基准。"
+    },
+    {
+      "id": "e_tone_ma_washout",
+      "from": "tone_st_midgray_anchor",
+      "to": "tone_se_night_washout",
+      "relation": "副作用",
+      "weight": 0.95,
+      "content": "夜景误用中灰锚定的直接后果：夜色被推向中灰而整体发灰。"
+    },
+    {
+      "id": "e_tone_bp_deadblack",
+      "from": "tone_st_blackpoint",
+      "to": "tone_se_dead_black",
+      "relation": "副作用",
+      "weight": 0.7,
+      "content": "黑场重定下手过猛，会把仍有细节的暗部一并压成死黑。"
+    },
+    {
+      "id": "e_tone_sc_clip",
+      "from": "tone_st_film_scurve",
+      "to": "tone_se_hl_clip",
+      "relation": "副作用",
+      "weight": 0.6,
+      "content": "S曲线上臂过陡会把高光推出范围造成削波，需配合滚降收口。"
+    },
+    {
+      "id": "e_tone_lg_ma_pair",
+      "from": "tone_st_lowlight_guard",
+      "to": "tone_st_midgray_anchor",
+      "relation": "配套",
+      "weight": 0.9,
+      "content": "两者配套才安全：正常照度可用中灰锚定，低光由保护机制接管限幅。"
+    },
+    {
+      "id": "e_tone_subj_mg_pair",
+      "from": "tone_st_subject_contrast",
+      "to": "tone_st_midgray_contrast",
+      "relation": "配套",
+      "weight": 0.8,
+      "content": "题材决定中灰对比的力度旋钮：风光拧大、人像拧小。"
+    },
+    {
+      "id": "e_tone_ro_sc_pair",
+      "from": "tone_st_hl_rolloff",
+      "to": "tone_st_film_scurve",
+      "relation": "配套",
+      "weight": 0.85,
+      "content": "S曲线管整体反差，滚降管肩部收口，二者天然配套。"
+    }
+  ]
+}

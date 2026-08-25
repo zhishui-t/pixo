@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    {"id":"post2_wb_first","type":"action","label":"白平衡先定调","keywords":["白平衡","定调","影调基准","灰点"],"content":"白平衡是后期的第一步：WB 一旦失真，曝光、对比、色彩的判断全部失去基准。先吸灰点或输灰卡值定准中性，再往下走。"},
+    {"id":"post2_denoise_first","type":"action","label":"降噪先于锐化","keywords":["降噪","锐化","工序顺序","明度降噪"],"content":"降噪必须先于锐化：锐化算法不辨噪声与细节，顺序颠倒会把噪点当纹理一起放大。先压干净噪声，再做细节增强。"},
+    {"id":"post2_sharpen_output_size","type":"boundary","label":"锐化按输出尺寸做","keywords":["锐化","输出尺寸","半径","重采样"],"content":"锐化只对最终输出尺寸有效：为全尺寸预览设的强度，缩图导出后会被重采样抹掉或产生晕边，导出前按目标尺寸重调数量与半径。"},
+    {"id":"post2_local_before_global","type":"action","label":"局部调整优先","keywords":["局部","蒙版","径向滤镜","画笔"],"content":"局部问题优先用蒙版（径向/渐变/画笔）处理，不要用全局极端参数硬拉：为一个角落把整片画面推到边界得不偿失。"},
+    {"id":"post2_calibration_primary","type":"action","label":"相机校准三原色更根本","keywords":["相机校准","三原色","hsl","蓝原色"],"content":"相机校准底部的三原色滑块改变 RAW 解码的色彩基底，比 HSL 分通道修补更根本；蓝原色加饱和常能同时通透天空与肤色。"},
+    {"id":"post2_vibrance_vs_saturation","type":"action","label":"Vibrance 保护肤色","keywords":["vibrance","自然饱和度","saturation","肤色保护"],"content":"Vibrance 智能提升低饱和色并保护肤色，Saturation 对全部颜色等比拉伸；人像首选 Vibrance，Saturation 仅作小幅全局微调。"},
+    {"id":"post2_saturation_trap","type":"side_effect","label":"Saturation 全局等比的陷阱","keywords":["饱和度","等比拉伸","肤色溢出","色块"],"content":"Saturation 过量的典型副作用：已接近饱和的通道率先溢出成色块，肤色转橙红、蓝天变塑料，且回撤后过渡仍显生硬。"},
+    {"id":"post2_dehaze_overuse","type":"side_effect","label":"去雾过量副作用","keywords":["去雾","dehaze","色偏","晕圈"],"content":"去雾本质是强对比+去大气透视，过量必出副作用：整体偏向青蓝的色偏和高反差边缘的亮晕圈。少量多次，事后复查白平衡。"},
+    {"id":"post2_split_tone_restraint","type":"boundary","label":"分离色调要克制","keywords":["分离色调","color grading","高光暖","阴影冷"],"content":"分离色调塑造风格但须克制：经典的高光暖/阴影冷组合，饱和度宜在 10 以下，过量会污染中性灰并产生廉价滤镜感。"}
+  ],
+  "edges": [
+    {"id":"e_p2_wb_graycard","from":"cap_gray_card","to":"post2_wb_first","relation":"前期配套","weight":0.85,"content":"现场灰卡定义的精确白平衡，是 WB 先行定调最可靠的输入。"},
+    {"id":"e_p2_iso_dn","from":"cap_high_iso","to":"post2_denoise_first","relation":"噪声来源","weight":0.85,"content":"高 ISO 彩色噪点随提亮放大，正是降噪必须前置的直接原因。"},
+    {"id":"e_p2_bl_dn","from":"cap_backlight","to":"post2_denoise_first","relation":"后期配套","weight":0.75,"content":"逆光片大幅提阴影后暗部噪声显现，随即进入降噪环节。"},
+    {"id":"e_p2_dn_sharp","from":"post2_denoise_first","to":"post2_sharpen_output_size","relation":"工序顺序","weight":0.9,"content":"先降噪后锐化的固定次序：锐化会连同残余噪点一起强调。"},
+    {"id":"e_p2_vib_sat","from":"post2_vibrance_vs_saturation","to":"post2_saturation_trap","relation":"方案对照","weight":0.8,"content":"Vibrance 的价值正在于规避 Saturation 等比拉伸的肤色灾难。"},
+    {"id":"e_p2_oc_dh","from":"cap_overcast","to":"post2_dehaze_overuse","relation":"场景风险","weight":0.75,"content":"阴天发灰最容易诱导去雾过量，警惕色偏与晕圈代价。"},
+    {"id":"e_p2_bh_st","from":"cap_blue_hour","to":"post2_split_tone_restraint","relation":"场景呼应","weight":0.7,"content":"蓝调时刻自带冷暖对撞，分离色调只需轻推即可成立。"},
+    {"id":"e_p2_wb_local","from":"post2_wb_first","to":"post2_local_before_global","relation":"流程先后","weight":0.8,"content":"WB 与曝光完成定调后才能进局部调整，否则局部基准漂移。"},
+    {"id":"e_p2_cal_color","from":"post2_calibration_primary","to":"post2_vibrance_vs_saturation","relation":"底层优先","weight":0.75,"content":"先用相机校准定色彩基底，再用 HSL/Vibrance 做分通道修饰。"}
+  ]
+}

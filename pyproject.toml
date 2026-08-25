@@ -46,6 +46,9 @@ exclude = ["render.tests*", "pixo.render.tests*"]
 "pixo.agent" = [
     "prompts/*.md",
 ]
+"pixo.know" = [
+    "data/*.json",
+]
 
 [tool.setuptools.data-files]
 "configs/styles" = ["configs/styles/*.json"]

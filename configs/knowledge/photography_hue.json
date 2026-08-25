@@ -1,0 +1,258 @@
+{
+  "nodes": [
+    {
+      "id": "hue_mixed_light",
+      "type": "color_issue",
+      "label": "混色光源偏色",
+      "keywords": [
+        "混色光源",
+        "品绿偏色",
+        "白平衡",
+        "病因"
+      ],
+      "content": "窗光日光与室内钨丝灯混光时单轴K拉不平，面部出现品/绿漂移，这是品绿偏色最常见的病因。"
+    },
+    {
+      "id": "hue_lens_cast",
+      "type": "color_issue",
+      "label": "镜头色偏",
+      "keywords": [
+        "镜头色偏",
+        "紫边",
+        "高反差",
+        "局部"
+      ],
+      "content": "镜头镀膜与传感器在高反差边缘引入紫、绿染色，属光学级色偏，全局校色无法根除，需局部处理。"
+    },
+    {
+      "id": "hue_green_veg",
+      "type": "color_issue",
+      "label": "植被荧光绿",
+      "keywords": [
+        "荧光绿",
+        "植被",
+        "数码感",
+        "绿通道"
+      ],
+      "content": "传感器绿通道响应过剩，直出植被常呈刺眼荧光绿，是数码感的最大来源，也是绿偏的场景化表现。"
+    },
+    {
+      "id": "hue_sky_purple",
+      "type": "color_issue",
+      "label": "天空紫边",
+      "keywords": [
+        "紫边",
+        "天空",
+        "高反差",
+        "渗色"
+      ],
+      "content": "高反差交界处紫色渗色混入蓝天，饱和度和对比一拉就炸开，必须在校色前置环节清除。"
+    },
+    {
+      "id": "act_wb_dual",
+      "type": "action",
+      "label": "K+tint双轴校白",
+      "keywords": [
+        "k值",
+        "tint",
+        "白平衡",
+        "双轴"
+      ],
+      "content": "语义分工：K控蓝黄轴，tint控绿品轴。先K对准中性灰，再tint清绿品残差，两轴交替小步逼近，忌一次拉满。"
+    },
+    {
+      "id": "act_sky_shift",
+      "type": "action",
+      "label": "天空蓝左移",
+      "keywords": [
+        "天空蓝",
+        "色相左移",
+        "去紫边",
+        "降饱和"
+      ],
+      "content": "先去紫边，再将蓝色相左移（向青）5-10并适度降饱和找回层次；顺序颠倒会把紫边一并放大。"
+    },
+    {
+      "id": "act_veg_yellow",
+      "type": "action",
+      "label": "植被绿转黄绿",
+      "keywords": [
+        "黄绿",
+        "植被",
+        "相机校准",
+        "自然"
+      ],
+      "content": "经HSL或相机校准把绿色相右移转黄绿、略降饱和，植被即刻贴近肉眼记忆色，自然感回升。"
+    },
+    {
+      "id": "act_skin_hsl",
+      "type": "action",
+      "label": "肤色HSL锚定",
+      "keywords": [
+        "肤色",
+        "hsl",
+        "橙色相",
+        "安全区"
+      ],
+      "content": "肤色锚定橙色相±5°主区内调整：优先动明度提亮面部，其次饱和给血色；±8°为警戒线，越线即回退。"
+    },
+    {
+      "id": "act_orange_teal",
+      "type": "action",
+      "label": "橙青互补电影感",
+      "keywords": [
+        "橙青",
+        "互补色",
+        "电影感",
+        "分离色调"
+      ],
+      "content": "阴影推青、高光留橙，以肤色为橙端锚点拉开冷暖互补对撞，即经典电影感teal&orange基调。"
+    },
+    {
+      "id": "strat_harmony",
+      "type": "strategy",
+      "label": "色彩和谐框架",
+      "keywords": [
+        "色彩和谐",
+        "邻近色",
+        "互补色",
+        "色环"
+      ],
+      "content": "全图主色控制在色环邻近60°内，或以一对互补色担当对撞主角；每多一种强色相，和谐度掉一档。"
+    },
+    {
+      "id": "bnd_skin_shift",
+      "type": "boundary",
+      "label": "防塑料肤幅度上限",
+      "keywords": [
+        "塑料肤",
+        "幅度上限",
+        "色相偏移"
+      ],
+      "content": "肤色安全区口径：±5°为主区、±8°为警戒线，越线即现塑料感；宁动明度与饱和，不拿色相开刀。"
+    },
+    {
+      "id": "bnd_sky_cyan",
+      "type": "boundary",
+      "label": "天空青色溢出线",
+      "keywords": [
+        "青色溢出",
+        "假色",
+        "幅度限制"
+      ],
+      "content": "蓝色相左移止于约-10°，越线天空泛青绿假色并与植被争色，画面整体和谐随之崩坏。"
+    },
+    {
+      "id": "bnd_veg_skin_bleed",
+      "type": "boundary",
+      "label": "植被调色殃及肤色",
+      "keywords": [
+        "蒙版",
+        "肤色保护",
+        "连带偏色"
+      ],
+      "content": "绿转黄绿会连带邻近色相的肤色发黄，人像场景必须用蒙版隔离人物，先护脸再调景。"
+    },
+    {
+      "id": "bnd_wb_overcorrect",
+      "type": "boundary",
+      "label": "校白过度",
+      "keywords": [
+        "过度校正",
+        "中性灰",
+        "氛围"
+      ],
+      "content": "白平衡以中性灰为靶点到即收：过度求纯灰会抽干氛围暖意，画面发白发死，应保留少量色温叙事。"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_mix_wb",
+      "from": "hue_mixed_light",
+      "to": "act_wb_dual",
+      "relation": "病因→动作",
+      "weight": 0.95,
+      "content": "混色光源下单靠K拉不平，必须K+tint两轴分工收敛绿品残差。"
+    },
+    {
+      "id": "e_wb_bnd",
+      "from": "act_wb_dual",
+      "to": "bnd_wb_overcorrect",
+      "relation": "动作→边界",
+      "weight": 0.85,
+      "content": "以中性灰到靶即收，过度校白抽干氛围暖意，画面发死。"
+    },
+    {
+      "id": "e_cast_sky",
+      "from": "hue_lens_cast",
+      "to": "act_sky_shift",
+      "relation": "病因→动作",
+      "weight": 0.8,
+      "content": "紫边属镜头色偏的高反差表现：先去边再做蓝色相位移，顺序不能反。"
+    },
+    {
+      "id": "e_purple_sky",
+      "from": "hue_sky_purple",
+      "to": "act_sky_shift",
+      "relation": "病因→动作",
+      "weight": 0.9,
+      "content": "紫边遇饱和即炸，去边之后左移蓝色相才能得到干净的天空层次。"
+    },
+    {
+      "id": "e_sky_bnd",
+      "from": "act_sky_shift",
+      "to": "bnd_sky_cyan",
+      "relation": "动作→边界",
+      "weight": 0.85,
+      "content": "左移止步于青之前，越线天空变青绿假色并与植被抢色。"
+    },
+    {
+      "id": "e_veg_act",
+      "from": "hue_green_veg",
+      "to": "act_veg_yellow",
+      "relation": "病因→动作",
+      "weight": 0.9,
+      "content": "荧光绿是数码感元凶，转黄绿加降饱和即可回归自然记忆色。"
+    },
+    {
+      "id": "e_veg_bnd",
+      "from": "act_veg_yellow",
+      "to": "bnd_veg_skin_bleed",
+      "relation": "动作→边界",
+      "weight": 0.8,
+      "content": "绿转黄绿会拖累相邻肤色发黄，人像需蒙版隔离保护面部。"
+    },
+    {
+      "id": "e_skin_bnd",
+      "from": "act_skin_hsl",
+      "to": "bnd_skin_shift",
+      "relation": "动作→边界",
+      "weight": 0.95,
+      "content": "肤色安全区即橙色相±5°：明度饱和可大胆，色相只许微调防塑料感。"
+    },
+    {
+      "id": "e_teal_skin",
+      "from": "act_orange_teal",
+      "to": "bnd_skin_shift",
+      "relation": "动作→边界",
+      "weight": 0.75,
+      "content": "橙青调以肤色为橙端锚点，肤色被青污染或推向洋红即翻车。"
+    },
+    {
+      "id": "e_harm_teal",
+      "from": "strat_harmony",
+      "to": "act_orange_teal",
+      "relation": "策略→动作",
+      "weight": 0.8,
+      "content": "橙青互补是和谐框架的对撞解，全图其余颜色须让位于这对主角。"
+    },
+    {
+      "id": "e_harm_veg",
+      "from": "strat_harmony",
+      "to": "act_veg_yellow",
+      "relation": "策略→动作",
+      "weight": 0.7,
+      "content": "植被转黄绿既除数码感，也让绿退回邻近色环维持整体和谐。"
+    }
+  ]
+}

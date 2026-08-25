@@ -1,0 +1,159 @@
+{
+  "nodes": [
+    {
+      "id": "cap_raw_priority",
+      "type": "capture",
+      "label": "RAW 优先",
+      "keywords": [
+        "raw",
+        "格式",
+        "前期"
+      ],
+      "content": "RAW 保留 12-14bit 线性数据，白平衡与曝光宽容度远高于 8bit JPEG，前期用 RAW 是后期一切余地的前提。"
+    },
+    {
+      "id": "cap_ettr",
+      "type": "capture",
+      "label": "向右曝光 ETTR",
+      "keywords": [
+        "ettr",
+        "向右曝光",
+        "信噪比"
+      ],
+      "content": "低 ISO 下向右曝光最大化信噪比：直方图尽量靠右但高光不裁，后期再压回，比欠曝再提亮噪声小得多。"
+    },
+    {
+      "id": "cap_backlight",
+      "type": "capture",
+      "label": "逆光拍摄",
+      "keywords": [
+        "逆光",
+        "背光",
+        "轮廓光"
+      ],
+      "content": "逆光对人像点测面部并 +0.7~1EV，或包围曝光；RAW 阴影提升空间大但暗部噪声显著，后期需配合降噪。"
+    },
+    {
+      "id": "cap_blue_hour",
+      "type": "light",
+      "label": "蓝调时刻",
+      "keywords": [
+        "蓝调",
+        "blue hour",
+        "日落后"
+      ],
+      "content": "日落后 20-40 分钟天空呈深蓝，与城市暖灯形成天然冷暖对比，是夜景拍摄的黄金窗口。"
+    },
+    {
+      "id": "cap_overcast",
+      "type": "light",
+      "label": "阴天柔光",
+      "keywords": [
+        "阴天",
+        "柔光",
+        "漫射"
+      ],
+      "content": "阴天是巨型柔光箱：光线均匀但反差平淡易发灰，后期需重建对比（黑场+中灰对比）并适度去雾。"
+    },
+    {
+      "id": "cap_high_iso",
+      "type": "noise",
+      "label": "高 ISO 代价",
+      "keywords": [
+        "高iso",
+        "噪点",
+        "暗光"
+      ],
+      "content": "高 ISO 噪声以彩色噪点为主且随提亮放大：能前期的绝不到后期补，必须提亮时先降噪再看影调。"
+    },
+    {
+      "id": "cap_gray_card",
+      "type": "capture",
+      "label": "灰卡定制白平衡",
+      "keywords": [
+        "灰卡",
+        "白平衡",
+        "校准"
+      ],
+      "content": "现场拍一张灰卡/白卡，后期一键定义精确 WB，混色光源下比目测吸管可靠得多。"
+    },
+    {
+      "id": "cap_hdr_bracket",
+      "type": "capture",
+      "label": "包围曝光",
+      "keywords": [
+        "hdr",
+        "包围",
+        "大光比"
+      ],
+      "content": "大光比场景 ±2EV 包围曝光后期合成，比单帧暴力提阴影干净一个数量级。"
+    },
+    {
+      "id": "cap_polarizer",
+      "type": "capture",
+      "label": "偏振镜",
+      "keywords": [
+        "偏振镜",
+        "cpl",
+        "反光"
+      ],
+      "content": "CPL 压水面/叶面反光、加深蓝天，属于光学级信息增加，后期无法完全模拟。"
+    },
+    {
+      "id": "cap_sky_headroom",
+      "type": "capture",
+      "label": "给天空留余量",
+      "keywords": [
+        "天空",
+        "过曝",
+        "高光"
+      ],
+      "content": "高光细节一旦前期裁切后期无法恢复：亮背景构图时刻意欠 1/3~1EV 保住天空层次。"
+    },
+    {
+      "id": "act_shadow_lift",
+      "type": "action",
+      "label": "阴影提升",
+      "keywords": [
+        "阴影",
+        "提亮",
+        "shadow"
+      ],
+      "content": "提阴影恢复暗部层次，但噪声同步放大：幅度受信噪比约束，通常配合降噪与黑场重定使用。"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_raw_ettr",
+      "from": "cap_raw_priority",
+      "to": "cap_ettr",
+      "relation": "技术路线",
+      "weight": 0.9,
+      "content": "RAW 宽容度是 ETTR 敢于贴着高光拍的底气。"
+    },
+    {
+      "id": "e_bl_strategy",
+      "from": "cap_backlight",
+      "to": "act_shadow_lift",
+      "relation": "后期配套",
+      "weight": 0.85,
+      "content": "逆光片的后期核心是大幅提阴影，同时面对噪声代价。"
+    },
+    {
+      "id": "e_bl_denoise",
+      "from": "act_shadow_lift",
+      "to": "cap_high_iso",
+      "relation": "副作用",
+      "weight": 0.8,
+      "content": "大幅提阴影会把暗部噪声一并放大。"
+    },
+    {
+      "id": "e_overcast_post",
+      "from": "cap_overcast",
+      "to": "tone_st_blackpoint",
+      "relation": "后期配套",
+      "weight": 0.85,
+      "content": "阴天片发灰的第一处方是重定黑场。"
+    }
+  ]
+}
