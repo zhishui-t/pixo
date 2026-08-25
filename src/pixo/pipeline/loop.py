@@ -453,6 +453,7 @@ class SinglePhotoLoop:
         aesthetic_stagnation_eps: float | None = None,
         crop_suggest: bool = False,
         box_provider: Callable[..., Any] | None = None,
+        agent_suggest: bool = False,
     ) -> None:
         self.render_backend = render_backend or renderer
         self.segmenter = segmenter
@@ -484,6 +485,9 @@ class SinglePhotoLoop:
         # t31 构图建议：默认关；box_provider 为原生框通道(未来 vision 升级)。
         self.crop_suggest = bool(crop_suggest)
         self.box_provider = box_provider
+        # t47 LLM 建议编排：默认关；开且 dsh.chat 环境齐备才整链运行，
+        # accepted 仅注入 decide_context 建议态，rejected/跳过进 trace。
+        self.agent_suggest = bool(agent_suggest)
 
     def _build_backend(
         self,
@@ -845,6 +849,42 @@ class SinglePhotoLoop:
                 ),
                 "manual_on_unreliable": self.manual_on_unreliable,
             }
+            if self.agent_suggest:
+                # t47 建议链（默认关）：accepted 入建议态 llm_suggestions，
+                # rejected 全文/环境未配置跳过均留痕 trace；异常降级不阻断闭环。
+                try:
+                    from ..agent.suggest import is_dsh_chat_configured, run_suggest
+                    if not is_dsh_chat_configured():
+                        self._add_trace(
+                            sm, event_type="agent_suggest_skipped",
+                            reason="dsh.chat 环境未配置"
+                                   "(PIXO_DSH_CHAT_URL/KEY/MODEL)")
+                    else:
+                        sugg = run_suggest(
+                            measurement=metrics,
+                            aesthetic_history=list(aesthetic_scores),
+                            scene_query=" ".join(self.prompts),
+                            locked_params=self.locked_params,
+                        )
+                        if sugg.get("status") == "ok":
+                            decide_context["llm_suggestions"] = list(
+                                sugg["accepted"])
+                            self._add_trace(
+                                sm, event_type="agent_suggest_accepted",
+                                reason=f"{len(sugg['accepted'])} 个补丁入建议态",
+                                metadata={"params": [
+                                    p.get("param") for p in sugg["accepted"]
+                                    if isinstance(p, dict)]})
+                        if sugg.get("rejected"):
+                            self._add_trace(
+                                sm, event_type="agent_suggest_rejected",
+                                reason=f"{len(sugg['rejected'])} 个补丁被拒绝",
+                                metadata={"rejected": sugg["rejected"],
+                                          "reply_text": sugg["reply_text"]})
+                except Exception as exc:      # noqa: BLE001 - 建议链绝不阻断闭环
+                    self._add_trace(
+                        sm, event_type="agent_suggest_error",
+                        reason=f"suggest 编排异常降级: {exc}")
             decision = decide(decide_context, self.rules)
             self._add_trace(
                 sm,
