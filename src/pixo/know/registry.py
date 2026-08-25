@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import logging
 import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -17,12 +18,13 @@ from .cards import (
 from .graph import KnowledgeGraph, load_default_graph
 from .query import hybrid_query
 from .rag import RagIndex, load_default_rag
+_LOGGER = logging.getLogger(__name__)
 
 
 
 def _know_warn(msg: str) -> None:
     """坏包/脏数据告警；不抛错，保持坏包不致命。"""
-    print("[pixo.know] warn:", msg)
+    _LOGGER.warning("[pixo.know] warn: %s", msg)
 
 
 def _knowledge_pack_dirs() -> list[Path]:

@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import logging
 import json
 import os
 import urllib.error
@@ -17,6 +18,7 @@ from typing import Any, Callable
 
 from .burst_selection import select_burst_frames
 from .orchestrator import run_batch, run_photo
+_LOGGER = logging.getLogger(__name__)
 
 __all__ = [
     "ToolRegistry",
@@ -148,10 +150,9 @@ def _dsh_chat_real(text: str) -> dict[str, Any]:
     """
     cfg = _dsh_chat_config()
     if cfg is None:
-        print(
+        _LOGGER.warning(
             "[pixo.agent.tools] dsh.chat 未配置"
-            "(PIXO_DSH_CHAT_URL/KEY/MODEL)，降级本地占位"
-        )
+            "(PIXO_DSH_CHAT_URL/KEY/MODEL)，降级本地占位")
         return _dsh_chat_placeholder(text)
 
     last_error: Exception | None = None
@@ -168,10 +169,9 @@ def _dsh_chat_real(text: str) -> dict[str, Any]:
             }
         except Exception as exc:  # noqa: BLE001 - 网络异常一律走重试/降级
             last_error = exc
-            print(
+            _LOGGER.warning(
                 "[pixo.agent.tools] dsh.chat 请求失败"
-                f"(第{attempt}/{_DSH_CHAT_MAX_ATTEMPTS}次): {exc}"
-            )
+                f"(第{attempt}/{_DSH_CHAT_MAX_ATTEMPTS}次): {exc}")
     fallback = _dsh_chat_placeholder(text)
     fallback["error"] = f"{type(last_error).__name__}: {last_error}"
     return fallback

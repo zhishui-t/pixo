@@ -195,7 +195,7 @@ def test_warm_cal_file_missing_or_invalid_falls_back(tmp_path):
         assert np.allclose(ctx.state["wb"], expected, atol=1e-5)
 
 
-def test_warm_cal_domain_hint_and_fallback(tmp_path, capsys):
+def test_warm_cal_domain_hint_and_fallback(tmp_path, caplog):
     """t22: 超出 _domain 打一次性提示; fallback_outside_domain=true 回退斜率模型。"""
     import json
     knots = [[2.4, 1.0, 1.0, 1.0], [3.0, 1.1, 1.0, 0.95]]  # 域 [2.4,3.0]
@@ -220,9 +220,11 @@ def test_warm_cal_domain_hint_and_fallback(tmp_path, capsys):
 
     # 默认 (fallback_outside_domain=False): 域外仍用曲线, 打一次性提示
     assert np.allclose(run({}), curved, atol=1e-5)
-    assert "超出" in capsys.readouterr().out
+    assert any("超出暖度标定适用域" in r.getMessage()
+               for r in caplog.records if r.levelname == "WARNING")
     assert np.allclose(run({}), curved, atol=1e-5)   # 行为不变
-    assert "超出" not in capsys.readouterr().out      # 提示仅一次
+    assert sum("超出暖度标定适用域" in r.getMessage()
+               for r in caplog.records) == 1            # 提示仅一次
     # fallback_outside_domain=True: 回退内置斜率模型
     assert np.allclose(run({"fallback_outside_domain": True}), slope, atol=1e-5)
 

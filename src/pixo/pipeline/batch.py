@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import logging
 import copy
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -29,6 +30,7 @@ from pixo.vision import (
     measure_motion_blur,
     measure_sharpness,
 )
+_LOGGER = logging.getLogger(__name__)
 
 
 class BatchError(RuntimeError):
@@ -264,15 +266,14 @@ def make_default_scorer() -> Any:
 
         candidate = PixoAestheticScorer()
         if not candidate.health_info().get("available"):
-            print(
+            _LOGGER.warning(
                 "[pixo.pipeline.batch] 真美学评分器不可用"
-                "(torch/transformers 缺失或权重缺失/损坏)，回退 Mock"
-            )
+                "(torch/transformers 缺失或权重缺失/损坏)，回退 Mock")
             return MockAestheticScorer()
-        print("[pixo.pipeline.batch] 使用真美学评分器(PixoAestheticScorer)")
+        _LOGGER.info("[pixo.pipeline.batch] 使用真美学评分器(PixoAestheticScorer)")
         return _PixoScorerAdapter(candidate)
     except Exception as exc:  # noqa: BLE001 - 真评分器不可用一律降级 Mock
-        print("[pixo.pipeline.batch] 真评分器构造异常，回退 Mock:", exc)
+        _LOGGER.warning("[pixo.pipeline.batch] 真评分器构造异常，回退 Mock: %s", exc)
         return MockAestheticScorer()
 
 
@@ -320,14 +321,13 @@ class _PixoScorerAdapter:
         try:
             result = self._scorer.score(image_rgb)
         except Exception as exc:  # noqa: BLE001 - 单张失败不崩批
-            print("[pixo.pipeline.batch] 真评分器异常，永久降级为Mock:", exc)
+            _LOGGER.warning("[pixo.pipeline.batch] 真评分器异常，永久降级为Mock: %s", exc)
             self._degraded = True
             return self._mock_score(image_rgb)
         if not isinstance(result, dict) or not result:
-            print(
+            _LOGGER.warning(
                 "[pixo.pipeline.batch] 真评分器返回空结果(None/空dict)，"
-                "永久降级为Mock"
-            )
+                "永久降级为Mock")
             self._degraded = True
             return self._mock_score(image_rgb)
 
@@ -347,10 +347,9 @@ class _PixoScorerAdapter:
         if overall_raw is None:
             if not dims:
                 self._degraded = True
-                print(
+                _LOGGER.warning(
                     "[pixo.pipeline.batch] 真评分器输出无可信分数，"
-                    "永久降级为Mock"
-                )
+                    "永久降级为Mock")
                 return self._mock_score(image_rgb)
             overall = sum(dims.values()) / len(dims)
         else:
@@ -391,10 +390,9 @@ class MockAgentSelector:
         ]
         skipped = len(candidates) - len(usable)
         if skipped:
-            print(
-                "[pixo.pipeline.batch] AgentSelector 过滤无效美学候选 %d 个"
-                % skipped
-            )
+            _LOGGER.warning(
+                "[pixo.pipeline.batch] AgentSelector 过滤无效美学候选 %d 个",
+                skipped)
         ranked = sorted(usable, key=lambda x: x[1].overall, reverse=True)[
             : self.top_n
         ]
@@ -584,11 +582,10 @@ class BatchPipeline:
                     if aesthetic is None:
                         # 暗路径防御：无分候选绝不入排序池
                         self._none_score_count += 1
-                        print(
+                        _LOGGER.warning(
                             "[pixo.pipeline.batch] 候选 %s 美学分缺失(None)，"
-                            "跳出排序池(累计%d)"
-                            % (item.photo_id, self._none_score_count)
-                        )
+                            "跳出排序池(累计%d)",
+                            item.photo_id, self._none_score_count)
                     else:
                         candidates.append((item, aesthetic))
                 photo_results.append(

@@ -43,6 +43,7 @@
 """
 from __future__ import annotations
 
+import logging
 import json
 import os
 from numbers import Real
@@ -55,6 +56,7 @@ from ..pipeline.graph import DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB
 from ..core.color import (cam_to_linear_srgb_matrix, cct_from_wb,
                      interpolate_forward_matrix, temp_tint_to_wb)
 from ..core.calibration import DcpProfile
+_LOGGER = logging.getLogger(__name__)
 
 
 # 暖度模型约束 (2026-08 方案 A, 见 research/warmth-model-regularization.md):
@@ -330,12 +332,12 @@ class WhiteBalanceStage(Stage):
                                                  False))
                                 if str(wcf) not in _WARM_DOMAIN_WARNED:
                                     _WARM_DOMAIN_WARNED.add(str(wcf))
-                                    print(f"[whitebalance] wb_B={b_now:.3f} 超出暖度"
+                                    _LOGGER.warning(
+                                          f"[whitebalance] wb_B={b_now:.3f} 超出暖度"
                                           f"标定适用域 [{lo:.3f}, {hi:.3f}] ({wcf}); "
                                           + ("回退内置斜率模型" if fb else
                                              "仍用曲线 (域外由端点垫片近似斜率模型,"
-                                             "可设 fallback_outside_domain=true 回退)"),
-                                          flush=True)
+                                             "可设 fallback_outside_domain=true 回退)"))
                                 use_curve = not fb
                         if use_curve:
                             cal["curve"] = doc["curve"]
