@@ -80,7 +80,7 @@ def test_retry_once_then_success(monkeypatch, configured):
     assert result["retries_used"] == 1
 
 
-def test_double_failure_degrades_to_placeholder(monkeypatch, configured, capsys):
+def test_double_failure_degrades_to_placeholder(monkeypatch, configured, caplog):
     """两次失败 → 占位应答带 error 字段与 source=placeholder，不抛错。"""
     attempts = {"n": 0}
 
@@ -97,8 +97,9 @@ def test_double_failure_degrades_to_placeholder(monkeypatch, configured, capsys)
     assert result["source"] == "placeholder"
     assert "error" in result and "TimeoutError" in result["error"]
     assert "已收到 DSH 消息: hello" in result["text"]
-    captured = capsys.readouterr().out
-    assert captured.count("请求失败") == 2
+    warns = [r for r in caplog.records
+             if r.levelname == "WARNING" and "请求失败" in r.getMessage()]
+    assert len(warns) == 2
 
 
 def test_unconfigured_falls_back_without_http(monkeypatch):

@@ -196,8 +196,10 @@ def test_adapter_permanent_degrade_on_empty_result():
     assert isinstance(result, AestheticScore) and result.source == "mock"
 
 
-def test_batch_skips_none_score_candidates(capsys):
+def test_batch_skips_none_score_candidates(caplog):
     """⑤None 分候选跳过排序池+计数告警，其余照常 TopN。"""
+    import logging
+
     scores = {"pa": 4.8, "pb": 3.6, "pc": None}
 
     class _FakeNone:
@@ -209,7 +211,9 @@ def test_batch_skips_none_score_candidates(capsys):
             return AestheticScore(overall=value, dimensions={"x": value})
 
     pipeline = BatchPipeline(aesthetic_scorer=_FakeNone(), top_n=2)
-    result = pipeline.process(_inputs(["pa", "pb", "pc"]))
+    import logging as _lg
+    with caplog.at_level(_lg.WARNING, logger="pixo.pipeline.batch"):
+        result = pipeline.process(_inputs(["pa", "pb", "pc"]))
     status = {
         p.photo_id: p.status
         for group in result.groups
@@ -219,8 +223,8 @@ def test_batch_skips_none_score_candidates(capsys):
     assert status["pb"] == "recommended"
     assert status["pc"] == "not_selected"      # 无分候选不崩批不入池
     assert pipeline._none_score_count == 1
-    captured = capsys.readouterr().out
-    assert "pc 美学分缺失(None)" in captured and "跳出排序池" in captured
+    log_text = caplog.text
+    assert "pc 美学分缺失(None)" in log_text and "跳出排序池" in log_text
 
 
 def test_selector_filters_invalid_candidates_directly():

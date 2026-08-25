@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-25 — 清偿批：色彩规则执行位实装 · 真评分器权重部署 · 治理收尾
+
+- 色彩规则端到端生效：决策键→colorcal 参数映射桥（_COLOR_PARAM_ALIASES，
+  修复语义键悬空静默丢弃），6006 提 vibrance ΔS+11.2 / 5238 压饱和 ΔS−6.2，
+  双 FINAL_QC 通过；四向方向探针固化为合成图单测。
+- 真美学评分器部署：aesthetic_scorer.pt(333MB,MIT,HF 权威渠道) 落
+  resources/models/aesthetic/，默认路径切换、探针 available 实证
+  source="pixo"；许可双条目登记 model_licenses.json；真分偏低须标定
+  （合成/低纹理域系统性低分已知，tech_debt #11 附注）。
+- suggest 同上下文指纹 LRU8 缓存（命中零 HTTP）+ chat_latency_ms 全路径入 trace。
+- print 告警统一迁 logging（5 文件 14 站点，capsys 断言随迁 caplog）；
+  model_licenses 补换行与 usage 词表锁定测试。
+- 验收：816 passed（终版门禁）。
+
 ## 2026-08-25 — P3 批：LLM 副驾转正（建议态闭环，默认关）
 
 - dsh.chat 从占位转正：OpenAI 兼容客户端（PIXO_DSH_CHAT_URL/KEY/MODEL 三要素

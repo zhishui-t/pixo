@@ -53,6 +53,13 @@
 11. **评分器权重部署**：
     - aesthetic_scorer.pt 就位后 make_default_scorer 自动切真模型（对照
       model_licenses.json 许可）；composition/overall 维度即可供 P2 规则消费。
+    - 附注(t52 连锁,2026-08-25)：权重已部署(HF rsinema/aesthetic-scorer,MIT,
+      resources/models/aesthetic/)。真模型对合成/低纹理图像系统性低分——
+      实测噪声合成图 confidence≈0.52<0.6 阈值致 batch 推荐沉默（开发5 已在
+      测试注入 FixedAestheticScorer 规避）。**分数分布标定须覆盖"合成/低纹理"
+      域**（与 docs/metrics/proxy_distribution.md 同法补该域分位），否则依赖
+      美学分的选片推荐与终止判定在此类输入下会系统性不触发。标定前生产语义：
+      低分≠废片，仅是域外输入。
 
 12. **公式守卫日落条款**：
     - 引擎原生 AND/between 落地后，新规则改用原生 condition，存量公式守卫规则

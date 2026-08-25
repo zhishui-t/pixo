@@ -208,9 +208,12 @@ def test_single_photo_runner_invoked_for_recommended():
         calls.append(photo_id)
         return {"photo_id": photo_id, "state": "ACCEPTED"}
 
+    # 真评分器对噪声合成图打分偏低(标定待办)，推荐链路测试改注入
+    # 确定性 scorer，避免依赖 333MB 模型与网络下载。
     pipeline = BatchPipeline(
         top_n=1,
         single_photo_runner=runner,
+        aesthetic_scorer=FixedAestheticScorer({"p0": 4.8}),
     )
     result = pipeline.process(photos)
 
