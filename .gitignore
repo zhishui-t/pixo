@@ -23,7 +23,7 @@ package-lock.json
 vitest.config.ts
 apply.spec.ts
 
-# ÆäËû DSH »á»°²ĞÁôÁÙÊ±½Å±¾
+# DSH ä¼šè¯ä¸´æ—¶è„šæœ¬
 *.mjs
 !pixo/dsh/*.mjs
 !frontend/e2e/*.mjs
@@ -49,3 +49,6 @@ frontend/screenshots/
 
 # Auto-generated photo outputs and artifacts
 exports/
+
+# Agent teams æœ¬åœ°åä½œçŠ¶æ€
+.agent-teams/
