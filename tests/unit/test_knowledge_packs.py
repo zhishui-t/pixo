@@ -26,6 +26,7 @@ PACK_DOMAINS: dict[str, tuple[str, ...]] = {
     "photography_hue.json": ("hue_", "act_", "bnd_", "strat_"),
     "photography_post2.json": ("post2_",),
     "photography_capture_post.json": ("cap_", "act_"),
+    "photography_composition.json": ("comp_",),
 }
 
 REQUIRED_NODE_FIELDS = ("id", "type", "label", "keywords", "content")

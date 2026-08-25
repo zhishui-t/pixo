@@ -1,0 +1,188 @@
+{
+  "nodes": [
+    {
+      "id": "comp_sc_env_portrait",
+      "type": "scene",
+      "label": "环境人像场景",
+      "keywords": [
+        "环境人像",
+        "主体占比",
+        "叙事"
+      ],
+      "content": "人物占画面小比例，靠环境交代身份与场所；主体易被环境淹没，构图要主动安置视线落点。"
+    },
+    {
+      "id": "comp_sc_closeup",
+      "type": "scene",
+      "label": "特写场景",
+      "keywords": [
+        "特写",
+        "情绪",
+        "主体占比"
+      ],
+      "content": "面部充满画面、背景退位的占比路线：放大情绪与细节，牺牲环境信息，依赖光影塑形。"
+    },
+    {
+      "id": "comp_st_thirds",
+      "type": "strategy",
+      "label": "三分法交点",
+      "keywords": [
+        "三分法",
+        "交点",
+        "九宫格"
+      ],
+      "content": "把主体或其视线落点放在三分线交点附近，比居中更有张力；地平线对齐三分线而非正中。"
+    },
+    {
+      "id": "comp_st_headroom",
+      "type": "strategy",
+      "label": "头留白与视线留白",
+      "keywords": [
+        "headroom",
+        "头留白",
+        "视线留白"
+      ],
+      "content": "人像头顶留少量空间防压迫，视线方向多留余量让目光有去处；贴顶或视线顶边都显憋闷。"
+    },
+    {
+      "id": "comp_st_horizon",
+      "type": "strategy",
+      "label": "地平线水平与位置",
+      "keywords": [
+        "地平线",
+        "水平",
+        "上三分之一"
+      ],
+      "content": "先拉平再选位：强调地面放下1/3、强调天空放上1/3；倾斜的地平线是最刺眼的穿帮。"
+    },
+    {
+      "id": "comp_st_leading",
+      "type": "strategy",
+      "label": "前景引导线",
+      "keywords": [
+        "引导线",
+        "前景",
+        "透视"
+      ],
+      "content": "用道路栏杆光线等前景线条把视线引向主体，纵深感随之而来；线条指向画外则泄气。"
+    },
+    {
+      "id": "comp_st_negspace",
+      "type": "strategy",
+      "label": "负空间运用",
+      "keywords": [
+        "负空间",
+        "留白",
+        "极简"
+      ],
+      "content": "大面积留白衬托小主体，画面即刻安静高级；负空间方向要顺着视线与动势，反了就堵。"
+    },
+    {
+      "id": "comp_st_recrop",
+      "type": "strategy",
+      "label": "二次构图服务主题",
+      "keywords": [
+        "二次构图",
+        "裁剪",
+        "强化主体"
+      ],
+      "content": "后期裁剪删减多余元素、强化主体与主题；先定主题再动剪，每剪一刀问删掉的是什么。"
+    },
+    {
+      "id": "comp_bd_crop_taboo",
+      "type": "boundary",
+      "label": "裁剪禁忌",
+      "keywords": [
+        "切关节",
+        "切头发",
+        "贴边"
+      ],
+      "content": "人像裁剪三不切：颈腕肘膝踝关节不切、发丝不切、主体不贴边；切在关节处观感天然别扭。"
+    },
+    {
+      "id": "comp_se_res_loss",
+      "type": "side_effect",
+      "label": "过度裁剪的代价",
+      "keywords": [
+        "分辨率",
+        "过度裁剪",
+        "输出尺寸"
+      ],
+      "content": "二次构图像素只出不进：裁得越狠分辨率越低，放大发糊、输出受限，景别尽量前期取足。"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_comp_ratio_contrast",
+      "from": "comp_sc_env_portrait",
+      "to": "comp_sc_closeup",
+      "relation": "方案对照",
+      "weight": 0.8,
+      "content": "同一主体的两种占比路线：交代环境叙事 vs 放大情绪细节，按主题选而非按习惯拍。"
+    },
+    {
+      "id": "e_comp_env_thirds",
+      "from": "comp_sc_env_portrait",
+      "to": "comp_st_thirds",
+      "relation": "配套",
+      "weight": 0.85,
+      "content": "环境人像主体易被淹没，置于三分交点并压住视线落点即可立住。"
+    },
+    {
+      "id": "e_comp_env_neg",
+      "from": "comp_sc_env_portrait",
+      "to": "comp_st_negspace",
+      "relation": "配套",
+      "weight": 0.8,
+      "content": "环境人像靠负空间交代场所氛围，留白方向顺视线才透气。"
+    },
+    {
+      "id": "e_comp_cu_head",
+      "from": "comp_sc_closeup",
+      "to": "comp_st_headroom",
+      "relation": "配套",
+      "weight": 0.9,
+      "content": "特写的生命线是头留白与视线留白，贴顶即压抑出戏。"
+    },
+    {
+      "id": "e_comp_env_hori",
+      "from": "comp_sc_env_portrait",
+      "to": "comp_st_horizon",
+      "relation": "配套",
+      "weight": 0.7,
+      "content": "户外环境人像常带入地平线，务必拉平并避开人物头部高度。"
+    },
+    {
+      "id": "e_comp_lead_neg",
+      "from": "comp_st_leading",
+      "to": "comp_st_negspace",
+      "relation": "策略",
+      "weight": 0.75,
+      "content": "引导线把视线送进负空间里的主体，二者配合画面才安静有序。"
+    },
+    {
+      "id": "e_comp_head_bnd",
+      "from": "comp_st_headroom",
+      "to": "comp_bd_crop_taboo",
+      "relation": "边界",
+      "weight": 0.85,
+      "content": "留白不足被迫收画幅时，宁可画面窄也不切关节与发丝。"
+    },
+    {
+      "id": "e_comp_recrop_bnd",
+      "from": "comp_st_recrop",
+      "to": "comp_bd_crop_taboo",
+      "relation": "边界",
+      "weight": 0.95,
+      "content": "二次构图的硬边界：不切关节、不切发丝、主体不贴边。"
+    },
+    {
+      "id": "e_comp_recrop_se",
+      "from": "comp_st_recrop",
+      "to": "comp_se_res_loss",
+      "relation": "副作用",
+      "weight": 0.8,
+      "content": "裁剪即像素净损失，大比例二次构图直接封顶输出尺寸。"
+    }
+  ]
+}

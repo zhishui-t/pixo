@@ -10,6 +10,7 @@
 | photography_tone.json | 影调 | 曝光/影调策略与工序 |
 | photography_hue.json | 色相 | 色偏病因→调色动作→边界 |
 | photography_post2.json | 后期方法论 | 流程与方法 |
+| photography_composition.json | 构图 | 场景→策略→禁忌链，二次构图边界 |
 
 ## Schema
 
