@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-23 — 修图质量 P0 修复与项目整理
+
+- 修复：tone `brightness` 回归标定值 0.25（原 0.5 与标定注释矛盾）；
+  exposure 新增低光保护参数（low_key_knee/keep/range）。
+- 新增：场景自适应曝光标定表 `src/pixo/render/target_offset.json`（12 结点，
+  以 RAW 内嵌相机缩略图为真值拟合）+ 拟合工具 `scripts/fit_target_offset.py`。
+- 实测：室内 ΔE 38.8→9.2 / 33.6→9.8，夜景 46.5→16.5；全量测试 673 passed。
+- 测试：loop_e2e 亮场夹具改为显式超亮，解除对引擎默认亮度的依赖。
+- 整理：清理根目录残留日志；`.agent-teams/` 纳入 .gitignore；
+  一次性实验脚本归档至 `scripts/experiments/`；重写 `scripts/README.md`。
+
 ## 2026-08-22 — Phase A/E 目录与资源整理
 
 - `doc/` 改名 `docs/`，并更新全仓引用。
