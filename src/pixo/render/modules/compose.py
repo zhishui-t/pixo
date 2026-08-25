@@ -138,6 +138,62 @@ def apply_rotation(img: np.ndarray, angle: float) -> tuple[np.ndarray, np.ndarra
     return out, m
 
 
+# ---- auto_level 地平线检测 (t28) ----
+AUTO_LEVEL_MAX_ANGLE = 8.0   # |校正角| 钳制: 超过视为无可靠地平线 -> 回退 0
+_AUTO_LEVEL_STEP = 0.25      # 角度扫描步长 (°)
+_AUTO_LEVEL_DS = 256         # 检测用下采样长边
+_AUTO_LEVEL_MARGIN = 4.0     # 扫描范围超出钳制的余量: 端点钉死可判"超角"
+AUTO_LEVEL_DEFAULT_MIN_CONFIDENCE = 0.35
+
+
+def detect_horizon_angle(img: np.ndarray,
+                         max_angle: float = AUTO_LEVEL_MAX_ANGLE,
+                         step: float = _AUTO_LEVEL_STEP,
+                         ds_long: int = _AUTO_LEVEL_DS) -> tuple[float, float]:
+    """行梯度投影统计估计主导地平线滚转角 (方法选型见 t28 实测, 备选 HoughLinesP)。
+
+    流程: 灰度下采样 (INTER_AREA) -> Sobel 横向梯度幅值 -> 对 theta ∈
+    [-max_angle, +max_angle] 扫描旋转幅值图, 行和方差最大的 theta 即把
+    地平线转到水平所需的角度。
+
+    扫描范围 [-max_angle-MARGIN, +max_angle+MARGIN]: 真实倾角超过钳制时
+    峰会钉死在 ±max_angle 附近之外, 由调用方据返回值判"超角回退",
+    避免把 20° 斜线误校成 8° 残斜。
+
+    返回 (phi, confidence):
+      phi         把画面摆平应施加的旋转角 (°), 直接可喂 apply_rotation;
+                  符号约定与 cv2.getRotationMatrix2D 一致。
+      confidence  峰突出度 (smax-smed)/(smax-smin+eps) ∈ [0,1]; 无地平线
+                  场景 (人像特写/静物) 各角度得分接近, 置信度趋 0。
+    """
+    gray = img if img.ndim == 2 else (
+        0.2126 * img[..., 0] + 0.7152 * img[..., 1] + 0.0722 * img[..., 2])
+    gray = np.clip(np.asarray(gray, dtype=np.float32), 0.0, None)
+    h, w = gray.shape[:2]
+    scale = float(ds_long) / float(max(h, w))
+    if scale < 1.0:
+        gray = cv2.resize(gray, (max(1, int(round(w * scale))),
+                                 max(1, int(round(h * scale)))),
+                          interpolation=cv2.INTER_AREA)
+    mag = np.abs(cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)).astype(np.float32)
+    hh, ww = mag.shape[:2]
+    center = (ww / 2.0, hh / 2.0)
+    lim = float(max_angle) + float(_AUTO_LEVEL_MARGIN)
+    angles = np.arange(-lim, lim + 1e-9, float(step))
+    scores = np.empty(len(angles), dtype=np.float64)
+    for i, th in enumerate(angles):
+        m = cv2.getRotationMatrix2D(center, float(th), 1.0)
+        rot = cv2.warpAffine(mag, m, (ww, hh), flags=cv2.INTER_LINEAR,
+                             borderMode=cv2.BORDER_REPLICATE)
+        scores[i] = float(rot.sum(axis=1).var())
+    imax = int(np.argmax(scores))
+    smax = float(scores[imax])
+    smin = float(scores.min())
+    smed = float(np.median(scores))
+    conf = (smax - smed) / max(smax - smin, 1e-9)
+    return float(angles[imax]), float(np.clip(conf, 0.0, 1.0))
+
+
 @register_stage("compose", order=22,
                 domain_in=DOMAIN_LINEAR_RGB, domain_out=DOMAIN_LINEAR_RGB)
 class ComposeStage(Stage):
@@ -156,6 +212,8 @@ class ComposeStage(Stage):
         "y": {"type": "float"},
         "width": {"type": "float"},
         "height": {"type": "float"},
+        # auto_level: 地平线置信度门限 (低于则回退恒等, 不动构图)
+        "min_confidence": {"type": "float", "min": 0.0, "max": 1.0},
     }
 
     def default_params(self) -> dict[str, Any]:
@@ -171,6 +229,7 @@ class ComposeStage(Stage):
             "y": 0.0,
             "width": 0.0,
             "height": 0.0,
+            "min_confidence": AUTO_LEVEL_DEFAULT_MIN_CONFIDENCE,
         }
 
     def process(self, ctx: StageContext) -> None:
@@ -183,6 +242,28 @@ class ComposeStage(Stage):
         rotation = float(self.p(ctx, "rotation", 0.0) or 0.0)
         horizontal_flip = bool(self.p(ctx, "horizontal_flip", False))
         vertical_flip = bool(self.p(ctx, "vertical_flip", False))
+
+        # auto_level (t28): 地平线检测自动摆平。|校正角|>8° 或置信度不足
+        # (含人像特写/静物等无地平线场景) 时回退 theta=0 不动构图。
+        al_meta = None
+        if mode == "auto_level":
+            min_conf = float(self.p(ctx, "min_confidence",
+                                    AUTO_LEVEL_DEFAULT_MIN_CONFIDENCE))
+            phi, conf = detect_horizon_angle(img)
+            reliable = (abs(phi) <= AUTO_LEVEL_MAX_ANGLE
+                        and conf >= min_conf)
+            if reliable:
+                rotation += phi
+                tag = "high"
+            else:
+                tag = "low"
+            al_meta = {
+                "auto_level": True,
+                "auto_level_detected_angle": round(float(phi), 3),
+                "auto_level_applied": round(float(rotation), 3),
+                "auto_level_confidence": tag,
+                "auto_level_confidence_value": round(float(conf), 4),
+            }
 
         x0, y0, cw, ch = compute_crop_rect(
             h, w,
@@ -228,6 +309,8 @@ class ComposeStage(Stage):
             "width": final_w,
             "height": final_h,
         }
+        if al_meta is not None:
+            geom.update(al_meta)
         ctx.state["compose"] = geom
         ctx.state["compose_geometry"] = geom
         metrics = {
@@ -237,5 +320,7 @@ class ComposeStage(Stage):
             "border_mode": _BORDER_NAME,
             "final_size": [final_h, final_w],
         }
+        if al_meta is not None:
+            metrics.update(al_meta)
         if ctx.results:
             ctx.results[-1].metrics = metrics
