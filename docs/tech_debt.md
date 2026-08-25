@@ -45,3 +45,15 @@
     - 含跨包边的知识包必须同组提交、同组发布（见 `configs/knowledge/README.md`
       发布约定）；新增跨包边须在所在包 JSON 顶部声明 `_requires`，
       单包先行变更会制造悬空引用。
+
+10. **色彩规则执行位占位**：
+    - 色彩规则决策键（vibrance/saturation.adjust）已通，下游 VibranceStage 为占位，
+      参数暂不产生渲染差异；实装或映射至 huesat 待排期。
+
+11. **评分器权重部署**：
+    - aesthetic_scorer.pt 就位后 make_default_scorer 自动切真模型（对照
+      model_licenses.json 许可）；composition/overall 维度即可供 P2 规则消费。
+
+12. **公式守卫日落条款**：
+    - 引擎原生 AND/between 落地后，新规则改用原生 condition，存量公式守卫规则
+      （clarity_flat 等）择机迁移（裁定见 t40 复审记录）。

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-25 — P2 规则包批：代理指标量纲修复 + 六条数据锚定规则
+
+- vision.measure 新增三代理指标并统一 [0,1] 域（修复 colorfulness 恒饱和 100 的
+  量纲失配）：haze_proxy / colorfulness_proxy / tonal_range，透传 decide_context。
+- 规则扩容：影调通透包 4 条（dehaze≤0.22=p75 触发、clarity 入口 0.12=p25 带通
+  <0.22、shadow_open≥0.18、highlight_recover）+ 色彩包 2 条（vibrance≤4.78=p25、
+  saturation≥6.13=p75），全部阈值锚定 docs/metrics/proxy_distribution.md 实测分位。
+- decide 护栏：公式标识符加载期 lint（笔误→DecideError）、no-op 计数留痕；
+  load_rules 文件分支死代码修复。
+- 验收：实测分布门禁——12 样张驱动 evaluate_rules，触发簇精确命中、中间带静默；
+  全量 778 passed。已知限定：VibranceStage 执行位占位（决策键已通）。
+
 ## 2026-08-25 — 二次构图批：auto_level 实做与主体感知 smart_crop
 
 - compose.auto_level 从占位转正：行梯度投影地平线检测（±12° 扫描/8° 钳制/
