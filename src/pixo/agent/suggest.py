@@ -14,7 +14,10 @@ rejected 连同回复全文交 trace。
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable
 
@@ -148,6 +151,37 @@ def _extract_json_patches(text: Any) -> list | None:
     return None
 
 
+# ---- 同上下文指纹缓存（t53）：sha256(system+user) -> 响应，LRU 上限 8 ----
+_SUGGEST_CACHE_MAX = 8
+_SUGGEST_CACHE: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+CACHE_STATS = {"hits": 0, "misses": 0}
+
+
+def _cache_fingerprint(prompt: str) -> str:
+    """system+user 全文指纹。"""
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+
+def _cache_get(fingerprint: str):
+    """命中返回响应副本并置 cache_hit；未命中记 miss 返回 None。"""
+    if fingerprint in _SUGGEST_CACHE:
+        _SUGGEST_CACHE.move_to_end(fingerprint)
+        CACHE_STATS["hits"] += 1
+        out = dict(_SUGGEST_CACHE[fingerprint])
+        out["cache_hit"] = True
+        return out
+    CACHE_STATS["misses"] += 1
+    return None
+
+
+def _cache_put(fingerprint: str, result: dict[str, Any]) -> None:
+    """仅缓存成功解析的结果；LRU 容量 8，超出淘汰最旧。"""
+    _SUGGEST_CACHE[fingerprint] = dict(result)
+    _SUGGEST_CACHE.move_to_end(fingerprint)
+    while len(_SUGGEST_CACHE) > _SUGGEST_CACHE_MAX:
+        _SUGGEST_CACHE.popitem(last=False)
+
+
 def run_suggest(
     *,
     measurement: Any = None,
@@ -176,14 +210,25 @@ def run_suggest(
     prompt = (load_system_prompt() + nl + nl + "## 当前上下文(测量摘要)"
               + nl + json.dumps(context, ensure_ascii=False, default=str))
 
+    fingerprint = _cache_fingerprint(prompt)
+    cached = _cache_get(fingerprint)
+    if cached is not None:
+        # 同上下文指纹命中：跳过 HTTP 直接复用（t53 延迟治理）
+        cached["chat_latency_ms"] = 0.0
+        return cached
+
     client: Callable[[str], Any] = chat_client or _dsh_chat_real
+    started = time.perf_counter()
     try:
         reply = client(prompt)
     except Exception as exc:                 # 注入客户端自爆也不拖垮闭环
+        latency = round((time.perf_counter() - started) * 1000.0, 3)
         return {"status": "ok", "accepted": [],
                 "rejected": [{"item": None, "reason": f"chat 客户端异常 {exc}",
                               "raw_text": ""}],
-                "reply_text": "", "source": "client_exception"}
+                "reply_text": "", "source": "client_exception",
+                "chat_latency_ms": latency}
+    latency_ms = round((time.perf_counter() - started) * 1000.0, 3)
 
     if isinstance(reply, dict):
         text = str(reply.get("text", ""))
@@ -199,9 +244,13 @@ def run_suggest(
                 "rejected": [{"item": None,
                               "reason": "回复中未解析到补丁 JSON",
                               "raw_text": text}],
-                "reply_text": text, "source": source}
+                "reply_text": text, "source": source,
+                "chat_latency_ms": latency_ms, "cache_hit": False}
     review = review_patches(patches, locked_params=locked_params,
                             current_params=current_params)
-    return {"status": "ok", "accepted": list(review.accepted),
-            "rejected": list(review.rejected), "reply_text": text,
-            "source": source}
+    result = {"status": "ok", "accepted": list(review.accepted),
+              "rejected": list(review.rejected), "reply_text": text,
+              "source": source, "chat_latency_ms": latency_ms,
+              "cache_hit": False}
+    _cache_put(fingerprint, result)
+    return result

@@ -145,3 +145,83 @@ def test_loop_accepted_enters_decide_context(monkeypatch):
     rej = [e for t, e in evs if t == "agent_suggest_rejected"]
     assert acc and acc[0]["metadata"]["params"] == ["tone.brightness"]
     assert rej and "RAW全文" in rej[0]["metadata"]["reply_text"]
+
+
+# --- t53：指纹缓存与延迟观测 ---------------------------------------------------
+
+def _valid_payload_client(counter):
+    fence = chr(96) * 3
+
+    def client(_prompt):
+        counter["n"] += 1
+        return (fence + "json" + chr(10)
+                + json.dumps([{"param": "tone.brightness", "op": "set",
+                               "value": 0.3, "reason": "偏暗"}]))
+
+    return client
+
+
+def test_same_fingerprint_second_call_skips_http(monkeypatch):
+    suggest_mod._SUGGEST_CACHE.clear()
+    counter = {"n": 0}
+    client = _valid_payload_client(counter)
+
+    first = suggest_mod.run_suggest(measurement={"mean_luminance": 96},
+                                    chat_client=client)
+    second = suggest_mod.run_suggest(measurement={"mean_luminance": 96},
+                                     chat_client=client)
+    assert counter["n"] == 1                      # 二次命中零 HTTP
+    assert first.get("cache_hit") is False
+    assert second.get("cache_hit") is True
+    assert second["accepted"] == first["accepted"]
+
+
+def test_lru_eviction_at_max_8(monkeypatch):
+    suggest_mod._SUGGEST_CACHE.clear()
+    counter = {"n": 0}
+    client = _valid_payload_client(counter)
+    for i in range(9):                            # 9 个不同上下文 -> 淘汰最旧
+        suggest_mod.run_suggest(
+            measurement={"mean_luminance": 100 + i}, chat_client=client)
+    assert len(suggest_mod._SUGGEST_CACHE) == 8
+    before = counter["n"]
+    suggest_mod.run_suggest(measurement={"mean_luminance": 100},
+                            chat_client=client)   # 最旧已被淘汰 -> 重新 HTTP
+    assert counter["n"] == before + 1
+
+
+def test_chat_latency_ms_present_on_result():
+    suggest_mod._SUGGEST_CACHE.clear()
+
+    def slow_client(_prompt):
+        import time as _t
+        _t.sleep(0.005)
+        return json.dumps([{"param": "tone.brightness", "op": "delta",
+                            "value": 0.05, "reason": "r"}])
+
+    out = suggest_mod.run_suggest(measurement={"mean_luminance": 90},
+                                  chat_client=slow_client)
+    assert isinstance(out.get("chat_latency_ms"), (int, float))
+    assert out["chat_latency_ms"] > 0.0
+
+
+def test_loop_accepted_trace_carries_chat_latency(monkeypatch):
+    suggest_mod._SUGGEST_CACHE.clear()
+    for k, v in zip(_ENV, ("http://fake", "key", "m")):
+        monkeypatch.setenv(k, v)
+    counter = {"n": 0}
+
+    def fake_real(prompt):
+        counter["n"] += 1
+        return json.dumps([{"param": "tone.brightness", "op": "set",
+                            "value": 0.3, "reason": "r"}])
+
+    monkeypatch.setattr(suggest_mod, "_dsh_chat_real", fake_real)
+    loop = _make_loop(agent_suggest=True)
+    result = loop.run("latency", image_rgb=_img())
+    evs = [e for e in result.trace_events
+           if (e.get("event_type") if isinstance(e, dict)
+               else getattr(e, "event_type", "")) == "agent_suggest_accepted"]
+    assert evs, "应有 accepted 留痕"
+    meta = evs[0].get("metadata") if isinstance(evs[0], dict)         else getattr(evs[0], "metadata", {})
+    assert isinstance(meta.get("chat_latency_ms"), (int, float))
