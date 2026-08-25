@@ -106,17 +106,18 @@ def test_factory_wraps_real_scorer_and_adapts_dict(monkeypatch):
 
     result = scorer.score(_sharp_image(), {"photo_id": "p"})
     assert isinstance(result, AestheticScore)
-    assert result.overall == 4.2
-    assert result.dimensions == {"quality": 4.5, "color": 3.9}
+    assert result.overall == 5.0      # t63 仿射后 4.2/4.5/3.9 均超上锚点→硬界
+    assert result.dimensions == {"quality": 5.0, "color": 5.0}
+    assert result.raw_overall == 4.2
 
-    # overall 缺失 → 维度均值兜底
+    # overall 缺失 → 已标定维度均值兜底
     class _NoOverall(_FakeHealthScorer):
         def score(self, image_rgb):
             return {"quality": 4.0, "color": 2.0}
 
     adapter = _PixoScorerAdapter(_NoOverall())
     fallback = adapter.score(_sharp_image())
-    assert fallback is not None and fallback.overall == 3.0
+    assert fallback is not None and fallback.overall == 5.0  # 两维远超上锚点→均兜底5
 
     # 非法输出 → 永久降级为 Mock（t20③，暗路径不产生悬空 None）
     class _Junk(_FakeHealthScorer):
@@ -147,16 +148,18 @@ def test_corrupt_weights_probe_rejects_and_factory_falls_back(tmp_path, monkeypa
     assert isinstance(default, MockAestheticScorer)
 
 
-def test_adapter_clamps_uncalibrated_output_to_contract_domain():
-    """④真模型量纲未标定 → np.clip 到 [0,5]，source=pixo。"""
+def test_adapter_affine_maps_and_caps_to_contract_domain():
+    """t63 真模型带符号原始分 → 逐维仿射标定 + [0,5] 兜底，附追溯字段。"""
     class _Hi:
         def score(self, image_rgb):
             return {"overall": 7.2, "quality": 4.5, "color": -1.0}
 
     result = _PixoScorerAdapter(_Hi()).score(_sharp_image())
-    assert result.overall == 5.0
-    assert result.dimensions == {"quality": 4.5, "color": 0.0}
+    assert result.overall == 5.0                       # 远超上锚点 → 硬界兜底
+    assert result.dimensions == {"quality": 5.0, "color": 0.0}
     assert result.source == "pixo"
+    assert result.raw_overall == 7.2                   # 原始分可追溯
+    assert result.domain_hint == "synthetic_like"      # 超实拍域上尾(p75)
 
 
 def test_adapter_permanent_degrade_on_inner_error():

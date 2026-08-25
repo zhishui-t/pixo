@@ -72,12 +72,18 @@ class HardFilterResult:
 class AestheticScore:
     """美学预筛结果（契约域 0-5 分）。
 
-    source 标记分数出处："mock"（占位评分器）/"pixo"（真模型，经钳制映射）。
+    source 标记分数出处："mock"（占位评分器）/"pixo"（真模型，经仿射标定）。
+    raw_overall/domain_hint 仅 source="pixo" 时由适配器填充：
+      - raw_overall：标定前模型原始分（带符号），供追溯与再标定；
+      - domain_hint="synthetic_like"：原始分超实拍域上尾(p75_raw)，
+        疑似合成/低纹理域，绝对分不可与实拍跨域比较(t58)。
     """
 
     overall: float
     dimensions: dict[str, float] = field(default_factory=dict)
     source: str = "mock"
+    raw_overall: float | None = None
+    domain_hint: str | None = None
 
 
 @dataclass
@@ -254,6 +260,36 @@ class MockAestheticScorer:
 
 
 
+# ---- 真评分器仿射标定（t63；锚点=docs/metrics/scorer_distribution.md t58 表）----
+_PIXO_CAL_TARGET_LO = 2.0
+_PIXO_CAL_TARGET_HI = 4.0
+_PIXO_CAL_ANCHORS_RAW = {
+    # 维度: (p25_raw, p75_raw)，overall 行为主锚点
+    "overall": (-0.637, -0.272),
+    "quality": (-0.790, 0.058),
+    "composition": (-0.886, -0.411),
+    "lighting": (0.146, 0.811),
+    "color": (0.541, 0.693),
+    "depth_of_field": (-0.452, 0.609),
+    "content": (-0.790, -0.271),
+}
+_DOMAIN_HINT_HIGH = "synthetic_like"
+
+
+def _pixo_calibrate(raw: float, dim: str = "overall") -> float:
+    """t58 分布锚点的保序仿射映射 raw -> [0,5]。
+
+    两锚点 (p25,p75)->(2,4) 定直线，外延线性延伸后 np.clip 兜底；
+    锚点来自实拍分布——合成/低纹理输入绝对分不可跨域比较。
+    """
+    lo_raw, hi_raw = _PIXO_CAL_ANCHORS_RAW.get(dim, _PIXO_CAL_ANCHORS_RAW["overall"])
+    if hi_raw <= lo_raw:
+        return _PIXO_CAL_TARGET_LO
+    slope = (_PIXO_CAL_TARGET_HI - _PIXO_CAL_TARGET_LO) / (hi_raw - lo_raw)
+    mapped = _PIXO_CAL_TARGET_LO + slope * (float(raw) - lo_raw)
+    return round(float(np.clip(mapped, 0.0, 5.0)), 3)
+
+
 def make_default_scorer() -> Any:
     """构造批量流程默认美学评分器。
 
@@ -284,8 +320,10 @@ class _PixoScorerAdapter:
     真评分器为 score(image_rgb) -> dict[dimension, float] | None，
     本适配器负责签名与返回类型转换（overall 缺失时取维度均值）。
 
-    量纲说明：真模型 head 输出未做标定，与契约域 [0, 5] 不同源；
-    此处仅 np.clip 到契约域防越界混入阈值比较，属粗映射而非标定。
+    量纲说明（t63）：真模型输出带符号原始分（实拍 overall 全负，粗钳制会
+    削平信号）；此处按 t58 分布表逐维 p25/p75 双锚点保序仿射到契约域 [0,5]，
+    外延延伸+硬界兜底。合成/低纹理输入在域外，绝对分不可跨域比较——
+    raw 超实拍 p75 时 domain_hint="synthetic_like"。
     健壮性：真评分器抛异常或返回空结果即永久降级为内置 Mock，
     不再重试（_degraded），保证暗路径不崩批。
     """
@@ -331,18 +369,15 @@ class _PixoScorerAdapter:
             self._degraded = True
             return self._mock_score(image_rgb)
 
-        def _clamp(value: float) -> float:
-            # 未标定量纲 → 钳制到契约域 [0, 5]
-            return round(float(np.clip(float(value), 0.0, 5.0)), 3)
-
         dims: dict[str, float] = {}
         for name, value in result.items():
             if name == "overall":
                 continue
             try:
-                dims[str(name)] = _clamp(value)
+                dims[str(name)] = _pixo_calibrate(value, str(name))
             except (TypeError, ValueError):
                 continue
+
         overall_raw = result.get("overall")
         if overall_raw is None:
             if not dims:
@@ -352,12 +387,24 @@ class _PixoScorerAdapter:
                     "永久降级为Mock")
                 return self._mock_score(image_rgb)
             overall = sum(dims.values()) / len(dims)
+            raw_overall = None
+            domain_hint = None
         else:
-            overall = _clamp(overall_raw)
+            raw_val = float(overall_raw)
+            overall = _pixo_calibrate(raw_val, "overall")
+            raw_overall = round(raw_val, 6)
+            domain_hint = (
+                _DOMAIN_HINT_HIGH
+                if raw_val > _PIXO_CAL_ANCHORS_RAW["overall"][1]
+                else None
+            )
+
         return AestheticScore(
             overall=round(float(overall), 3),
             dimensions=dims,
             source="pixo",
+            raw_overall=raw_overall,
+            domain_hint=domain_hint,
         )
 
 
