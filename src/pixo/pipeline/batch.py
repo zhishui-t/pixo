@@ -544,6 +544,10 @@ class BatchPipeline:
                 measurement = VisionMeasure().measure(
                     image, {"face": masks.get("face", np.zeros_like(image[..., 0]))}
                 )
+                from pixo.vision.measure import compute_proxy_metrics
+                proxies = compute_proxy_metrics(image)
+                if proxies:
+                    measurement.update(proxies)
                 face = measurement.get("regions", {}).get("face", {})
                 if not face.get("reliable", False):
                     reasons.append("face_unreliable")

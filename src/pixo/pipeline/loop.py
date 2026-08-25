@@ -31,6 +31,7 @@ from pixo.decide.engine import _locked_params
 from pixo.state import PhotoStateMachine, TraceEvent
 from pixo.render.geometry.smart_crop import suggest_crop
 from pixo.vision import MockSegmenter, Segmenter, SegmenterUnavailable, VisionMeasure
+from pixo.vision.measure import compute_proxy_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -320,6 +321,9 @@ def _metrics_for_decide(measurement: dict[str, Any]) -> dict[str, Any]:
             "preview_highlight_clip_estimate"
         ),
     }
+    for key in ("haze_proxy", "colorfulness_proxy", "tonal_range"):
+        if key in measurement:
+            metrics[key] = measurement[key]
     for name, region in regions.items():
         if not isinstance(region, dict):
             continue
@@ -748,6 +752,9 @@ class SinglePhotoLoop:
                 render_version=self._render_version(),
                 detection_version=self._detection_version(),
             )
+            proxies = compute_proxy_metrics(preview_img)
+            if proxies:
+                measurement.update(proxies)
             measurements.append(measurement)
 
             crop_suggestion = None
@@ -946,6 +953,9 @@ class SinglePhotoLoop:
             render_version=self._render_version(),
             detection_version=self._detection_version(),
         )
+        qc_proxies = compute_proxy_metrics(full_img)
+        if qc_proxies:
+            full_measurement.update(qc_proxies)
         final_aesthetic = self._score_aesthetic(full_img, full_masks)
         if final_aesthetic is not None:
             full_measurement["aesthetic"] = dict(final_aesthetic)
