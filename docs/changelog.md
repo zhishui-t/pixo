@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-25 — P3 批：LLM 副驾转正（建议态闭环，默认关）
+
+- dsh.chat 从占位转正：OpenAI 兼容客户端（PIXO_DSH_CHAT_URL/KEY/MODEL 三要素
+  环境变量，缺一降级占位带 source 标记；10s 超时/重试 1 次/二次失败降级附 error）。
+- 新增 agent/patch_protocol.py：LLM 参数补丁唯一闸门——五段校验链（结构 schema→
+  ParamRef 双段白名单→op 枚举→clamp 预检拒绝式→locked_params 锁定拒绝）+
+  PatchReview 分组 + apply_patches 纯函数。
+- 新增 agent/suggest.py 编排：指标+aesthetic 历史+RAG top3 组装上下文，双 prompts
+  加载，LLM 输出经校验后 accepted 入 decide_context 建议态（不碰终态）、rejected
+  全文进 trace；agent_suggest 默认关（零行为变化已逐位验证），环境未配置整链跳过。
+- know/context.py：RAG 结果 prompt 格式器（去重/置信截断/限长）。
+- 安全评审通过：注入面协议层消灭、降级三态可观测、密钥全环境变量零硬编码。
+- 验收：808 passed；30 个 P3 新用例全绿。
+
 ## 2026-08-25 — P2 规则包批：代理指标量纲修复 + 六条数据锚定规则
 
 - vision.measure 新增三代理指标并统一 [0,1] 域（修复 colorfulness 恒饱和 100 的
