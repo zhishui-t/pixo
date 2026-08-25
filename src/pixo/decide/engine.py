@@ -690,6 +690,41 @@ def check_termination(context: dict) -> dict:
             "reason_code": "targets_met",
         }
 
+    # P1b 可选规则：美学维度终止。context["aesthetic"] 缺省或参数为
+    # None 时完全关闭，不影响既有终止路径。
+    aesthetic = context.get("aesthetic")
+    if isinstance(aesthetic, dict):
+        accept_threshold = aesthetic.get("accept_threshold")
+        overall = aesthetic.get("overall")
+        if accept_threshold is not None and overall is not None:
+            try:
+                if float(overall) >= float(accept_threshold):
+                    return {
+                        "should_stop": True,
+                        "decision": "stopped",
+                        "reason": (
+                            f"美学总分 {float(overall):.3f} "
+                            f"达到验收阈值 {float(accept_threshold):.3f}"
+                        ),
+                        "reason_code": "aesthetic_target_met",
+                    }
+            except (TypeError, ValueError):
+                pass
+        stagnation_eps = aesthetic.get("stagnation_eps")
+        a_history = aesthetic.get("history") or []
+        if stagnation_eps is not None and len(a_history) >= 2:
+            try:
+                last_two = [float(v) for v in a_history[-2:]]
+                if all(v < float(stagnation_eps) for v in last_two):
+                    return {
+                        "should_stop": True,
+                        "decision": "stopped",
+                        "reason": "连续两轮美学改善低于阈值，视为停滞",
+                        "reason_code": "aesthetic_stagnation",
+                    }
+            except (TypeError, ValueError):
+                pass
+
     max_iterations = int(context.get("max_iterations", 3))
     iteration = int(context.get("iteration", 1))
     if iteration >= max_iterations:
