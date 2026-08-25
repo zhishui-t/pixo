@@ -244,13 +244,21 @@ class ExposureStage(Stage):
         "subject_mode": {"type": "str", "choices": ["box", "full"]},
         "baseline_ev_curve": {"type": "float_or_str"},
         "baseline_scene_ev": {"type": "float_or_str"},
+        # 低光保护 (无 cal_table 回退时生效): 暗场景正向提亮收敛;
+        # knee=膝点 (中灰以下 log2 档数, 低于它才开始衰减, 保护普通暗场景);
+        # keep=最深场景保留的正向 EV 比例; range=膝点以下的衰减跨度。
+        "low_key_keep": {"type": "float", "min": 0.0, "max": 1.0},
+        "low_key_range": {"type": "float", "min": 0.5, "max": 6.0},
+        "low_key_knee": {"type": "float", "min": 0.0, "max": 4.0},
     }
 
     def default_params(self):
         return {"mode": "auto", "target": None, "target_offset": _load_target_offset(),
                 "clip_p": 98.0, "max_ev": 2.5, "rolloff_knee": 0.9,
                 "vignette": 0.0, "subject_mode": "box",
-                "baseline_ev_curve": None, "baseline_scene_ev": None}
+                "baseline_ev_curve": None, "baseline_scene_ev": None,
+                "low_key_keep": 0.15, "low_key_range": 2.0,
+                "low_key_knee": 1.5}
 
     def process(self, ctx: StageContext) -> None:
         mode = self.p(ctx, "mode")
@@ -382,6 +390,18 @@ class ExposureStage(Stage):
         if p_hi > 0:
             ev_hi = np.log2(1.0 / p_hi)
             ev = min(ev, ev_hi)
+        # 低光保护 (ADR-06 暗场景保暗): 相机预览对暗场景保暗而非拉到中灰,
+        # 中灰锚定的正向 EV 按场景暗度 smoothstep 收敛 —— med 越低保留越少,
+        # 深 low_key_range 档后仅剩 low_key_keep (默认 0.15); 负向 EV 不衰减。
+        # 场景自适应标定表存在时走查表路径, 不经过本启发式。
+        if table is None and ev > 0.0:
+            span = max(float(self.p(ctx, "low_key_range")), 1e-6)
+            knee = float(self.p(ctx, "low_key_knee"))
+            t = min(max((LOG2_GRAY - knee - med) / span, 0.0), 1.0)
+            keep = 1.0 - (1.0 - float(self.p(ctx, "low_key_keep"))) * (
+                t * t * (3.0 - 2.0 * t))
+            ev *= keep
+            ctx.state["ev_low_key_keep"] = float(keep)
         # 用户/规则曝光偏移在自动曝光与高光保护决策之后施加，
         # 确保负向 offset 也能如实压高光、正向 offset 可主动提亮。
         ev += offset

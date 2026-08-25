@@ -287,7 +287,7 @@ class ToneStage(Stage):
         # brightness 默认 +0.25: 基座整体亮度 (此前标定对齐相机预览偏暗, 实测
         # 发暗; +0.25EV 显示亮度把中位提到观感舒适区, 仍低于裁切阈值)。
         return {"profile_curve": False, "eotf": "srgb", "gamma": 2.2,
-                "brightness": 0.5, "use_filmic": False,
+                "brightness": 0.25, "use_filmic": False,
                 "contrast": 0.12, "toe": 0.0, "shoulder": 0.35,
                 "highlight_compress_curve": None,
                 "user_curve": None,
