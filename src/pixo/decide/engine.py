@@ -147,7 +147,9 @@ def _enforce_formula_lint(rules: list, metric_keys: Any = None) -> None:
     known = set(str(k) for k in (metric_keys or ())) | registered_metric_keys()
     if not known:
         return  # 无键宇宙：旧调用方宽松兼容，不做加载期报错
-    problems = _lint_rule_formulas(rules, known_metric_keys=known)
+    problems = _lint_rule_formulas(
+        rules, known_metric_keys=known, check_condition_metrics=True
+    )
     if problems:
         raise DecideError("规则公式标识符校验失败: " + "; ".join(problems))
 
@@ -155,11 +157,14 @@ def _enforce_formula_lint(rules: list, metric_keys: Any = None) -> None:
 def _lint_rule_formulas(
     rules: list,
     known_metric_keys: Any = None,
+    check_condition_metrics: bool = False,
 ) -> list:
     """扫描规则公式的标识符引用，返回问题清单（不抛错）。
 
     白名单 = _FORMULA_FUNCS ∪ 运行时变量 ∪ 已知指标键，
     与 _eval_formula 的运行时命名空间保持一致，避免 lint 误报。
+    ``check_condition_metrics=True`` 时额外校验 condition.all 子项的
+    指标名 ∈ 已知指标键（t59 新结构同步进加载期守卫）。
     """
     allowed = set(_FORMULA_FUNCS) | set(_FORMULA_RUNTIME_VARS)
     allowed |= {str(k) for k in (known_metric_keys or ())}
@@ -185,6 +190,15 @@ def _lint_rule_formulas(
                 problems.append(
                     f"规则 {rule_id}: 公式引用未知标识符 {name!r} ({expr!r})"
                 )
+        cond = rule.get("condition")
+        if check_condition_metrics and isinstance(cond, dict):
+            for sub in cond.get("all") or []:
+                sub_name = str((sub or {}).get("metric", ""))
+                if sub_name and sub_name not in allowed:
+                    problems.append(
+                        f"规则 {rule_id}: condition.all 引用未知指标 "
+                        f"{sub_name!r}"
+                    )
     return problems
 
 
@@ -295,17 +309,28 @@ def _clamp(value: float, rng: Any) -> float:
 # 条件 / 公式
 # ---------------------------------------------------------------------------
 
-def _condition_met(condition: Optional[dict], metrics: Optional[dict]) -> bool:
-    """判断规则条件是否满足。条件缺失视为满足。"""
-    if not condition:
-        return True
-    metric = _metric_value(metrics, str(condition.get("metric", "")))
-    op = str(condition.get("op", "gt")).lower()
-    value = condition.get("value")
+def _eval_one_condition(
+    cond: dict,
+    metrics: Optional[dict],
+) -> tuple:
+    """求值单个子条件，返回 (是否满足, 明细)。语义与历史版本逐位一致。"""
+    metric_name = str(cond.get("metric", ""))
+    op = str(cond.get("op", "gt")).lower()
+    value = cond.get("value")
 
+    detail = {
+        "metric": metric_name,
+        "op": op,
+        "expected": value,
+        "actual": None,
+        "passed": False,
+    }
+
+    metric = _metric_value(metrics, metric_name)
+    detail["actual"] = metric
     if metric is None:
         # 缺失指标不触发条件（除非显式 eq None 场景未在本期支持）。
-        return False
+        return False, detail
 
     try:
         mv = float(metric)
@@ -316,26 +341,70 @@ def _condition_met(condition: Optional[dict], metrics: Optional[dict]) -> bool:
         tv = str(value)
 
     if op in ("lt", "<"):
-        return mv < tv
-    if op in ("le", "<=", "lte"):
-        return mv <= tv
-    if op in ("gt", ">"):
-        return mv > tv
-    if op in ("ge", ">=", "gte"):
-        return mv >= tv
-    if op in ("eq", "==", "="):
-        return mv == tv
-    if op in ("ne", "!=", "<>"):
-        return mv != tv
-    if op == "between":
+        passed = mv < tv
+    elif op in ("le", "<=", "lte"):
+        passed = mv <= tv
+    elif op in ("gt", ">"):
+        passed = mv > tv
+    elif op in ("ge", ">=", "gte"):
+        passed = mv >= tv
+    elif op in ("eq", "==", "="):
+        passed = mv == tv
+    elif op in ("ne", "!=", "<>"):
+        passed = mv != tv
+    elif op == "between":
         try:
             lo, hi = float(value[0]), float(value[1])
-            return lo <= float(metric) <= hi
+            passed = lo <= float(metric) <= hi
         except (TypeError, ValueError, IndexError):
-            return False
-    if op == "in":
-        return metric in _as_list(value)
-    raise DecideError(f"未知条件操作符: {op!r}")
+            passed = False
+    elif op == "in":
+        passed = metric in _as_list(value)
+    else:
+        raise DecideError(f"未知条件操作符: {op!r}")
+
+    detail["passed"] = bool(passed)
+    return bool(passed), detail
+
+
+def _eval_condition_detail(condition: Optional[dict], metrics: Optional[dict]) -> tuple:
+    """求值条件，返回 (是否满足, 子条件明细列表)。
+
+    - 缺失条件视为满足（明细为空表）；
+    - 可选键 ``all``：[{metric,op,value},...] ≥2 个子条件 AND 组合；
+      提供时忽略顶层单条件键（向后兼容：不提供则走原单条件路径）；
+    - 单条件路径与历史版本行为逐位一致。
+    """
+    if not condition:
+        return True, []
+
+    subs = condition.get("all")
+    if subs is not None:
+        if not isinstance(subs, (list, tuple)) or len(subs) < 2:
+            raise DecideError(
+                f"condition.all 需为至少两个子条件的列表 (实际 {subs!r})"
+            )
+        details: list = []
+        ok_all = True
+        for sub in subs:
+            if not isinstance(sub, dict):
+                raise DecideError(f"condition.all 子项需为 dict (实际 {sub!r})")
+            ok, d = _eval_one_condition(sub, metrics)
+            details.append(d)
+            ok_all = ok_all and ok
+        return bool(ok_all), details
+
+    ok, detail = _eval_one_condition(condition, metrics)
+    return ok, [detail]
+
+
+def _condition_met(condition: Optional[dict], metrics: Optional[dict]) -> bool:
+    """判断规则条件是否满足。条件缺失视为满足。
+
+    兼容旧签名；需要明细请用 :func:`_eval_condition_detail`。
+    """
+    ok, _ = _eval_condition_detail(condition, metrics)
+    return ok
 
 
 _FORMULA_RUNTIME_VARS = frozenset({
@@ -561,7 +630,10 @@ def evaluate_rules(
             continue
         if rule.get("enabled") is False:
             continue
-        if not _condition_met(rule.get("condition"), metrics):
+        cond_ok, cond_details = _eval_condition_detail(
+            rule.get("condition"), metrics
+        )
+        if not cond_ok:
             continue
         action = rule.get("action") or {}
         param = action.get("param")
@@ -589,6 +661,8 @@ def evaluate_rules(
             "rule": rule,
             "noop": is_noop,
         })
+        if isinstance(rule.get("condition"), dict) and "all" in rule["condition"]:
+            results[-1]["matched"] = cond_details  # t59: all 型条件命中明细
     results.noop_count = noop_count
     return results
 
