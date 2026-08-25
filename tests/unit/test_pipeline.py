@@ -231,6 +231,12 @@ def test_reshape_stubs_registered_and_inert():
         assert s.domain_in == DOMAIN_GAMMA_RGB
         assert s.domain_out == DOMAIN_GAMMA_RGB
 
+    # t66: VibranceStage 显式废弃 —— 强制调用必须抛 NotImplementedError
+    # 指引迁移 colorcal (真实能力位), 占位不再静默吞调用。
+    with pytest.raises(NotImplementedError, match="colorcal"):
+        VibranceStage().process(ctx)
+    assert "vibrance" not in DEFAULT_STAGES
+
 
 # ---------------------------------------------------------------------------
 # 7) 暖度模型约束 (方案 A): 冻结锚点 + 斜率带界 + 删死参数 cct_orig

@@ -133,10 +133,18 @@ class SharpenStage(Stage):
 @register_stage("vibrance", order=49,
                 domain_in=DOMAIN_GAMMA_RGB, domain_out=DOMAIN_GAMMA_RGB)
 class VibranceStage(Stage):
-    """自然饱和度 (占位: colorcal 已含 vibrance/saturation)。"""
+    """已废弃占位 (t66): 真实能力在 colorcal stage 的 vibrance/saturation 参数。
+
+    色彩规则执行位经 loop._COLOR_PARAM_ALIASES 桥接到 colorcal
+    (vibrance.strength -> colorcal.vibrance 等); 默认管线不含本 stage,
+    wants() 恒 False。保留注册名仅为 params.STAGE_CLASSES 名称表稳定。
+    若被显式调用, process 抛 NotImplementedError 指引迁移。
+    """
 
     def wants(self, ctx: StageContext) -> bool:
         return False
 
     def process(self, ctx: StageContext) -> None:
-        return
+        raise NotImplementedError(
+            "VibranceStage 已废弃: 请改用 colorcal stage 的 "
+            "vibrance/saturation 参数 (色彩规则已经 _COLOR_PARAM_ALIASES 桥接)")

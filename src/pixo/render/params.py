@@ -15,7 +15,7 @@ from .modules.skin import SkinStage
 from .modules.split_tone import SplitToneStage
 from .modules.style import StylizeStage
 from .modules.tone_map import ToneStage
-from .modules.vibrance import VibranceStage
+from .modules.reshape import VibranceStage
 from .modules.white_balance import WhiteBalanceStage
 from .pipeline.graph import (
     DOMAIN_GAMMA_RGB,
