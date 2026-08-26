@@ -18,12 +18,28 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from .paths import repo_configs_dir
+
 _STYLE_CARD_PRIORITY = 6000.0
 
 _LOGGER = logging.getLogger(__name__)
 
-# 胶片卡目录（cwd 相对，与 registry 的 configs/knowledge 约定一致）。
-FILMS_DIR = Path("configs") / "styles" / "films"
+
+def _default_films_dir() -> Path | None:
+    """默认胶片卡目录 configs/styles/films（按仓库根定位，不依赖 cwd）。
+
+    目录缺失时告警说明少加载了什么，返回 None。
+    """
+    cfg = repo_configs_dir()
+    if cfg is None:
+        return None
+    films = cfg / "styles" / "films"
+    if not films.is_dir():
+        _LOGGER.warning(
+            "[films] 未找到 configs/styles/films 目录，外部胶片风格卡将不加载"
+        )
+        return None
+    return films
 
 # metadata 字段缺省值：family 必有落点，前端分组永不悬空。
 _FILM_METADATA_DEFAULTS: dict[str, Any] = {
@@ -79,14 +95,15 @@ class StyleCard:
         ``pipeline_from_config`` 只读前三键，metadata 为未知键自然忽略。
 
         行为约定：
-        - 目录不存在或为空 → 返回 ``[]``（不崩）；
+        - 缺省目录按仓库根解析（``PIXO_CONFIG_ROOT`` 可覆盖，见 paths.py）；
+        - 显式传入的目录不存在或为空 → 返回 ``[]``（不崩）；
         - 坏 JSON / 缺 ``stages`` 的文件跳过并 warning；
         - ``style_id`` 取文件名 stem；metadata 缺失字段补缺省
           （family 缺省 "uncategorized"，label 缺省文件名），前端分组
           永有落点。
         """
-        d = Path(directory) if directory is not None else FILMS_DIR
-        if not d.is_dir():
+        d = Path(directory) if directory is not None else _default_films_dir()
+        if d is None or not d.is_dir():
             return []
         cards: list[dict[str, Any]] = []
         for fp in sorted(d.glob("*.json")):

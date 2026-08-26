@@ -158,10 +158,15 @@ def test_termination_targets_met():
 
 
 def test_termination_max_iterations():
+    # t107：达到最大轮数时不再继续，但当前轮参数须已计算（last_iteration）
     term = check_termination({"iteration": 3, "max_iterations": 3})
-    assert term["should_stop"] is True
-    assert term["decision"] == "stopped"
+    assert term["should_stop"] is False
+    assert term["decision"] == "adjust_and_continue"
+    assert term["last_iteration"] is True
     assert term["reason_code"] == "max_iterations"
+    # 未达最大轮数时无 last_iteration 标记
+    term2 = check_termination({"iteration": 2, "max_iterations": 3})
+    assert term2.get("last_iteration") is None
 
 
 def test_termination_low_improvement():
@@ -239,3 +244,97 @@ def test_evaluate_and_apply_helpers():
     assert len(evaluated) == 1
     params = apply_rules(rules, {}, {})
     assert params["exposure_ev"] == pytest.approx(0.4)
+
+
+# ---------------------------------------------------------------------------
+# t107 off-by-one 回归：max_iterations=1 时规则参数必须落地一次
+# ---------------------------------------------------------------------------
+
+def test_decide_max_iterations_one_still_applies_rules():
+    """max_iterations=1：check_termination 不得截断当前轮规则计算。"""
+    rule = {
+        "rule_id": "brightness_rule",
+        "priority": 10,
+        "condition": {"metric": "mean_luminance", "op": "lt", "value": 120},
+        "action": {"param": "tone.brightness", "op": "set", "value": 0.5},
+    }
+    ctx = {
+        "metrics": {"mean_luminance": 90},
+        "iteration": 1,
+        "max_iterations": 1,
+    }
+    out = decide(ctx, [rule])
+    # 参数必须被计算并返回（不被 should_stop 截断）
+    assert out["decision"] == "adjust_and_continue"
+    assert out["params"].get("tone.brightness") == 0.5
+
+
+# ---------------------------------------------------------------------------
+# last_iteration 死分支修复：decide() 透传 check_termination 的补充信息
+# ---------------------------------------------------------------------------
+
+def test_decide_passthrough_last_iteration_extra():
+    """末轮 decide 输出须携带 last_iteration/reason_code/reason，否则
+    loop 侧 decision.get("last_iteration") 恒 None，break 分支永不生效。"""
+    out = decide({
+        "metrics": {}, "params": {}, "iteration": 1, "max_iterations": 1,
+    })
+    assert out["decision"] == "adjust_and_continue"
+    assert out["last_iteration"] is True
+    assert out["reason_code"] == "max_iterations"
+    assert "最大迭代轮数" in out["reason"]
+
+
+def test_decide_midway_has_no_termination_extra_keys():
+    """非末轮输出不得携带终止补充键（保持五键契约干净）。"""
+    out = decide({
+        "metrics": {}, "params": {}, "iteration": 1, "max_iterations": 3,
+    })
+    assert out.get("last_iteration") is None
+    assert out.get("reason_code") is None
+    assert out.get("reason") is None
+
+
+def test_decide_stopped_carries_reason_and_code():
+    """stopped 分支同样透传 reason/reason_code：loop break 时 stop_reason
+    直接取 term 的 reason，而非落到通用兜底文案。"""
+    out = decide({
+        "metrics": {"face_luminance": 115},
+        "targets": {"face_luminance": 115},
+        "params": {},
+    })
+    assert out["decision"] == "stopped"
+    assert out["reason_code"] == "targets_met"
+    assert out["reason"] == "所有目标指标进入容差范围"
+
+
+# ---------------------------------------------------------------------------
+# low_improvement 解锁：停滞判定优先于轮数上限
+# ---------------------------------------------------------------------------
+
+def test_low_improvement_beats_max_iterations():
+    """max_iterations 末轮若先命中 last_iteration，连续两轮低改善将永不
+    触发——停滞判定必须排在轮数上限之前。"""
+    term = check_termination({
+        "iteration": 3,
+        "max_iterations": 3,
+        "improvement_history": [0.01, 0.01],
+        "improvement_threshold": 0.1,
+    })
+    assert term["should_stop"] is True
+    assert term["decision"] == "stopped"
+    assert term["reason_code"] == "low_improvement"
+    assert term.get("last_iteration") is None
+
+
+def test_max_iterations_still_hits_without_stagnation():
+    """无停滞历史时末轮仍走 last_iteration（t107 语义不回归）。"""
+    term = check_termination({
+        "iteration": 3,
+        "max_iterations": 3,
+        "improvement_history": [0.5, 0.4],
+        "improvement_threshold": 0.1,
+    })
+    assert term["should_stop"] is False
+    assert term["decision"] == "adjust_and_continue"
+    assert term["last_iteration"] is True

@@ -26,6 +26,8 @@ import math
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
+from pixo.state.machine import _MAX_QC_ROLLBACKS
+
 __all__ = [
     "DecideError",
     "FormulaError",
@@ -941,16 +943,9 @@ def check_termination(context: dict) -> dict:
             except (TypeError, ValueError):
                 pass
 
-    max_iterations = int(context.get("max_iterations", 3))
-    iteration = int(context.get("iteration", 1))
-    if iteration >= max_iterations:
-        return {
-            "should_stop": True,
-            "decision": "stopped",
-            "reason": f"达到最大迭代轮数 ({max_iterations})",
-            "reason_code": "max_iterations",
-        }
-
+    # 低改善停滞判定先于轮数上限：若 max_iterations 先行命中，末轮
+    # 恒返回 last_iteration（不 stop），连续两轮低改善将永远不会触发；
+    # 停滞时参数已收敛，本轮无需再修正，直接 stopped 可接受。
     threshold = float(context.get("improvement_threshold", 0.1))
     history = context.get("improvement_history") or []
     if len(history) >= 2:
@@ -978,6 +973,20 @@ def check_termination(context: dict) -> dict:
                 }
         except (TypeError, ValueError):
             pass
+
+    max_iterations = int(context.get("max_iterations", 3))
+    iteration = int(context.get("iteration", 1))
+    if iteration >= max_iterations:
+        # 达到最大轮数：不再继续新一轮，但**当前轮仍需计算并应用规则参数**
+        # （t107 修 off-by-one：max_iterations=1 时规则必须触发一次；默认 3
+        # 轮时第 3 轮的修正不得作废）。由 loop 在应用本轮参数后据此退出。
+        return {
+            "should_stop": False,
+            "decision": "adjust_and_continue",
+            "last_iteration": True,
+            "reason": f"达到最大迭代轮数 ({max_iterations})",
+            "reason_code": "max_iterations",
+        }
 
     return {
         "should_stop": False,
@@ -1035,7 +1044,7 @@ def qc_rollback(context: dict) -> dict:
         }
 
     count = int(context.get("qc_rollback_count", 0) or 0)
-    if count >= 1:
+    if count >= _MAX_QC_ROLLBACKS:
         return {
             "decision": "manual_review",
             "params": params,
@@ -1075,8 +1084,8 @@ def qc_rollback(context: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def _output(decision: str, params: dict, reasons: list, rule_ids: list,
-            context: dict) -> dict:
-    return {
+            context: dict, extra: dict | None = None) -> dict:
+    out = {
         "decision": decision,
         "params": params,
         "reasons": reasons,
@@ -1085,6 +1094,11 @@ def _output(decision: str, params: dict, reasons: list, rule_ids: list,
             context.get("unreliable_regions") or context.get("unreliable") or []
         ),
     }
+    if extra:
+        # 附加键（如 last_iteration/reason_code）合并进输出，供 loop 侧
+        # 在应用本轮参数后据此退出；不影响既有五键消费者。
+        out.update(extra)
+    return out
 
 
 def _style_card_rules(context: dict) -> list[dict]:
@@ -1132,12 +1146,20 @@ def decide(context: Optional[dict], rules: Optional[Iterable[dict]] = None) -> d
 
     term = check_termination(context)
     if term["should_stop"]:
+        # stopped 分支同样透传 reason/reason_code：loop 侧 break 时
+        # stop_reason 直接取 term 的 reason，而不是落到通用兜底文案。
+        extra = {
+            key: term[key]
+            for key in ("reason_code", "reason")
+            if term.get(key) is not None
+        }
         return _output(
             term["decision"],
             copy.deepcopy(context.get("params") or {}),
             [term["reason"]] if term["reason"] else [],
             [],
             context,
+            extra=extra or None,
         )
 
     params, applied = _apply_rules_internal(
@@ -1149,7 +1171,16 @@ def decide(context: Optional[dict], rules: Optional[Iterable[dict]] = None) -> d
     )
     reasons = [a["reason"] for a in applied]
     rule_ids = [a["rule_id"] for a in applied]
-    return _output("adjust_and_continue", params, reasons, rule_ids, context)
+    # 终止判定的补充信息有值时透传（如 max_iterations 末轮的
+    # last_iteration/reason_code/reason），否则 loop 侧永远读不到
+    # last_iteration 而无法在应用参数后退出（死分支修复）。
+    extra = {
+        key: term[key]
+        for key in ("last_iteration", "reason_code", "reason")
+        if term.get(key) is not None
+    }
+    return _output("adjust_and_continue", params, reasons, rule_ids,
+                   context, extra=extra or None)
 
 
 # ---------------------------------------------------------------------------

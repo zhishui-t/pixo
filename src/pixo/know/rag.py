@@ -1,13 +1,14 @@
-"""pixo.know.rag —— 轻量混合检索（关键词 + 简单 BM25 风格打分）。
+"""pixo.know.rag —— 轻量混合检索（关键词 + BM25 风格打分）。
 
 不引入重型向量库；本地文档/案例以 JSON 或 Python dict 形式载入，
-按标题/正文/标签关键词做词频与覆盖度打分，返回来源文本与置信度。
+按标题/正文/标签做词频（含 IDF）、词边界匹配与最小词干近似，返回来源文本与置信度。
 """
 from __future__ import annotations
 
 import json
 import math
 import re
+from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -63,6 +64,43 @@ def _tokenize(text: str) -> list[str]:
     return ascii_words + chinese_phrases
 
 
+_ASCII_TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+# 英文最小词干近似：去掉常见复数/进行时词尾（s/es/ing）。
+# 仅在去掉词尾后剩余长度 >= 3 时生效，避免 "iso"/"bus" 被截坏。
+_STEM_SUFFIXES = ("es", "s", "ing")
+
+
+def _stem_ascii(token: str) -> str:
+    for suffix in _STEM_SUFFIXES:
+        if token.endswith(suffix) and len(token) - len(suffix) >= 3:
+            return token[: -len(suffix)]
+    return token
+
+
+def _is_ascii_token(token: str) -> bool:
+    return bool(_ASCII_TOKEN_RE.fullmatch(token))
+
+
+def _prepare_doc(doc: dict[str, Any]) -> tuple[str, Counter]:
+    """预处理一篇文档：返回 (小写全文, 英文词干 -> 词频)。
+
+    英文按词干聚合计数（词边界匹配），中文保留原串做子串计数。
+    """
+    low = _field_text(doc).lower()
+    stems = Counter(
+        _stem_ascii(t) for t in _tokenize(low) if _is_ascii_token(t)
+    )
+    return low, stems
+
+
+def _term_freq(term: str, low: str, stems: Counter) -> int:
+    """查询词在文档中的词频：英文按词干整词匹配，中文按子串计数。"""
+    if _is_ascii_token(term):
+        return stems.get(_stem_ascii(term), 0)
+    return low.count(term)
+
+
 def _field_text(doc: dict[str, Any]) -> str:
     """把文档可检索字段拼接成文本。"""
     return " ".join([
@@ -107,7 +145,11 @@ class RagIndex:
         return self
 
     def search(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
-        """关键词检索，返回 {source_type, confidence, knowledge_ref, content}。"""
+        """关键词检索，返回 {source_type, confidence, knowledge_ref, content}。
+
+        打分：``IDF(term) * (1 + log1p(tf))`` 求和，再乘覆盖率权重；
+        英文词按词干整词匹配（portrait/portraits 可互命中），中文按子串匹配。
+        """
         query = (query or "").strip()
         if not query:
             return []
@@ -115,22 +157,29 @@ class RagIndex:
         if not query_terms:
             return []
 
-        scored: list[tuple[float, dict[str, Any]]] = []
-        for doc in self.documents:
-            haystack = _field_text(doc).lower()
-            doc_terms = _tokenize(haystack)
-            term_freq = {
-                term: doc_terms.count(term)
-                for term in doc_terms
-            }
+        prepared = [(doc, *_prepare_doc(doc)) for doc in self.documents]
 
+        # 文档频率 → IDF：命中文档越少，词的区分度越高。
+        total_docs = max(1, len(self.documents))
+        df: dict[str, int] = {}
+        for term in query_terms:
+            if term in df:
+                continue
+            df[term] = sum(
+                1 for _, low, stems in prepared if _term_freq(term, low, stems) > 0
+            )
+
+        scored: list[tuple[float, dict[str, Any]]] = []
+        for doc, low, stems in prepared:
             score = 0.0
             overlap = 0
             for term in query_terms:
-                if term in haystack:
-                    overlap += 1
-                    tf = term_freq.get(term, 0) or 1
-                    score += 1.0 + math.log1p(tf)
+                tf = _term_freq(term, low, stems)
+                if tf <= 0:
+                    continue
+                overlap += 1
+                idf = math.log(1.0 + total_docs / max(df.get(term, 1), 1))
+                score += idf * (1.0 + math.log1p(tf))
             if overlap == 0:
                 continue
             # 覆盖率权重：查询词命中比例越高越可信。

@@ -16,6 +16,7 @@ from .cards import (
     style_card_to_decide_rules,
 )
 from .graph import KnowledgeGraph, load_default_graph
+from .paths import repo_configs_dir
 from .query import hybrid_query
 from .rag import RagIndex, load_default_rag
 _LOGGER = logging.getLogger(__name__)
@@ -28,12 +29,41 @@ def _know_warn(msg: str) -> None:
 
 
 def _knowledge_pack_dirs() -> list[Path]:
-    """外部知识包目录：包内 data/ 与仓库 configs/knowledge/(cwd 相对)。"""
+    """外部知识包目录：包内 data/ 与仓库 configs/knowledge/（按仓库根定位，不依赖 cwd）。"""
     dirs = [
         Path(__file__).resolve().parent / "data",
-        Path.cwd() / "configs" / "knowledge",
     ]
-    return [d for d in dirs if d.is_dir()]
+    cfg = repo_configs_dir()
+    if cfg is not None:
+        knowledge_dir = cfg / "knowledge"
+        if knowledge_dir.is_dir():
+            dirs.append(knowledge_dir)
+        else:
+            _know_warn(
+                "未找到 configs/knowledge 目录，外部知识包（configs/knowledge/*.json）"
+                "将不加载，仅内置图谱可用"
+            )
+    return dirs
+
+
+def _pack_requires(data: dict[str, Any], pack_name: str) -> set[str]:
+    """读取包顶部 ``_requires`` 声明（缺失仅告警，兼容现状）。"""
+    requires = data.get("_requires")
+    if requires is None:
+        return set()
+    if not isinstance(requires, list) or not all(
+        isinstance(r, str) for r in requires
+    ):
+        _know_warn(
+            "%s: _requires 必须为字符串数组，忽略该声明: %r" % (pack_name, requires)
+        )
+        return set()
+    return set(requires)
+
+
+def _req_pack_loaded(loaded_packs: set[str], req: str) -> bool:
+    """判断声明的依赖包是否已加载；兼容 README 的短包名（如 "tone" -> photography_tone）。"""
+    return any(name == req or name.endswith("_" + req) for name in loaded_packs)
 
 
 def _merge_knowledge_packs(graph: KnowledgeGraph) -> KnowledgeGraph:
@@ -42,6 +72,8 @@ def _merge_knowledge_packs(graph: KnowledgeGraph) -> KnowledgeGraph:
     - 两阶段：先合并所有节点(first-wins 去重)，再追加所有边；
     - 节点缺 id / 重复 id：跳过并告警；
     - 边端点不在合并后节点集、或 edge id 与已有边重复：跳过该边并告警；
+    - 跨包边（from/to 分属不同包）会核对目标包与 ``_requires`` 声明，
+      不一致仅告警不阻塞（见 configs/knowledge/README.md 发布约定）；
     - 解析失败的坏包直接跳过，均不抛错。
     """
     packs: list[tuple[Path, dict[str, Any]]] = []
@@ -57,7 +89,13 @@ def _merge_knowledge_packs(graph: KnowledgeGraph) -> KnowledgeGraph:
             else:
                 _know_warn("%s: 顶层不是 object，整包跳过" % pack_path.name)
 
-    # 阶段一：节点 first-wins 合并
+    loaded_packs = {path.stem for path, _ in packs}
+    requires_by_pack = {
+        path.stem: _pack_requires(data, path.name) for path, data in packs
+    }
+
+    # 阶段一：节点 first-wins 合并（记录每个节点归属的包，供跨包边校验）
+    node_pack: dict[str, str] = {}
     for pack_path, data in packs:
         for node in data.get("nodes") or []:
             if not isinstance(node, dict):
@@ -72,10 +110,18 @@ def _merge_knowledge_packs(graph: KnowledgeGraph) -> KnowledgeGraph:
                 )
                 continue
             graph.add_node(node)
+            node_pack[node_id] = pack_path.stem
 
-    # 阶段二：校验后追加边（端点存在 + edge id 唯一）
+    # 阶段二：校验后追加边（端点存在 + edge id 唯一 + 跨包声明核对）
     edge_ids = {str(e.get("id")) for e in graph.edges}
     for pack_path, data in packs:
+        pack_name = pack_path.stem
+        requires = requires_by_pack.get(pack_name, set())
+        for req in sorted(requires):
+            if not _req_pack_loaded(loaded_packs, req):
+                _know_warn(
+                    "%s: _requires 声明的包 %s 未加载，跨包边可能悬空" % (pack_path.name, req)
+                )
         for edge in data.get("edges") or []:
             if not isinstance(edge, dict):
                 continue
@@ -91,6 +137,22 @@ def _merge_knowledge_packs(graph: KnowledgeGraph) -> KnowledgeGraph:
             if eid and eid in edge_ids:
                 _know_warn("%s: 边 id 重复，跳过: %s" % (pack_path.name, eid))
                 continue
+            # 跨包边核对：目标包未加载 / 未在 _requires 声明 → 仅告警。
+            for endpoint, owner in ((src, node_pack.get(src)), (dst, node_pack.get(dst))):
+                if owner is None or owner == pack_name:
+                    continue
+                if owner not in loaded_packs:
+                    _know_warn(
+                        "%s: 跨包边 %s 引用的包 %s 未加载"
+                        % (pack_path.name, eid or "<no-id>", owner)
+                    )
+                short_owner = owner.rsplit("_", 1)[-1]
+                if owner not in requires and short_owner not in requires:
+                    _know_warn(
+                        '%s: 跨包边 %s(%s -> %s) 引用 %s 包节点，'
+                        '但包内未声明 "_requires": ["%s"]'
+                        % (pack_path.name, eid or "<no-id>", src, dst, owner, short_owner)
+                    )
             record = graph.add_edge(edge)
             edge_ids.add(str(record.get("id")))
     return graph

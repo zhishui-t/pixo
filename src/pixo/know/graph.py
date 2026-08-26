@@ -191,6 +191,19 @@ def _hit_score(text: str, query_tokens: list[str]) -> float:
     return score
 
 
+# 邻居扩展衰减系数：1-hop 邻居以 直接分 × 衰减 × 边权重 参与排序。
+_NEIGHBOR_DECAY = 0.5
+
+
+def _edge_weight(edge: dict[str, Any]) -> float:
+    """读取边权重（0-1）；缺失/非法回退 1.0，负数按 0 处理。"""
+    try:
+        w = float(edge.get("weight", 1.0))
+    except (TypeError, ValueError):
+        return 1.0
+    return max(0.0, min(1.0, w))
+
+
 class KnowledgeGraph:
     """进程内知识图谱。
 
@@ -258,8 +271,24 @@ class KnowledgeGraph:
             "edges": list(self.edges),
         }
 
+    def _adjacency(self) -> dict[str, list[tuple[str, float]]]:
+        """构建 node_id -> [(邻居 id, 边权重)] 邻接表（边按无向处理）。"""
+        adjacency: dict[str, list[tuple[str, float]]] = {}
+        for edge in self.edges:
+            src = str(edge.get("from") or "")
+            dst = str(edge.get("to") or "")
+            if not src or not dst:
+                continue
+            w = _edge_weight(edge)
+            adjacency.setdefault(src, []).append((dst, w))
+            adjacency.setdefault(dst, []).append((src, w))
+        return adjacency
+
     def query(self, query: str, max_results: int = 5) -> list[dict[str, Any]]:
         """按关键词查询节点与边，返回带置信度的知识条目。
+
+        命中节点会做 1-hop 邻居扩展：邻居以 ``直接分 × _NEIGHBOR_DECAY ×
+        边权重`` 参与排序，图结构（边权重）因此影响结果顺序。
 
         Returns:
             list[dict]: 每项含 source_type / confidence / knowledge_ref /
@@ -269,8 +298,8 @@ class KnowledgeGraph:
         if not tokens:
             return []
 
-        scored: list[tuple[float, dict[str, Any]]] = []
-
+        # 节点直接命中分（node_id -> [score, item]）
+        node_hits: dict[str, list] = {}
         for node in self.nodes.values():
             text = " ".join([
                 str(node.get("label", "")),
@@ -281,18 +310,30 @@ class KnowledgeGraph:
             score = _hit_score(text, tokens)
             if score <= 0:
                 continue
-            scored.append((
-                score,
-                {
-                    "source_type": "graph",
-                    "source": "graph",
-                    "confidence": round(min(0.95, 0.35 + score * 0.12), 4),
-                    "knowledge_ref": self._node_ref(node["id"]),
-                    "content": str(node.get("content") or node.get("label") or ""),
-                    "title": str(node.get("label") or node["id"]),
-                    "metadata": dict(node),
-                },
-            ))
+            node_hits[node["id"]] = [score, self._node_item(node)]
+
+        # 1-hop 邻居扩展：邻居按衰减 × 边权重累计分数。
+        adjacency = self._adjacency()
+        neighbor_hits: dict[str, list] = {}
+        for node_id, (score, _item) in node_hits.items():
+            for other_id, weight in adjacency.get(node_id, ()):
+                contrib = score * _NEIGHBOR_DECAY * weight
+                if contrib <= 0:
+                    continue
+                if other_id in node_hits:
+                    node_hits[other_id][0] += contrib
+                elif other_id in neighbor_hits:
+                    neighbor_hits[other_id][0] += contrib
+                else:
+                    other = self.nodes.get(other_id)
+                    if other is None:
+                        continue
+                    neighbor_hits[other_id] = [contrib, self._node_item(other)]
+
+        scored: list[tuple[float, dict[str, Any]]] = [
+            (score, item)
+            for score, item in [*node_hits.values(), *neighbor_hits.values()]
+        ]
 
         for edge in self.edges:
             source = self.nodes.get(str(edge.get("from")))
@@ -321,6 +362,19 @@ class KnowledgeGraph:
 
         scored.sort(key=lambda item: item[0], reverse=True)
         return [item[1] for item in scored[:max_results]]
+
+    def _node_item(self, node: dict[str, Any]) -> dict[str, Any]:
+        """把节点包装为查询返回条目（置信度在最终得分确定后填充）。"""
+        item = {
+            "source_type": "graph",
+            "source": "graph",
+            "confidence": 0.0,
+            "knowledge_ref": self._node_ref(node["id"]),
+            "content": str(node.get("content") or node.get("label") or ""),
+            "title": str(node.get("label") or node["id"]),
+            "metadata": dict(node),
+        }
+        return item
 
     @staticmethod
     def _node_ref(node_id: str) -> str:
