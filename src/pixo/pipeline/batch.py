@@ -419,10 +419,13 @@ class MockAgentSelector:
         top_n: int = 3,
         confidence_threshold: float = 0.6,
         manual_threshold: float = 0.5,
+        include_synthetic: bool = False,
     ) -> None:
         self.top_n = int(top_n)
         self.confidence_threshold = float(confidence_threshold)
         self.manual_threshold = float(manual_threshold)
+        # t68 域外隔离：synthetic_like 候选默认不与实拍域混排。
+        self.include_synthetic = bool(include_synthetic)
 
     def select(
         self,
@@ -440,7 +443,16 @@ class MockAgentSelector:
             _LOGGER.warning(
                 "[pixo.pipeline.batch] AgentSelector 过滤无效美学候选 %d 个",
                 skipped)
-        ranked = sorted(usable, key=lambda x: x[1].overall, reverse=True)[
+        # t68 域外隔离：synthetic_like 绝对分不可与实拍跨域比较，
+        # 默认从 TopN 排序池剔除；include_synthetic=True 时才可见。
+        if self.include_synthetic:
+            ranked_pool = usable
+        else:
+            ranked_pool = [
+                pair for pair in usable
+                if getattr(pair[1], "domain_hint", None) != _DOMAIN_HINT_HIGH
+            ]
+        ranked = sorted(ranked_pool, key=lambda x: x[1].overall, reverse=True)[
             : self.top_n
         ]
         verdicts: dict[str, AgentVerdict] = {}
@@ -462,6 +474,20 @@ class MockAgentSelector:
                 ),
                 manual_review=manual,
             )
+        if not self.include_synthetic:
+            ranked_ids = {item.photo_id for item, _ in ranked}
+            for item, score in usable:
+                pid = item.photo_id
+                if pid in verdicts or pid in ranked_ids:
+                    continue
+                if getattr(score, "domain_hint", None) != _DOMAIN_HINT_HIGH:
+                    continue
+                verdicts[pid] = AgentVerdict(
+                    recommended=False,
+                    confidence=0.0,
+                    reason="合成域候选隔离：不与实拍域绝对分混排(t68)",
+                    manual_review=False,
+                )
         return verdicts
 
 
@@ -480,6 +506,7 @@ class BatchPipeline:
         segmenter: Any | None = None,
         single_photo_runner: Callable[..., Any] | None = None,
         top_n: int = 3,
+        include_synthetic: bool = False,
     ) -> None:
         self.hard_filter_config = hard_filter_config or HardFilterConfig()
         self.aesthetic_scorer = (
@@ -487,7 +514,8 @@ class BatchPipeline:
             if aesthetic_scorer is not None
             else make_default_scorer()
         )
-        self.agent_selector = agent_selector or MockAgentSelector(top_n=top_n)
+        self.agent_selector = agent_selector or MockAgentSelector(
+            top_n=top_n, include_synthetic=include_synthetic)
         self.segmenter = segmenter or MockSegmenter()
         self.single_photo_runner = single_photo_runner
         self.top_n = int(top_n)

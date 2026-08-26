@@ -286,3 +286,85 @@ def test_topn_consumes_injected_fake_scores():
     # reason 中引用了 fake 分数，证明确实消费注入值
     assert "4.80" in verdicts["pa"].reason
     del order_rank
+
+
+# --- t68：synthetic_like 域外隔离 ---------------------------------------------
+
+class _DomainScorer:
+    """按 photo_id 返回带 domain_hint 的固定分（pixo 适配器输出形态）。"""
+
+    def __init__(self, table: dict) -> None:
+        self.table = table          # pid -> (overall, domain_hint)
+
+    def score(self, image_rgb, meta=None):
+        pid = (meta or {}).get("photo_id", "unknown")
+        overall, hint = self.table.get(pid, (3.0, None))
+        return AestheticScore(
+            overall=overall,
+            dimensions={"mock": overall},
+            source="pixo",
+            raw_overall=overall,
+            domain_hint=hint,
+        )
+
+
+def _domain_pipeline(table, top_n=2, **kw):
+    photos = [
+        BatchInput(photo_id=pid,
+                   image_rgb=_sharp_image(seed=i),
+                   meta=_burst_meta(0, pid))   # 同刻确保单组，TopN 才有意义
+        for i, pid in enumerate(sorted(table))
+    ]
+    pipeline = BatchPipeline(
+        aesthetic_scorer=_DomainScorer(table),
+        top_n=top_n,
+        **kw,
+    )
+    return pipeline.process(photos)
+
+
+def test_synthetic_like_excluded_from_topn_default():
+    result = _domain_pipeline(
+        {"p0": (4.5, None), "p1": (3.9, None), "p2": (5.0, "synthetic_like")},
+        top_n=2,
+    )
+    # 合成候选虽分最高，但默认隔离不占 TopN
+    assert result.all_recommended == ["p0", "p1"]
+    by_id = {p.photo_id: p for p in result.groups[0].photos}
+    verdict = by_id["p2"].agent
+    assert verdict.recommended is False
+    assert "隔离" in verdict.reason
+
+
+def test_include_synthetic_makes_it_visible():
+    result = _domain_pipeline(
+        {"p0": (4.5, None), "p1": (3.9, None), "p2": (5.0, "synthetic_like")},
+        top_n=2,
+        include_synthetic=True,
+    )
+    # 开关开启：合成候选按绝对分参与排序并可见（top_n=2 挤掉最低分实拍）
+    assert sorted(result.all_recommended) == ["p0", "p2"]
+    assert "p1" not in result.all_recommended
+
+
+def test_selector_level_domain_split_direct():
+    """selector 直测：同输入下开关翻转改变 TopN 成员。"""
+    from datetime import datetime
+
+    base = datetime(2026, 8, 1, 10, 0, 0)
+    items = []
+    scores = {}
+    table = [("r0", 4.5, None), ("r1", 3.9, None), ("s0", 5.0, "synthetic_like")]
+    for i, (pid, overall, hint) in enumerate(table):
+        meta = {"photo_id": pid,
+                "datetime": (base + __import__("datetime").timedelta(
+                    seconds=i * 5)).isoformat()}
+        item = BatchInput(photo_id=pid, image_rgb=_sharp_image(i), meta=meta)
+        items.append((item, AestheticScore(
+            overall=overall, dimensions={"m": overall},
+            source="pixo", raw_overall=overall, domain_hint=hint)))
+
+    excl = MockAgentSelector(top_n=2, include_synthetic=False).select(items)
+    incl = MockAgentSelector(top_n=2, include_synthetic=True).select(items)
+    assert "s0" not in excl or not excl["s0"].recommended
+    assert incl["s0"].recommended
