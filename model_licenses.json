@@ -10,8 +10,8 @@
         "mobileclip2_b.ts"
       ],
       "usage": "internal_development_only",
-      "isolation_file": "render/vision/segmenters/yoloe.py",
-      "notes": "AGPL-3.0 仅供内部研发使用；产品化/对外分发前必须替换为 Apache/MIT 模型或购买 Ultralytics 企业授权。该模型只允许通过 Segmenter 接口调用，不允许其它模块直接 import ultralytics/torch。",
+      "isolation_file": "src/pixo/vision/segmenters/yoloe.py",
+      "notes": "AGPL-3.0 仅供内部研发使用；产品化/对外分发前必须替换为 Apache/MIT 模型或购买 Ultralytics 企业授权。隔离口径：ultralytics 仅限 src/pixo/vision/segmenters/yoloe.py 直接 import（AGPL 隔离）；torch/transformers 限 vision 各适配器文件内懒 import，其它模块仅经 Segmenter 接口调用。",
       "status": "internal_development_only"
     },
     {
@@ -40,7 +40,7 @@
       "license": "code MIT / weights CC BY-NC-SA(CelebAMask-HQ 派生)",
       "files": [],
       "usage": "internal_development_only",
-      "notes": "t90 UniFace 位实现：SegFormer 头部解析，权重非商业仅内部研发；产品化需替换或取得商业授权。",
+      "notes": "t90 UniFace 位实现：SegFormer 头部解析，权重非商业仅内部研发；产品化需替换或取得商业授权。torch/transformers 限 src/pixo/vision/segmenters/uniface_face.py 内懒 import。multi_router 默认按本条 usage 门控：仅 PIXO_ALLOW_RESTRICTED=1 时注册进路由。",
       "status": "internal_development_only"
     },
     {
@@ -67,7 +67,7 @@
       "license": "Apache-2.0",
       "files": [],
       "usage": "redistribution_allowed_with_license_notice",
-      "notes": "t90 开放词汇可选后端（GroundedSAM 两段式）；默认懒加载，PIXO_GSAM_ENABLED=0 可关。",
+      "notes": "t90 开放词汇可选后端（GroundedSAM 两段式）；默认关闭（opt-in），PIXO_GSAM_ENABLED=1 显式开启——启用后首用经 transformers 自动下载 DINO+SAM 全套权重（合计数 GB）。torch/transformers 限 src/pixo/vision/segmenters/grounded_sam.py 内懒 import。",
       "status": "redistribution_allowed_with_license_notice"
     },
     {
@@ -76,8 +76,8 @@
       "license": "CC-BY-NC-4.0 (Sapiens2 License 口径)",
       "files": [],
       "usage": "internal_development_only",
-      "isolation_file": "vision/segmenters/sapiens_body.py",
-      "notes": "t91 部位解析(hair/skin/clothes/body)：开源项目可用；商用分发需替换或隔离（NC 特性，区别 YOLOE 的 AGPL internal-only 口径）。任务书 Sapiens-0.4B 为系列约称，默认权重 facebook/sapiens-seg-0.3b，PIXO_SAPIENS_MODEL 可覆写。",
+      "isolation_file": "src/pixo/vision/segmenters/sapiens_body.py",
+      "notes": "t91 部位解析(hair/skin/clothes/body)：开源项目可用；商用分发需替换或隔离（NC 特性，区别 YOLOE 的 AGPL internal-only 口径）。torch/transformers 仅限 src/pixo/vision/segmenters/sapiens_body.py 内懒 import。任务书 Sapiens-0.4B 为系列约称，默认权重 facebook/sapiens-seg-0.3b，PIXO_SAPIENS_MODEL 可覆写。multi_router 默认按本条 usage 门控：仅 PIXO_ALLOW_RESTRICTED=1 时注册进路由。",
       "status": "internal_development_only"
     }
   ]

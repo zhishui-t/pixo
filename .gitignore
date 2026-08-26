@@ -25,7 +25,7 @@ apply.spec.ts
 
 # DSH 会话临时脚本
 *.mjs
-!pixo/dsh/*.mjs
+!src/pixo/dsh/*.mjs
 !frontend/e2e/*.mjs
 
 # ---- C++ native build artifacts ----
@@ -57,3 +57,18 @@ exports/
 resources/models/aesthetic/*.pt
 frontend/dist/
 frontend/e2e/screenshots/
+
+# ---- 实验残留：根目录临时脚本/日志/冒烟输出（不入版本控制）----
+/_*.py
+/_*.log
+/_*.txt
+/_*.png
+/_tools/
+
+# ---- 可再生 metrics 运行产物（.md 摘要保留跟踪，数据文件不跟踪）----
+docs/metrics/*.jsonl
+docs/metrics/*.json
+docs/metrics/.*.jsonl
+docs/metrics/.*.json
+docs/metrics/*_result.txt
+!docs/metrics/*.md

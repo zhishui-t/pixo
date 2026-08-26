@@ -5,7 +5,12 @@
 ## 关键技术债
 
 1. **YOLOE AGPL-3.0 发布阻断**：
-   - 当前仓库允许 AGPL 隔离使用（仅 `pixo/vision/segmenters/yoloe.py` 直接依赖 torch/ultralytics）。
+   - 当前仓库允许 AGPL 隔离使用：ultralytics 仅限
+     `src/pixo/vision/segmenters/yoloe.py` 直接 import（AGPL 隔离）；
+     torch/transformers 限 vision 各适配器文件内懒 import。
+   - `model_licenses.json` 中 `usage=internal_development_only` 的后端
+     （YOLOE/uniface/sapiens）由 multi_router 构造时门控：默认不注册进
+     路由，需 `PIXO_ALLOW_RESTRICTED=1` 显式放行。
    - 对外发布前需替换模型、企业授权，或从发布分支移除 AGPL 运行时依赖。
 
 2. **DNG SDK clean-room 复审**：
