@@ -5,9 +5,14 @@
   - 非法转移拒绝
   - AGENT_ESCALATED / MANUAL_REVIEW 必须带 reason
   - FINAL_QC 回退限一次
+  - MANUAL_REVIEW 非终态：可出边 ACCEPTED/REJECTED/COLOR_CORRECTING
+  - save_state 失败时内存状态回滚
+  - store 多线程并发写安全
   - Trace 参数级查询、历史查询、SQLite 持久化
 """
 from __future__ import annotations
+
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -16,6 +21,8 @@ from pixo.state import (
     InvalidTransitionReasonError,
     PhotoStateMachine,
     RollbackLimitError,
+    StateRecord,
+    TERMINAL_STATES,
     TraceStore,
 )
 
@@ -170,4 +177,88 @@ def test_store_clear_and_close():
     store.clear()
     assert store.history("DSC_0008") == []
     assert store.load_state("DSC_0008") is None
+    store.close()
+
+
+def test_manual_review_has_outgoing_edges():
+    """MANUAL_REVIEW 非终态：可转 ACCEPTED/REJECTED，或回 COLOR_CORRECTING。"""
+    assert "MANUAL_REVIEW" not in TERMINAL_STATES
+
+    sm = PhotoStateMachine("DSC_MR1")
+    sm.transition("SCREENED")
+    sm.escalate("需要人工确认")
+    assert sm.state == "MANUAL_REVIEW"
+
+    sm.transition("ACCEPTED", reason="人工验收通过")
+    assert sm.state == "ACCEPTED"
+
+    sm2 = PhotoStateMachine("DSC_MR2")
+    sm2.transition("SCREENED")
+    sm2.escalate("色彩需人工调整")
+    sm2.transition("COLOR_CORRECTING", reason="人工要求回锅调色")
+    assert sm2.state == "COLOR_CORRECTING"
+    # 回锅后仍可走正常链路到终态
+    sm2.transition("STYLE_APPLIED")
+    sm2.transition("FINAL_QC")
+    sm2.transition("REJECTED")
+    assert sm2.state == "REJECTED"
+
+
+def test_transition_rolls_back_memory_when_save_fails(monkeypatch):
+    """save_state 抛异常时内存状态回滚到转移前，且异常向上传播。"""
+    store = TraceStore(":memory:")
+    sm = PhotoStateMachine("DSC_RB", store=store)
+    sm.transition("SCREENED")
+
+    def broken_save(record):
+        raise RuntimeError("模拟磁盘写失败")
+
+    monkeypatch.setattr(store, "save_state", broken_save)
+
+    with pytest.raises(RuntimeError, match="模拟磁盘写失败"):
+        sm.transition(
+            "BASE_RENDERED", iteration=5, params={"Exposure": 0.2},
+            measurement={"global": {}},
+        )
+    # 内存回滚：状态与被转移修改的字段全部恢复
+    assert sm.state == "SCREENED"
+    assert sm.record.iteration == 0
+    assert sm.record.current_params == {}
+    assert sm.record.last_measurement == {}
+    # 失败转移不应留下 STATE_CHANGE trace
+    assert len(store.history("DSC_RB")) == 1
+
+    # 落盘恢复后同状态机可继续正常转移
+    monkeypatch.undo()
+    sm.transition("BASE_RENDERED")
+    assert sm.state == "BASE_RENDERED"
+    assert store.load_state("DSC_RB").state == "BASE_RENDERED"
+
+
+def test_store_supports_multithreaded_writes(tmp_path):
+    """跨线程共享 store 并发写不抛错，且数据不丢失（WAL + 写锁）。"""
+    store = TraceStore(str(tmp_path / "state.db"))
+    errors: list[Exception] = []
+
+    def writer(worker: int) -> None:
+        try:
+            for j in range(20):
+                pid = f"P{worker}_{j}"
+                store.save_state(StateRecord(photo_id=pid, state="SCREENED"))
+                store.add_trace(photo_id=pid, event_type="iteration")
+        except Exception as exc:  # noqa: BLE001 - 收集任意线程错误
+            errors.append(exc)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(writer, range(8)))
+
+    assert errors == []
+    states = store.list_states()
+    assert len(states) == 8 * 20
+    assert all(r.state == "SCREENED" for r in states)
+    total_traces = sum(
+        len(store.query_traces(f"P{w}_{j}"))
+        for w in range(8) for j in range(20)
+    )
+    assert total_traces == 8 * 20
     store.close()

@@ -5,14 +5,19 @@ vision/meta/render/decide/state/trace。不实现 DSH 工具插件（P2）。
 """
 from __future__ import annotations
 
+import logging
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 
 from .runtime import PixoServiceRuntime
 
 _API_DESCRIPTION = "Pixo 本地服务：照片管理、渲染预览、测量、决策、导出。"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _media_type(fmt: str) -> str:
@@ -38,45 +43,54 @@ def _bad_request(message: str) -> HTTPException:
     return HTTPException(status_code=400, detail=message)
 
 
+def warm_aesthetic_scorer() -> dict[str, Any]:
+    """t67：启动期预热评分器，消除首轮推理冷启（PIXO_SCORER_WARMUP 可关）。"""
+    from pixo.vision.aesthetic import warm_default_scorer
+
+    return warm_default_scorer()
+
+
+@asynccontextmanager
+async def scorer_warmup_lifespan(app: FastAPI):
+    """启动期预热评分器；预热在线程池执行避免阻塞事件循环。"""
+    try:
+        info = await run_in_threadpool(warm_aesthetic_scorer)
+        _LOGGER.info("[pixo.service] 评分器预热: %s", info)
+    except Exception:  # noqa: BLE001 - 预热失败不阻断服务启动
+        _LOGGER.exception("[pixo.service] 评分器预热失败(不影响启动)")
+    yield
+
+
 def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
     """创建 FastAPI 应用；可注入自定义 runtime 便于测试。"""
     app = FastAPI(title="pixo-service", description=_API_DESCRIPTION,
-                  version="0.1.0")
+                  version="0.1.0", lifespan=scorer_warmup_lifespan)
     rt = runtime or PixoServiceRuntime()
     app.state.runtime = rt
 
-    @app.on_event("startup")
-    def _warm_aesthetic_scorer() -> None:
-        """t67：启动期预热评分器，消除首轮推理冷启（PIXO_SCORER_WARMUP 可关）。"""
-        try:
-            from pixo.vision.aesthetic import warm_default_scorer
-
-            info = warm_default_scorer()
-            print("[pixo.service] 评分器预热:", info)
-        except Exception as exc:  # noqa: BLE001 - 预热失败不阻断服务启动
-            print("[pixo.service] 评分器预热失败(不影响启动):", exc)
-
     @app.post("/api/import")
     async def api_import(request: Request) -> dict[str, Any]:
-        """扫描目录，返回 RAW 候选清单。"""
+        """扫描目录，返回 RAW 候选清单（目录遍历在线程池执行）。"""
         body = await request.json()
         directory = body.get("directory") if isinstance(body, dict) else None
         if not directory:
             raise _bad_request("缺少 directory 参数")
         try:
-            candidates = rt.scan_directory(directory)
+            candidates = await run_in_threadpool(rt.scan_directory, directory)
         except ValueError as exc:
             raise _bad_request(str(exc)) from exc
         return {"directory": directory, "candidates": candidates}
 
     @app.post("/api/photos", status_code=201)
     async def api_create_photo(request: Request) -> dict[str, Any]:
-        """确认导入，创建 photo 记录。"""
+        """确认导入，创建 photo 记录（EXIF 读取 RAW 在线程池执行）。"""
         body = await request.json()
         if not isinstance(body, dict) or not body.get("path"):
             raise _bad_request("缺少 path 参数")
         try:
-            photo = rt.create_photo(body["path"], body.get("photo_id"))
+            photo = await run_in_threadpool(
+                rt.create_photo, body["path"], body.get("photo_id")
+            )
             return {"photo": rt.photo_dict(photo.photo_id)}
         except (ValueError, KeyError) as exc:
             raise _bad_request(str(exc)) from exc
@@ -108,14 +122,16 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
     @app.put("/api/sessions/{session_id}/params")
     async def api_update_params(session_id: str,
                                 request: Request) -> dict[str, Any]:
-        """局部 patch 参数，深合并并递增 generation。"""
+        """局部 patch 参数，深合并并递增 generation（canonical 构建在线程池执行）。"""
         body = await request.json()
         if not isinstance(body, dict):
             raise _bad_request("请求体必须是 JSON 对象")
         patch = {k: v for k, v in body.items() if k != "__source"}
         source = body.get("__source")
         try:
-            return rt.update_params(session_id, patch, source=source)
+            return await run_in_threadpool(
+                rt.update_params, session_id, patch, source=source
+            )
         except KeyError as exc:
             raise _not_found(str(exc)) from exc
 
@@ -176,7 +192,7 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
         session_id: str,
         request: Request,
     ) -> dict[str, Any]:
-        """提交导出任务。"""
+        """提交导出任务（canonical_params 全管线构建在线程池执行）。"""
         body = await request.json()
         if not isinstance(body, dict):
             raise _bad_request("请求体必须是 JSON 对象")
@@ -184,7 +200,8 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
         quality = body.get("quality")
         output_dir = body.get("output_dir")
         try:
-            result = rt.submit_export(
+            result = await run_in_threadpool(
+                rt.submit_export,
                 session_id,
                 fmt=str(fmt),
                 quality=int(quality) if quality is not None else None,
@@ -212,14 +229,41 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
         except KeyError as exc:
             raise _not_found(str(exc)) from exc
 
-    @app.get("/api/photos/{photo_id}/decide")
     @app.post("/api/photos/{photo_id}/decide")
     def api_decide(photo_id: str) -> dict[str, Any]:
-        """获取/触发一轮 Decide。"""
+        """触发一轮 Decide：渲染 + 测量 + 规则决策，结果缓存到照片。
+
+        整条链路同步阻塞（渲染/测量），sync def 让 FastAPI 自动进线程池。
+        """
         try:
             return rt.decide_photo(photo_id)
         except KeyError as exc:
             raise _not_found(str(exc)) from exc
+
+    @app.get("/api/photos/{photo_id}/decide")
+    def api_decide_cached(photo_id: str) -> dict[str, Any]:
+        """只读返回最近一次 Decide 缓存；无缓存时 404 提示先 POST。
+
+        GET 不触发渲染/测量等副作用，避免缓存击穿与重复计算。
+        """
+        try:
+            photo = rt.get_photo(photo_id)
+        except KeyError as exc:
+            raise _not_found(str(exc)) from exc
+        if not (photo.last_measurement or photo.last_decision):
+            raise _not_found(
+                f"photo {photo_id} 尚无 Decide 结果缓存，"
+                f"请先 POST /api/photos/{photo_id}/decide 触发计算"
+            )
+        sm = rt.state_machines.get(photo_id)
+        return {
+            "photo_id": photo_id,
+            "state": sm.state if sm is not None else "UNKNOWN",
+            "iteration": sm.record.iteration if sm is not None else 0,
+            "measurement": photo.last_measurement,
+            "decision": photo.last_decision,
+            "cached": True,
+        }
 
     @app.get("/api/health")
     def api_health() -> dict[str, Any]:

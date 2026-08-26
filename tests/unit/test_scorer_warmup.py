@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from fastapi.testclient import TestClient
 
 from pixo.vision.aesthetic import PixoAestheticScorer, _warmup_enabled
 
@@ -104,14 +105,19 @@ def test_repeated_warmup_reuses_loaded_state():
     assert second["warmup_ms"] <= first["warmup_ms"] + 100
 
 
-def test_service_app_registers_startup_hook():
-    """②service 启动序列接入：create_app 注册 startup 钩子。"""
-    from pixo.service.app import create_app
+def test_service_app_registers_startup_hook(monkeypatch):
+    """②service 启动序列接入：create_app 经 lifespan 在启动期调用预热。"""
+    from pixo.service import app as app_mod
 
-    app = create_app()
-    hook_names = {
-        h.__name__ for h in getattr(app.router, "on_startup", [])
-    }
-    assert "_warm_aesthetic_scorer" in hook_names or any(
-        "warm" in n for n in hook_names
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        app_mod,
+        "warm_aesthetic_scorer",
+        lambda: calls.append({"warmed": True}) or {"warmed": True},
     )
+
+    app = app_mod.create_app()
+    # on_event("startup") 已迁移为 lifespan：不再注册独立 startup 钩子。
+    assert app.router.on_startup == []
+    with TestClient(app):
+        assert len(calls) == 1  # lifespan 启动段恰好调用一次预热

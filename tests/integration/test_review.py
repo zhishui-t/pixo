@@ -46,14 +46,22 @@ class TraceStore:
 
 
 def test_enqueue_get_list_and_duplicate():
+    """重复 photo_id 入队按 docstring 覆盖旧项而非报错。"""
     q = ReviewQueue()
     item = _item()
     q.enqueue(item)
     assert q.get("P001") is item
     assert len(q.list()) == 1
     assert q.list("pending") == [item]
+
+    replacement = _item()  # 同 photo_id 的新待审项
+    returned = q.enqueue(replacement)
+    assert returned is replacement
+    assert q.get("P001") is replacement
+    assert len(q.list()) == 1
+
     with pytest.raises(ReviewError):
-        q.enqueue(item)
+        q.enqueue(_item("P002", status="accepted"))  # 非 pending 仍拒绝
 
 
 def test_invalid_review_status_raises():
@@ -62,6 +70,7 @@ def test_invalid_review_status_raises():
 
 
 def test_accept_reject_edit_actions():
+    """无状态机（缺省）路径：accept/reject 直接置目标 state；edit 不改 state。"""
     q = ReviewQueue()
     q.enqueue(_item("A"))
     a = q.accept("A", reason="通过")
@@ -73,7 +82,9 @@ def test_accept_reject_edit_actions():
 
     q.enqueue(_item("C"))
     c = q.edit("C", edit_params={"exposure": {"mode": 0.3}}, after="/tmp/edited.jpg")
-    assert c.status == "edited" and c.state == "EDITING"
+    assert c.status == "edited"
+    # 语义变化：不再写不在状态机词表的 "EDITING" 死值，state 保持不变。
+    assert c.state == "MANUAL_REVIEW"
     assert c.edit_params == {"exposure": {"mode": 0.3}}
     assert c.after == "/tmp/edited.jpg"
 
@@ -98,6 +109,71 @@ def test_queue_writes_trace():
     types = [e.event_type for e in store.events]
     assert "review.enqueue" in types
     assert "review.accept" in types
+
+
+def test_enqueue_duplicate_writes_overwrite_trace():
+    """重复入队覆盖旧项时，trace 元数据注明 overwritten。"""
+    store = TraceStore()
+    q = ReviewQueue(trace_store=store)
+    q.enqueue(_item("D1"))
+    q.enqueue(_item("D1"))
+    enq = [e for e in store.events if e.event_type == "review.enqueue"]
+    assert len(enq) == 2
+    assert enq[0].metadata.get("overwritten") is False
+    assert enq[1].metadata.get("overwritten") is True
+
+
+def _machine_factory():
+    """构造 photo_id → PhotoStateMachine 工厂（新照片停在 MANUAL_REVIEW）。"""
+    from pixo.state import PhotoStateMachine
+
+    machines: dict = {}
+
+    def factory(photo_id: str):
+        sm = machines.get(photo_id)
+        if sm is None:
+            sm = PhotoStateMachine(photo_id)
+            sm.transition("SCREENED")
+            sm.escalate("需要人工复核")
+            machines[photo_id] = sm
+        return sm
+
+    return factory, machines
+
+
+def test_queue_with_machines_drives_state_transitions():
+    """注入状态机工厂：accept/reject/edit 驱动真实转移并镜像 sm.state。"""
+    factory, machines = _machine_factory()
+    q = ReviewQueue(machines=factory)
+
+    q.enqueue(_item("M1"))
+    a = q.accept("M1", reason="人工验收")
+    assert machines["M1"].state == "ACCEPTED"
+    assert a.state == "ACCEPTED"
+    assert any(e.event_type == "REVIEW_ACCEPTED"
+               for e in machines["M1"].history())
+
+    q.enqueue(_item("M2"))
+    b = q.reject("M2", reason="废片")
+    assert machines["M2"].state == "REJECTED"
+    assert b.state == "REJECTED"
+    assert any(e.event_type == "REVIEW_REJECTED"
+               for e in machines["M2"].history())
+
+    q.enqueue(_item("M3"))
+    c = q.edit("M3", edit_params={"exposure": {"mode": 0.3}})
+    assert c.status == "edited"
+    assert c.state == "COLOR_CORRECTING"  # 回锅调色，不再出现 EDITING
+    assert machines["M3"].state == "COLOR_CORRECTING"
+    assert any(e.event_type == "REVIEW_EDIT" for e in machines["M3"].history())
+
+
+def test_queue_without_machines_keeps_default_behavior():
+    """缺省（machines=None）保持纯内存行为，不触发任何状态机。"""
+    q = ReviewQueue()
+    q.enqueue(_item("N1"))
+    a = q.accept("N1")
+    assert a.state == "ACCEPTED" and a.status == "accepted"
 
 
 def test_csv_report_and_summary():

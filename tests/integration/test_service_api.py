@@ -168,7 +168,7 @@ def test_image_generation_mismatch_return_404(client: TestClient,
 
 
 def test_timeline_and_decide(client: TestClient, raw_file: Path):
-    """timeline 返回状态与 trace；decide 返回决策结构。"""
+    """timeline 返回状态与 trace；POST decide 返回决策结构。"""
     photo_id = _create_photo(client, raw_file)
     session_id = _create_session(client, photo_id)
     client.put(f"/api/sessions/{session_id}/params",
@@ -182,11 +182,81 @@ def test_timeline_and_decide(client: TestClient, raw_file: Path):
     assert any(e["event_type"] == "param_patch"
                for e in timeline["events"])
 
-    decide_resp = client.get(f"/api/photos/{photo_id}/decide")
+    decide_resp = client.post(f"/api/photos/{photo_id}/decide")
     assert decide_resp.status_code == 200
     decide = decide_resp.json()
     assert "decision" in decide
     assert "params" in decide["decision"]
+
+
+def test_decide_get_is_read_only_and_uses_cache(client: TestClient,
+                                                raw_file: Path):
+    """GET decide 只读：无缓存 404 提示先 POST；POST 后 GET 返回缓存。"""
+    photo_id = _create_photo(client, raw_file)
+
+    missing_resp = client.get(f"/api/photos/{photo_id}/decide")
+    assert missing_resp.status_code == 404
+    assert "POST" in missing_resp.json()["detail"]
+
+    session_id = _create_session(client, photo_id)
+    client.put(f"/api/sessions/{session_id}/params",
+               json={"tone": {"highlights": -20}})
+
+    post_resp = client.post(f"/api/photos/{photo_id}/decide")
+    assert post_resp.status_code == 200
+    decision = post_resp.json()
+
+    get_resp = client.get(f"/api/photos/{photo_id}/decide")
+    assert get_resp.status_code == 200
+    cached = get_resp.json()
+    assert cached["cached"] is True
+    assert cached["decision"] == decision["decision"]
+    assert cached["measurement"] == decision["measurement"]
+    assert cached["state"] == decision["state"]
+
+
+def test_decide_get_unknown_photo_returns_404(client: TestClient):
+    """GET decide 对不存在的照片返回 404。"""
+    resp = client.get("/api/photos/NO_SUCH_PHOTO/decide")
+    assert resp.status_code == 404
+
+
+def test_blocking_routes_run_in_threadpool(tmp_path: Path):
+    """阻塞路由应进线程池：并发请求总耗时应显著低于串行总和。"""
+    import asyncio
+    import time
+
+    import httpx
+
+    runtime = PixoServiceRuntime(
+        profile=object(),
+        work_dir=tmp_path / "exports",
+        session_factory=lambda photo, sid: FakeSession(photo, sid),
+    )
+
+    def slow_scan(directory):
+        time.sleep(0.25)  # 模拟大目录遍历
+        return []
+
+    runtime.scan_directory = slow_scan  # type: ignore[assignment]
+    app = create_app(runtime)
+
+    async def fire() -> tuple[list[int], float]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as ac:
+            start = time.perf_counter()
+            responses = await asyncio.gather(*[
+                ac.post("/api/import", json={"directory": str(tmp_path)})
+                for _ in range(4)
+            ])
+            return [r.status_code for r in responses], time.perf_counter() - start
+
+    statuses, elapsed = asyncio.run(fire())
+    assert statuses == [200] * 4
+    # 串行（阻塞事件循环）至少 4*0.25s=1.0s；线程池并发应在 ~0.25s 量级。
+    assert elapsed < 4 * 0.25
 
 
 def test_export_flow(client: TestClient, raw_file: Path, monkeypatch):

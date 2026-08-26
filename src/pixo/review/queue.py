@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from .models import ReviewItem
 
+if TYPE_CHECKING:  # pragma: no cover - 仅类型提示，运行时不依赖 pixo.state
+    from pixo.state.machine import PhotoStateMachine
+
 TraceWriter = Callable[..., Any]
+MachineFactory = Callable[[str], "PhotoStateMachine"]
 
 
 def _now_iso() -> str:
@@ -23,11 +27,28 @@ class ReviewQueue:
 
     trace_store 可以是一个带 ``add_trace`` 方法的对象，也可以是一个
     可调用对象；本期不绑定具体持久化实现。
+
+    machines 为可选的 photo_id → PhotoStateMachine 工厂：提供时
+    accept/reject/edit 会驱动状态机真实转移（event_type 分别为
+    REVIEW_ACCEPTED / REVIEW_REJECTED / REVIEW_EDIT），item.state 镜像
+    sm.state；缺省 None 保持纯内存行为（edit 不再写 "EDITING" 死值，
+    item.state 保持不变，仅记录编辑事件）。
     """
 
-    def __init__(self, trace_store: Any | None = None) -> None:
+    def __init__(
+        self,
+        trace_store: Any | None = None,
+        machines: MachineFactory | None = None,
+    ) -> None:
         self._items: dict[str, ReviewItem] = {}
         self.trace_store = trace_store
+        self.machines = machines
+
+    def _machine(self, photo_id: str) -> Any | None:
+        """取注入的状态机；未注入时返回 None。"""
+        if self.machines is None:
+            return None
+        return self.machines(photo_id)
 
     def _write_trace(self, event_type: str, item: ReviewItem, **extra: Any) -> None:
         metadata = {
@@ -62,10 +83,11 @@ class ReviewQueue:
         """入队；同一 photo_id 重复入队时覆盖旧项。"""
         if item.status != "pending":
             raise ReviewError(f"入队项状态必须是 pending，实际: {item.status!r}")
-        if item.photo_id in self._items:
-            raise ReviewError(f"photo_id 已在队列中: {item.photo_id}")
+        overwritten = item.photo_id in self._items
         self._items[item.photo_id] = item
-        self._write_trace("review.enqueue", item)
+        self._write_trace(
+            "review.enqueue", item, overwritten=overwritten,
+        )
         return item
 
     def get(self, photo_id: str) -> ReviewItem:
@@ -91,9 +113,14 @@ class ReviewQueue:
         return item
 
     def accept(self, photo_id: str, reason: str = "人工接受") -> ReviewItem:
-        """接受结果：状态 accepted，state 置 ACCEPTED。"""
+        """接受结果：状态 accepted；提供状态机时驱动 REVIEW_ACCEPTED 转移。"""
         item = self._require_pending(photo_id)
-        item.state = "ACCEPTED"
+        sm = self._machine(photo_id)
+        if sm is not None:
+            sm.transition("ACCEPTED", event_type="REVIEW_ACCEPTED", reason=reason)
+            item.state = sm.state
+        else:
+            item.state = "ACCEPTED"
         item.status = "accepted"
         item.updated_at = _now_iso()
         item.agent_reason = reason or item.agent_reason
@@ -101,9 +128,14 @@ class ReviewQueue:
         return item
 
     def reject(self, photo_id: str, reason: str = "人工拒绝") -> ReviewItem:
-        """拒绝/废片：状态 rejected，state 置 REJECTED。"""
+        """拒绝/废片：状态 rejected；提供状态机时驱动 REVIEW_REJECTED 转移。"""
         item = self._require_pending(photo_id)
-        item.state = "REJECTED"
+        sm = self._machine(photo_id)
+        if sm is not None:
+            sm.transition("REJECTED", event_type="REVIEW_REJECTED", reason=reason)
+            item.state = sm.state
+        else:
+            item.state = "REJECTED"
         item.status = "rejected"
         item.updated_at = _now_iso()
         item.agent_reason = reason or item.agent_reason
@@ -118,13 +150,22 @@ class ReviewQueue:
         edit_params: dict[str, Any] | None = None,
         after: Any = None,
     ) -> ReviewItem:
-        """进入编辑：状态 edited；可携带用户锁定参数与新的 after 引用。"""
+        """进入编辑：状态 edited；提供状态机时回 COLOR_CORRECTING 回锅调色。
+
+        未提供状态机时不改写 item.state（"EDITING" 不在状态机词表，
+        不再写该死值），仅记录编辑事件。
+        """
         item = self._require_pending(photo_id)
         if edit_params is not None:
             item.edit_params = dict(edit_params)
         if after is not None:
             item.after = after
-        item.state = "EDITING"
+        sm = self._machine(photo_id)
+        if sm is not None:
+            sm.transition(
+                "COLOR_CORRECTING", event_type="REVIEW_EDIT", reason=reason
+            )
+            item.state = sm.state
         item.status = "edited"
         item.updated_at = _now_iso()
         item.agent_reason = reason or item.agent_reason

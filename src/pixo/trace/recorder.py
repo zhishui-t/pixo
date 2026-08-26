@@ -11,8 +11,8 @@ from typing import Any
 
 
 def _now_iso() -> str:
-    """生成带时区的 ISO 时间戳。"""
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    """生成带时区的 ISO 时间戳（毫秒精度，便于回放排序）。"""
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
 @dataclass

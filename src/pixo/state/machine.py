@@ -9,9 +9,14 @@
   - 任意迭代状态可经 AGENT_ESCALATED 转 MANUAL_REVIEW，必须带 reason。
   - FINAL_QC 可回退到 EXPOSURE_ALIGNING / COLOR_CORRECTING，限一次。
   - FINAL_QC 二次超标不再自动回退，应转 MANUAL_REVIEW。
+  - MANUAL_REVIEW 不是终态（对 §11.1 原图约束的修订）：人工复核后可出边
+    ACCEPTED / REJECTED 结案，或回 COLOR_CORRECTING 回锅调色，避免状态机
+    在人工复核队列驱动下卡死。终态仅 ACCEPTED / REJECTED。
 """
 from __future__ import annotations
 
+import copy
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -22,6 +27,8 @@ from .exceptions import (
     RollbackLimitError,
 )
 from pixo.trace import TraceEvent
+
+_LOGGER = logging.getLogger(__name__)
 
 INITIAL_STATE = "RAW_PENDING"
 
@@ -38,7 +45,8 @@ STATES = (
     "REJECTED",
 )
 
-TERMINAL_STATES = {"ACCEPTED", "MANUAL_REVIEW", "REJECTED"}
+# MANUAL_REVIEW 已非终态（可经人工复核出边），终态仅剩 ACCEPTED/REJECTED。
+TERMINAL_STATES = {"ACCEPTED", "REJECTED"}
 
 ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     "RAW_PENDING": {"SCREENED"},
@@ -55,13 +63,27 @@ ALLOWED_TRANSITIONS: dict[str, set[str]] = {
         "EXPOSURE_ALIGNING",
     },
     "ACCEPTED": set(),
-    "MANUAL_REVIEW": set(),
+    # 人工复核出边：接受 / 拒绝 / 回锅调色（§11.1 修订，见模块头）。
+    "MANUAL_REVIEW": {"ACCEPTED", "REJECTED", "COLOR_CORRECTING"},
     "REJECTED": set(),
 }
 
 _MAX_QC_ROLLBACKS = 1
 MAX_QC_ROLLBACKS = _MAX_QC_ROLLBACKS
 QC_ROLLBACK_TARGETS = {"EXPOSURE_ALIGNING", "COLOR_CORRECTING"}
+
+# transition 会改写的 StateRecord 字段（落盘失败时逐字段回滚）。
+_RECORD_MUTABLE_FIELDS = (
+    "state",
+    "iteration",
+    "current_params",
+    "last_measurement",
+    "rule_hits",
+    "next_action",
+    "agent_decision",
+    "qc_rollback_count",
+    "updated_at",
+)
 
 
 def _now_iso() -> str:
@@ -243,6 +265,9 @@ class PhotoStateMachine:
         )
 
         old_state = from_state
+        # 落盘失败回滚快照：save_state 抛异常时恢复转移前内存状态，
+        # 避免内存与持久层不一致（浅拷贝足够：以下均为整体字段重赋值）。
+        snapshot = copy.copy(self._record)
         self._record.state = target
         if self._is_rollback(old_state, target):
             self._record.qc_rollback_count += 1
@@ -261,7 +286,20 @@ class PhotoStateMachine:
         self._record.updated_at = _now_iso()
 
         if self._state_store is not None:
-            self._state_store.save_state(self._record)
+            try:
+                self._state_store.save_state(self._record)
+            except Exception:
+                # 回滚内存到转移前快照并原地上写，外部持有的 record 引用同步恢复。
+                for f in _RECORD_MUTABLE_FIELDS:
+                    setattr(self._record, f, getattr(snapshot, f))
+                _LOGGER.exception(
+                    "save_state 失败，已回滚内存状态 %s -> %s（photo=%s）",
+                    old_state,
+                    target,
+                    self.photo_id,
+                )
+                # re-raise：让调用方感知转移失败，由其决定重试/降级。
+                raise
 
         event_metadata = dict(metadata or {})
         event_metadata.setdefault("from_state", old_state)

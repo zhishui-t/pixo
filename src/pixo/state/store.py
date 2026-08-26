@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from typing import Any
 
 from .machine import StateRecord
@@ -71,50 +72,59 @@ def _json_loads(value: str | None, default: Any = None) -> Any:
 
 
 class SQLiteStateTraceStore:
-    """SQLite 状态与 Trace 存储。"""
+    """SQLite 状态与 Trace 存储。
+
+    FastAPI 线程池路由（sync def / run_in_threadpool）下会跨线程共享同一
+    连接：``check_same_thread=False`` 放开同线程校验，全部写操作持
+    ``_write_lock`` 串行化，读操作依赖 SQLite 序列化模式的语句级原子性。
+    """
 
     def __init__(self, db_path: str = ":memory:") -> None:
         self.db_path = db_path
-        self._conn = sqlite3.connect(db_path)
+        self._write_lock = threading.Lock()
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # WAL 降低写阻塞与损坏面；:memory: 库该 PRAGMA 静默保持 memory 模式。
+        self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
 
     # ── 状态记录 ──────────────────────────────────────────────
     def save_state(self, record: StateRecord) -> None:
         """写入/更新一张照片的状态记录。"""
-        self._conn.execute(
-            """
-            INSERT INTO photo_states (
-                photo_id, state, iteration, current_params, last_measurement,
-                rule_hits, next_action, agent_decision, qc_rollback_count,
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(photo_id) DO UPDATE SET
-                state = excluded.state,
-                iteration = excluded.iteration,
-                current_params = excluded.current_params,
-                last_measurement = excluded.last_measurement,
-                rule_hits = excluded.rule_hits,
-                next_action = excluded.next_action,
-                agent_decision = excluded.agent_decision,
-                qc_rollback_count = excluded.qc_rollback_count,
-                updated_at = excluded.updated_at
-            """,
-            (
-                record.photo_id,
-                record.state,
-                int(record.iteration),
-                _json_dumps(record.current_params),
-                _json_dumps(record.last_measurement),
-                _json_dumps(record.rule_hits),
-                record.next_action,
-                record.agent_decision,
-                int(record.qc_rollback_count),
-                record.updated_at,
-            ),
-        )
-        self._conn.commit()
+        with self._write_lock:
+            self._conn.execute(
+                """
+                INSERT INTO photo_states (
+                    photo_id, state, iteration, current_params, last_measurement,
+                    rule_hits, next_action, agent_decision, qc_rollback_count,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(photo_id) DO UPDATE SET
+                    state = excluded.state,
+                    iteration = excluded.iteration,
+                    current_params = excluded.current_params,
+                    last_measurement = excluded.last_measurement,
+                    rule_hits = excluded.rule_hits,
+                    next_action = excluded.next_action,
+                    agent_decision = excluded.agent_decision,
+                    qc_rollback_count = excluded.qc_rollback_count,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    record.photo_id,
+                    record.state,
+                    int(record.iteration),
+                    _json_dumps(record.current_params),
+                    _json_dumps(record.last_measurement),
+                    _json_dumps(record.rule_hits),
+                    record.next_action,
+                    record.agent_decision,
+                    int(record.qc_rollback_count),
+                    record.updated_at,
+                ),
+            )
+            self._conn.commit()
 
     def load_state(self, photo_id: str) -> StateRecord | None:
         """按 photo_id 加载状态记录；不存在返回 None。"""
@@ -170,34 +180,35 @@ class SQLiteStateTraceStore:
         """
         if event is None:
             event = TraceEvent(**kwargs)
-        cursor = self._conn.execute(
-            """
-            INSERT INTO trace_events (
-                photo_id, event_type, param, value, reason, rule_id,
-                formula, source, knowledge_ref, meta_ref, old_value,
-                new_value, iteration, timestamp, metadata
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                event.photo_id,
-                event.event_type,
-                event.param,
-                _json_dumps(event.value),
-                event.reason or "",
-                event.rule_id or "",
-                event.formula or "",
-                event.source or "",
-                event.knowledge_ref,
-                event.meta_ref,
-                _json_dumps(event.old_value),
-                _json_dumps(event.new_value),
-                int(event.iteration),
-                event.timestamp,
-                _json_dumps(event.metadata),
-            ),
-        )
-        self._conn.commit()
-        return int(cursor.lastrowid or 0)
+        with self._write_lock:
+            cursor = self._conn.execute(
+                """
+                INSERT INTO trace_events (
+                    photo_id, event_type, param, value, reason, rule_id,
+                    formula, source, knowledge_ref, meta_ref, old_value,
+                    new_value, iteration, timestamp, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event.photo_id,
+                    event.event_type,
+                    event.param,
+                    _json_dumps(event.value),
+                    event.reason or "",
+                    event.rule_id or "",
+                    event.formula or "",
+                    event.source or "",
+                    event.knowledge_ref,
+                    event.meta_ref,
+                    _json_dumps(event.old_value),
+                    _json_dumps(event.new_value),
+                    int(event.iteration),
+                    event.timestamp,
+                    _json_dumps(event.metadata),
+                ),
+            )
+            self._conn.commit()
+            return int(cursor.lastrowid or 0)
 
     add_event = add_trace
     add = add_trace
@@ -261,9 +272,10 @@ class SQLiteStateTraceStore:
     # ── 工具方法 ──────────────────────────────────────────────
     def clear(self) -> None:
         """清空所有状态与 Trace 数据。"""
-        self._conn.execute("DELETE FROM photo_states")
-        self._conn.execute("DELETE FROM trace_events")
-        self._conn.commit()
+        with self._write_lock:
+            self._conn.execute("DELETE FROM photo_states")
+            self._conn.execute("DELETE FROM trace_events")
+            self._conn.commit()
 
     def close(self) -> None:
         """关闭数据库连接。"""
