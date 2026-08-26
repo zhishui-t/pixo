@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -20,10 +21,13 @@ from pixo.vision.measure import compute_proxy_metrics
 
 PROXY_KEYS = ("haze_proxy", "colorfulness_proxy", "tonal_range")
 ROOT = Path(__file__).resolve().parents[2]
-REAL_RAW_SAMPLES = [
-    Path("<corpus>/a/raw/DSC_5236.NEF"),
-    Path("<corpus>/festival/DSC_0355.NEF"),
-]
+# 真实 RAW 样本路径经环境变量注入（仓库不携带本地路径/场景名）：
+#   PIXO_CORPUS_A_RAW      = <0711 raw 目录>/DSC_5236.NEF
+#   PIXO_CORPUS_FESTIVAL_RAW = <春节目录>/DSC_0355.NEF
+# 未设置时相关用例自动跳过。
+_REAL_A = os.environ.get("PIXO_CORPUS_A_RAW")
+_REAL_FEST = os.environ.get("PIXO_CORPUS_FESTIVAL_RAW")
+REAL_RAW_SAMPLES = [Path(p) for p in (_REAL_A, _REAL_FEST) if p]
 
 
 def _flat_gray(level=0.5):
