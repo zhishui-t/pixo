@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from .compare import (
+    DEFAULT_REL_TOL,
     DEFAULT_TOLERANCE,
     compare_measurement,
     compare_sample,
@@ -55,4 +56,5 @@ __all__ = [
     "run_synthetic_sample",
     "compare_sample_with_run",
     "DEFAULT_TOLERANCE",
+    "DEFAULT_REL_TOL",
 ]

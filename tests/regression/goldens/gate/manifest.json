@@ -1,5 +1,5 @@
 {
-  "schema": "render-gate-golden-v1",
+  "schema": "render-gate-synth-v1",
   "features": {
     "exposure": {
       "file": "exposure.npy",

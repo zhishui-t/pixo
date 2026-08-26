@@ -129,6 +129,60 @@ def test_compare_measurement_detects_failure():
     assert len(result["failed"]) == 1
 
 
+def test_rel_tight_for_large_scale_metrics():
+    """0-255 量纲：+3.0 漂移应 FAIL（旧 rel_tol=0.03 容差 4.65 会误放行）。
+
+    expected=153.38 > LARGE_SCALE_THRESHOLD=1.5 时 rel 系数收紧为
+    LARGE_SCALE_REL_TOL=0.002，effective_tol = 0.05 + 0.002*153.38 ≈ 0.357，
+    3.0 个亮度级漂移必须被拦截。
+    """
+    result = compare_measurement(
+        {"global.mean_luminance": 153.38 + 3.0},
+        {"global.mean_luminance": 153.38},
+    )
+    assert result["passed"] is False
+    assert len(result["failed"]) == 1
+    entry = result["failed"][0]
+    assert entry["abs_diff"] == 3.0
+    assert entry["effective_tol"] == pytest.approx(0.05 + 0.002 * 153.38)
+
+
+def test_rel_tight_large_scale_allows_small_drift():
+    """0-255 量纲：+0.2 跨平台浮点级漂移应 PASS（收紧后容差 ≈ 0.357）。"""
+    result = compare_measurement(
+        {"global.mean_luminance": 153.38 + 0.2},
+        {"global.mean_luminance": 153.38},
+    )
+    assert result["passed"] is True
+    assert result["failed"] == []
+    assert result["matched"]["global.mean_luminance"]["effective_tol"] == \
+        pytest.approx(0.05 + 0.002 * 153.38)
+
+
+def test_rel_default_kept_for_unit_scale_metrics():
+    """0-1 量纲：+0.02 漂移应 PASS（rel_tol=0.03 通道不受收紧影响）。
+
+    expected=0.4479 <= 1.5，effective_tol = 0.05 + 0.03*0.4479 ≈ 0.0634。
+    """
+    result = compare_measurement(
+        {"global.green_ratio": 0.4479 + 0.02},
+        {"global.green_ratio": 0.4479},
+    )
+    assert result["passed"] is True
+    assert result["matched"]["global.green_ratio"]["effective_tol"] == \
+        pytest.approx(0.05 + 0.03 * 0.4479)
+
+
+def test_rel_default_fails_for_unit_scale_overshoot():
+    """0-1 量纲：+0.08 漂移应 FAIL（超出 0.05 + 0.03*0.4479 ≈ 0.0634）。"""
+    result = compare_measurement(
+        {"global.green_ratio": 0.4479 + 0.08},
+        {"global.green_ratio": 0.4479},
+    )
+    assert result["passed"] is False
+    assert result["failed"][0]["abs_diff"] == pytest.approx(0.08)
+
+
 def test_save_load_roundtrip(tmp_path):
     """save_manifest 与 load_manifest 往返一致。"""
     manifest = GoldenManifest(samples=[
