@@ -569,10 +569,18 @@ class BatchPipeline:
     ) -> list[tuple[str, list[BatchInput]]]:
         """按 Meta 连拍分组；无时间信息时每组一张。"""
         metas = [self._meta_dict(item) for item in photos]
-        by_key = {
-            str(meta.get("file_path") or item.photo_id): item
-            for item, meta in zip(photos, metas)
-        }
+        # 重复 file_path：保留首个并告警。原 dict 推导会让后者静默覆盖
+        # 前者，连拍组内两张照片会凭空少一张。
+        by_key: dict[str, BatchInput] = {}
+        for item, meta in zip(photos, metas):
+            key = str(meta.get("file_path") or item.photo_id)
+            if key in by_key:
+                _LOGGER.warning(
+                    "[pixo.pipeline.batch] 分组键 file_path 重复, 保留首个"
+                    " photo_id=%s, 忽略 photo_id=%s (key=%s)",
+                    by_key[key].photo_id, item.photo_id, key)
+                continue
+            by_key[key] = item
         groups_meta = detect_burst_groups(metas) if any(
             (m.get("datetime") or m.get("capture", {}).get("datetime"))
             for m in metas
@@ -597,10 +605,30 @@ class BatchPipeline:
     # ---- 单张筛选 ----
 
     def _image_for(self, item: BatchInput) -> np.ndarray | None:
-        """取批量输入图像；无图返回 None。"""
+        """取批量输入图像；无图返回 None。
+
+        raw_path-only 输入（image_rgb 为 None）时用 rawpy 半尺寸解码出
+        预览图供硬过滤/美学预筛消费——此前 raw_path 从不解码，RAW 输入
+        100% 被 no_image 拒绝。解码失败记 warning 后走原拒绝路径。
+        """
         if item.image_rgb is not None:
             return np.asarray(item.image_rgb)
-        return None
+        raw_path = item.raw_path
+        if raw_path is None:
+            return None
+        try:
+            import rawpy  # 函数内导入：未装 rawpy 的纯 RGB 环境不受影响
+
+            with rawpy.imread(str(raw_path)) as raw:
+                rgb = raw.postprocess(
+                    use_camera_wb=True, half_size=True, output_bps=8,
+                )
+            return np.ascontiguousarray(rgb)
+        except Exception as exc:  # noqa: BLE001 - RAW 预览解码失败不崩批
+            _LOGGER.warning(
+                "[pixo.pipeline.batch] RAW 预览解码失败, 按无图处理: "
+                "%s (%s)", raw_path, exc)
+            return None
 
     def hard_filter(
         self,

@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -94,6 +95,38 @@ _DSH_CHAT_ENV_MODEL = "PIXO_DSH_CHAT_MODEL"
 _DSH_CHAT_TIMEOUT_S = 10.0
 _DSH_CHAT_MAX_ATTEMPTS = 2  # 首次 + 重试 1 次
 
+# ---- LLM 调用熔断（t94）：连续失败 N 次进入冷却期，冷却内零请求直降级 ----
+# 10s 超时 × 2 次重试的同步调用发生在渲染迭代内，最坏 ~20s/张；服务持续
+# 不可用时按连续失败计数熔断，冷却期内直接返回降级结果不再发请求。
+_LLM_BREAKER_THRESHOLD = 3          # 连续失败阈值（按请求次计，成功清零）
+_LLM_COOLDOWN_ENV = "PIXO_LLM_COOLDOWN"
+_LLM_COOLDOWN_DEFAULT_S = 60.0
+_LLM_BREAKER = {"failures": 0, "cool_until": 0.0}
+
+
+def _now() -> float:
+    """单调时钟（测试经 monkeypatch 注入假时钟）。"""
+    return time.monotonic()
+
+
+def _llm_cooldown_s() -> float:
+    """冷却秒数：env PIXO_LLM_COOLDOWN 可调，缺失/非法回退默认 60s。"""
+    raw = os.environ.get(_LLM_COOLDOWN_ENV)
+    if raw is None:
+        return _LLM_COOLDOWN_DEFAULT_S
+    try:
+        value = float(raw)
+    except ValueError:
+        return _LLM_COOLDOWN_DEFAULT_S
+    return value if value >= 0.0 else _LLM_COOLDOWN_DEFAULT_S
+
+
+def _llm_breaker_remaining_s() -> float:
+    """熔断冷却剩余秒数；未达阈值或已过期返回 0.0。"""
+    if _LLM_BREAKER["failures"] < _LLM_BREAKER_THRESHOLD:
+        return 0.0
+    return max(0.0, _LLM_BREAKER["cool_until"] - _now())
+
 
 def _dsh_chat_config() -> dict[str, str] | None:
     """读取 DSH Chat 三要素配置；任一缺失返回 None。"""
@@ -146,6 +179,9 @@ def _dsh_chat_real(text: str) -> dict[str, Any]:
 
     - PIXO_DSH_CHAT_URL/KEY/MODEL 任一缺失 → 本地占位(source=placeholder)；
     - 超时 10s、失败重试 1 次；
+    - 熔断（t94）：连续 3 次请求失败进入冷却期（默认 60s，env
+      PIXO_LLM_COOLDOWN 可调），冷却期内零请求直接降级；任一次成功
+      即清零失败计数；
     - 二次失败 → 本地占位并附 error 字段，不向调用方抛错。
     """
     cfg = _dsh_chat_config()
@@ -155,10 +191,21 @@ def _dsh_chat_real(text: str) -> dict[str, Any]:
             "(PIXO_DSH_CHAT_URL/KEY/MODEL)，降级本地占位")
         return _dsh_chat_placeholder(text)
 
+    remaining = _llm_breaker_remaining_s()
+    if remaining > 0.0:
+        _LOGGER.warning(
+            "[pixo.agent.tools] dsh.chat 熔断冷却中，跳过请求"
+            f"(连续失败 {_LLM_BREAKER['failures']} 次，剩余 {remaining:.1f}s)")
+        fallback = _dsh_chat_placeholder(text)
+        fallback["error"] = (
+            f"circuit_breaker_cooldown: 剩余 {remaining:.1f}s")
+        return fallback
+
     last_error: Exception | None = None
     for attempt in range(1, _DSH_CHAT_MAX_ATTEMPTS + 1):
         try:
             reply = _dsh_chat_post(cfg, text)
+            _LLM_BREAKER["failures"] = 0      # 成功即清零失败计数
             return {
                 "ok": True,
                 "role": "agent",
@@ -169,6 +216,13 @@ def _dsh_chat_real(text: str) -> dict[str, Any]:
             }
         except Exception as exc:  # noqa: BLE001 - 网络异常一律走重试/降级
             last_error = exc
+            _LLM_BREAKER["failures"] += 1
+            if _LLM_BREAKER["failures"] >= _LLM_BREAKER_THRESHOLD:
+                _LLM_BREAKER["cool_until"] = _now() + _llm_cooldown_s()
+                _LOGGER.warning(
+                    "[pixo.agent.tools] dsh.chat 连续失败达 "
+                    f"{_LLM_BREAKER['failures']} 次，熔断冷却 "
+                    f"{_llm_cooldown_s():.0f}s")
             _LOGGER.warning(
                 "[pixo.agent.tools] dsh.chat 请求失败"
                 f"(第{attempt}/{_DSH_CHAT_MAX_ATTEMPTS}次): {exc}")

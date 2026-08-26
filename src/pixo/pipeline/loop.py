@@ -56,6 +56,36 @@ _COLOR_PARAM_ALIASES = {
     "saturation.adjust": ("colorcal", "saturation"),
 }
 
+# 完整「语义键 → 执行位」注册表（t107）：Decide/LLM 规则输出的点分扁平键
+# 必须命中此表才有渲染执行位，否则落成顶层悬空键被静默忽略（tone/dehaze/
+# clarity 规则曾整链悬空）。色彩键沿用 _COLOR_PARAM_ALIASES，影调键映射到
+# 对应 stage 桶。dehaze 已进 DEFAULT_STAGES（t108）但默认 enabled=False，
+# 规则命中时由 _apply_decide_params 联动置 enabled=True 才产生视觉差异。
+_DOTTED_PARAM_REGISTRY: dict[str, tuple[str, str]] = {
+    **_COLOR_PARAM_ALIASES,
+    "tone.shadows": ("tone", "shadows"),
+    "tone.highlights": ("tone", "highlights"),
+    "clarity.strength": ("clarity", "strength"),
+    "dehaze.strength": ("dehaze", "strength"),
+}
+
+_LOGGER = logging.getLogger(__name__)
+
+# trace 文本截断上限：同一 rejected 事件可能同时携带 reply_text 与
+# rejected 项内 raw_text 双份全文，超长回复会原样翻倍进 trace/state 存储。
+_TRACE_REPLY_TEXT_MAX = 4096   # reply_text 单字段上限（4KB）
+_TRACE_RAW_TEXT_MAX = 2048     # 每个 rejected 项内 raw_text 上限（2KB）
+
+
+def _truncate_text(text: Any, limit: int) -> tuple[str | None, bool]:
+    """把超长文本截到 limit 字符，返回 (截断后文本, 是否发生截断)。"""
+    if text is None:
+        return None, False
+    s = str(text)
+    if len(s) <= limit:
+        return s, False
+    return s[:limit], True
+
 
 def _build_llm_review(trace_dicts: list[dict[str, Any]]) -> dict[str, Any] | None:
     """从 trace 事件汇总 llm_suggestions 人工审核块 (t69, 纯报表)。
@@ -91,8 +121,14 @@ def _build_llm_review(trace_dicts: list[dict[str, Any]]) -> dict[str, Any] | Non
             if not items:
                 reasons["unknown"] = reasons.get("unknown", 0) + 1
             if meta.get("reply_text"):
-                notes.append("rejected 回复全文见 agent_suggest_rejected "
-                             "事件 metadata.reply_text")
+                # 超长回复写 trace 前已截断（reply_truncated 标记），
+                # 注明非全文避免误导。
+                notes.append(
+                    "rejected 回复超长已截断，截断文本见 "
+                    "agent_suggest_rejected 事件 metadata.reply_text"
+                    if meta.get("reply_truncated") else
+                    "rejected 回复全文见 agent_suggest_rejected "
+                    "事件 metadata.reply_text")
         elif et == "agent_suggest_skipped":
             notes.append(e.get("reason") or "dsh.chat 环境未配置整链跳过")
         elif et == "agent_suggest_error":
@@ -242,15 +278,27 @@ class SyntheticRenderBackend:
         return int(w), int(h)
 
     def _apply_exposure(self, img: np.ndarray, params: dict[str, Any]) -> np.ndarray:
-        """把嵌套 exposure.mode 数值当作 EV 线性增益应用。"""
+        """把嵌套 exposure 参数当作 EV 线性增益应用。
+
+        数值 mode 为手动绝对 EV；mode="auto" 时读取 target_offset 作为
+        相对自动曝光的增益（loop 的 decide 曝光修正写出的正是该形态，
+        此前被直接跳过导致合成链路曝光规则无效）。
+        """
         exposure = params.get("exposure")
         if not isinstance(exposure, dict):
             return img
         mode = exposure.get("mode", "auto")
         if isinstance(mode, (int, float)) and not isinstance(mode, bool):
-            if mode != "auto":
-                img = img * (2.0 ** float(mode))
-        return img
+            ev = float(mode)
+        elif str(mode).lower() == "auto":
+            # auto 模式：target_offset 即相对自动曝光的 EV 增益
+            try:
+                ev = float(exposure.get("target_offset", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                return img
+        else:
+            return img
+        return img * (2.0 ** ev)
 
     def _render(
         self,
@@ -424,11 +472,20 @@ def _unreliable_regions(measurement: dict[str, Any]) -> list[str]:
     ]
 
 
-def _flatten_decide_params(params: dict[str, Any]) -> dict[str, Any]:
+def _flatten_decide_params(
+    params: dict[str, Any],
+    *,
+    include_exposure: bool = False,
+) -> dict[str, Any]:
     """把嵌套管线参数转换为 Decide 使用的扁平参数。
 
     默认 auto 曝光使用 target_offset 作为可调曝光值；手动数值模式仍按
     exposure_ev 暴露，便于兼容已有手动管线。
+
+    ``include_exposure=True`` 时额外保留 exposure 嵌套桶（与扁平
+    exposure_ev 共存）：run_suggest → review_patches 的 delta 预检按
+    ``current_params[stage][name]`` 读取嵌套桶，剥离后
+    exposure.target_offset 的 delta 基线会失真回 0。
     """
     flat: dict[str, Any] = {}
     exposure = params.get("exposure") if isinstance(params.get("exposure"), dict) else {}
@@ -443,7 +500,12 @@ def _flatten_decide_params(params: dict[str, Any]) -> dict[str, Any]:
             except (TypeError, ValueError):
                 pass
     for key, value in params.items():
-        if key not in ("exposure", "compose"):
+        if key == "exposure":
+            if include_exposure:
+                # 保留嵌套桶供 delta 预检读基线；扁平 exposure_ev 已在上方
+                flat[key] = copy.deepcopy(value)
+            continue
+        if key != "compose":
             flat[key] = value
     return flat
 
@@ -464,18 +526,48 @@ def _apply_decide_params(
             exp = out.setdefault("exposure", {})
             exp["mode"] = "auto"
             exp["target_offset"] = float(value)
-        elif low in _COLOR_PARAM_ALIASES:
-            # t51 色彩规则执行位: 点分语义键翻译进 colorcal stage 桶,
-            # 不再落成顶层悬空键; 值直传 (域语义见 _COLOR_PARAM_ALIASES 注)。
-            stage, sparam = _COLOR_PARAM_ALIASES[low]
+        elif low in _DOTTED_PARAM_REGISTRY:
+            # t51/t107: 点分语义键翻译进 stage 桶, 不再落成顶层悬空键
+            stage, sparam = _DOTTED_PARAM_REGISTRY[low]
             bucket = out.setdefault(stage, {})
             if isinstance(bucket, dict):
                 bucket[sparam] = float(value)
+                if stage == "dehaze" and sparam == "strength":
+                    # dehaze 默认 enabled=False（wants 门控），规则命中需
+                    # 显式开启才产生视觉差异（t108 进 DEFAULT_STAGES 后联动）
+                    bucket["enabled"] = True
             else:
                 out[key] = copy.deepcopy(value)
         else:
+            if "." in low:
+                # 未知点分键: 无执行位, 保留为顶层 informational 键
+                # (行为不吞键, 仅提示其不会产生渲染效果)
+                _LOGGER.warning(
+                    "[pixo.loop] Decide 输出点分参数无执行位, "
+                    "保留为顶层 informational 键: %s",
+                    low)
             out[key] = copy.deepcopy(value)
     return out
+
+
+def _target_value(targets: Mapping[str, Any] | None,
+                  metric: str) -> float | None:
+    """从 targets 解析指标的数值目标；无该指标/不可数值化返回 None。
+
+    兼容两种形态：纯数值（``{"face_luminance": 115}``）与
+    ``{"value"|"target": ...}`` 字典（与引擎 _resolve_target 一致）。
+    """
+    if not isinstance(targets, Mapping):
+        return None
+    tv = targets.get(metric)
+    if isinstance(tv, dict):
+        tv = tv.get("value", tv.get("target"))
+    if tv is None:
+        return None
+    try:
+        return float(tv)
+    except (TypeError, ValueError):
+        return None
 
 
 def _default_meta_extractor(raw_path: str | Path) -> dict[str, Any]:
@@ -509,9 +601,11 @@ class SinglePhotoLoop:
 
     参数均可注入，便于单测与未来 service 复用。
 
-    规则评估时机坑 (t51/t73)：decide 规则仅在 max_iterations>=2 时于首轮
-      之后的迭代被评估；max_iterations=1 时首轮 decide 短路，规则包完全不
-      触发 —— 调参与验收规则行为时必须以 >=2 运行。
+    规则评估时机 (t51/t73 → t107 修复后语义)：每轮 decide 都会评估规则
+      并应用参数；max_iterations=N 时第 N 轮 check_termination 置
+      last_iteration 而非 stop，本轮参数照常计算应用，loop 据
+      last_iteration 标记在应用后退出。低改善停滞（low_improvement）
+      优先于轮数上限判定。
     构图建议契约（crop_suggest=True）：
       用户意图的显式通道是 locked_params；未锁定的显式 compose.* 设置
       可能在采纳建议时被覆盖（当前已知行为）：采纳为合并语义——保留
@@ -950,10 +1044,27 @@ class SinglePhotoLoop:
                 metrics["crop_suggestion_applicable"] = (
                     1 if (avail and not locked_compose) else 0
                 )
-            key = metrics.get("face_luminance") or metrics.get("mean_luminance")
+            metric_name = (
+                "face_luminance" if metrics.get("face_luminance")
+                else "mean_luminance"
+            )
+            key = metrics.get(metric_name)
             if key is not None:
                 if previous_key is not None:
-                    improvement_history.append(abs(float(key) - float(previous_key)))
+                    target_value = _target_value(self.targets, metric_name)
+                    if target_value is not None:
+                        # 有显式目标：改善 = 目标距离的缩短量（负改善截 0）。
+                        # 绕目标振荡（|Δ观测值| 大但两侧等距）不再被
+                        # 误判为大改善。
+                        prev_dist = abs(previous_key - target_value)
+                        cur_dist = abs(float(key) - target_value)
+                        improvement_history.append(
+                            max(0.0, prev_dist - cur_dist))
+                    else:
+                        # 无显式目标：退化为相邻轮观测值差分。局限：绕目标
+                        # 振荡时 |Δ| 仍会被计为大改善，仅作启发式兜底。
+                        improvement_history.append(
+                            abs(float(key) - previous_key))
                 previous_key = float(key)
 
             flat_params = _flatten_decide_params(params)
@@ -1002,6 +1113,11 @@ class SinglePhotoLoop:
                             aesthetic_history=list(aesthetic_scores),
                             scene_query=" ".join(self.prompts),
                             locked_params=self.locked_params,
+                            # 保留 exposure 嵌套桶：review_patches 的
+                            # delta 预检按嵌套桶读现值，剥离会使
+                            # exposure.target_offset 基线失真回 0。
+                            current_params=_flatten_decide_params(
+                                params, include_exposure=True),
                         )
                         if sugg.get("status") == "ok":
                             accepted_list = list(sugg["accepted"])
@@ -1032,11 +1148,27 @@ class SinglePhotoLoop:
                                         sugg.get("chat_latency_ms"),
                                     "cache_hit": sugg.get("cache_hit")})
                         if sugg.get("rejected"):
+                            # 同一事件可能双份全文（reply_text + 项内
+                            # raw_text），写 trace 前分别截断留痕。
+                            reply_text, reply_truncated = _truncate_text(
+                                sugg.get("reply_text"), _TRACE_REPLY_TEXT_MAX)
+                            rejected_items = []
+                            for r in sugg["rejected"]:
+                                if isinstance(r, dict):
+                                    raw, raw_truncated = _truncate_text(
+                                        r.get("raw_text"),
+                                        _TRACE_RAW_TEXT_MAX)
+                                    r = {**r, "raw_text": raw}
+                                    if raw_truncated:
+                                        r["raw_truncated"] = True
+                                rejected_items.append(r)
                             self._add_trace(
                                 sm, event_type="agent_suggest_rejected",
                                 reason=f"{len(sugg['rejected'])} 个补丁被拒绝",
-                                metadata={"rejected": sugg["rejected"],
-                                          "reply_text": sugg["reply_text"],
+                                metadata={"rejected": rejected_items,
+                                          "reply_text": reply_text,
+                                          **({"reply_truncated": True}
+                                             if reply_truncated else {}),
                                           "chat_latency_ms":
                                               sugg.get("chat_latency_ms"),
                                           "cache_hit": sugg.get("cache_hit")})
@@ -1057,6 +1189,10 @@ class SinglePhotoLoop:
                     "rule_ids": decision.get("rule_ids", []),
                     "params": decision.get("params", {}),
                     "metrics": metrics,
+                    # 末轮 last_iteration 透传留痕（loop 据此在应用
+                    # 本轮参数后退出），非末轮不写该键。
+                    **({"last_iteration": True}
+                       if decision.get("last_iteration") else {}),
                 },
                 metadata={"iteration": iteration},
             )
@@ -1122,6 +1258,10 @@ class SinglePhotoLoop:
                 decision.get("rule_ids") or [],
                 iteration,
             )
+            if decision.get("last_iteration"):
+                # 本轮为最大轮数：参数已应用，终止迭代（t107 off-by-one 修复）
+                stop_reason = decision.get("reason") or "达到最大迭代轮数"
+                break
 
         return params, measurements, masks_cache, stop_reason
 
@@ -1247,7 +1387,7 @@ class SinglePhotoLoop:
                 reason=reason,
             )
 
-        params_after, preview_measurements, masks_cache, _stop_reason = (
+        params_after, preview_measurements, masks_cache, preview_stop_reason = (
             self._run_preview_iterations(
                 sm, backend, photo_id, loop_params, metadata, max_iter
             )
@@ -1339,11 +1479,17 @@ class SinglePhotoLoop:
         if self.export_path is not None and full_img is not None:
             self.export_path = _save_image(full_img, self.export_path)
 
+        # 最终 reason 组装：FINAL_QC 结论为主，preview 阶段终止原因
+        # （stopped/last_iteration 的 term reason）作为补充信息一并留痕，
+        # 不再被丢弃。
+        final_reason = "FINAL_QC 达标"
+        if preview_stop_reason:
+            final_reason = f"{final_reason}；preview 终止: {preview_stop_reason}"
         return self._result(
             sm, photo_id, params_after, preview_measurements,
             full_measurement, full_img, metadata,
             full_measurement.get("global"), agent_decision=agent_decision,
-            reason="FINAL_QC 达标",
+            reason=final_reason,
         )
 
     def _result(

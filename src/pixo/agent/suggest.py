@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import time
 from collections import OrderedDict
 from pathlib import Path
@@ -23,6 +24,8 @@ from typing import Any, Callable
 
 from .patch_protocol import review_patches
 from .tools import _dsh_chat_config, _dsh_chat_real
+
+_LOGGER = logging.getLogger(__name__)
 
 __all__ = [
     "is_dsh_chat_configured",
@@ -61,16 +64,31 @@ def is_dsh_chat_configured() -> bool:
     return _dsh_chat_config() is not None
 
 
+# 系统提示词模块级缓存：{"stamp": ((路径, mtime_ns), ...), "value": str}
+# 渲染迭代内每张照片都会拼 prompt，避免重复读盘（mtime 变化自动失效）
+_SYSTEM_PROMPT_CACHE: dict[str, Any] = {}
+
+
 def load_system_prompt() -> str:
-    """system.md + tools.md + 补丁协议 + few-shot 拼接为系统段。"""
-    parts = []
-    for name in ("system.md", "tools.md"):
-        p = _PROMPTS_DIR / name
-        if p.exists():
-            parts.append(p.read_text(encoding="utf-8"))
+    """system.md + tools.md + 补丁协议 + few-shot 拼接为系统段。
+
+    结果模块级缓存，仅在 prompts 文件 mtime 变化时重建。
+    """
+    files = [_PROMPTS_DIR / name for name in ("system.md", "tools.md")]
+    stamp = tuple(
+        (str(p), p.stat().st_mtime_ns) if p.exists() else (str(p), None)
+        for p in files
+    )
+    cached = _SYSTEM_PROMPT_CACHE.get("value")
+    if cached is not None and _SYSTEM_PROMPT_CACHE.get("stamp") == stamp:
+        return cached
+    parts = [p.read_text(encoding="utf-8") for p in files if p.exists()]
     parts.append(PATCH_SCHEMA_DOC)
     parts.append(FEW_SHOT_EXAMPLE)
-    return chr(10).join(parts) + chr(10)
+    text = chr(10).join(parts) + chr(10)
+    _SYSTEM_PROMPT_CACHE["value"] = text
+    _SYSTEM_PROMPT_CACHE["stamp"] = stamp
+    return text
 
 
 def _pick_metrics(measurement: Any) -> dict:
@@ -97,7 +115,9 @@ def _knowledge_top(registry: Any, scene_query: str, top: int = 3):
         return []
     try:
         res = registry.query(scene_query)
-    except Exception:
+    except Exception as exc:            # 图谱查询失败：降级空列表不阻断
+        _LOGGER.warning(
+            "[pixo.agent.suggest] 知识图谱查询失败，降级空列表: %s", exc)
         return []
     items = res.get("items") if isinstance(res, dict) else None
     if not isinstance(items, list):
@@ -126,28 +146,58 @@ def build_suggest_context(
     }
 
 
-def _extract_json_patches(text: Any) -> list | None:
+# 对抗性超长回复上限：超出直接放弃解析（防 O(n) 扫描被滥用为 CPU 消耗）
+_EXTRACT_MAX_CHARS = 256 * 1024
+
+
+def _looks_like_patch(obj: Any) -> bool:
+    """元素形如补丁：dict 且带 'param' 键（其余字段交闸门完整校验）。"""
+    return isinstance(obj, dict) and "param" in obj
+
+
+def _extract_json_patches(text: Any, prompt: str | None = None) -> list | None:
     """从回复全文提取补丁 JSON 数组；容忍 ```json 围栏与前后闲话。
 
-    返回 list[dict]；解析失败/无数组 → None（调用方按全 rejected 处理）。
+    - O(n)：``raw_decode(s, idx)`` 在候选起始位原地解析，无逐位子串复制；
+    - 数组优先：扫描全部候选（'[' / '{' 起始位），取第一个「是 list 且
+      元素形如补丁」的结果——模型先回显 dict 上下文再给数组时不会误判；
+    - ``prompt`` 传入时先剥离回复中回显的提示词前缀：占位/降级路径的
+      模型会把整段提示词原样回显，其中内嵌的 few-shot 示例与上下文
+      JSON 会被误判为补丁（t107 回归）；剥离后只在回复正文里寻找；
+    - 长度上限 256KB，超长回复直接放弃解析；
+    - 找不到合格数组返回 None（调用方按全 rejected 处理）。
     """
     if not isinstance(text, str) or not text.strip():
         return None
+    if len(text) > _EXTRACT_MAX_CHARS:
+        _LOGGER.warning(
+            "[pixo.agent.suggest] 回复超长(%d > %d 字符)，放弃补丁提取",
+            len(text), _EXTRACT_MAX_CHARS)
+        return None
     fence = chr(96) * 3                      # ``` 围栏剥离
     cleaned = text.replace(fence, "")
+    if prompt:
+        # 提示词回显剥离：占位/降级路径模型会回显整段提示词（常带
+        # "已收到 DSH 消息: " 之类前缀）。prompt 与回复同样先剥离围栏
+        # （few-shot 内含 ```json 围栏），再定位 prompt 全文出现处并
+        # 剥离到其末尾，只在回复正文里寻找补丁；reply_text 保留完整回复。
+        probe = prompt.replace(fence, "")
+        pos = cleaned.find(probe)
+        if pos >= 0:
+            cleaned = cleaned[pos + len(probe):].lstrip()
     decoder = json.JSONDecoder()
     for idx, ch in enumerate(cleaned):
         if ch not in "[{":
             continue
         try:
-            obj, _ = decoder.raw_decode(cleaned[idx:])
+            obj, _end = decoder.raw_decode(cleaned, idx)
         except ValueError:
             continue
-        if isinstance(obj, dict):
-            return [obj]
-        if isinstance(obj, list):
+        if isinstance(obj, list) and any(_looks_like_patch(o) for o in obj):
+            # 保留全部 dict 元素：形如补丁的进 accepted，畸形的交闸门
+            # 给出明确 rejected 理由
             return [o for o in obj if isinstance(o, dict)]
-        return None
+        # 非补丁形数组 / dict：继续向后扫描（数组优先，见 docstring）
     return None
 
 
@@ -157,9 +207,26 @@ _SUGGEST_CACHE: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
 CACHE_STATS = {"hits": 0, "misses": 0}
 
 
-def _cache_fingerprint(prompt: str) -> str:
-    """system+user 全文指纹。"""
-    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+def _cache_fingerprint(
+    prompt: str,
+    locked_params: Any = None,
+    current_params: Any = None,
+) -> str:
+    """指纹 = system+user 全文 + locked/current 参数域（排序规范化序列化）。
+
+    prompt 本身不含锁定集与现行参数——若指纹只取 prompt，锁定集不同的
+    照片会命中彼此缓存，把按旧锁定集放行的 accepted 直接复用（t94 封堵）。
+    """
+    h = hashlib.sha256()
+    h.update(prompt.encode("utf-8"))
+    try:
+        locked = sorted(str(k) for k in (locked_params or []))
+        extra = json.dumps({"locked": locked, "current": current_params or {}},
+                           sort_keys=True, ensure_ascii=False, default=str)
+    except (TypeError, ValueError):       # 不可序列化的极端入参：repr 兜底
+        extra = repr((locked_params, current_params))
+    h.update(extra.encode("utf-8"))
+    return h.hexdigest()
 
 
 def _cache_get(fingerprint: str):
@@ -210,7 +277,7 @@ def run_suggest(
     prompt = (load_system_prompt() + nl + nl + "## 当前上下文(测量摘要)"
               + nl + json.dumps(context, ensure_ascii=False, default=str))
 
-    fingerprint = _cache_fingerprint(prompt)
+    fingerprint = _cache_fingerprint(prompt, locked_params, current_params)
     cached = _cache_get(fingerprint)
     if cached is not None:
         # 同上下文指纹命中：跳过 HTTP 直接复用（t53 延迟治理）
@@ -223,6 +290,8 @@ def run_suggest(
         reply = client(prompt)
     except Exception as exc:                 # 注入客户端自爆也不拖垮闭环
         latency = round((time.perf_counter() - started) * 1000.0, 3)
+        _LOGGER.warning(
+            "[pixo.agent.suggest] chat 客户端异常，降级 rejected: %s", exc)
         return {"status": "ok", "accepted": [],
                 "rejected": [{"item": None, "reason": f"chat 客户端异常 {exc}",
                               "raw_text": ""}],
@@ -237,9 +306,12 @@ def run_suggest(
         text = str(reply)
         source = "injected"
 
-    patches = _extract_json_patches(text)
+    patches = _extract_json_patches(text, prompt)
     if patches is None:
         # 全文无可解析补丁：整条按 rejected 合成，保证回复全文可进 trace
+        _LOGGER.warning(
+            "[pixo.agent.suggest] 回复未解析到补丁 JSON (source=%s, "
+            "len=%d)，整条降级 rejected", source, len(text))
         return {"status": "ok", "accepted": [],
                 "rejected": [{"item": None,
                               "reason": "回复中未解析到补丁 JSON",

@@ -6,7 +6,10 @@
       "reason": str, "rule_ids": [str, ...]}, ...]
 
 校验链（按序短路，拒绝理由确定）：
-  1. 结构 schema：param/op/value 必备且类型正确；
+  1. 结构 schema：param/op/value 必备且类型正确；value 统一
+     ``math.isfinite`` 校验（NaN/Infinity/-Infinity 一律拒绝——Python
+     json.loads 默认接受这三类字面量，且 NaN 与任何比较均为 False，
+     会静默绕过第 4 段越界预检）；
   2. ParamRef：拆解出的 stage 存在于 STAGE_REGISTRY，且 param 在该
      Stage 的 param_schema 中；decide 层扁平方言（如 exposure_ev）
      不接受；
@@ -23,8 +26,9 @@ apply_patches(params, review) 是纯函数：deepcopy 后落地——set 直接
 from __future__ import annotations
 
 import copy
+import math
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 from pixo.decide.engine import _clamp
 from pixo.render import modules as _stage_modules  # noqa: F401 触发 Stage 注册
@@ -95,6 +99,11 @@ def _validate_one(
         return f"param {param!r} 不符合 'stage.param' 形态"
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         return f"value 必须是数值，实际 {value!r}"
+    if not math.isfinite(value):
+        # NaN/Infinity：json.loads 默认接受字面量，且 NaN 与任何比较均
+        # 为 False，会静默绕过下方越界预检——必须在此显式拒绝
+        return (f"value 必须是有限数值（拒绝 NaN/Infinity），"
+                f"实际 {value!r}")
     stage, name = param.split(".", 1)
 
     # 2) ParamRef：stage 存在 + 参数在 schema 中
@@ -120,6 +129,10 @@ def _validate_one(
             target = float(cur) + float(value)
         except (TypeError, ValueError):
             return f"delta 现值不可数值化：{stage}.{name}={cur!r}"
+        if not math.isfinite(target):
+            # 现值被污染（inf/nan）时目标值同样非有限：拒绝而非放行
+            return (f"delta 目标值非有限（NaN/Infinity）："
+                    f"{stage}.{name}: {cur!r} + {value!r}")
     if lo is not None and target < float(lo):
         return (f"数值越界：目标 {target} 低于 '{param}' 下界 {lo}"
                 "（预检拒绝而非截断）")
@@ -175,8 +188,12 @@ def apply_patches(
 ) -> dict[str, Any]:
     """把已通过校验的补丁落地到嵌套参数（纯函数，返回新 dict）。
 
+    注意：当前无生产调用方（预留——建议态经人工确认后的落地入口）。
+
     set 直接赋值；delta 以现值（缺省 0.0）为基累加；落地值经引擎同款
-    clamp 截断兜底（正常应已被 review 预检拦截越界）。
+    clamp 截断兜底（正常应已被 review 预检拦截越界）。NaN/Infinity 与
+    不可数值化的项防御性跳过（clamp 对 NaN 失效——任何比较均为 False
+    会原样放行），绝不落地。
     """
     out = copy.deepcopy(dict(params or {}))
     for item in review.accepted:
@@ -185,9 +202,14 @@ def apply_patches(
         if not isinstance(bucket, dict):
             bucket = out[stage] = {}
         lo, hi = _rng_for(stage, name)
-        if item["op"] == "delta":
-            new_value = float(bucket.get(name, 0.0)) + float(item["value"])
-        else:
-            new_value = float(item["value"])
+        try:
+            if item["op"] == "delta":
+                new_value = float(bucket.get(name, 0.0)) + float(item["value"])
+            else:
+                new_value = float(item["value"])
+        except (TypeError, ValueError):
+            continue                   # 不可数值化：兜底跳过不落地
+        if not math.isfinite(new_value):
+            continue                   # NaN/Infinity 兜底：clamp 对其失效
         bucket[name] = _clamp(new_value, (lo, hi))
     return out

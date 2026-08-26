@@ -9,6 +9,8 @@
 """
 from __future__ import annotations
 
+import sys
+import types
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -220,3 +222,113 @@ def test_single_photo_runner_invoked_for_recommended():
     assert calls == ["p0"]
     assert result.all_recommended == ["p0"]
     assert result.groups[0].photos[0].single_loop_result["state"] == "ACCEPTED"
+
+
+# ---------------------------------------------------------------------------
+# RAW 通道：raw_path-only 输入解码预览图 + 分组键重复保留首个
+# ---------------------------------------------------------------------------
+
+class _FakeRawHandle:
+    """rawpy.imread 句柄假件：postprocess 直接返回预置数组。"""
+
+    def __init__(self, arr: np.ndarray) -> None:
+        self._arr = arr
+
+    def postprocess(self, **kw):
+        return self._arr
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def _install_fake_rawpy(monkeypatch, arr_or_factory):
+    """把假 rawpy 模块塞进 sys.modules（_image_for 函数内 import 生效）。"""
+    def _imread(path):
+        arr = arr_or_factory() if callable(arr_or_factory) else arr_or_factory
+        return _FakeRawHandle(arr)
+
+    fake = types.SimpleNamespace(imread=_imread)
+    monkeypatch.setitem(sys.modules, "rawpy", fake)
+    return fake
+
+
+def test_raw_path_only_input_decodes_preview_not_no_image(monkeypatch):
+    """image_rgb=None + raw_path：rawpy 半尺寸解码出预览图参与硬过滤，
+    不再被 no_image 一律拒绝。"""
+    _install_fake_rawpy(monkeypatch, _sharp_image(7))
+    pipeline = BatchPipeline(
+        top_n=1,
+        aesthetic_scorer=FixedAestheticScorer({"r1": 4.5}),
+    )
+    item = BatchInput(photo_id="r1", raw_path="X:/fake/DSC_0001.NEF")
+
+    image = pipeline._image_for(item)
+    assert image is not None
+    assert image.shape == (64, 64, 3)
+
+    result = pipeline.process([item])
+    photo = result.groups[0].photos[0]
+    assert photo.hard_filter.passed is True
+    assert "no_image" not in photo.hard_filter.reasons
+
+
+def test_raw_decode_failure_warns_and_keeps_no_image(monkeypatch, caplog):
+    """解码失败：记 warning 后走原拒绝路径（no_image），不崩批。"""
+
+    class _BoomHandle:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def postprocess(self, **kw):
+            raise RuntimeError("corrupt raw data")
+
+    monkeypatch.setitem(
+        sys.modules, "rawpy", types.SimpleNamespace(imread=lambda p: _BoomHandle()))
+    pipeline = BatchPipeline(top_n=1)
+    item = BatchInput(photo_id="bad", raw_path="X:/fake/bad.NEF")
+
+    with caplog.at_level("WARNING", logger="pixo.pipeline.batch"):
+        assert pipeline._image_for(item) is None
+        result = pipeline.process([item])
+    photo = result.groups[0].photos[0]
+    assert photo.hard_filter.passed is False
+    assert "no_image" in photo.hard_filter.reasons
+    assert any("RAW 预览解码失败" in r.message for r in caplog.records)
+
+
+def test_rawpy_missing_still_rejects_without_crash(monkeypatch):
+    """未安装 rawpy（sys.modules[rawpy]=None 触发 ImportError）：拒绝路径
+    不抛错。"""
+    monkeypatch.setitem(sys.modules, "rawpy", None)
+    pipeline = BatchPipeline(top_n=1)
+    item = BatchInput(photo_id="nopy", raw_path="X:/fake/x.NEF")
+    assert pipeline._image_for(item) is None
+
+
+def test_duplicate_group_key_keeps_first_with_warning(caplog):
+    """重复 file_path：保留首个输入并告警。
+
+    原 dict 推导会让后者静默覆盖前者（连拍组凭空少一张照片）。
+    """
+    def _dup(photo_id: str) -> BatchInput:
+        return BatchInput(
+            photo_id=photo_id,
+            image_rgb=_sharp_image(1),
+            meta={**_burst_meta(0, photo_id), "file_path": "dup.NEF",
+                  "photo_id": photo_id},
+        )
+
+    pipeline = BatchPipeline(top_n=10)
+    with caplog.at_level("WARNING", logger="pixo.pipeline.batch"):
+        groups = pipeline._group_inputs([_dup("first"), _dup("second")])
+
+    ids = [p.photo_id for _, items in groups for p in items]
+    assert "first" in ids
+    assert "second" not in ids
+    assert any("重复" in r.message for r in caplog.records)
