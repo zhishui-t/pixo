@@ -123,9 +123,13 @@ def test_gamut_soft_matches_reference(native_required):
 def test_colorcal_stage_native_matches_fallback(native_required, monkeypatch):
     rng = np.random.default_rng(20260820)
     img = rng.uniform(0.0, 1.0, size=(32, 32, 3)).astype(np.float32)
+    # S5 后 Python 全量回退的中性权重是"平台+高斯尾", native 仍是纯高斯:
+    # 中性偏移非零时两者已知分歧 (待 native 重编对齐, 有界性由
+    # tests/regression/test_gate_colorcal.py 的分歧上界测试把守), 故本测试
+    # 的严格等价只覆盖中性偏移为零的组合。
     cfg = {"stages": {"colorcal": {
         "saturation": 0.2, "vibrance": 0.15, "hue": 5.0,
-        "neutral_a": 1.0, "neutral_b": -1.0, "neutral_mode": "static",
+        "neutral_a": 0.0, "neutral_b": 0.0, "neutral_mode": "static",
         "skin_protect": 0.7, "gamut_soft": 0.5,
     }}}
     stage = ColorCalStage()

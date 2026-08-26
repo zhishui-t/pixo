@@ -37,24 +37,60 @@ def _param_fingerprint(params: Any) -> str:
     return hashlib.sha256(text).hexdigest()
 
 
+# 采样摘要每端取的字节数（state 内大 ndarray 的廉价指纹粒度）。
+_DIGEST_EDGE_BYTES = 4096
+
+
+def _ndarray_digest(value: np.ndarray) -> dict:
+    """ndarray 廉价摘要：shape/dtype/data_ptr + 首末各 4KB 采样 sha256。
+
+    不再对全图 tobytes() 哈希（cam_raw/cam_wb/sat_mask 全图曾使
+    _state_fingerprint 每 stage 哈希 ~25MB，12 stage 全链 ~310MB/渲染）。
+
+    防 false-positive 的前提（已核验，见 stage 缓存引用共享注释）：
+    1. state 内 ndarray 全部由上游 stage 重新绑定产出（white_balance.py /
+       exposure.py 均写新数组，无原地写者），其内容变化已被上游输出指纹链
+       覆盖；
+    2. 缓存条目按引用持有这些数组 ⇒ 旧数组被钉住不释放，新数组不会复用
+       旧地址（data_ptr 不碰撞）；
+    3. 首末采样 + shape/dtype 兜底同形同址的内容差异。
+    """
+    arr = np.asarray(value)
+    if arr.nbytes <= 2 * _DIGEST_EDGE_BYTES:
+        digest = hashlib.sha256(np.ascontiguousarray(arr).tobytes()).hexdigest()
+    else:
+        flat = np.ascontiguousarray(arr).reshape(-1).view(np.uint8)
+        h = hashlib.sha256()
+        h.update(flat[:_DIGEST_EDGE_BYTES].tobytes())
+        h.update(flat[-_DIGEST_EDGE_BYTES:].tobytes())
+        digest = h.hexdigest()
+    return {"__ndarray__": True, "shape": list(arr.shape),
+            "dtype": arr.dtype.str,
+            "ptr": int(arr.__array_interface__["data"][0]),
+            "sha256": digest}
+
+
 def _array_fingerprint(arr: np.ndarray) -> str:
+    """图像内容指纹（精确 sha256 全量哈希）。
+
+    性能约定：仅在 miss 路径调用（记录本 stage 输出指纹供下一级链式引用），
+    tier 首次解码时另算一次并缓存；命中路径经指纹链传递，不哈希全图。
+    """
     a = np.ascontiguousarray(arr)
     h = hashlib.sha256(a.tobytes()).hexdigest()
     return f"{h}:{a.shape}:{a.dtype.str}"
 
 
 def _state_fingerprint(state: dict) -> str:
-    """对 ctx.state 做规范化指纹，包含 ndarray 内容。
+    """对 ctx.state 做规范化指纹；ndarray 用 _ndarray_digest 廉价摘要。
 
     用于 stage 缓存 key：即使输入图像与 stage 参数相同，若 wb/ev/cct/
-    scene_trim 等 state 变化，也必须让缓存失效。
+    scene_trim 等 state 变化，也必须让缓存失效。大数组（cam_raw/cam_wb/
+    sat_mask）改采样摘要后，单次指纹成本 ~O(几十 KB) 而非 ~O(25MB)。
     """
     def _norm(value):
         if isinstance(value, np.ndarray):
-            arr = np.ascontiguousarray(value)
-            digest = hashlib.sha256(arr.tobytes()).hexdigest()
-            return {"__ndarray__": True, "shape": list(arr.shape),
-                    "dtype": arr.dtype.str, "sha256": digest}
+            return _ndarray_digest(value)
         if isinstance(value, dict):
             return {str(k): _norm(v) for k, v in sorted(value.items(),
                                                         key=lambda kv: str(kv[0]))}
@@ -103,9 +139,21 @@ class RawPreviewSession:
         self._decode_cache: dict[str, np.ndarray] = {}
         self._decode_wb: dict[str, np.ndarray | None] = {}
         self._tier_cache: dict[tuple, np.ndarray] = {}
+        self._tier_fp_cache: dict[tuple, str] = {}
         self._stage_cache: "OrderedDict[tuple, tuple]" = OrderedDict()
+        self._stage_cache_bytes = 0  # 增量维护，淘汰时不再 O(n) 全表求和
         self._encoding_cache: "OrderedDict[tuple, bytes]" = OrderedDict()
-        self._executor: Optional[ThreadPoolExecutor] = None
+        # 每缓存一把专用轻锁：只包 get/set/move_to_end/popitem（微秒级），
+        # 不包 stage.run / 渲染本身。
+        self._stage_lock = threading.Lock()
+        self._encoding_lock = threading.Lock()
+        # params + generation 一致性锁：update_params 的 _deep_merge 与渲染
+        # 线程的 deepcopy(self.params) 快照互斥，避免读到半更新状态。
+        self._params_lock = threading.Lock()
+        # executor 在 __init__ 建好（线程到首次 submit 才创建，成本可忽略），
+        # 消除 submit_render 懒初始化的竞态；close() 语义不变。
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix=f"render-{self.session_id}")
         self._async_lock = threading.Lock()
         self._latest_result: dict[int, np.ndarray] = {}
         self._closed = False
@@ -120,9 +168,10 @@ class RawPreviewSession:
     # ---- 参数 / generation ----
     def update_params(self, new_params: dict) -> int:
         """递归合并更新参数并递增 generation，返回新 generation。"""
-        _deep_merge(self.params, dict(new_params or {}))
-        self.generation += 1
-        return self.generation
+        with self._params_lock:
+            _deep_merge(self.params, dict(new_params or {}))
+            self.generation += 1
+            return self.generation
 
     def _raw_version(self) -> tuple[int, int]:
         """RAW 文件版本指纹：同路径文件被替换时缓存自动失效。"""
@@ -172,8 +221,10 @@ class RawPreviewSession:
         self._decode_wb[key] = wb
         return img
 
-    def _get_tier(self, long_edge: int, decode_mode: str) -> np.ndarray:
-        key = (int(long_edge), decode_mode, self._raw_version())
+    def _get_tier(self, long_edge: int, decode_mode: str,
+                  key: Optional[tuple] = None) -> np.ndarray:
+        if key is None:
+            key = (int(long_edge), decode_mode, self._raw_version())
         if key in self._tier_cache:
             return self._tier_cache[key]
 
@@ -187,19 +238,42 @@ class RawPreviewSession:
         self._tier_cache[key] = img
         return img
 
+    def _get_tier_fingerprint(self, tier_key: tuple,
+                              img: np.ndarray) -> str:
+        """tier 输入图指纹：tier 图不可变且被 _tier_cache 钉住，算一次即可。
+
+        tier_key/img 必须来自同一次渲染（调用方 stat 一次、tier 取图与指纹
+        共用该 key），避免文件在取图与建指纹之间被替换的版本竞态。
+        """
+        fp = self._tier_fp_cache.get(tier_key)
+        if fp is None:
+            fp = _array_fingerprint(img)
+            self._tier_fp_cache[tier_key] = fp
+        return fp
+
+    @staticmethod
+    def _entry_bytes(image: np.ndarray, state: dict) -> int:
+        return int(image.nbytes) + sum(
+            int(v.nbytes) for v in state.values()
+            if isinstance(v, np.ndarray))
+
     def _evict_stage_cache(self):
-        """按条数与估算字节数做 LRU 淘汰。"""
+        """按条数与估算字节数做 LRU 淘汰（字节总量增量维护，无 O(n) 扫描）。
+
+        注：state 数组按引用共享时同一数组可能被多个条目重复计数，
+        估算偏保守（只会提前淘汰），不影响正确性。
+        需持 self._stage_lock 调用。
+        """
         while len(self._stage_cache) > self.max_stage_entries:
-            self._stage_cache.popitem(last=False)
+            self._evict_stage_one()
         if self.max_stage_bytes > 0:
-            while self._stage_cache:
-                total = sum(
-                    entry[0].nbytes + sum(v.nbytes for v in entry[2].values()
-                                          if isinstance(v, np.ndarray))
-                    for entry in self._stage_cache.values())
-                if total <= self.max_stage_bytes:
-                    break
-                self._stage_cache.popitem(last=False)
+            while self._stage_cache and self._stage_cache_bytes > self.max_stage_bytes:
+                self._evict_stage_one()
+
+    def _evict_stage_one(self):
+        """淘汰最旧一条并扣减增量字节统计。需持 self._stage_lock 调用。"""
+        _, entry = self._stage_cache.popitem(last=False)
+        self._stage_cache_bytes -= self._entry_bytes(entry[0], entry[2])
 
     # ---- 渲染 ----
     def render(self, long_edge: int = 1024, output_bps: int = 8,
@@ -211,8 +285,10 @@ class RawPreviewSession:
         供 exposure 测光 subject_mode=box 消费（t92 原生框链路的 raw 侧缺口）。
         与原 state 键同名时以本参数为准；None/空 dict 不注入，行为与旧版一致。
         """
+        with self._params_lock:
+            params = copy.deepcopy(self.params)
         return self._render_with_params(
-            copy.deepcopy(self.params), long_edge, output_bps, decode_mode,
+            params, long_edge, output_bps, decode_mode,
             state_extras=state_extras)
 
     def _render_with_params(self, params: dict, long_edge: int,
@@ -226,7 +302,11 @@ class RawPreviewSession:
         """
         if output_bps not in (8, 16):
             raise ValueError("output_bps 只支持 8 或 16")
-        img = self._get_tier(long_edge, decode_mode)
+        # 版本 stat 一次：tier 取图与 tier 指纹共用同一 key，消除文件替换
+        # 竞态下“旧图配新版本指纹”的错配。
+        version = self._raw_version()
+        tier_key = (int(long_edge), decode_mode, version)
+        img = self._get_tier(long_edge, decode_mode, key=tier_key)
 
         pipe = build_default_pipeline(prof=self.prof, params=params)
         ctx = StageContext(
@@ -235,7 +315,7 @@ class RawPreviewSession:
                     "decode_mode": decode_mode, "long_edge": int(long_edge)})
         ctx.set_image(img.copy(), DOMAIN_LINEAR_CAM)
         ctx.state["half_size"] = True
-        wb = self._decode_wb.get((decode_mode, self._raw_version()))
+        wb = self._decode_wb.get((decode_mode, version))
         if wb is not None:
             ctx.state["camera_wb"] = wb
         # t92 遗留闭合：归一化框（face_boxes/subject_boxes）注入 state，
@@ -244,25 +324,60 @@ class RawPreviewSession:
         if isinstance(state_extras, dict) and state_extras:
             ctx.state.update(state_extras)
 
+        # 跨级参数依赖: 部分 stage 直接读其它 stage 的参数 (如 exposure 探针读
+        # whitebalance 的 mode/temp/tint), 仅用本 stage 参数指纹会让这些 stage
+        # 命中陈旧缓存 (改 WB 后 EV 不更新)。缓存键加入全 stage 参数指纹
+        # (渲染开始算一次, 循环内复用, 不增加每 stage 成本)。
+        all_stages_fp = _param_fingerprint(ctx.config.get("stages") or params)
+        # 指纹链: stage i 的输入图指纹 = 上一 stage 缓存条目记录的输出指纹
+        # （miss 时精确哈希一次并随条目记录；命中直接复用记录值），链头为
+        # tier 指纹（tier 图不可变，每 tier 只算一次）。相比逐级
+        # _array_fingerprint(ctx.image) 的全图 sha256（1024 tier ~8.4MB x 12
+        # stage），全命中路径零全图哈希；链上指纹为精确 sha256，无误命中。
+        input_fp = self._get_tier_fingerprint(tier_key, img)
         for stage in pipe.stages:
             if not stage.wants(ctx):
                 continue
             param_fp = _param_fingerprint(params.get(stage.name, {}))
-            input_fp = _array_fingerprint(ctx.image)
             state_fp = _state_fingerprint(ctx.state)
-            key = (stage.name, param_fp, input_fp, state_fp)
-            if key in self._stage_cache:
-                out, domain, state = self._stage_cache[key]
+            key = (stage.name, param_fp, input_fp, state_fp, all_stages_fp)
+            with self._stage_lock:
+                entry = self._stage_cache.get(key)
+                if entry is not None:
+                    self._stage_cache.move_to_end(key)
+            if entry is not None:
+                out, domain, state, output_fp = entry
                 ctx.image = out.copy()
                 ctx.domain = domain
-                ctx.state = copy.deepcopy(state)
-                self._stage_cache.move_to_end(key)
+                # state 恢复用浅拷贝：dict 是新容器（后续 stage 重新绑定键不
+                # 影响缓存条目），ndarray 按引用共享（只读约定，见写入侧注释）。
+                ctx.state = dict(state)
+                input_fp = output_fp
             else:
                 stage.run(ctx)
-                self._stage_cache[key] = (
-                    ctx.image.copy(), ctx.domain, copy.deepcopy(ctx.state))
-                self._stage_cache.move_to_end(key)
-                self._evict_stage_cache()
+                output_fp = _array_fingerprint(ctx.image)
+                # 缓存条目：image 拷贝一份防下游原地写；state 按**引用**共享
+                # （原 copy.deepcopy 每条目 ~17.5MB，12 条目是主要内存放大源）。
+                # 安全前提（2026-08 逐点核验）：
+                #   - 写点全部重新绑定新数组，无原地写者：
+                #     white_balance.py:299/355/374（wb_cam/cam_raw/cam_wb）、
+                #     exposure.py:382（sat_mask）、huesat.py:91（dng_prophoto_pre_tone）；
+                #   - 读点只读：huesat.py:73 cam_raw/cam_wb →
+                #     cam_wb_to_prophoto（asarray 换 dtype 产生副本）、
+                #     white_balance.py:357 sat_mask 只读索引、
+                #     exposure camera_wb 只读标量；
+                #   - 引用共享同时钉住旧数组不被释放，保证 _ndarray_digest 的
+                #     data_ptr 不会因地址复用碰撞。
+                state_entry = dict(ctx.state)
+                image_entry = ctx.image.copy()
+                with self._stage_lock:
+                    self._stage_cache[key] = (
+                        image_entry, ctx.domain, state_entry, output_fp)
+                    self._stage_cache.move_to_end(key)
+                    self._stage_cache_bytes += self._entry_bytes(
+                        image_entry, state_entry)
+                    self._evict_stage_cache()
+                input_fp = output_fp
 
         if ctx.domain != DOMAIN_GAMMA_RGB:
             raise RuntimeError(
@@ -289,12 +404,13 @@ class RawPreviewSession:
         """
         if self._closed:
             raise RuntimeError("RawPreviewSession has been closed")
-        generation = self.generation
-        params_snapshot = copy.deepcopy(self.params)
-        if self._executor is None:
-            self._executor = ThreadPoolExecutor(
-                max_workers=1, thread_name_prefix=f"render-{self.session_id}")
-        return self._executor.submit(
+        with self._params_lock:
+            generation = self.generation
+            params_snapshot = copy.deepcopy(self.params)
+        executor = self._executor
+        if executor is None:  # close() 竞态窗口内被置空
+            raise RuntimeError("RawPreviewSession has been closed")
+        return executor.submit(
             self._render_snapshot, generation, params_snapshot,
             int(long_edge), int(output_bps), decode_mode)
 
@@ -350,18 +466,24 @@ class RawPreviewSession:
             render_bps = 8
         else:
             raise ValueError(f"不支持的编码格式: {fmt}")
+        with self._params_lock:
+            generation = self.generation
         key = (int(long_edge), fmt_l, int(quality),
-               int(render_bps), self.generation, decode_mode,
+               int(render_bps), generation, decode_mode,
                self._raw_version())
-        if key in self._encoding_cache:
-            return self._encoding_cache[key]
+        with self._encoding_lock:
+            cached = self._encoding_cache.get(key)
+            if cached is not None:
+                self._encoding_cache.move_to_end(key)
+                return cached
         img = self.render(long_edge, output_bps=render_bps,
                           decode_mode=decode_mode)
         data = encode_image(img, fmt_l, quality=quality)
-        self._encoding_cache[key] = data
-        self._encoding_cache.move_to_end(key)
-        while len(self._encoding_cache) > self.max_encoding_entries:
-            self._encoding_cache.popitem(last=False)
+        with self._encoding_lock:
+            self._encoding_cache[key] = data
+            self._encoding_cache.move_to_end(key)
+            while len(self._encoding_cache) > self.max_encoding_entries:
+                self._encoding_cache.popitem(last=False)
         return data
 
     def save_encoded(self, out_dir, long_edge: int = 1024, fmt: str = "jpeg",
@@ -377,8 +499,11 @@ class RawPreviewSession:
         path = out_dir / f"{self.session_id}_{long_edge}_{self.generation}{ext}"
         path.write_bytes(data)
         if fmt.lower() == "raw48":
-            img = self.render(long_edge, output_bps=16,
-                              decode_mode=decode_mode)
+            # sidecar 只需要分辨率：渲染输出分辨率与 tier 输入一致（预览链
+            # 各 stage 保分辨率，clarity 预览路径降采样后还原同尺寸），
+            # 直接取 tier shape，省一整遍 16-bit 重渲染。tier 已被 encode
+            # 路径填充，这里只是字典命中。
+            tier_shape = self._get_tier(long_edge, decode_mode).shape
             profile_path = str(getattr(self.prof, "path", "")
                                or getattr(self.prof, "source", "") or "")
             sidecar = {
@@ -386,8 +511,8 @@ class RawPreviewSession:
                 "raw_path": str(self.raw_path),
                 "profile_path": profile_path,
                 "long_edge": int(long_edge),
-                "width": int(img.shape[1]),
-                "height": int(img.shape[0]),
+                "width": int(tier_shape[1]),
+                "height": int(tier_shape[0]),
                 "generation": self.generation,
                 "params": self.params,
                 "format": "raw48",

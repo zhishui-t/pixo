@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import os
+import threading
+from collections import OrderedDict
 from pathlib import Path
 
 from .lut3d import LUT3D, hald_to_lut, parse_cube  # noqa: F401
 
-__all__ = ["LUT3D", "hald_to_lut", "parse_cube", "load_lut"]
+__all__ = ["LUT3D", "hald_to_lut", "parse_cube", "load_lut", "load_lut_path"]
 
 
 # ── LUT 库注册 (guanlan luts/ 复用; 环境变量 PIXO_RENDER_LUT_DIR 优先, 旧值仅作回退) ──
@@ -42,7 +44,28 @@ _LUT_REGISTRY = {
     "pan_cinetone": "pan_cinetone.cube",
 }
 
-_cache: dict = {}
+# 统一 LUT 缓存（此前 style.py 的 StylizeStage._loaded 与本模块 _cache 两套
+# 无锁无上限字典并存，各 ~50MB/表可无限堆积）。单 dict + 锁 + LRU 上限 4 表。
+_LUT_CACHE: "OrderedDict[tuple, LUT3D]" = OrderedDict()
+_LUT_CACHE_LOCK = threading.Lock()
+_LUT_CACHE_MAX = 4
+
+
+def _lut_cache_get(key: tuple):
+    with _LUT_CACHE_LOCK:
+        lut = _LUT_CACHE.get(key)
+        if lut is not None:
+            _LUT_CACHE.move_to_end(key)
+        return lut
+
+
+def _lut_cache_put(key: tuple, lut: LUT3D) -> None:
+    with _LUT_CACHE_LOCK:
+        _LUT_CACHE[key] = lut
+        _LUT_CACHE.move_to_end(key)
+        while len(_LUT_CACHE) > _LUT_CACHE_MAX:
+            oldest = next(iter(_LUT_CACHE))
+            del _LUT_CACHE[oldest]
 
 
 def load_lut(style_id: str) -> LUT3D:
@@ -50,14 +73,30 @@ def load_lut(style_id: str) -> LUT3D:
 
     首次加载含建表 ~16s (一次); 之后 apply 命中缓存 ~0.2s (half_size)。
     """
-    if style_id in _cache:
-        return _cache[style_id]
+    key = ("id", str(style_id))
+    lut = _lut_cache_get(key)
+    if lut is not None:
+        return lut
     name = _LUT_REGISTRY.get(style_id)
     if not name:
         raise KeyError(f"未注册 LUT: {style_id} (可选: {list(_LUT_REGISTRY)})")
     lut = LUT3D.from_cube(_LUT_DIR / name)
     lut._build_table()  # 预热查表 (一次性, 分块)
-    _cache[style_id] = lut
+    _lut_cache_put(key, lut)
     return lut
 
-__all__ = ["LUT3D", "hald_to_lut", "parse_cube", "load_lut"]
+
+def load_lut_path(path) -> LUT3D:
+    """按 .cube 文件路径加载 LUT（与 load_lut 共享同一锁 + LRU 缓存）。
+
+    供 stylize stage 的 lut_path 参数使用；此前 StylizeStage._loaded 把
+    路径串喂给 load_lut（注册表查不到必然 KeyError），本入口才是路径语义。
+    """
+    key = ("path", str(path))
+    lut = _lut_cache_get(key)
+    if lut is not None:
+        return lut
+    lut = LUT3D.from_cube(Path(path))
+    lut._build_table()
+    _lut_cache_put(key, lut)
+    return lut

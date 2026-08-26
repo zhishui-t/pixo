@@ -32,7 +32,12 @@ from ..core.curves import (make_filmic_lut, make_base_curve_lut, apply_lut1d,
                       apply_lut1d_fast, parse_profile_curve, curve_lut_from_points)
 
 _LUT_CACHE = {}
-_PROFILE_CACHE = {}
+# DcpProfile 影调曲线 LUT 缓存：id(prof) 键 + **值里持 prof 强引用**。
+# 不能用 WeakKeyDictionary——DcpProfile 是 @dataclass(默认生成 __eq__) 不可哈希；
+# 也不能裸 id() 键——prof 被 GC 后 id 可能被新对象复用，导致张冠李戴的曲线
+# (原实现的潜在缺陷)。强引用钉住 prof ⇒ 条目存活期内 id 不可能复用；
+# 每条目仅 (prof 引用 + 16K float LUT)，profile 实例有限，泄漏可忽略。
+_PROFILE_CACHE: dict[int, tuple] = {}
 _LRFIT_CACHE = None
 _N_FAST = 16384  # 热路径 LUT 级数 (最近邻, 量化误差 <1/32768 不可感知)
 
@@ -98,12 +103,15 @@ def _get_profile_lut(prof) -> np.ndarray | None:
     """DCP 影调曲线 LUT (缓存; 无曲线返回 None)。"""
     if prof is None:
         return None
-    lut = _PROFILE_CACHE.get(id(prof))
-    if lut is None:
+    entry = _PROFILE_CACHE.get(id(prof))
+    if entry is None:
         parsed = parse_profile_curve(getattr(prof, "profile_tone_curve", None))
         lut = curve_lut_from_points(*parsed, _N_FAST) if parsed else None
-        _PROFILE_CACHE[id(prof)] = lut
-    return lut
+        # 值持 (prof, lut) 强引用：防 prof 释放后 id 被新 profile 复用
+        # (DcpProfile 不可哈希，无法用 WeakKeyDictionary)。
+        entry = (prof, lut)
+        _PROFILE_CACHE[id(prof)] = entry
+    return entry[1]
 
 
 _RGB_WEIGHTS = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
@@ -320,7 +328,11 @@ class ToneStage(Stage):
             lrfit = _get_lrfit()
             if lrfit is not None:
                 gains, lut = lrfit
-                xc = np.clip(ctx.image.astype(np.float32) * gains, 0.0, 1.0)
+                # E2 修复: 六键 (Highlights/Shadows/Whites/Blacks) 在 lrfit 分支
+                # 同样生效 —— 基于六键结果乘 gains; 仍不乘 brightness
+                # (注释语义保持: 曲线已含 LR 的亮度锚定)。
+                x6 = _apply_sixkey(ctx.image.astype(np.float32), ctx, self)
+                xc = np.clip(x6 * gains, 0.0, 1.0)
                 y = np.empty_like(xc)
                 for c in range(3):
                     y[..., c] = _apply_lut(xc[..., c], lut)

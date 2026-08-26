@@ -192,9 +192,12 @@ def test_preset_loads_and_describe_order():
 
 def test_default_stages_contains_huesat():
     # P0-1 集成: 默认链扩为 13 段 (compose 插在 whitebalance 后; calibration/hsl/split_tone 默认 no-op)
+    # dehaze 后补进链 (默认 enabled=False 不改像素, 为 dehaze.strength 点分参数
+    # 提供执行位), 现 14 段
     assert DEFAULT_STAGES == ["exposure", "whitebalance", "compose", "huesat",
-                              "tone", "clarity", "colorcal", "calibration",
-                              "hsl", "split_tone", "skin", "stylize", "refine"]
+                              "tone", "dehaze", "clarity", "colorcal",
+                              "calibration", "hsl", "split_tone", "skin",
+                              "stylize", "refine"]
 
 
 def test_stage_orders_renumbered():

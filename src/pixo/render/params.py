@@ -5,6 +5,7 @@ from .modules.calibration import CalibrationStage
 from .modules.clarity import ClarityStage
 from .modules.color_cal import ColorCalStage
 from .modules.compose import ComposeStage
+from .modules.dehaze import DehazeStage
 from .modules.denoise import DenoiseStage
 from .modules.exposure import ExposureStage
 from .modules.hsl import HslStage
@@ -31,7 +32,7 @@ STAGE_CLASSES = {
     "huesat": HueSatStage,
     "tone": ToneStage,
     "clarity": ClarityStage,
-    "dehaze": ClarityStage,
+    "dehaze": DehazeStage,
     "denoise": DenoiseStage,
     "sharpen": SharpenStage,
     "vibrance": VibranceStage,

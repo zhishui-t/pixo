@@ -7,11 +7,13 @@ from typing import Any, Dict, Optional
 from .graph import Pipeline
 
 # 默认管线顺序: 曝光 → 白平衡 → 构图(裁剪/旋转/翻转) → HueSatMap(默认关,
-# 线性域、tone 前) → 影调 → 清晰度(质感, 基座开) → 色彩校准(肤色保护)
-# → 用户校准 → HSL → 分离色调 → 磨皮(仅人像, wants 门控) → 风格化(LUT) → 精修
+# 线性域、tone 前) → 影调 → 去雾(默认 enabled=False, wants 门控保证不改像素;
+# 进链供 dehaze.strength 等点分参数有执行位) → 清晰度(质感, 基座开)
+# → 色彩校准(肤色保护) → 用户校准 → HSL → 分离色调 → 磨皮(仅人像, wants 门控)
+# → 风格化(LUT) → 精修
 DEFAULT_STAGES = ["exposure", "whitebalance", "compose", "huesat", "tone",
-                  "clarity", "colorcal", "calibration", "hsl", "split_tone",
-                  "skin", "stylize", "refine"]
+                  "dehaze", "clarity", "colorcal", "calibration", "hsl",
+                  "split_tone", "skin", "stylize", "refine"]
 
 
 def build_default_pipeline(prof=None, style_lut=None,

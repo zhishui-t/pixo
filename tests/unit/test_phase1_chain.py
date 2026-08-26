@@ -55,11 +55,14 @@ def test_default_chain_13_vs_9_pixel_identical():
     assert diff == 0.0, f"默认链 9 段 vs 13 段输出不一致 max|Δ|={diff}"
 
 
-def test_default_chain_contains_13_stages():
-    assert len(DEFAULT_STAGES) == 13
+def test_default_chain_contains_14_stages():
+    """dehaze 进默认链 (默认 enabled=False, wants 门控不改像素) —— 点分参数
+    dehaze.strength 由此获得执行位 (loop 侧 enabled 联动另行处理)。"""
+    assert len(DEFAULT_STAGES) == 14
     assert DEFAULT_STAGES == ["exposure", "whitebalance", "compose", "huesat",
-                              "tone", "clarity", "colorcal", "calibration",
-                              "hsl", "split_tone", "skin", "stylize", "refine"]
+                              "tone", "dehaze", "clarity", "colorcal",
+                              "calibration", "hsl", "split_tone", "skin",
+                              "stylize", "refine"]
 
 
 def test_phase1_stages_registered_order_increasing():

@@ -155,3 +155,65 @@ def test_blacks_compress_stays_nonnegative():
     img = _ramp_img()
     out = _run(img, {"blacks": -1.0})
     assert float(out.min()) >= -1e-4
+
+
+# ---------------------------------------------------------------------------
+# E2 回归: lrfit 分支不得丢弃六键
+# ---------------------------------------------------------------------------
+
+def test_lrfit_branch_applies_sixkey(monkeypatch):
+    """E2: eotf=lrfit (LR 标定表存在) 时 Highlights 等六键仍生效。
+
+    旧实现 lrfit 分支用处理链外的 ctx.image 直接乘 gains, _apply_sixkey
+    的四键被静默丢弃。此处注入假 _LRFIT_CACHE (单位 gains + 恒等曲线),
+    断言: (a) 六键区域输出与"六键全 0"不同 (旧代码两输出逐位相同);
+    (b) 六键全 0 时 lrfit 与手算 clip(img)·恒等曲线一致; (c) 非 0 六键
+    输出 == 先 _apply_sixkey 再过恒等曲线 (六键在 gains/曲线之前)。
+    """
+    from pixo.render.modules import tone_map
+
+    lut = np.linspace(0.0, 1.0, 256, dtype=np.float32)   # 恒等曲线
+    gains = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+    monkeypatch.setattr(tone_map, "_LRFIT_CACHE", (gains, lut))
+
+    img = _ramp_img()
+    base = _run(img, {"eotf": "lrfit"})                       # 六键全 0
+    out_h = _run(img, {"eotf": "lrfit", "highlights": -0.8})  # 只压高光
+
+    # (a) 六键生效: 高光带变暗; 旧代码 (六键被丢) out_h 与 base 逐位相同
+    x = np.linspace(0.0, 1.0, img.shape[1])
+    bright = x > 0.7
+    dark = x < 0.12
+    bd = float(np.mean(out_h[0, bright, 0]) - np.mean(base[0, bright, 0]))
+    dd = float(np.mean(out_h[0, dark, 0]) - np.mean(base[0, dark, 0]))
+    assert bd < -_DELTA_TOL, f"lrfit 分支 highlights 未生效: bright Δ={bd}"
+    assert abs(dd) < _REGION_TOL, f"lrfit 分支 highlights 误伤暗部: dark Δ={dd}"
+
+    # (b/c) 与直接先 sixkey 后恒等曲线一致 (亮度不参与: brightness 已设 0)
+    ctx6 = StageContext("t.nef", config={})
+    ctx6.set_image(img.astype(np.float32), DOMAIN_LINEAR_RGB)
+    x6 = tone_map._apply_sixkey(img.astype(np.float32), ctx6,
+                                tone_map.ToneStage({"highlights": -0.8}))
+    expected = np.clip(x6 * gains, 0.0, 1.0)
+    # 恒等曲线经 LUT (16384 级最近邻) 回放, 容忍量化
+    assert float(np.abs(out_h - expected).max()) <= 2e-3
+
+
+def test_lrfit_branch_skips_brightness(monkeypatch):
+    """lrfit 分支保持"不乘 brightness"语义 (曲线已含 LR 亮度锚定)。"""
+    from pixo.render.modules import tone_map
+
+    lut = np.linspace(0.0, 1.0, 256, dtype=np.float32)
+    gains = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+    monkeypatch.setattr(tone_map, "_LRFIT_CACHE", (gains, lut))
+
+    img = np.full((2, 4, 3), 0.25, dtype=np.float32)
+    ctx = StageContext("t.nef", config={})
+    ctx.set_image(img.copy(), DOMAIN_LINEAR_RGB)
+    # brightness 走实例默认 (+0.25) —— lrfit 分支应忽略它
+    tone_map.ToneStage({"eotf": "lrfit"}).run(ctx)
+    ref = StageContext("t.nef", config={})
+    ref.set_image(img.copy(), DOMAIN_LINEAR_RGB)
+    tone_map.ToneStage({"eotf": "lrfit", "brightness": 0.0}).run(ref)
+    assert np.allclose(ctx.image, ref.image, atol=2e-3), (
+        "lrfit 分支不应乘 brightness (曲线已含 LR 亮度锚定)")

@@ -313,7 +313,9 @@ def _find_matrices(prof, white_xy):
             return m1
         return g * m1 + (1.0 - g) * m2
 
-    xyz_to_camera = blend(cc1 @ cm1, cc2 @ cm2)
+    # DNG SDK 口径: 先分别插值 CameraCalibration 与 ColorMatrix, 再复合
+    # (矩阵插值与复合不可交换, 旧"先复合后插值"结果数值不等价)。
+    xyz_to_camera = blend(cc1, cc2) @ blend(cm1, cm2)
     fm = blend(fm1, fm2) if fm1 is not None else None
     cc = blend(cc1, cc2)
     return xyz_to_camera, fm, cc

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from collections import OrderedDict
 from pathlib import Path
 from typing import Tuple, Union
 
@@ -19,11 +20,38 @@ import rawpy
 # rawpy 首次访问 raw_image_visible / raw_pattern / black_level 等属性会触发
 # DNG/RAW 解压（实测 ~1.3s）；同一文件重复预览时直接复用最终 RGB，避免重复解压。
 # 磁盘缓存用于跨进程冷启动：首次 CFA 解码后落盘，后续新进程直接加载 half RGB。
-_DECODE_CACHE: dict[tuple, np.ndarray] = {}
+# LRU（上限 _LRU_MAX）：原实现满 8 条全清，热点条目被连带逐出导致重复解压。
+_DECODE_CACHE: "OrderedDict[tuple, np.ndarray]" = OrderedDict()
 _DECODE_CACHE_DIR = Path(
     os.environ.get(
         "PIXO_RENDER_DECODE_CACHE_DIR",
         str(Path(__file__).resolve().parents[1] / "bench" / "cache" / "decode")))
+
+_LRU_MAX = 8
+
+
+def _lru_get(cache: dict, key: tuple):
+    """LRU 命中：返回值并刷新 recency；未命中返回 None。
+
+    兼容被 monkeypatch 成普通 dict 的 cache（无 move_to_end 时跳过刷新）。
+    """
+    value = cache.get(key)
+    if value is not None:
+        move_to_end = getattr(cache, "move_to_end", None)
+        if move_to_end is not None:
+            move_to_end(key)
+    return value
+
+
+def _lru_put(cache: dict, key: tuple, value, limit: int = _LRU_MAX) -> None:
+    """LRU 写入：插入并刷新 recency，超限淘汰最旧一条（不再全清）。"""
+    cache[key] = value
+    move_to_end = getattr(cache, "move_to_end", None)
+    if move_to_end is not None:
+        move_to_end(key)
+    while len(cache) > limit:
+        oldest = next(iter(cache))
+        del cache[oldest]
 
 
 def _decode_cache_key(raw_path: Union[str, Path],
@@ -83,16 +111,14 @@ def decode_cfa_half(raw: rawpy.RawPy, output_scale: float = 1.0,
     from .._native import decode_cfa_half as _native_decode
 
     cache_key = _decode_cache_key(raw_path, output_scale) if raw_path is not None else None
-    if cache_key is not None and cache_key in _DECODE_CACHE:
+    if cache_key is not None and _lru_get(_DECODE_CACHE, cache_key) is not None:
         return _DECODE_CACHE[cache_key]
     cache_path = _decode_cache_path(cache_key)
     if cache_path is not None and cache_path.exists():
         try:
             out = np.load(cache_path, allow_pickle=False)
             if cache_key is not None:
-                if len(_DECODE_CACHE) >= 8:
-                    _DECODE_CACHE.clear()
-                _DECODE_CACHE[cache_key] = out
+                _lru_put(_DECODE_CACHE, cache_key, out)
             return out
         except Exception:
             pass
@@ -127,9 +153,7 @@ def decode_cfa_half(raw: rawpy.RawPy, output_scale: float = 1.0,
         output_scale=float(output_scale),
     )
     if cache_key is not None:
-        if len(_DECODE_CACHE) >= 8:
-            _DECODE_CACHE.clear()
-        _DECODE_CACHE[cache_key] = out
+        _lru_put(_DECODE_CACHE, cache_key, out)
         if cache_path is not None:
             try:
                 np.save(cache_path, out, allow_pickle=False)
@@ -145,7 +169,8 @@ def _read_opcode_list(raw_path: str) -> dict:
           'warp': (planes, coeffs[plane][4], (cx, cy)) | None}
     """
     import struct
-    b = open(str(raw_path), "rb").read()
+    with open(str(raw_path), "rb") as f:
+        b = f.read()
     e = "<"
     out: dict = {}
 
@@ -213,6 +238,36 @@ def _apply_vignette(lin: np.ndarray, op) -> np.ndarray:
     return np.clip(np.rint(lin.astype(np.float64) * gain), 0, 65535).astype(np.uint16)
 
 
+def _raw_make(raw_path) -> str:
+    """读 TIFF IFD0 的 Make 标签 (0x010F) → 相机厂商字符串; 失败返回 ""。
+
+    NEF/DNG 都是 TIFF 基格式; rawpy 不暴露 make, 这里手工解析头部。
+    """
+    import struct
+    try:
+        b = open(str(raw_path), "rb").read(64 * 1024)
+        if len(b) < 8 or b[:4] not in (b"II\x2a\x00", b"MM\x00\x2a"):
+            return ""
+        e = "<" if b[:2] == b"II" else ">"
+        off = struct.unpack(e + "I", b[4:8])[0]
+        if off <= 0 or off + 2 > len(b):
+            return ""
+        n = struct.unpack(e + "H", b[off:off + 2])[0]
+        for i in range(min(n, 128)):
+            base = off + 2 + i * 12
+            if base + 12 > len(b):
+                break
+            tag, typ, cnt, vo = struct.unpack(e + "HHII", b[base:base + 12])
+            if tag == 0x010F and typ == 2 and cnt > 0:
+                if cnt <= 4:  # 内联 ASCII
+                    return b[base + 8:base + 8 + cnt].split(b"\x00")[0].decode(
+                        "latin1", "ignore")
+                return b[vo:vo + cnt].split(b"\x00")[0].decode("latin1", "ignore")
+        return ""
+    except Exception:
+        return ""
+
+
 def decode_stage3_like(raw_path: Union[str, Path],
                           dng_pair: Union[str, Path, None] = None,
                           white_level: int | None = None,
@@ -237,11 +292,18 @@ def decode_stage3_like(raw_path: Union[str, Path],
     for ch in desc[:4]:
         color_map.append({"R": 0, "G": 1, "B": 2}.get(ch, 1))
     black = np.array(raw.black_level_per_channel, dtype=np.int64)
-    # NEF -> DNG 转换实测: Adobe DNG 对 Z5 用 WhiteLevel=15892, 不是
+    # NEF -> DNG 转换实测: Adobe DNG 对 Nikon Z5 用 WhiteLevel=15892, 不是
     # rawpy 的 white_level=16383, 也不是 camera_white_level=15311。
     # DNG 文件本身两者相等 (15892), 行为不变。
+    # E3 修复: 15892 是 Nikon Z5 的 NEF→DNG 实测值, 仅对 Nikon (Make 含
+    # "nikon", 大小写不敏感) 套用; 其它厂商的非 DNG 回退 rawpy 的 white_level。
     if white_level is None:
-        white_level = int(raw.white_level) if is_dng else 15892
+        if is_dng:
+            white_level = int(raw.white_level)
+        elif "nikon" in _raw_make(raw_path).lower():
+            white_level = 15892
+        else:
+            white_level = int(raw.white_level)
     white = np.full(4, int(white_level), dtype=np.int64)
     lin = np.zeros_like(mosaic, dtype=np.uint16)
     for c in range(4):
@@ -305,20 +367,19 @@ def camera_neutral_wb(raw: rawpy.RawPy) -> np.ndarray:
 
 
 # 相机 WB 缓存：raw.camera_whitebalance 首次访问同样会触发 DNG 解压（~1.3s）。
-_WB_CACHE: dict[tuple, np.ndarray] = {}
+# 与 _DECODE_CACHE 同款 LRU（满额淘汰最旧一条，不再全清）。
+_WB_CACHE: "OrderedDict[tuple, np.ndarray]" = OrderedDict()
 
 
 def camera_neutral_wb_cached(raw: rawpy.RawPy,
                              raw_path: Union[str, Path, None] = None) -> np.ndarray:
     """返回 As Shot WB；raw_path 非空时使用跨 RawPy 对象缓存。"""
     key = _decode_cache_key(raw_path, 0.0) if raw_path is not None else None
-    if key is not None and key in _WB_CACHE:
+    if key is not None and _lru_get(_WB_CACHE, key) is not None:
         return _WB_CACHE[key]
     wb = camera_neutral_wb(raw)
     if key is not None:
-        if len(_WB_CACHE) >= 8:
-            _WB_CACHE.clear()
-        _WB_CACHE[key] = wb
+        _lru_put(_WB_CACHE, key, wb)
     return wb
 
 __all__ = ["decode_raw", "decode_cfa_half", "decode_stage3_like",

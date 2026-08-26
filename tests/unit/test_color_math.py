@@ -123,3 +123,63 @@ def test_srgb_decode_anchor_points():
     assert float(srgb_decode(np.array([0.0]))[0]) == 0.0
     assert abs(float(srgb_decode(np.array([1.0]))[0]) - 1.0) < 1e-9
     assert abs(float(srgb_decode(np.array([0.04045]))[0]) - 0.0031308) < 1e-6
+
+
+# ---------------------------------------------------------------------------
+# S1: _find_matrices 双光源插值顺序 (DNG SDK 口径: 先插值后复合)
+# ---------------------------------------------------------------------------
+
+def test_find_matrices_interpolates_before_composing():
+    """S1 回归: xyz_to_camera = blend(CC) @ blend(CM), 不是 blend(CC@CM)。
+
+    DNG SDK (dng_color_spec) 先分别插值 CameraCalibration 与 ColorMatrix
+    再复合; 矩阵插值与复合不可交换, 旧"先复合后插值"数值不等价。
+    """
+    from types import SimpleNamespace
+
+    from pixo.render.core.color import (_calibration_temperatures,
+                                        _find_matrices,
+                                        temperature_from_xy)
+
+    prof = SimpleNamespace(
+        calibration_illuminant1=17,   # StdA ~2856K
+        calibration_illuminant2=21,   # D65 ~6500K
+        color_matrix1=[1.1643, -0.653, 0.0726, -0.4355, 1.2179, 0.2449,
+                       -0.0231, 0.0811, 0.7571],
+        color_matrix2=[0.9874, -0.3784, -0.0823, -0.4728, 1.2673, 0.2286,
+                       -0.0648, 0.1513, 0.6375],
+        camera_calibration1=[1.02, 0.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 1.01],
+        camera_calibration2=[0.98, 0.01, 0.0, 0.01, 1.02, 0.0, 0.0, -0.01, 0.99],
+        forward_matrix1=[0.7978, 0.1352, 0.0313, 0.288, 0.7119, 0.0001,
+                         0.0, 0.0, 0.8251],
+        forward_matrix2=[0.81, 0.12, 0.03, 0.27, 0.73, 0.001, 0.0, 0.0, 0.82])
+
+    # 取双光源之间的白点 (~4600K 附近), 保证 0<g<1 (插值真正发生)
+    xy = (0.355, 0.345)
+    temp = temperature_from_xy(*xy)
+    t1, t2 = _calibration_temperatures(prof)
+    g = (1.0 / temp - 1.0 / t2) / (1.0 / t1 - 1.0 / t2)
+    assert t1 < temp < t2 and 0.01 < g < 0.99, (
+        f"测试白点未落在插值区: temp={temp}, g={g}")
+
+    xyz_to_camera, fm, cc = _find_matrices(prof, xy)
+
+    def blend(m1, m2):
+        return g * np.asarray(m1, dtype=np.float64).reshape(3, 3) \
+            + (1.0 - g) * np.asarray(m2, dtype=np.float64).reshape(3, 3)
+
+    cc_expected = blend(prof.camera_calibration1, prof.camera_calibration2)
+    cm_expected = blend(prof.color_matrix1, prof.color_matrix2)
+    fm_expected = blend(prof.forward_matrix1, prof.forward_matrix2)
+
+    assert np.allclose(cc, cc_expected, atol=1e-12)
+    assert np.allclose(fm, fm_expected, atol=1e-12)
+    # 先插值后复合 (SDK 口径)
+    assert np.allclose(xyz_to_camera, cc_expected @ cm_expected, atol=1e-12)
+    # 旧实现 (先复合后插值) 数值上确有差异 → 本断言防回退
+    legacy = blend(np.asarray(prof.camera_calibration1).reshape(3, 3)
+                   @ np.asarray(prof.color_matrix1).reshape(3, 3),
+                   np.asarray(prof.camera_calibration2).reshape(3, 3)
+                   @ np.asarray(prof.color_matrix2).reshape(3, 3))
+    assert not np.allclose(xyz_to_camera, legacy, atol=1e-6), (
+        "xyz_to_camera 退回'先复合后插值'口径")

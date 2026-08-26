@@ -20,9 +20,11 @@ from ..pipeline.graph import DOMAIN_GAMMA_RGB
                 domain_in=DOMAIN_GAMMA_RGB, domain_out=DOMAIN_GAMMA_RGB)
 class StylizeStage(Stage):
     name = "stylize"
-    _loaded = {}
 
     param_schema = {
+        # lut 为 LUT3D 实例 (内存对象, 非 JSON 标量), 类型 any = 宽松放行
+        # (仅声明占位, 使 get_param_schema("stylize") 覆盖全部 process 读取键)。
+        "lut": {"type": "any"},
         "lut_path": {"type": "str"},
         "lut_strength": {"type": "float", "min": 0.0, "max": 1.0},
     }
@@ -37,10 +39,10 @@ class StylizeStage(Stage):
         path = self.p(ctx, "lut_path")
         if not path:
             return None
-        if path not in self._loaded:
-            from ..core.lut import load_lut
-            self._loaded[path] = load_lut(path)
-        return self._loaded[path]
+        # 统一走 core.lut 的共享 LUT 缓存（锁 + 上限 4 表的 LRU）：
+        # 此前类属性 _loaded 与 core 侧 _cache 双套无锁无上限（各 ~50MB/表）。
+        from ..core.lut import load_lut_path
+        return load_lut_path(path)
 
     def wants(self, ctx: StageContext) -> bool:
         return self._get_lut(ctx) is not None

@@ -12,7 +12,8 @@ import numpy as np
 import rawpy
 
 from ..core.color import cam_wb_to_prophoto, linear_prophoto_to_srgb
-from ..core.io import camera_neutral_wb, decode_stage3_like
+from ..core.io import camera_neutral_wb, camera_neutral_wb_cached, \
+    decode_stage3_like
 from ..core.tone import apply_rgb_tone, exposure_ramp, load_tone_table
 from ..core.huesat import apply_hue_sat_map_prophoto, apply_look_table_prophoto
 
@@ -75,6 +76,9 @@ def render_dcp_linear(raw_path: Union[str, Path], dcp_path: Union[str, Path],
         cache_all = cache or load_camera_cache()
         pair = Path(dng_pair) if dng_pair else raw_path
         img, raw_obj = decode_stage3_like(str(raw_path), dng_pair=str(pair))
+        # WB 复用第一次解压的 raw 对象（close 前取）；原实现随后 rawpy.imread
+        # 第二次解压仅为读 camera_neutral_wb，每次多耗 ~1.3s。
+        wb = camera_neutral_wb_cached(raw_obj, raw_path)
         raw_obj.close()
         try:
             entry = find_camera_entry(pair, cache_all)
@@ -85,6 +89,7 @@ def render_dcp_linear(raw_path: Union[str, Path], dcp_path: Union[str, Path],
         img, raw_obj = decode_stage3_like(
             str(raw_path), white_level=entry["white_level"],
             opcodes=entry["opcodes"])
+        wb = camera_neutral_wb_cached(raw_obj, raw_path)
         raw_obj.close()
     if entry is None:
         raise FileNotFoundError("缺少 dng_camera_cache 条目, 无法确定 baseline/tone table")
@@ -92,9 +97,6 @@ def render_dcp_linear(raw_path: Union[str, Path], dcp_path: Union[str, Path],
     src = dng_resample(img, tuple(entry["src_bounds"]), tuple(entry["dst_size"]))
     from ..core.calibration import load_dcp
     prof = load_dcp(dcp_path)
-    rp = rawpy.imread(str(raw_path))
-    wb = camera_neutral_wb(rp)
-    rp.close()
     pp = cam_wb_to_prophoto(src, prof, wb)
     pp = apply_hue_sat_map_prophoto(pp, prof, 1.0)
     baseline_ev = entry["total_baseline"] - np.log2(entry["stage3_gain"])

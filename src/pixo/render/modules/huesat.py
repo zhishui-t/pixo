@@ -78,7 +78,7 @@ class HueSatStage(Stage):
             # DNG SDK 同源应用域: 未乘 WB 的相机 RGB → ForwardMatrix ProPhoto。
             # SDK 顺序: HueSatMap -> ExposureRamp -> LookTable -> RGBTone -> final。
             from ..core.color import (cam_wb_to_prophoto,
-                                 dng_linear_prophoto_to_srgb)
+                                 linear_prophoto_to_srgb)
             from ..core.tone import apply_rgb_tone, exposure_ramp
             pp = cam_wb_to_prophoto(cam_raw, ctx.prof, ctx.state.get("wb"))
             if bool(self.p(ctx, "enabled")):
@@ -92,7 +92,7 @@ class HueSatStage(Stage):
             tone_table = ctx.state.get("dng_tone_table")
             if bool(ctx.state.get("dng_apply_tone")) and tone_table is not None:
                 pp = apply_rgb_tone(pp, tone_table)
-            img = dng_linear_prophoto_to_srgb(pp)
+            img = linear_prophoto_to_srgb(pp)
         elif bool(self.p(ctx, "enabled")) and ctx.prof is not None:
             img = apply_hue_sat_map(img, ctx.prof, strength=strength)
             img = apply_look_table(img, ctx.prof, strength=strength)

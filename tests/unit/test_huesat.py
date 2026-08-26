@@ -308,3 +308,55 @@ def test_stage_warm_highlight_wants_and_metrics():
     ctx2 = StageContext("x.NEF", prof=prof,
                         config={"stages": {"huesat": {"warm_highlight_sat": 1.0}}})
     assert stage.wants(ctx2) is False
+
+
+# ---------------------------------------------------------------------------
+# 6) DNG SDK 复刻路径 (use_dng_huesat_path): E1 死 import 回归
+# ---------------------------------------------------------------------------
+
+def test_dng_huesat_path_no_dead_import():
+    """E1 回归: 启用 DNG 复刻路径 (state.use_dng_huesat_path=True) 不得 ImportError。
+
+    旧实现在该分支 import 了不存在的 dng_linear_prophoto_to_srgb
+    (迁移改名后旧名残留, 真名 linear_prophoto_to_srgb) —— 路径一启用即崩。
+    FM 缺失/表格缺失均走既有回退 (直通), 只需证明链路可走通。
+    """
+    from pathlib import Path
+
+    from pixo.render.core.calibration import DcpProfile
+    from pixo.render.modules.huesat import HueSatStage
+    from pixo.render.pipeline.graph import StageContext
+
+    # 真实 Nikon Z 5 II 矩阵 (与 test_wb_temp_tint.py 一致, 确定性)
+    prof = DcpProfile(
+        path=Path("test.dcp"),
+        color_matrix1=[1.1643, -0.653, 0.0726, -0.4355, 1.2179, 0.2449,
+                       -0.0231, 0.0811, 0.7571],
+        color_matrix2=[0.9874, -0.3784, -0.0823, -0.4728, 1.2673, 0.2286,
+                       -0.0648, 0.1513, 0.6375],
+        forward_matrix1=[0.7978, 0.1352, 0.0313, 0.288, 0.7119, 0.0001,
+                         0.0, 0.0, 0.8251],
+        forward_matrix2=[0.7978, 0.1352, 0.0313, 0.288, 0.7119, 0.0001,
+                         0.0, 0.0, 0.8251],
+        hue_sat_map=_flatten(_make_table(
+            4, 2, 2, hue_fn=lambda h: 15.0,
+            sat_fn=lambda s: 1.0, val_fn=lambda v: 1.0)),
+        hue_sat_dims=[4, 2, 2])
+
+    img = np.random.default_rng(4).random((16, 16, 3)).astype(np.float32) * 0.8
+    cam_raw = (img * np.array([1.3, 1.0, 1.7], dtype=np.float32)).astype(np.float32)
+    ctx = StageContext("x.NEF", prof=prof,
+                       config={"stages": {"huesat": {"enabled": True}}})
+    ctx.set_image(img.copy(), "linear_rgb")
+    ctx.state["use_dng_huesat_path"] = True
+    ctx.state["cam_raw"] = cam_raw
+    ctx.state["wb"] = np.array([1.3, 1.0, 1.7], dtype=np.float32)
+
+    stage = HueSatStage()
+    assert stage.wants(ctx) is True
+    stage.run(ctx)          # 旧代码在此抛 ImportError: dng_linear_prophoto_to_srgb
+    assert ctx.domain == "linear_rgb"
+    assert ctx.image.shape == img.shape
+    assert np.isfinite(ctx.image).all()
+    assert float(ctx.image.min()) >= 0.0
+    assert "dng_prophoto_pre_tone" in ctx.state

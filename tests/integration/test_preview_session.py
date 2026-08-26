@@ -29,7 +29,9 @@ class _FakeStage:
 
     def run(self, ctx):
         self.calls.append(self.name)
-        ctx.image = np.full((4, 4, 3), 0.5, dtype=np.float32)
+        # 保持输入分辨率：真实管线 stage 不改分辨率，raw48 sidecar 的
+        # tier-shape 语义（sidecar 尺寸 == 渲染输出尺寸）才能在 fake 环境成立。
+        ctx.image = np.full(ctx.image.shape, 0.5, dtype=np.float32)
         ctx.domain = self.domain_out
 
 
@@ -90,8 +92,10 @@ def test_generation_increment_and_incremental_recompute(session_env):
     assert sess.generation == 0
     assert sess.update_params({"s2": {"x": 1}}) == 1
     sess.render(long_edge=8)
-    # s1 参数/输入未变 -> 命中；s2 参数变化 -> 只重算 s2
-    assert session_env["calls"] == ["s1", "s2", "s2"]
+    # 缓存键含全 stage 参数指纹 (跨级参数依赖, 见
+    # test_stage_cache_key_includes_all_stage_params): 任一 stage 参数变化
+    # → 所有 stage 的键都变 → 全链重算 (正确性优先于增量)。
+    assert session_env["calls"] == ["s1", "s2", "s1", "s2"]
 
 
 def test_encode_cache_and_raw48_sidecar(session_env, tmp_path):
@@ -191,7 +195,8 @@ def test_raw48_sidecar_has_shape_and_endian(session_env, tmp_path):
     sess = RawPreviewSession("x.nef", prof=object())
     path = sess.save_encoded(tmp_path, long_edge=8, fmt="raw48")
     side = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
-    assert side["width"] == 4 and side["height"] == 4
+    # sidecar 尺寸取自 tier（渲染输出与 tier 同分辨率），fake 解码 8x8
+    assert side["width"] == 8 and side["height"] == 8
     assert side["endian"] == "big"
     assert side["bits_per_channel"] == 16
     assert side["value_range"] == [0, 65535]
@@ -332,3 +337,82 @@ def test_submit_render_async_completion(session_env):
     assert result.dtype == np.uint8
     assert sess.latest_result is result
     sess.close()
+
+
+# ---- 跨级参数依赖: 缓存键含全 stage 参数指纹 ----
+
+class _CrossStageParamStage:
+    """模拟 exposure 探针: 直接读**另一个** stage (whitebalance) 的参数决定输出。
+
+    自身参数恒为空、输入图 (解码层) 恒不变、运行前 state 恒不变 —— 三指纹
+    全部不变, 只有 whitebalance 参数在变, 用来暴露缓存键缺失跨级依赖的 bug。
+    """
+
+    def __init__(self, name, calls, reads):
+        self.name = name
+        self.calls = calls
+        self.reads = reads   # 本 stage 输出依赖的其它 stage 参数名
+
+    def wants(self, ctx):
+        return True
+
+    def run(self, ctx):
+        self.calls.append(self.name)
+        v = 0.5
+        for dep in self.reads:
+            dep_params = ctx.params_for(dep)
+            # 模拟 modules/exposure.py 探针读 whitebalance 的 mode/temp/tint
+            if dep_params.get("mode", "as_shot") == "manual":
+                v *= 1.0 + float(dep_params.get("temp", 0.0)) / 100000.0
+        ctx.image = np.full((4, 4, 3), v, dtype=np.float32)
+        ctx.domain = DOMAIN_GAMMA_RGB
+
+
+def test_stage_cache_key_includes_all_stage_params(monkeypatch):
+    """改 whitebalance 参数后, 读它的 exposure 类 stage 必须重算 (不得命中旧缓存)。
+
+    回归: 旧缓存键 (stage.name, 本 stage 参数指纹, 输入图指纹, state 指纹) 不含
+    其它 stage 参数, 而 exposure 探针直接读 whitebalance 的 mode/temp/tint ——
+    改 WB 后 exposure 三指纹不变命中旧缓存, EV 不随 WB 更新。
+    """
+    calls = []
+    # 简单透传 stage (whitebalance 本体在真实链路里, 这里只需占位)
+    class _Sink:
+        name = "whitebalance"
+
+        def wants(self, ctx):
+            return True
+
+        def run(self, ctx):
+            calls.append(self.name)
+            # 不改 image/domain: 只作为被读取参数的 stage 存在
+
+    stages = [_CrossStageParamStage("exposure", calls, reads=["whitebalance"]),
+              _Sink()]
+    monkeypatch.setattr(sess_mod.rawpy, "imread",
+                        staticmethod(lambda path: _FakeRaw()))
+    monkeypatch.setattr(sess_mod, "decode_cfa_half",
+                        lambda raw, raw_path=None: np.full(
+                            (8, 8, 3), 0.2, dtype=np.float32))
+    monkeypatch.setattr(sess_mod, "build_default_pipeline",
+                        lambda prof=None, params=None: _FakePipe(stages))
+
+    sess = RawPreviewSession("x.nef", prof=object())
+    out1 = sess.render(long_edge=8)
+    assert calls == ["exposure", "whitebalance"]
+    v1 = float(out1[0, 0, 0])
+    assert abs(v1 - (0.5 * 255.0 + 0.5)) < 1.0  # as_shot: 无 WB 修正
+
+    # 同参数重复渲染: 全 stage 缓存命中 (键含全参数指纹不破坏命中)
+    sess.render(long_edge=8)
+    assert calls == ["exposure", "whitebalance"]
+
+    # 改 whitebalance (manual/temp) —— exposure 必须重算, 输出随 WB 变化
+    sess.update_params({"whitebalance": {"mode": "manual", "temp": 5200.0}})
+    out2 = sess.render(long_edge=8)
+    assert calls == ["exposure", "whitebalance", "exposure", "whitebalance"], (
+        "改 whitebalance 参数后, 读 WB 参数的 exposure stage 命中了陈旧缓存")
+    v2 = float(out2[0, 0, 0])
+    expected2 = 0.5 * (1.0 + 5200.0 / 100000.0)
+    assert abs(v2 - (expected2 * 255.0 + 0.5)) < 1.0, (
+        f"第二次渲染未反映新 WB 参数: got {v2}, want ~{expected2 * 255.0}")

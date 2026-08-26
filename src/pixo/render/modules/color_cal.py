@@ -129,12 +129,22 @@ class ColorCalStage(Stage):
         "hue": {"type": "float"},
         "neutral_a": {"type": "float"},
         "neutral_b": {"type": "float"},
+        # 按亮度分段的中性校正曲线 (7 点, L 中心 [8,32,72,128,184,224,248]);
+        # process 读取, 必须声明走 schema 校验 (native 侧 InterpCurve 无条件
+        # 读 curve[0..6], 非 7 点即越界), 长度校验见 _neutral_curves。
+        "neutral_a_curve": {"type": "float_or_str"},
+        "neutral_b_curve": {"type": "float_or_str"},
         "neutral_mode": {"type": "str", "choices": ["adaptive", "static", "off"]},
         "neutral_damping": {"type": "float", "min": 0.0, "max": 1.0},
         "neutral_sigma": {"type": "float", "min": 0.0},
         "skin_protect": {"type": "float", "min": 0.0, "max": 1.0},
         "skin_trim": {"type": "float_or_str"},       # [da, db] 肤色区 Lab 偏移 (软加权)
         "scene_trim": {"type": "float_or_str"},     # [[wb_r_lo,r_hi,b_lo,b_hi,da,db], ...]
+        # scene_skin_trim / scene_hue: process 读取的显式场景修正窗口,
+        # 原先未声明 (完全绕过 schema 校验), 补声明 (结构校验在
+        # _check_scene_skin_trim / _check_scene_hue)。
+        "scene_skin_trim": {"type": "float_or_str"},  # [[wb_b_lo,wb_b_hi,da,db], ...]
+        "scene_hue": {"type": "float_or_str"},        # [[wb_lo,wb_hi,deg], ...]
         "gamut_soft": {"type": "float", "min": 0.0},
     }
 
@@ -153,7 +163,24 @@ class ColorCalStage(Stage):
 
         static 模式按渲染时 CCT (ctx.state['cct_k'], whitebalance Stage 写入)
         在分段标定桶间插值选曲线; 缺 cct 回退 6500K。
+        曲线必须为 7 点 (native 侧 InterpCurve 无条件读 curve[0..6],
+        非 7 点越界); 不符抛 ValueError 带键名。
         """
+        def _check_curve(name, curve):
+            if curve is None:
+                return None
+            try:
+                n = len(np.asarray(curve, dtype=np.float64).reshape(-1))
+            except Exception as exc:
+                raise ValueError(
+                    f"[colorcal] {name} 需为 7 点数值曲线 (L 中心 "
+                    f"{_NEUTRAL_CENTERS.tolist()}): {curve!r} ({exc})")
+            if n != 7:
+                raise ValueError(
+                    f"[colorcal] {name} 需为 7 点曲线 (实际 {n} 点, "
+                    f"L 中心 {_NEUTRAL_CENTERS.tolist()}): {curve!r}")
+            return curve
+
         a_curve = self.p(ctx, "neutral_a_curve", None)
         b_curve = self.p(ctx, "neutral_b_curve", None)
         if a_curve is None and b_curve is None and ctx.prof is not None:
@@ -163,7 +190,8 @@ class ColorCalStage(Stage):
                 a_curve, b_curve = camera_look_curves(ctx.prof, cct)
             except Exception:
                 pass
-        return a_curve, b_curve
+        return (_check_curve("neutral_a_curve", a_curve),
+                _check_curve("neutral_b_curve", b_curve))
 
     def _skin_trim_offsets(self, ctx: StageContext):
         """解析 skin_trim=[da,db] (Lab, 0..255 坐标), 带界 [-24,24]; 非法抛 ValueError。"""
@@ -293,9 +321,14 @@ class ColorCalStage(Stage):
             L, a, b = lab[:, :, 0], lab[:, :, 1], lab[:, :, 2]
             C = np.sqrt((a - 128.0) ** 2 + (b - 128.0) ** 2)
 
-            # 1) 中性轴校准: 标量 + 按亮度分段曲线, 高斯权重按 C 衰减 (不动饱和色)
+            # 1) 中性轴校准: 标量 + 按亮度分段曲线, 平台+高斯尾权重按 C 衰减
+            #    (不动饱和色)。S5 修复: 与快速路径 _apply_neutral_fast 同一口径
+            #    (C<=plateau(12) 全量, 之后高斯衰减), 消除同参数快/慢路径分歧;
+            #    native 侧 (colorcal.cpp) 仍为纯高斯, 对齐待 DLL 重编 (已知分歧)。
             if na != 0.0 or nb != 0.0 or a_curve is not None or b_curve is not None:
-                w = np.exp(-(C ** 2) / (2.0 * sigma * sigma))
+                plateau = 12.0
+                tail = np.maximum(C - plateau, 0.0)
+                w = np.exp(-(tail ** 2) / (2.0 * sigma * sigma))
                 if a_curve is not None or b_curve is not None:
                     a_off = (np.interp(L, _NEUTRAL_CENTERS, a_curve).astype(np.float32)
                              if a_curve is not None else 0.0)

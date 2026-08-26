@@ -45,9 +45,18 @@ def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8):
     img, raw = decode_raw(str(raw_path), half_size=False)
     try:
         pipe = build_default_pipeline(prof=prof, params=params)
+        # 显式补 decode_mode/long_edge 键（falsy 值）：clarity/skin 的
+        # is_preview 判定式为
+        #   bool(config.get("preview")) or bool(config.get("long_edge"))
+        #   or bool(config.get("decode_mode"))
+        # (modules/reshape.py / modules/skin.py)。export 走全尺寸主线，
+        # 必须**非** preview 语义 —— 缺省键本就判 False，但显式写
+        # long_edge=0 / decode_mode=None 让语义自说明，并防后续代码
+        # 直接 config["decode_mode"] 取键时 KeyError 或误设真值。
         ctx = StageContext(
             raw_path, raw=raw, prof=prof,
-            config={"stages": dict(params), "half_size": False, "preview": False})
+            config={"stages": dict(params), "half_size": False,
+                    "preview": False, "long_edge": 0, "decode_mode": None})
         ctx.set_image(img, DOMAIN_LINEAR_CAM)
         ctx.state["half_size"] = False
         try:
@@ -91,7 +100,6 @@ class ExportManager:
         fmt_l = fmt.lower()
         if fmt_l not in _EXT:
             raise ValueError(f"不支持的导出格式: {fmt}")
-        canonical = session.canonical_params()
         task_id = uuid.uuid4().hex
         out_dir = Path(output_dir) if output_dir else self.work_dir
         out_dir.mkdir(parents=True, exist_ok=True)
