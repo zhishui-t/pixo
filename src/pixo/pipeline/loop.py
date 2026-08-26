@@ -497,6 +497,9 @@ class SinglePhotoLoop:
 
     参数均可注入，便于单测与未来 service 复用。
 
+    规则评估时机坑 (t51/t73)：decide 规则仅在 max_iterations>=2 时于首轮
+      之后的迭代被评估；max_iterations=1 时首轮 decide 短路，规则包完全不
+      触发 —— 调参与验收规则行为时必须以 >=2 运行。
     构图建议契约（crop_suggest=True）：
       用户意图的显式通道是 locked_params；未锁定的显式 compose.* 设置
       可能在采纳建议时被覆盖（当前已知行为）：采纳为合并语义——保留
