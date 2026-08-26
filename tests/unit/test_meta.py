@@ -256,3 +256,78 @@ def test_parse_exif_time_default_offset():
     assert off == pytest.approx(8.0)
     dt2, off2 = parse_exif_time("2026:08:18 17:32:45", "-05:00")
     assert off2 == pytest.approx(-5.0)
+
+
+# ---------------------------------------------------------------------------
+# 缺陷修复回归（t107）：时区混排 / 无时间丢图 / parent_id 碰撞 / Flash / GPS / 0 值
+# ---------------------------------------------------------------------------
+
+def test_burst_mixed_aware_naive_timezone_no_crash():
+    """aware（带 OffsetTime）与 naive（mtime 回退）混排不得崩溃。"""
+    aware = dict(_img(0), datetime="2026-07-29T15:30:00+08:00")
+    naive = dict(_img(1, interval=0.5),
+                 datetime="2026-07-29T15:30:00")
+    groups = detect_burst_groups([aware, naive])
+    # 同为 15:30:00（本地），归一到 UTC 后间隔 0.5s → 同组
+    assert len(groups) == 1
+    assert groups[0]["frame_count"] == 2
+
+
+def test_burst_untimed_photos_keep_standalone():
+    """无时间戳照片不得从结果中消失，各自成 standalone。"""
+    timed_a = _img(0)
+    timed_b = _img(1, interval=0.5)
+    untimed = {"path": "/test/NO_TIME.NEF", "focal_length": 50.0,
+               "aperture": 2.8, "shutter_speed": 1 / 500, "iso": 100}
+    groups = detect_burst_groups([timed_a, untimed, timed_b])
+    files = [g["files"][0] for g in groups] + [
+        f for g in groups if g["frame_count"] > 1 for f in g["files"][1:]]
+    assert "/test/NO_TIME.NEF" in files
+    untimed_groups = [g for g in groups
+                      if "/test/NO_TIME.NEF" in g["files"]]
+    assert untimed_groups and all(g["is_standalone"] for g in untimed_groups)
+
+
+def test_burst_oversized_parent_id_unique_across_groups():
+    """超大组拆分 parent_group_id 组内唯一，不跨组碰撞。"""
+    a = [_img(i, base=datetime(2026, 7, 29, 15, 0, 0)) for i in range(25)]
+    b = [_img(100 + i, base=datetime(2026, 7, 29, 16, 0, 0)) for i in range(40)]
+    groups = detect_burst_groups(a + b, max_group_size=10)
+    oversized = [g for g in groups if g["is_oversized"]]
+    parents = [g["parent_group_id"] for g in oversized]
+    # 核心不变量：parent_group_id 全局唯一，不跨组碰撞
+    assert len(parents) == len(set(parents)), f"parent 碰撞: {parents}"
+    # 25 张拆 3 块 + 40 张拆 4 块 = 7 块，每块独立 parent
+    assert len(parents) == 7
+
+
+def test_normalize_flash_no_fire_function_not_on():
+    """'No Flash function' 不得因子串 'on' 被误判为已发射。"""
+    from pixo.meta.exif import _normalize_flash
+    assert _normalize_flash("No Flash function") == "off"
+    assert _normalize_flash("Flash did not fire") == "off"
+    assert _normalize_flash("Flash fired") == "on"
+    # 数值位语义：bit0=0 且 bit5=1（无功能）→ off
+    assert _normalize_flash(_FakeTag([0x20], "No Flash function")) == "off"
+    assert _normalize_flash(_FakeTag([0x01], "Flash fired")) == "on"
+
+
+def test_gps_decimal_two_tuple_keeps_minutes():
+    """GPS (度, 分) 二元组不得丢分（~1° 误差）。"""
+    from pixo.meta.exif import _gps_decimal
+    assert _gps_decimal([39, 54]) == pytest.approx(39 + 54 / 60.0)
+    assert _gps_decimal([39, 54, 30]) == pytest.approx(
+        39 + 54 / 60.0 + 30 / 3600.0)
+
+
+def test_burst_zero_values_not_treated_missing():
+    """快门 0s 等合法 0 值不得被 or 链跳过。"""
+    meta = {
+        "path": "/test/ZERO.NEF",
+        "exposure": {"shutter_seconds": 0.0, "iso": 0, "aperture_value": 0.0},
+        "capture": {"datetime": "2026-07-29T15:30:00"},
+    }
+    groups = detect_burst_groups([meta])
+    assert len(groups) == 1
+    g = groups[0]
+    assert g["files"] == ["/test/ZERO.NEF"]

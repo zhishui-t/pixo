@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 
 __all__ = [
@@ -59,20 +59,23 @@ class FrameMeta:
 # ---------------------------------------------------------------------------
 
 def _parse_datetime(value: Any) -> Optional[datetime]:
-    """解析 datetime / ISO 字符串 / EXIF 冒号字符串。"""
+    """解析 datetime / ISO 字符串 / EXIF 冒号字符串。
+
+    统一归一为 **UTC naive**：aware 时间按本地时区转 UTC 后剥掉 tzinfo，
+    naive 时间视为本地时区。保证混排（EXIF OffsetTime aware + mtime naive
+    回退）的输入在排序/差值计算时不因 aware/naive 类型冲突崩溃。
+    """
     if value is None:
         return None
     if isinstance(value, datetime):
-        return value
+        return _to_utc_naive(value)
     if isinstance(value, str):
         text = value.strip()
         if text.endswith("Z"):
             text = text[:-1] + "+00:00"
         try:
             dt = datetime.fromisoformat(text)
-            if dt.tzinfo is not None:
-                return dt
-            return dt
+            return _to_utc_naive(dt)
         except ValueError:
             pass
         for fmt in (
@@ -81,10 +84,17 @@ def _parse_datetime(value: Any) -> Optional[datetime]:
             "%Y-%m-%d %H:%M:%S",
         ):
             try:
-                return datetime.strptime(text, fmt)
+                return _to_utc_naive(datetime.strptime(text, fmt))
             except ValueError:
                 continue
     return None
+
+
+def _to_utc_naive(dt: datetime) -> datetime:
+    """aware → UTC naive；naive 视为本地时区转 UTC naive。"""
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt.astimezone().astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _as_number(value: Any) -> Optional[float]:
@@ -134,6 +144,14 @@ def _nested(candidate: Any, section: str, field: str, default=None):
     return default
 
 
+def _first_not_none(*values):
+    """取第一个非 None 值；0/False/空串等合法值不视为缺失。"""
+    for v in values:
+        if v is not None:
+            return v
+    return None
+
+
 def normalize_image_meta(item: Any) -> dict:
     """把路径或元数据 dict 转成连拍聚类所需的内部字典。"""
     if isinstance(item, (str, os.PathLike)):
@@ -142,29 +160,39 @@ def normalize_image_meta(item: Any) -> dict:
 
         meta = extract(path)
         dt = _parse_datetime(
-            _nested(meta, "capture", "datetime")
-            or _get_field(meta, "datetime")
+            _first_not_none(
+                _nested(meta, "capture", "datetime"),
+                _get_field(meta, "datetime"),
+            )
         )
         return {
             "file_path": path,
             "datetime": dt,
             "focal_length": _as_number(
-                _nested(meta, "exposure", "focal_length")
-                or _get_field(meta, "focal_length")
+                _first_not_none(
+                    _nested(meta, "exposure", "focal_length"),
+                    _get_field(meta, "focal_length"),
+                )
             ),
             "aperture": _as_number(
-                _nested(meta, "exposure", "aperture_value")
-                or _nested(meta, "exposure", "aperture")
-                or _get_field(meta, "aperture")
+                _first_not_none(
+                    _nested(meta, "exposure", "aperture_value"),
+                    _nested(meta, "exposure", "aperture"),
+                    _get_field(meta, "aperture"),
+                )
             ),
             "shutter_speed": _as_number(
-                _nested(meta, "exposure", "shutter_seconds")
-                or _nested(meta, "exposure", "shutter_speed")
-                or _get_field(meta, "shutter_speed")
+                _first_not_none(
+                    _nested(meta, "exposure", "shutter_seconds"),
+                    _nested(meta, "exposure", "shutter_speed"),
+                    _get_field(meta, "shutter_speed"),
+                )
             ),
             "iso": _as_number(
-                _nested(meta, "exposure", "iso")
-                or _get_field(meta, "iso")
+                _first_not_none(
+                    _nested(meta, "exposure", "iso"),
+                    _get_field(meta, "iso"),
+                )
             ),
         }
 
@@ -252,7 +280,9 @@ def _make_group(
 
 def _split_oversized(files: list, max_size: int, start_counter: int) -> list:
     groups = []
-    total_chunks = (len(files) + max_size - 1) // max_size
+    # parent_group_id 需全局唯一：start_counter 是跨组累加的全局序号，
+    # 直接用作 parent 序号（每块递增），保证不同超大组不碰撞。
+    parent_counter = start_counter
     for i in range(0, len(files), max_size):
         chunk = files[i:i + max_size]
         n = len(chunk)
@@ -262,10 +292,11 @@ def _split_oversized(files: list, max_size: int, start_counter: int) -> list:
             n,
             gid,
             is_oversized=True,
-            parent_group_id=f"oversized_{start_counter // total_chunks:03d}",
+            parent_group_id=f"oversized_{parent_counter:03d}",
             skip_vlm=(n < 3),
         ))
         start_counter += 1
+        parent_counter += 1
     return groups
 
 
@@ -305,20 +336,34 @@ def detect_burst_groups(
             meta = normalize_image_meta(item)
         except Exception:
             continue
-        if meta.get("datetime") is not None:
-            metas.append(meta)
+        metas.append(meta)
 
     if not metas:
         return []
 
-    metas.sort(key=lambda m: m["datetime"])
+    # 无时间戳的照片不进时间聚类，但不得从结果中消失：各自成 standalone
+    # 组返回（batch 侧据此保持输入全集可还原）。
+    timed = [m for m in metas if m.get("datetime") is not None]
+    untimed = [m for m in metas if m.get("datetime") is None]
+
+    result: list[dict] = []
+    for meta in untimed:
+        result.append(_make_group(
+            [meta["file_path"]], 1,
+            f"standalone_{len(result):04d}",
+            is_standalone=True, skip_vlm=True,
+        ))
+
+    if not timed:
+        return result
+
+    timed.sort(key=lambda m: m["datetime"])
 
     raw_groups: list[list[dict]] = []
-    current_group = [metas[0]]
-    for i in range(1, len(metas)):
+    current_group = [timed[0]]
+    for i in range(1, len(timed)):
         prev = current_group[-1]
-        curr = metas[i]
-
+        curr = timed[i]
         time_diff = abs((curr["datetime"] - prev["datetime"]).total_seconds())
 
         focal_match = (
@@ -341,7 +386,6 @@ def detect_burst_groups(
             current_group = [curr]
     raw_groups.append(current_group)
 
-    result: list[dict] = []
     group_counter = 0
     for rg in raw_groups:
         files = [m["file_path"] for m in rg]

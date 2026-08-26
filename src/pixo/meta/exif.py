@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -237,6 +238,9 @@ def _gps_decimal(coords: list) -> Optional[float]:
         return None
     if len(nums) >= 3:
         return nums[0] + nums[1] / 60.0 + nums[2] / 3600.0
+    if len(nums) == 2:
+        # 部分设备/软件只写 (度, 分) 二元组；仅取度会丢掉分（~1° 级误差）
+        return nums[0] + nums[1] / 60.0
     return nums[0]
 
 
@@ -301,14 +305,21 @@ def _normalize_flash(tag: Any) -> Optional[str]:
     if text is None:
         return None
     low = text.lower()
-    if "did not fire" in low or low in ("off", "0", "none", "no"):
-        return "off"
-    if "fired" in low or "on" in low or low in ("1", "yes"):
-        return "on"
+    # 数值型 EXIF Flash（0x9209）按位语义解析：bit0=已发射、bit5=无闪光灯功能
     value = _coerce_float(tag)
-    if value is not None:
-        return "on" if value > 0 else "off"
-    return text
+    if value is not None and value == int(value):
+        ival = int(value)
+        if ival & 0x20:                # bit5: 相机无闪光灯功能
+            return "off"
+        return "on" if (ival & 0x01) else "off"
+    # printable 字符串：精确词表匹配（避免 "functiON" 之类子串误判）
+    if ("did not fire" in low or "not fire" in low
+            or "no flash" in low
+            or low in ("off", "0", "none", "no", "false")):
+        return "off"
+    if ("fired" in low or low in ("on", "1", "yes", "true")):
+        return "on"
+    return "unknown"
 
 
 def _normalize_metering_mode(tag: Any) -> Optional[str]:
@@ -487,7 +498,14 @@ def extract(
         import exifread
         with open(str(path), "rb") as f:
             tags = exifread.process_file(f, details=False)
-    except Exception:
+    except ImportError:
+        logging.warning("[pixo.meta.exif] exifread 未安装，EXIF 解析跳过")
+    except FileNotFoundError:
+        logging.warning("[pixo.meta.exif] 文件不存在: %s", path)
+    except PermissionError:
+        logging.warning("[pixo.meta.exif] 无读取权限: %s", path)
+    except Exception as exc:  # noqa: BLE001 - 损坏文件等解析失败不阻断
+        logging.warning("[pixo.meta.exif] EXIF 解析失败 %s: %s", path, exc)
         tags = {}
 
     meta = normalize_exif(
