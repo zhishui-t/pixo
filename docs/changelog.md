@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-25 — 日落批：公式守卫清零 · VibranceStage 占位处置 · 主题锁防回归门禁
+
+- 公式守卫日落盘点（CI 哨兵固化）：全部规则 yaml 条件已无任何 formula 守卫
+  （clarity 迁原生 all 为末例）；exposure log2 算术属动作公式在册保留；
+  test_formula_guard_sunset.py 五用例固化为 CI 拦截。
+- VibranceStage 占位处置：转发壳删除、占位类显式废弃（NotImplementedError+
+  colorcal 指引），注册名保留稳住 STAGE_CLASSES；废弃契约断言入 test_pipeline。
+- 新增 theme_locked_dark 防回归门禁：属性覆写后 review/settings 字节级一致、
+  workspace 计算样式断言（blur 噪声规避）——暗房单主题锁的不变量守护。
+- 工程占位文案清理四处 + MOCK 徽章角标化。
+
 ## 2026-08-25 — 暗房主题 UI 批：基座 · 三线对齐 · 视觉走查整改
 
 - 主题基座：DESIGN_TOKENS 单一取色源（三层表面 canvas #101214/panel #17191c/
