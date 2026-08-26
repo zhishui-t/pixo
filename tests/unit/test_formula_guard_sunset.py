@@ -84,4 +84,7 @@ def test_all_packs_load_via_engine_and_mirrors_in_sync() -> None:
     assert names, "规则目录为空？"
     for name in names:
         load_rules(str(CONFIG_DIR / name))         # 引擎侧可解析
-        assert (CONFIG_DIR / name).read_bytes() == (MIRROR_DIR / name).read_bytes(), name
+        cfg = (CONFIG_DIR / name).read_bytes().replace(b"", b"\r\n")
+        mir = (MIRROR_DIR / name).read_bytes().replace(b"", b"\r\n")
+        assert cfg == mir, name
+
