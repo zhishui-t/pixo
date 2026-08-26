@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -104,6 +105,16 @@ def _has_ml_deps() -> bool:
     return True
 
 
+_WARMUP_DISABLED = {"0", "false", "off", "no"}
+
+
+def _warmup_enabled() -> bool:
+    """PIXO_SCORER_WARMUP=0/false/off/no 时跳过预热，默认启用。"""
+    return os.environ.get("PIXO_SCORER_WARMUP", "1").strip().lower() not in (
+        _WARMUP_DISABLED
+    )
+
+
 class PixoAestheticScorer:
     """Pixo 7 维美学评分器（懒加载，模型缺失时 score 返回 None）。"""
 
@@ -122,6 +133,7 @@ class PixoAestheticScorer:
         self._error: str | None = None
         self._degraded = False          # 永久降级：加载失败后不再重试
         self._warned_score_error = False  # score 异常仅告警一次
+        self._warmup_info: dict | None = None  # t67 预热状态/耗时
 
     @property
     def ready(self) -> bool:
@@ -234,9 +246,46 @@ class PixoAestheticScorer:
                 )
             return None
 
+    def warmup(self, image: np.ndarray | None = None) -> dict[str, Any]:
+        """常驻预热（t67）：预加载 backbone+权重头并跑一次 dummy 推理。
+
+        消除首轮推理冷启（t58 实测冷启 ~15.8s vs 稳态 ~20ms）。
+        PIXO_SCORER_WARMUP=0/false/off/no 可跳过；耗时写入 health_info。
+        """
+        if not _warmup_enabled():
+            self._warmup_info = {
+                "warmed": False,
+                "loaded_model": False,
+                "warmup_ms": None,
+                "skipped": True,
+            }
+            print("[pixo.vision.aesthetic] 评分器预热被关闭(PIXO_SCORER_WARMUP)")
+            return dict(self._warmup_info)
+
+        dummy = (
+            np.zeros((8, 8, 3), dtype=np.uint8)
+            if image is None
+            else np.asarray(image)
+        )
+        t0 = time.perf_counter()
+        loaded = self._ensure()
+        out = self.score(dummy) if loaded else None
+        elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 1)
+        self._warmup_info = {
+            "warmed": bool(loaded and out is not None),
+            "loaded_model": bool(loaded),
+            "warmup_ms": elapsed_ms,
+            "skipped": False,
+        }
+        print(
+            "[pixo.vision.aesthetic] 评分器预热完成:",
+            self._warmup_info,
+        )
+        return dict(self._warmup_info)
+
     def health_info(self) -> dict[str, Any]:
         """返回模型健康信息（不触发完整加载）。"""
-        return {
+        info = {
             "name": "AestheticScorer",
             "type": "real",
             "provider": "torch+transformers",
@@ -253,6 +302,13 @@ class PixoAestheticScorer:
                 else f"未加载：{self._error or '缺少模型或依赖'}"
             ),
         }
+        # t67：预热状态/耗时入健康信息
+        if self._warmup_info is not None:
+            info["warmed"] = bool(self._warmup_info.get("warmed"))
+            info["warmup_ms"] = self._warmup_info.get("warmup_ms")
+        else:
+            info["warmed"] = False
+        return info
 
 
 _aesthetic: PixoAestheticScorer | None = None
@@ -270,6 +326,14 @@ def get_aesthetic() -> PixoAestheticScorer | None:
     return _aesthetic
 
 
+def warm_default_scorer(image: np.ndarray | None = None) -> dict[str, Any]:
+    """预热默认单例评分器（服务启动序列调用点）；不可用时返回原因。"""
+    scorer = get_aesthetic()
+    if scorer is None:
+        return {"warmed": False, "skipped": False, "reason": "unavailable"}
+    return scorer.warmup(image)
+
+
 def aesthetic_health_info() -> dict[str, Any]:
     """构造当前美学模型的健康信息（不触发模型加载）。"""
     return PixoAestheticScorer().health_info()
@@ -279,5 +343,6 @@ __all__ = [
     "PixoAestheticScorer",
     "get_aesthetic",
     "aesthetic_health_info",
+    "warm_default_scorer",
     "PIXO_DIMENSIONS",
 ]

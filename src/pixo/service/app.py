@@ -45,6 +45,17 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
     rt = runtime or PixoServiceRuntime()
     app.state.runtime = rt
 
+    @app.on_event("startup")
+    def _warm_aesthetic_scorer() -> None:
+        """t67：启动期预热评分器，消除首轮推理冷启（PIXO_SCORER_WARMUP 可关）。"""
+        try:
+            from pixo.vision.aesthetic import warm_default_scorer
+
+            info = warm_default_scorer()
+            print("[pixo.service] 评分器预热:", info)
+        except Exception as exc:  # noqa: BLE001 - 预热失败不阻断服务启动
+            print("[pixo.service] 评分器预热失败(不影响启动):", exc)
+
     @app.post("/api/import")
     async def api_import(request: Request) -> dict[str, Any]:
         """扫描目录，返回 RAW 候选清单。"""
