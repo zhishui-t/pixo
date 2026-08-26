@@ -3,7 +3,7 @@ import { DESIGN_TOKENS as T } from '../theme/tokens';
 import { ActionIcon, Badge, Group, NumberInput, Paper, ScrollArea, Select, Text, UnstyledButton } from '@mantine/core';
 import { Star } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import type { ColorLabel, Photo } from '../types';
+import type { ColorLabel, PhotoView } from '../types';
 
 // 域标签色板：红/黄/绿/蓝/紫为用户数据标记色（Lightroom 惯例），
 // 属数据色而非主题色，故不纳入 DESIGN_TOKENS。
@@ -36,15 +36,15 @@ export function Filmstrip() {
       return true;
     });
     const list = [...filtered];
-    if (sortBy === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === 'name') list.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     if (sortBy === 'rating') list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     if (sortBy === 'date') list.sort((a, b) => (b.takenAt ?? '').localeCompare(a.takenAt ?? ''));
     return list;
   }, [photos, filmFilter, sortBy]);
 
-  const toggleColor = (photo: Photo, color: ColorLabel) => {
+  const toggleColor = (photo: PhotoView, color: ColorLabel) => {
     const next = photo.colorLabel === color ? undefined : color;
-    setPhotoColor(activeProjectId, photo.id, next);
+    setPhotoColor(activeProjectId, photo.photo_id, next);
   };
 
   return (
@@ -98,9 +98,9 @@ export function Filmstrip() {
       <ScrollArea style={{ height: 172 }}>
         <Group gap="md" wrap="nowrap" align="flex-start">
           {visible.map((photo) => {
-            const active = activePhotoId === photo.id;
+            const active = activePhotoId === photo.photo_id;
             return (
-              <UnstyledButton key={photo.id} onClick={() => selectPhoto(photo.id)}>
+              <UnstyledButton key={photo.photo_id} onClick={() => selectPhoto(photo.photo_id)}>
                 <Paper
                   className="film-card"
                   radius="md"
@@ -128,7 +128,7 @@ export function Filmstrip() {
                   </Group>
                   <Group gap={1} mt={4}>
                     {[1, 2, 3, 4, 5].map((n) => (
-                      <ActionIcon key={n} size="sm" variant="transparent" onClick={(e) => { e.stopPropagation(); setPhotoRating(activeProjectId, photo.id, n); }}>
+                      <ActionIcon key={n} size="sm" variant="transparent" onClick={(e) => { e.stopPropagation(); setPhotoRating(activeProjectId, photo.photo_id, n); }}>
                         <Star size={13} fill={(photo.rating ?? 0) >= n ? T.semantic.warning : 'transparent'} color={(photo.rating ?? 0) >= n ? T.semantic.warning : T.textSecondary} />
                       </ActionIcon>
                     ))}

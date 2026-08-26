@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge, Group, NumberInput, Slider, Text } from '@mantine/core';
 import { DESIGN_TOKENS } from '../theme/tokens';
 import type { ParamPatch, Source } from '../types';
@@ -16,7 +16,13 @@ interface SliderParamProps {
   locked?: boolean;
   /** 双击滑杆区域时的重置目标（缺省 0）。 */
   defaultValue?: number;
-  onPatch: (patch: ParamPatch) => void;
+  /**
+   * 自定义 patch 构造（如 hsl.bands 需要整体数组替换时）；
+   * 缺省为 {stage: {param: value}}。
+   */
+  buildPatch?: (value: number) => Record<string, Record<string, unknown>>;
+  /** 通用滑杆：stage/param 是运行时字符串，patch 用宽松形状，由调用方收窄。 */
+  onPatch: (patch: Record<string, Record<string, unknown>>) => void;
 }
 
 export function SliderParam({
@@ -31,19 +37,44 @@ export function SliderParam({
   source = 'user',
   locked = false,
   defaultValue,
+  buildPatch,
   onPatch,
 }: SliderParamProps) {
   const [dragging, setDragging] = useState(false);
+  // 防抖：拖动/输入期间只更新本地 state，onChangeEnd / onBlur / Enter 才提交 patch。
+  const [pending, setPending] = useState<number | null>(null);
+  // NumberInput 编辑中的原始文本（允许中间态如空串）。
+  const [editing, setEditing] = useState<string | null>(null);
+  const shown = pending ?? value;
 
-  const update = (next: number) => {
+  // 提交后保留 pending 显示，直到 store 回读的 value 追上（patch 是异步链路），
+  // 避免提交瞬间滑杆回跳旧值。
+  useEffect(() => {
+    setPending((p) => (p !== null && p === value ? null : p));
+  }, [value]);
+
+  const commit = (next: number) => {
     if (locked) return;
     const clamped = Math.max(min, Math.min(max, next));
-    onPatch({ [stage]: { [param]: clamped } });
+    onPatch(buildPatch ? buildPatch(clamped) : { [stage]: { [param]: clamped } });
   };
 
   const reset = () => {
     if (locked) return;
-    update(defaultValue ?? 0);
+    setPending(null);
+    setEditing(null);
+    commit(defaultValue ?? 0);
+  };
+
+  const commitEditing = () => {
+    if (editing === null) return;
+    const text = editing;
+    setEditing(null);
+    const parsed = Number(text);
+    if (text.trim() !== '' && Number.isFinite(parsed)) {
+      setPending(parsed);
+      commit(parsed);
+    }
   };
 
   return (
@@ -81,12 +112,13 @@ export function SliderParam({
         <Slider
           className="slider-param-track"
           style={{ flex: 1 }}
-          value={value}
+          value={shown}
           min={min}
           max={max}
           step={step}
           disabled={locked}
-          onChange={update}
+          onChange={(v) => setPending(v)}
+          onChangeEnd={(v) => commit(v)}
           size="sm"
           label={(v) => v.toFixed(2)}
           styles={{
@@ -108,12 +140,16 @@ export function SliderParam({
           className="slider-param-value"
           w={84}
           size="xs"
-          value={value}
+          value={editing ?? shown}
           min={min}
           max={max}
           step={step}
           disabled={locked}
-          onChange={(v) => update(Number(v) || 0)}
+          onChange={(v) => setEditing(typeof v === 'number' ? String(v) : v)}
+          onBlur={commitEditing}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitEditing();
+          }}
           hideControls
           styles={{
             input: {

@@ -1,14 +1,16 @@
 import {
+  useEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
-import { ActionIcon, Badge, Group, Paper, SegmentedControl, Text } from '@mantine/core';
+import { ActionIcon, Badge, Button, Group, Paper, SegmentedControl, Text } from '@mantine/core';
 import { Image as ImageIcon, Maximize2, Move, ZoomIn, ZoomOut } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { DESIGN_TOKENS as T } from '../theme/tokens';
-import { getOriginalSource, getPreviewSource } from '../api';
+import { getMockSessionId, getOriginalSource, getPreviewSource } from '../api';
 
 export function PreviewViewer() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -18,11 +20,38 @@ export function PreviewViewer() {
   const zoom = useAppStore((s) => s.zoom);
   const setZoom = useAppStore((s) => s.setZoom);
   const generation = useAppStore((s) => s.generation);
+  // 后端在线时 store 会缓存 ensureSession 建立的真实会话 id；mock 模式回退 demo。
+  const sessionId = useAppStore((s) => s.sessionId) ?? getMockSessionId();
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
 
-  const original = getOriginalSource();
-  const processed = getPreviewSource(generation);
+  const original = useMemo(() => getOriginalSource(sessionId), [sessionId]);
+  const processed = useMemo(
+    () => getPreviewSource(sessionId, generation),
+    [sessionId, generation],
+  );
+
+  // 处理图加载态：generation 变化时同一 img 元素切 src（不重挂载整层，避免闪烁）。
+  const [src, setSrc] = useState(processed);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    setSrc(processed);
+    setLoading(true);
+    setFailed(false);
+  }, [processed]);
+
+  const retry = () => {
+    setFailed(false);
+    setLoading(true);
+    // src 内容相同时也强制重新加载（先置空再赋值）。
+    const el = imgRef.current;
+    if (!el) return;
+    el.src = '';
+    el.src = processed;
+  };
 
   const onPointerDown = (e: ReactPointerEvent) => {
     drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
@@ -72,7 +101,7 @@ export function PreviewViewer() {
 
       <div
         className="preview-stage"
-        style={{ flex: 1, cursor: drag.current ? 'grabbing' : 'grab' }}
+        style={{ flex: 1, position: 'relative', cursor: drag.current ? 'grabbing' : 'grab' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -87,11 +116,19 @@ export function PreviewViewer() {
           <img className="preview-img original-layer" src={original} alt="original" draggable={false} />
           {viewMode !== 'original' && (
             <img
-              key={generation}
+              ref={imgRef}
               className="preview-img processed-layer"
-              src={processed}
+              src={src}
               alt="processed"
               draggable={false}
+              onLoad={() => {
+                setLoading(false);
+                setFailed(false);
+              }}
+              onError={() => {
+                setLoading(false);
+                setFailed(true);
+              }}
               style={viewMode === 'split' ? { clipPath: `inset(0 0 0 ${splitPos * 100}%)` } : undefined}
             />
           )}
@@ -99,6 +136,37 @@ export function PreviewViewer() {
             <div className="processed-only-badge">Processed</div>
           )}
         </div>
+
+        {viewMode !== 'original' && loading && !failed && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <Text size="sm" c="dimmed">渲染中…（gen #{generation}）</Text>
+          </div>
+        )}
+        {viewMode !== 'original' && failed && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <Text size="sm" c="red">预览加载失败（gen #{generation}）</Text>
+            <Button size="xs" variant="light" onClick={retry}>重试</Button>
+          </div>
+        )}
 
         {viewMode === 'split' && (
           <>

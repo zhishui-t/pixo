@@ -1,7 +1,8 @@
+import { useEffect, useRef, useState } from 'react';
 import { ActionIcon, AppShell, Group, Text, Tooltip } from '@mantine/core';
 import { Download, Inbox, LayoutGrid, Settings, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { DESIGN_TOKENS as T } from './theme/tokens';
-import { pollExport, submitExport } from './api';
+import { fetchPhotos, pollExport, submitExport, getMockSessionId } from './api';
 import { useAppStore } from './store/useAppStore';
 import { ProjectList } from './components/ProjectList';
 import { PreviewViewer } from './components/PreviewViewer';
@@ -11,17 +12,81 @@ import { AdjustmentsPanel } from './components/AdjustmentsPanel';
 import { ReviewQueue } from './components/ReviewQueue';
 import { SettingsPanel } from './components/SettingsPanel';
 
+/** 导出轮询节奏：1s 一次、最多 60 次（约 1 分钟）后放弃。 */
+const EXPORT_POLL_INTERVAL_MS = 1000;
+const EXPORT_POLL_MAX_ATTEMPTS = 60;
+
+interface ExportState {
+  taskId: string;
+  status: string;
+  progress: number;
+}
+
 export default function App() {
   const page = useAppStore((s) => s.page);
   const setPage = useAppStore((s) => s.setPage);
   const rightTab = useAppStore((s) => s.rightTab);
   const setRightTab = useAppStore((s) => s.setRightTab);
   const backend = useAppStore((s) => s.backend);
+  const setPhotos = useAppStore((s) => s.setPhotos);
+
+  // 挂载探测一次后端：setPhotos 会同步 photos + backend 标志，
+  // 让顶栏连接灯反映真实连接状态（mock 模式自动回退）。
+  useEffect(() => {
+    let alive = true;
+    fetchPhotos()
+      .then((result) => {
+        if (alive) setPhotos(result.photos, result.backend);
+      })
+      .catch(() => {
+        /* fetchPhotos 内部已降级 mock，不会 reject；防御性吞掉 */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [setPhotos]);
+
+  // 导出任务轮询（t：替代旧的一次性 poll + alert 假进度）。
+  const [exportState, setExportState] = useState<ExportState | null>(null);
+  const exportTimer = useRef<number | null>(null);
+  const exportCancelled = useRef(false);
+
+  // 组件卸载时停止轮询（StrictMode 双挂载下重置标志，避免误判已取消）。
+  useEffect(() => {
+    exportCancelled.current = false;
+    return () => {
+      exportCancelled.current = true;
+      if (exportTimer.current !== null) window.clearTimeout(exportTimer.current);
+    };
+  }, []);
 
   const handleExport = async () => {
-    const submitted = await submitExport('jpeg', 88);
-    const result = await pollExport(submitted.task_id);
-    window.alert(`导出任务 ${submitted.task_id}：${Math.round(result.progress * 100)}%`);
+    const busy =
+      exportState !== null &&
+      exportState.status !== 'completed' &&
+      exportState.status !== 'failed';
+    if (busy) return;
+    const sessionId = useAppStore.getState().sessionId ?? getMockSessionId();
+    const submitted = await submitExport(sessionId, 'jpeg', 88);
+    setExportState({ taskId: submitted.task_id, status: submitted.status, progress: 0 });
+
+    const scheduleNext = (attempt: number) => {
+      if (exportCancelled.current) return;
+      exportTimer.current = window.setTimeout(async () => {
+        if (exportCancelled.current) return;
+        try {
+          const { task, progress } = await pollExport(submitted.task_id);
+          const status = String(task.status ?? 'unknown');
+          setExportState({ taskId: submitted.task_id, status, progress });
+          if (status !== 'completed' && status !== 'failed' && attempt + 1 <= EXPORT_POLL_MAX_ATTEMPTS) {
+            scheduleNext(attempt + 1);
+          }
+        } catch {
+          setExportState({ taskId: submitted.task_id, status: 'failed', progress: 0 });
+        }
+      }, EXPORT_POLL_INTERVAL_MS);
+    };
+    scheduleNext(0);
   };
 
   // t75 三段式 TopBar: 左品牌 / 中 pill 导航 / 右全局动作。
@@ -68,8 +133,17 @@ export default function App() {
               <Text size="xs" c="dimmed">{backend ? '已连接' : '演示模式'}</Text>
             </span>
           </Tooltip>
+          {exportState && (
+            <Text size="xs" c={exportState.status === 'failed' ? 'red' : 'dimmed'} data-testid="export-status">
+              {exportState.status === 'completed'
+                ? `导出完成 ${Math.round(exportState.progress * 100)}%`
+                : exportState.status === 'failed'
+                  ? '导出失败'
+                  : `导出中 ${Math.round(exportState.progress * 100)}%`}
+            </Text>
+          )}
           <Tooltip label="导出当前结果">
-            <ActionIcon variant="default" size="lg" onClick={handleExport}>
+            <ActionIcon variant="default" size="lg" onClick={() => { void handleExport(); }}>
               <Download size={16} />
             </ActionIcon>
           </Tooltip>

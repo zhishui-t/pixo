@@ -1,17 +1,25 @@
-import type { ParamPatch, Photo } from '../types';
+/**
+ * client —— pixo-service REST 薄封装（路由见 src/pixo/service/app.py）。
+ * 返回类型如实标注，不做 as 强转；失败直接抛错，降级策略由 api/index.ts 决定。
+ */
+import type {
+  DecideResult,
+  ExportSubmission,
+  ExportTask,
+  HealthInfo,
+  MeasurementsResult,
+  ParamPatch,
+  ParamsUpdateResult,
+  Photo,
+  SessionInfo,
+  Source,
+  TimelineInfo,
+} from '../types';
 
 export const API_BASE: string =
   import.meta.env.VITE_PIXO_API_URL ?? 'http://localhost:8000';
 
-export interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-}
-
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
     ...options,
@@ -19,23 +27,27 @@ async function request<T>(
   if (!res.ok) {
     throw new Error(`pixo-service ${res.status}: ${await res.text()}`);
   }
-  return res.json() as Promise<T>;
+  return res.json();
 }
 
-export async function getHealth(): Promise<HealthResponse> {
-  return request<HealthResponse>('/api/health');
+/** GET /api/health */
+export function getHealth(): Promise<HealthInfo> {
+  return request<HealthInfo>('/api/health');
 }
 
-export async function getPhotos(): Promise<Photo[]> {
+/** GET /api/photos */
+export async function listPhotos(): Promise<Photo[]> {
   const data = await request<{ photos: Photo[] }>('/api/photos');
   return data.photos;
 }
 
-export async function getPhotoDetail(photoId: string): Promise<Photo> {
+/** GET /api/photos/{photo_id} */
+export async function getPhoto(photoId: string): Promise<Photo> {
   const data = await request<{ photo: Photo }>(`/api/photos/${photoId}`);
   return data.photo;
 }
 
+/** POST /api/photos（201） */
 export async function createPhoto(path: string): Promise<Photo> {
   const data = await request<{ photo: Photo }>('/api/photos', {
     method: 'POST',
@@ -44,44 +56,79 @@ export async function createPhoto(path: string): Promise<Photo> {
   return data.photo;
 }
 
-export async function patchParams(
+/** POST /api/photos/{photo_id}/sessions（201） */
+export async function createSession(photoId: string): Promise<SessionInfo> {
+  const data = await request<{ session: SessionInfo }>(
+    `/api/photos/${photoId}/sessions`,
+    { method: 'POST' },
+  );
+  return data.session;
+}
+
+/** PUT /api/sessions/{session_id}/params（深合并 + generation+1） */
+export function updateParams(
   sessionId: string,
   patch: ParamPatch,
-  source: string,
-): Promise<{ generation: number; params: ParamPatch; canonical: ParamPatch }> {
-  return request(`/api/sessions/${sessionId}/params`, {
+  source: Source,
+): Promise<ParamsUpdateResult> {
+  return request<ParamsUpdateResult>(`/api/sessions/${sessionId}/params`, {
     method: 'PUT',
     body: JSON.stringify({ ...patch, __source: source }),
   });
 }
 
-export async function submitExport(
+/** GET /api/sessions/{session_id}/measurements */
+export function getMeasurements(
   sessionId: string,
-  fmt = 'jpeg',
-  quality = 88,
-): Promise<{ task_id: string; status: string }> {
-  return request(`/api/sessions/${sessionId}/exports`, {
+  gen?: number,
+): Promise<MeasurementsResult> {
+  const query = gen !== undefined ? `?gen=${gen}` : '';
+  return request<MeasurementsResult>(
+    `/api/sessions/${sessionId}/measurements${query}`,
+  );
+}
+
+/** POST /api/sessions/{session_id}/exports（202 异步任务） */
+export function submitExport(
+  sessionId: string,
+  fmt: string,
+  quality: number,
+): Promise<ExportSubmission> {
+  return request<ExportSubmission>(`/api/sessions/${sessionId}/exports`, {
     method: 'POST',
     body: JSON.stringify({ fmt, quality }),
   });
 }
 
-export async function getExportStatus(taskId: string): Promise<{ task: Record<string, unknown> }> {
-  return request(`/api/exports/${taskId}`);
+/** GET /api/exports/{task_id} */
+export async function getExportStatus(taskId: string): Promise<ExportTask> {
+  const data = await request<{ task: ExportTask }>(`/api/exports/${taskId}`);
+  return data.task;
 }
 
-export interface HealthResponse {
-  ok: boolean;
-  native: boolean;
-  versions?: Record<string, string>;
-  /** t91：部位掩码路由能力（后端 runtime.health 暴露）。 */
-  segmenter?: { router?: string; part_prompts?: string[] };
+/** GET /api/photos/{photo_id}/timeline */
+export function getTimeline(photoId: string): Promise<TimelineInfo> {
+  return request<TimelineInfo>(`/api/photos/${photoId}/timeline`);
 }
 
+/** GET|POST /api/photos/{photo_id}/decide */
+export function decidePhoto(photoId: string): Promise<DecideResult> {
+  return request<DecideResult>(`/api/photos/${photoId}/decide`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * GET /api/sessions/{session_id}/image —— 预览图 URL。
+ * gen 传 null 时省略 gen 参数，由服务端按会话当前 generation 渲染
+ * （照片缩略图等不知 generation 的场景）。
+ */
 export function previewUrl(
   sessionId: string,
-  generation: number,
+  gen: number | null,
   longEdge = 1024,
+  quality = 88,
 ): string {
-  return `${API_BASE}/api/sessions/${sessionId}/image?gen=${generation}&long_edge=${longEdge}&fmt=jpeg`;
+  const genQuery = gen !== null ? `&gen=${gen}` : '';
+  return `${API_BASE}/api/sessions/${sessionId}/image?long_edge=${longEdge}&fmt=jpeg&quality=${quality}${genQuery}`;
 }

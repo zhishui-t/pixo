@@ -4,16 +4,18 @@ import type {
   ChatMessage,
   ColorLabel,
   ParamPatch,
-  Photo,
+  PhotoView,
   Project,
   ReviewItem,
   Source,
   StyleCardData,
 } from '../types';
 import {
+  ensureSession,
   fetchProjects,
   fetchStyleCards,
   getMockPhotoList,
+  getMockSessionId,
   patchParams as remotePatchParams,
 } from '../api';
 
@@ -32,12 +34,14 @@ interface FilmFilter {
 interface AppState {
   page: Page;
   projects: Project[];
-  photosByProject: Record<string, Photo[]>;
+  photosByProject: Record<string, PhotoView[]>;
   activeProjectId: string;
   activePhotoId: string | null;
   styleCards: StyleCardData[];
-  photos: Photo[];
+  photos: PhotoView[];
   backend: boolean;
+  /** 后端在线时 ensureSession 建立的真实会话 id；null=尚未建立（mock 模式）。 */
+  sessionId: string | null;
   /** t91：skin 部位掩码路由是否就绪（null=未探测）。 */
   skinMaskReady: boolean | null;
   params: ParamPatch;
@@ -59,7 +63,7 @@ interface AppState {
   search: string;
 
   setPage: (page: Page) => void;
-  setPhotos: (photos: Photo[], backend: boolean) => void;
+  setPhotos: (photos: PhotoView[], backend: boolean) => void;
   setSkinMaskReady: (v: boolean | null) => void;
   setProjects: (projects: Project[]) => void;
   selectProject: (projectId: string) => void;
@@ -89,9 +93,9 @@ interface AppState {
 
 function defaultParams(): ParamPatch {
   return {
-    exposure: { ev: 0.28, mode: 'auto' },
+    exposure: { mode: 0.28 },
     whitebalance: { mode: 'as_shot', temp: 5200, tint: 0 },
-    tone: { highlights: -20, shadows: 10, contrast: 0.1 },
+    tone: { highlights: -0.2, shadows: 0.1, contrast: 0.1 },
     colorcal: { saturation: 0.05, vibrance: 0.1 },
     refine: { sharpen: 0.2, chroma_denoise: 0.5 },
   };
@@ -99,11 +103,11 @@ function defaultParams(): ParamPatch {
 
 const initialProjects = fetchProjects();
 const initialPhotoList = getMockPhotoList();
-const initialPhotoMap: Record<string, Photo[]> = {};
+const initialPhotoMap: Record<string, PhotoView[]> = {};
 for (const project of initialProjects) {
   initialPhotoMap[project.id] = project.photoIds
-    .map((id) => initialPhotoList.find((p) => p.id === id))
-    .filter((p): p is Photo => Boolean(p));
+    .map((id) => initialPhotoList.find((p) => p.photo_id === id))
+    .filter((p): p is PhotoView => Boolean(p));
 }
 const initialParamsByProject: Record<string, ParamPatch> = {};
 for (const project of initialProjects) {
@@ -122,14 +126,14 @@ const initialSuggestions: AgentSuggestion[] = [
     title: '提亮人脸 +0.28 EV',
     reason: 'face_luminance 95 < target 115',
     confidence: 0.87,
-    patch: { exposure: { ev: 0.28 } },
+    patch: { exposure: { mode: 0.28 } },
   },
   {
     id: 's2',
     title: '压暗高光 -20',
     reason: 'highlight_clip 0.4% within safe range',
     confidence: 0.72,
-    patch: { tone: { highlights: -20 } },
+    patch: { tone: { highlights: -0.2 } },
   },
 ];
 
@@ -143,10 +147,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   projects: initialProjects,
   photosByProject: initialPhotoMap,
   activeProjectId: initialProjects[0]?.id ?? '',
-  activePhotoId: initialPhotoMap[initialProjects[0]?.id ?? '']?.[0]?.id ?? null,
+  activePhotoId: initialPhotoMap[initialProjects[0]?.id ?? '']?.[0]?.photo_id ?? null,
   styleCards: fetchStyleCards(),
   photos: initialPhotoList,
   backend: false,
+  sessionId: null,
   skinMaskReady: null,
   params: defaultParams(),
   paramsByProject: initialParamsByProject,
@@ -171,7 +176,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setPage: (page) => set({ page }),
   setPhotos: (photos, backend) =>
-    set({ photos, backend, activePhotoId: photos[0]?.id ?? null }),
+    set({ photos, backend, activePhotoId: photos[0]?.photo_id ?? null }),
   setSkinMaskReady: (v) => set({ skinMaskReady: v }),
   setProjects: (projects) => set({ projects }),
   selectProject: (projectId) =>
@@ -179,9 +184,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       const photos = state.photosByProject[projectId] ?? [];
       return {
         activeProjectId: projectId,
-        activePhotoId: photos[0]?.id ?? null,
+        activePhotoId: photos[0]?.photo_id ?? null,
         rightTab: 'style',
         messages: state.conversations[projectId] ?? [],
+        // 恢复该项目的参数副本（此前切换后 params 悬空为上一项目的值）。
+        params: state.paramsByProject[projectId] ?? {},
+        // TODO：generation 目前是全局单值，切项目未恢复该项目的代数；
+        // 后续应维护 perProject generation 或以会话回读为准。
       };
     }),
   addProject: (name) =>
@@ -221,7 +230,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSearch: (search) => set({ search }),
 
   patchParam: async (patch, source = 'user') => {
-    const result = await remotePatchParams(patch, source);
+    const sessionId = get().sessionId ?? getMockSessionId();
+    const result = await remotePatchParams(patch, source, sessionId);
     set({
       params: result.params,
       generation: result.generation,
@@ -229,7 +239,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   patchProjectParam: async (projectId, patch, source = 'user') => {
-    const result = await remotePatchParams(patch, source);
+    // 后端在线且尚未建立会话：先 ensureSession（当前选中照片），
+    // 避免硬传 demo-session 触发 404 并把 backendAvailable 打成 false。
+    // 建会话失败时 ensureSession 回退 demo id（本次 patch 由 api 层降级 mock），
+    // 且不缓存 demo id——下一次 patch 会重试建会话。
+    let sessionId = get().sessionId;
+    if (!sessionId) {
+      const photoId = get().activePhotoId;
+      const sid = photoId && get().backend ? await ensureSession(photoId) : getMockSessionId();
+      if (sid !== getMockSessionId()) set({ sessionId: sid });
+      sessionId = sid;
+    }
+    const result = await remotePatchParams(patch, source, sessionId);
     set((state) => ({
       params: result.params,
       generation: result.generation,
@@ -243,7 +264,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPhotoRating: (projectId, photoId, rating) =>
     set((state) => {
       const photos = (state.photosByProject[projectId] ?? []).map((p) =>
-        p.id === photoId ? { ...p, rating } : p,
+        p.photo_id === photoId ? { ...p, rating } : p,
       );
       return {
         photosByProject: { ...state.photosByProject, [projectId]: photos },
@@ -253,7 +274,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPhotoColor: (projectId, photoId, color) =>
     set((state) => {
       const photos = (state.photosByProject[projectId] ?? []).map((p) =>
-        p.id === photoId ? { ...p, colorLabel: color } : p,
+        p.photo_id === photoId ? { ...p, colorLabel: color } : p,
       );
       return {
         photosByProject: { ...state.photosByProject, [projectId]: photos },
