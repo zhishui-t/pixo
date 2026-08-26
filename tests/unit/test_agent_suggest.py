@@ -319,3 +319,39 @@ def test_agent_off_leaves_metrics_absent():
     assert "llm_suggest_count" not in metrics
     assert "llm_suggest_params" not in metrics
     assert all("llm_suggest_count" not in m for m in result.measurements)
+
+
+# --- t69: llm_review 人工审核报表块 -------------------------------------------
+
+def test_loop_review_block_complete_when_suggestions_exist(monkeypatch):
+    """有建议时块完整：accepted 逐条明细 + rejected 计数与原因分布。"""
+    for k, v in zip(_ENV, ("http://fake", "key", "m")):
+        monkeypatch.setenv(k, v)
+
+    def fake_run_suggest(**kw):
+        return {"status": "ok",
+                "accepted": [{"param": "tone.brightness", "op": "set",
+                              "value": 0.3, "reason": "偏暗"}],
+                "rejected": [{"item": None, "reason": "未解析到补丁 JSON",
+                              "raw_text": "全文"},
+                             {"param": "exposure_ev", "op": "delta",
+                              "value": 9.9, "reason": "锁定参数"}],
+                "reply_text": "RAW", "source": "test"}
+
+    monkeypatch.setattr(suggest_mod, "run_suggest", fake_run_suggest)
+    result = _make_loop(agent_suggest=True).run("review", image_rgb=_img())
+    blk = result.llm_review
+    assert blk is not None
+    assert blk["accepted"] == [{"param": "tone.brightness", "op": "set",
+                                "value": 0.3, "reason": "偏暗"}]
+    assert blk["rejected"]["count"] == 2
+    assert blk["rejected"]["reasons"] == {"未解析到补丁 JSON": 1,
+                                          "锁定参数": 1}
+    assert result.to_dict()["llm_review"] == blk      # to_dict 可导出
+
+
+def test_loop_review_block_absent_by_default():
+    """默认关/无建议时块缺席（to_dict 不含该键，而非 null）。"""
+    result = _make_loop().run("absent", image_rgb=_img())
+    assert result.llm_review is None
+    assert "llm_review" not in result.to_dict()

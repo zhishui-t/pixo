@@ -57,6 +57,54 @@ _COLOR_PARAM_ALIASES = {
 }
 
 
+def _build_llm_review(trace_dicts: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """从 trace 事件汇总 llm_suggestions 人工审核块 (t69, 纯报表)。
+
+    形态::
+
+        {"accepted": [{param, op, value, reason}, ...],
+         "rejected": {"count": n, "reasons": {原因: 次数}},
+         "notes": ["dsh.chat 环境未配置整链跳过", ...]}
+
+    无任何 agent_suggest 事件时返回 None —— 调用方据此让块缺席。
+    """
+    accepted: list = []
+    reasons: dict = {}
+    notes: list = []
+    for e in trace_dicts or []:
+        if not isinstance(e, dict):
+            continue
+        et = e.get("event_type")
+        meta = e.get("metadata") or {}
+        if et == "agent_suggest_accepted":
+            for p in meta.get("patches") or []:
+                if isinstance(p, dict):
+                    accepted.append({k: p.get(k)
+                                     for k in ("param", "op", "value",
+                                               "reason")})
+        elif et == "agent_suggest_rejected":
+            items = meta.get("rejected") or []
+            for r in items:
+                reason = (r.get("reason") if isinstance(r, dict)
+                          else str(r)) or "unknown"
+                reasons[reason] = reasons.get(reason, 0) + 1
+            if not items:
+                reasons["unknown"] = reasons.get("unknown", 0) + 1
+            if meta.get("reply_text"):
+                notes.append("rejected 回复全文见 agent_suggest_rejected "
+                             "事件 metadata.reply_text")
+        elif et == "agent_suggest_skipped":
+            notes.append(e.get("reason") or "dsh.chat 环境未配置整链跳过")
+        elif et == "agent_suggest_error":
+            notes.append(e.get("reason") or "suggest 编排异常降级")
+    if not (accepted or reasons or notes):
+        return None
+    return {"accepted": accepted,
+            "rejected": {"count": sum(reasons.values()),
+                         "reasons": reasons},
+            "notes": notes}
+
+
 class LoopError(RuntimeError):
     """闭环编排错误基类。"""
 
@@ -79,6 +127,7 @@ class LoopResult:
     metadata: dict[str, Any]
     compose_geometry: dict[str, Any] | None = None
     agent_decision: str = "agree"
+    llm_review: dict[str, Any] | None = None   # t69 人工审核块(无建议=None)
 
     def __getitem__(self, key: str) -> Any:
         """支持 result["state"] 式访问，兼容 dict 风格调用。"""
@@ -96,7 +145,7 @@ class LoopResult:
                 "shape": list(self.final_image.shape),
                 "dtype": str(self.final_image.dtype),
             }
-        return {
+        out = {
             "photo_id": self.photo_id,
             "state": self.state,
             "iteration": self.iteration,
@@ -112,6 +161,10 @@ class LoopResult:
             "compose_geometry": self.compose_geometry,
             "agent_decision": self.agent_decision,
         }
+        # t69: llm_review 块缺席语义 = 键不写入(而非 null)
+        if self.llm_review is not None:
+            out["llm_review"] = self.llm_review
+        return out
 
 
 def rect_px_to_norm(rect, width, height):
@@ -911,6 +964,8 @@ class SinglePhotoLoop:
                                 metadata={"params": [
                                     p.get("param") for p in sugg["accepted"]
                                     if isinstance(p, dict)],
+                                    "patches": [dict(p) for p in sugg[
+                                        "accepted"] if isinstance(p, dict)],
                                     "chat_latency_ms":
                                         sugg.get("chat_latency_ms"),
                                     "cache_hit": sugg.get("cache_hit")})
@@ -1247,7 +1302,9 @@ class SinglePhotoLoop:
         compose_geometry = None
         if isinstance(params.get("compose"), dict):
             compose_geometry = params["compose"]
+        trace_dicts = [e.to_dict() for e in sm.history()]
         return LoopResult(
+            llm_review=_build_llm_review(trace_dicts),
             photo_id=photo_id,
             state=sm.state,
             iteration=sm.record.iteration,
@@ -1255,7 +1312,7 @@ class SinglePhotoLoop:
             measurements=measurements,
             final_measurement=final_measurement,
             final_image=final_image,
-            trace_events=[e.to_dict() for e in sm.history()],
+            trace_events=trace_dicts,
             decision=sm.state,
             reason=reason,
             qc_rollback_count=sm.record.qc_rollback_count,
