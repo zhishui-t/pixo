@@ -33,6 +33,52 @@
       "usage": "redistribution_allowed_with_license_notice",
       "notes": "CLIP backbone，首次运行经 transformers 自动下载(~605MB，HF 缓存 ~/.cache/huggingface)；作为 aesthetic_scorer 底座仅推理使用。",
       "status": "redistribution_allowed_with_license_notice"
+    },
+    {
+      "name": "uniface-face-parsing",
+      "provider": "jonathandinu/face-parsing (Hugging Face)",
+      "license": "code MIT / weights CC BY-NC-SA(CelebAMask-HQ 派生)",
+      "files": [],
+      "usage": "internal_development_only",
+      "notes": "t90 UniFace 位实现：SegFormer 头部解析，权重非商业仅内部研发；产品化需替换或取得商业授权。",
+      "status": "internal_development_only"
+    },
+    {
+      "name": "rfdetr-seg-2xl",
+      "provider": "roboflow (RF-DETR-Seg)",
+      "license": "Apache-2.0",
+      "files": [],
+      "usage": "redistribution_allowed_with_license_notice",
+      "notes": "t90 person/subject 后端；权重经 rfdetr pip 包首用自动下载。",
+      "status": "redistribution_allowed_with_license_notice"
+    },
+    {
+      "name": "segformer-b1-finetuned-ade-512-512",
+      "provider": "NVIDIA (Hugging Face)",
+      "license": "code Apache-2.0(原始) / ADE20K 微调权重随发布口径",
+      "files": [],
+      "usage": "redistribution_allowed_with_license_notice",
+      "notes": "t90 sky/plant/mountain/tree/grass 场景后端；transformers 首用自动下载。",
+      "status": "redistribution_allowed_with_license_notice"
+    },
+    {
+      "name": "grounding-dino-tiny + sam-vit-base",
+      "provider": "IDEA-Research / Meta (Hugging Face)",
+      "license": "Apache-2.0",
+      "files": [],
+      "usage": "redistribution_allowed_with_license_notice",
+      "notes": "t90 开放词汇可选后端（GroundedSAM 两段式）；默认懒加载，PIXO_GSAM_ENABLED=0 可关。",
+      "status": "redistribution_allowed_with_license_notice"
+    },
+    {
+      "name": "facebook/sapiens-seg-0.3b",
+      "provider": "Meta (Hugging Face)",
+      "license": "CC-BY-NC-4.0 (Sapiens2 License 口径)",
+      "files": [],
+      "usage": "internal_development_only",
+      "isolation_file": "vision/segmenters/sapiens_body.py",
+      "notes": "t91 部位解析(hair/skin/clothes/body)：开源项目可用；商用分发需替换或隔离（NC 特性，区别 YOLOE 的 AGPL internal-only 口径）。任务书 Sapiens-0.4B 为系列约称，默认权重 facebook/sapiens-seg-0.3b，PIXO_SAPIENS_MODEL 可覆写。",
+      "status": "internal_development_only"
     }
   ]
 }

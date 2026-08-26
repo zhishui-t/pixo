@@ -203,15 +203,27 @@ class RawPreviewSession:
 
     # ---- 渲染 ----
     def render(self, long_edge: int = 1024, output_bps: int = 8,
-               decode_mode: str = "cfa_half_native") -> np.ndarray:
-        """渲染当前参数快照；返回 uint8 或 uint16 RGB。"""
+               decode_mode: str = "cfa_half_native",
+               state_extras: Optional[dict] = None) -> np.ndarray:
+        """渲染当前参数快照；返回 uint8 或 uint16 RGB。
+
+        state_extras: 额外 state 注入（如归一化 face_boxes/subject_boxes），
+        供 exposure 测光 subject_mode=box 消费（t92 原生框链路的 raw 侧缺口）。
+        与原 state 键同名时以本参数为准；None/空 dict 不注入，行为与旧版一致。
+        """
         return self._render_with_params(
-            copy.deepcopy(self.params), long_edge, output_bps, decode_mode)
+            copy.deepcopy(self.params), long_edge, output_bps, decode_mode,
+            state_extras=state_extras)
 
     def _render_with_params(self, params: dict, long_edge: int,
                             output_bps: int,
-                            decode_mode: str) -> np.ndarray:
-        """使用指定参数快照渲染（供异步任务调用，避免读到最新 params）。"""
+                            decode_mode: str,
+                            state_extras: Optional[dict] = None) -> np.ndarray:
+        """使用指定参数快照渲染（供异步任务调用，避免读到最新 params）。
+
+        state_extras: 与 render() 同语义；注入发生在 stage 循环之前，并计入
+        每级 stage 缓存的状态指纹，框变化会自然使 stage 缓存失效。
+        """
         if output_bps not in (8, 16):
             raise ValueError("output_bps 只支持 8 或 16")
         img = self._get_tier(long_edge, decode_mode)
@@ -226,6 +238,11 @@ class RawPreviewSession:
         wb = self._decode_wb.get((decode_mode, self._raw_version()))
         if wb is not None:
             ctx.state["camera_wb"] = wb
+        # t92 遗留闭合：归一化框（face_boxes/subject_boxes）注入 state，
+        # exposure 测光 subject_mode=box 在 raw 会话同样生效
+        # （与 SyntheticRenderBackend._render 的注入语义一致）。
+        if isinstance(state_extras, dict) and state_extras:
+            ctx.state.update(state_extras)
 
         for stage in pipe.stages:
             if not stage.wants(ctx):

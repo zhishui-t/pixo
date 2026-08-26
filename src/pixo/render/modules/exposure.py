@@ -46,6 +46,16 @@ from ..core.curves import curve_anchor_target
 
 LOG2_GRAY = float(np.log2(0.18))  # ≈ -2.474 (无 DCP 时的回退锚点)
 
+# t100 spike 高光钳界放宽 (仅标定表路径生效; 锚定回退路径已有两道闸保护组):
+#   RAW 探针 p99 ≥ 1.0（传感器真实饱和, 相机自身 clip 必 >10% —— DSC_0707
+#   实测 cam=10.4%）且场景中位偏暗 (med_log2 ≤ -3.3, 亮点集中型 spike; 平顶
+#   亮景 med 高不触发) 时, 标定表 EV 对这类尖峰场景偏保守 (0707 dL=-9, 我们
+#   比相机少钳 3.3pt), 允许有界提亮向相机对齐 (实测 +0.15 EV: 0707 dL
+#   -9.1→-3.5 入带, clip 7.0→8.0% 仍低于相机 10.4% 不越钳)。
+_SPIKE_P99_MIN = 1.0    # 探针 p99 饱和阈值 (线性域)
+_SPIKE_MED_MAX = -3.3   # 场景中位 log2 上限 (spike 判别: 亮点集中)
+_SPIKE_EV_LIFT = 0.15   # 有界提亮幅度 (EV), max_ev 内钳位
+
 # 每机曝光标定文件 (tools/fit_target_offset.py --write 生成):
 #   {"cal_table": [[m_log2, ev], ...]} —— 场景自适应表: 线性中位亮度 → 所需 EV。
 #   相机预览曝光是场景自适应的 (暗场景保暗), 单常量无法复现; 表结点 ≥3 时
@@ -451,6 +461,13 @@ class ExposureStage(Stage):
             ev = _cal_ev(med, table, wb_b)
             ctx.state["ev_mode"] = (
                 "cal_table_2d" if len(table) == 3 and wb_b is not None else "cal_table")
+            # t100 spike 高光钳界放宽: 探针 p99 真实饱和 + 中位偏暗的尖峰景,
+            # 相机同景必大量 clip (DSC_0707 cam=10.4%), 表 EV 偏保守 → 有界提亮。
+            # 判定用全图探针 (与 exposure 测光相关), p99/med 均取线性 sRGB 域。
+            p99_y = float(np.percentile(y, 99.0))
+            if p99_y >= _SPIKE_P99_MIN and med <= _SPIKE_MED_MAX:
+                ev = min(ev + _SPIKE_EV_LIFT, float(self.p(ctx, "max_ev")))
+                ctx.state["ev_spike_lift"] = True
         else:
             ctx.state["ev_mode"] = "anchor"
         # 无标定表回退保护组 (table is None 才生效; 标定表路径的均值匹配

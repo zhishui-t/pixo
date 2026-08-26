@@ -74,6 +74,8 @@ export interface HealthResponse {
   ok: boolean;
   native: boolean;
   versions?: Record<string, string>;
+  /** t91：部位掩码路由能力（后端 runtime.health 暴露）。 */
+  segmenter?: { router?: string; part_prompts?: string[] };
 }
 
 export function previewUrl(

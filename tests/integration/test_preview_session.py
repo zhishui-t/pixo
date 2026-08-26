@@ -152,6 +152,28 @@ def test_camera_wb_injected_into_stage_context(session_env, monkeypatch):
         np.testing.assert_array_equal(ctx.state["camera_wb"], expected)
 
 
+def test_state_extras_injected_into_stage_context(session_env):
+    """state_extras（归一化框）应注入每个 stage 的 StageContext.state。"""
+    extras = {"face_boxes": [[0.1, 0.1, 0.4, 0.4]],
+              "subject_boxes": [[0.3, 0.3, 0.8, 0.9]]}
+    sess = RawPreviewSession("x.nef", prof=object())
+    sess.render(long_edge=8, state_extras=extras)
+    assert session_env["seen_ctx"], "应捕获至少一个 stage ctx"
+    for ctx in session_env["seen_ctx"]:
+        assert list(ctx.state.get("face_boxes")) == [[0.1, 0.1, 0.4, 0.4]]
+        assert list(ctx.state.get("subject_boxes")) == [[0.3, 0.3, 0.8, 0.9]]
+
+
+def test_state_extras_absent_or_empty_not_injected(session_env):
+    """缺省 None / 空 dict 都不注入，保持旧行为。"""
+    sess = RawPreviewSession("y.nef", prof=object())
+    sess.render(long_edge=8)
+    sess.render(long_edge=8, state_extras={})
+    for ctx in session_env["seen_ctx"]:
+        assert "face_boxes" not in ctx.state
+        assert "subject_boxes" not in ctx.state
+
+
 def test_16bit_formats_force_16bit_render(session_env):
     import cv2
 

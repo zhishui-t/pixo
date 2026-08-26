@@ -354,6 +354,11 @@ class PixoServiceRuntime:
             "service": "pixo-service",
             "version": "0.1.0",
             "vision": vision_health(),
+            "segmenter": {
+                # t91：部位掩码路由能力（懒加载，首次使用才实例化后端）。
+                "router": "multi",
+                "part_prompts": ["hair", "skin", "clothes", "body"],
+            },
             "photos": len(self.photos),
             "sessions": len(self.sessions),
         }

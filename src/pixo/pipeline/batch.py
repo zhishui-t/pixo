@@ -94,6 +94,8 @@ class AgentVerdict:
     confidence: float
     reason: str
     manual_review: bool = False
+    synthetic_rank: int | None = None
+    synthetic_pool_size: int | None = None
 
 
 @dataclass
@@ -431,7 +433,17 @@ class MockAgentSelector:
         self,
         candidates: Sequence[tuple[BatchInput, AestheticScore]],
     ) -> dict[str, AgentVerdict]:
-        """返回 photo_id -> AgentVerdict（只处理 Top N）。"""
+        """评分 → 选片；合成域候选隔离 + 池内相对排序（t68 → t98 语义扩展）。
+
+        结构（无论 include_synthetic 取值）：
+          - 实拍域（domain_hint != synthetic_like）：按标定分取 Top N 推荐。
+          - 合成域（domain_hint == synthetic_like）：从不与实拍绝对分混排
+            （t58 禁跨域比）；include_synthetic=True 时以「隔离合成池」可见
+            形式输出——仅在池内按标定分相对排序（synthetic_rank），供人审
+            参考。t98 实测同场景退化阶梯 Spearman ρ≈0.03 非单调，域内相对
+            排名自洽性不足，**不得据此作质检硬结论**：recommended 恒 False
+            （即使 include_synthetic=True 也不推荐）。
+        """
         usable = [
             (item, score)
             for item, score in candidates
@@ -441,23 +453,23 @@ class MockAgentSelector:
         skipped = len(candidates) - len(usable)
         if skipped:
             _LOGGER.warning(
-                "[pixo.pipeline.batch] AgentSelector 过滤无效美学候选 %d 个",
+                "[pixo.pipeline.batch] AgentSelector 有 %d 个无有效美学得分"
+                "的候选被跳过",
                 skipped)
-        # t68 域外隔离：synthetic_like 绝对分不可与实拍跨域比较，
-        # 默认从 TopN 排序池剔除；include_synthetic=True 时才可见。
-        if self.include_synthetic:
-            ranked_pool = usable
-        else:
-            ranked_pool = [
-                pair for pair in usable
-                if getattr(pair[1], "domain_hint", None) != _DOMAIN_HINT_HIGH
-            ]
-        ranked = sorted(ranked_pool, key=lambda x: x[1].overall, reverse=True)[
+        real_pool = [
+            pair for pair in usable
+            if getattr(pair[1], "domain_hint", None) != _DOMAIN_HINT_HIGH
+        ]
+        synth_pool = [
+            pair for pair in usable
+            if getattr(pair[1], "domain_hint", None) == _DOMAIN_HINT_HIGH
+        ]
+        ranked = sorted(real_pool, key=lambda x: x[1].overall, reverse=True)[
             : self.top_n
         ]
         verdicts: dict[str, AgentVerdict] = {}
         for index, (item, score) in enumerate(ranked):
-            # 分数 5.0 时 confidence 约 0.98；越靠前额外加少量权重。
+            # 当 score=5.0 时 confidence 约 0.98；越靠前排名加权越高。
             confidence = float(np.clip(
                 0.50 + score.overall / 10.0 + (self.top_n - index) * 0.02,
                 0.0, 0.98,
@@ -469,27 +481,41 @@ class MockAgentSelector:
                 recommended=recommended,
                 confidence=confidence,
                 reason=(
-                    f"美学评分 {score.overall:.2f}/5，"
-                    f"候选第 {index + 1} 位"
+                    f"美学得分 {score.overall:.2f}/5，"
+                    f"选片第 {index + 1} 位"
                 ),
                 manual_review=manual,
             )
-        if not self.include_synthetic:
-            ranked_ids = {item.photo_id for item, _ in ranked}
-            for item, score in usable:
-                pid = item.photo_id
-                if pid in verdicts or pid in ranked_ids:
-                    continue
-                if getattr(score, "domain_hint", None) != _DOMAIN_HINT_HIGH:
-                    continue
+        # 合成域：隔离池。池内排序仅作参考（t98 ρ≈0.03 自洽性不足），
+        # 不参与实拍 TopN，也不产出任何推荐/人工评审。
+        ordered_synth = sorted(
+            synth_pool, key=lambda x: x[1].overall, reverse=True)
+        pool_size = len(ordered_synth)
+        for rank, (item, _score) in enumerate(ordered_synth, start=1):
+            pid = item.photo_id
+            if not self.include_synthetic:
                 verdicts[pid] = AgentVerdict(
                     recommended=False,
                     confidence=0.0,
                     reason="合成域候选隔离：不与实拍域绝对分混排(t68)",
                     manual_review=False,
+                    synthetic_rank=None,
+                    synthetic_pool_size=pool_size if pool_size else None,
                 )
+                continue
+            verdicts[pid] = AgentVerdict(
+                recommended=False,
+                confidence=0.0,
+                reason=(
+                    f"合成域池内第 {rank}/{pool_size}：相对排名自洽性不足"
+                    "(ρ≈0.03 非单调)仅供人审参考，不作质检硬结论；"
+                    "未与实拍混排(t98)"
+                ),
+                manual_review=False,
+                synthetic_rank=rank,
+                synthetic_pool_size=pool_size,
+            )
         return verdicts
-
 
 class BatchPipeline:
     """批量流程编排器。

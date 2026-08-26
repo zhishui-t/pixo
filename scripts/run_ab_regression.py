@@ -1,7 +1,9 @@
 """t85 全语料分层 A/B 回归：三层 linspace 抽样 ~40 张，逐张指标+分带验收。
 
-用法: python scripts/run_ab_regression.py [--smoke]
-输出: docs/metrics/ab_regression.md + .results.jsonl（渐进落盘）
+用法:
+  python scripts/run_ab_regression.py [--smoke]
+  python scripts/run_ab_regression.py --files <JSONL(每行raw)> [--out <jsonl>]  # t97 显式清单
+输出: docs/metrics/.ab_results.jsonl（渐进落盘）；--files 时默认 .ab_highlight_stress_results.jsonl
 """
 from __future__ import annotations
 
@@ -91,6 +93,12 @@ def band_check(cls, m):
     # 相机高光占比 <0.05% 时比值无统计意义（分母近零），跳过 clip 判据
     ratio = ((m["clip_hi_ours"] / m["clip_hi_cam"])
              if m["clip_hi_cam"] >= 0.05 else None)
+    # t100 判据加固: 常规带补 clip<=cam*1.5 —— 堵 DSC_2761 比值 3.148 型漏网
+    #   (相机 clip>=1% 才应用: 分母足够大、比值有统计意义; DSC_2816 cam=0.28%
+    #   属绝对值极小边缘样本, cam≈0 时比值发散, 不判超限)。
+    clip_ok = True
+    if cls == "normal" and m["clip_hi_cam"] >= 1.0:
+        clip_ok = ratio is not None and float(ratio) <= 1.5
     if cls == "indoor":
         ok, why = m["dE_mean"] <= 12.0, "室内带 dE<=12"
     elif cls == "night":
@@ -99,23 +107,44 @@ def band_check(cls, m):
         ok = abs(m["dL"]) <= 6.0 and (ratio is None or ratio <= 1.5)
         why = "高调带 |dL|<=6 且 clip<=cam*1.5"
     else:
-        ok, why = abs(m["dL"]) <= 8.0, "常规带 |dL|<=8"
-    return ok, why, ratio
+        ok, why = abs(m["dL"]) <= 8.0 and clip_ok, "常规带 |dL|<=8 且 clip<=cam*1.5(cam>=1%)"
+    return ok, why, ratio, clip_ok
 
 
-def main(smoke: bool):
-    samples = []
-    for layer, dirs in LAYERS.items():
-        for p in linspace_pick(pool(dirs), N_PER_LAYER[layer], MUST_CONTAIN[layer]):
-            samples.append((layer, p))
-    if smoke:
-        keep = {"DSC_5236", "DSC_2746", "DSC_0847"}
-        samples = [s for s in samples if any(k in s[1].name for k in keep)]
-    print(f"samples total = {len(samples)}", flush=True)
+def load_custom_samples(files_jsonl):
+    """t97 扩展：--files 传入 JSONL（每行含 raw/type/batch），逐张走同套指标管线。
+    返回 (samples, meta_map)；meta_map 供行级附注用。"""
+    import json as _json
+    samples, meta = [], {}
+    for line in open(files_jsonl, encoding="utf-8"):
+        line = line.strip()
+        if not line:
+            continue
+        rec = _json.loads(line)
+        p = Path(rec.get("raw", ""))
+        samples.append(("stress", p))
+        meta[p.name] = {k: v for k, v in rec.items() if k != "raw"}
+    return sorted(set(samples)), meta
 
+
+def main(smoke: bool, files_jsonl=None, out_jsonl=None):
     dcp = sorted((ROOT / "resources/dcp").glob("*.dcp"))[0]
+    if files_jsonl:
+        samples, meta = load_custom_samples(files_jsonl)
+        print(f"samples total = {len(samples)} (from {files_jsonl})", flush=True)
+        out_jsonl = out_jsonl or str(ROOT / "docs/metrics/.ab_highlight_stress_results.jsonl")
+    else:
+        samples = []
+        for layer, dirs in LAYERS.items():
+            for p in linspace_pick(pool(dirs), N_PER_LAYER[layer], MUST_CONTAIN[layer]):
+                samples.append((layer, p))
+        if smoke:
+            keep = {"DSC_5236", "DSC_2746", "DSC_0847"}
+            samples = [s for s in samples if any(k in s[1].name for k in keep)]
+        print(f"samples total = {len(samples)}", flush=True)
+        out_jsonl = out_jsonl or str(ROOT / "docs/metrics/.ab_results.jsonl")
+
     renderer = Renderer(dcp)
-    out_jsonl = ROOT / "docs/metrics/.ab_results.jsonl"
     rows = []
     with open(out_jsonl, "w", encoding="utf-8") as jf:
         for i, (layer, p) in enumerate(samples, 1):
@@ -128,13 +157,28 @@ def main(smoke: bool):
                 m = metrics(f"{stem}", ours, ref)
                 m_alt = metrics(f"{stem}[b=.25]", alt, ref)
                 cls, trait = scene_of(stem, ours)
-                ok, why, ratio = band_check(cls, m)
+                ok, why, ratio, clip_ok = band_check(cls, m)
+                # t100 超限归因: 高光外推(比值>1.5) / 提亮超带(dL>8) / 压暗超带(dL<-8)
+                if ok:
+                    attrib = ""
+                elif ratio is not None and float(ratio) > 1.5 and m["clip_hi_cam"] >= 1.0:
+                    attrib = "高光外推"
+                elif cls in ("highkey",) and abs(m["dL"]) > 6.0:
+                    attrib = "dL超带"
+                elif abs(m["dL"]) > 8.0:
+                    attrib = "提亮超带(压暗)" if m["dL"] > 0 else "压暗超带(提亮)"
+                else:
+                    attrib = "clip超带" if not clip_ok else ""
                 row = {
                     "layer": layer, "file": p.name, "class": cls,
                     **m, "dE_alt": m_alt["dE_mean"],
                     "clip_ratio": round(ratio, 3) if ratio else None,
+                    "clip_ok": clip_ok, "attribution": attrib,
                     "band_ok": ok, "band_rule": why, "scene_trait": trait,
                 }
+                if files_jsonl and p.name in meta:
+                    for k, v in meta[p.name].items():
+                        row[f"src_{k}"] = v
             except Exception as exc:  # noqa: BLE001 - 单张失败不拖垮全集
                 row = {"layer": layer, "file": p.name, "error":
                        f"{type(exc).__name__}: {exc}"}
@@ -148,4 +192,11 @@ def main(smoke: bool):
 
 
 if __name__ == "__main__":
-    main("--smoke" in sys.argv)
+    smoke = "--smoke" in sys.argv
+    files_jsonl = None
+    out_jsonl = None
+    if "--files" in sys.argv:
+        files_jsonl = sys.argv[sys.argv.index("--files") + 1]
+    if "--out" in sys.argv:
+        out_jsonl = sys.argv[sys.argv.index("--out") + 1]
+    main(smoke, files_jsonl, out_jsonl)

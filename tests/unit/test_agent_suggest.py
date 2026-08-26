@@ -355,3 +355,45 @@ def test_loop_review_block_absent_by_default():
     result = _make_loop().run("absent", image_rgb=_img())
     assert result.llm_review is None
     assert "llm_review" not in result.to_dict()
+
+
+# --- t92：RF-DETR 原生框直供 box_provider -------------------------------------
+
+class _DetectingSegmenter(MockSegmenter):
+    """带 detect_boxes 的假件：模拟 MultiModelSegmenter→RF-DETR 直供。"""
+
+    def detect_boxes(self, image_rgb, prompts):
+        return {"person": [[0.3, 0.2, 0.6, 0.7]]}
+
+
+def test_native_detector_boxes_feed_suggest_and_exposure():
+    suggest_mod._SUGGEST_CACHE.clear()
+    loop = _make_loop(crop_suggest=True)
+    loop.segmenter = _DetectingSegmenter()
+    result = loop.run("native_box", image_rgb=_img())
+
+    crop_evs = [e for e in result.trace_events
+                if (e.get("event_type") if isinstance(e, dict)
+                    else getattr(e, "event_type", "")) == "crop_suggest"]
+    assert crop_evs, "应产生构图建议"
+    val = crop_evs[-1]["value"]
+    assert val["source"] == "native_box"
+    # 原生框归一化透传进建议
+    assert val["rect"] and all(0.0 <= v <= 1.0 for v in val["rect"])
+
+    # 粘性框注入后端：exposure 测光可消费（person→face 分组惯例）
+    backend = loop.render_backend
+    extras = getattr(backend, "state_extras", None)
+    assert isinstance(extras, dict)
+    assert extras.get("face_boxes"), "原生框应按 person→faces 映射进 face_boxes"
+
+
+def test_mask_bbox_fallback_still_works_without_detect_boxes():
+    suggest_mod._SUGGEST_CACHE.clear()
+    loop = _make_loop(crop_suggest=True)          # MockSegmenter 无 detect_boxes
+    result = loop.run("mask_fallback", image_rgb=_img())
+    crop_evs = [e for e in result.trace_events
+                if (e.get("event_type") if isinstance(e, dict)
+                    else getattr(e, "event_type", "")) == "crop_suggest"]
+    assert crop_evs
+    assert crop_evs[-1]["value"]["source"] == "mask_bbox"

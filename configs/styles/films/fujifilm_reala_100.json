@@ -1,0 +1,71 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.12,
+      "toe": 0.18,
+      "shoulder": 0.3,
+      "brightness": 0.3
+    },
+    "huesat": {
+      "enabled": true,
+      "strength": 0.22
+    },
+    "colorcal": {
+      "vibrance": 0.05,
+      "saturation": -0.1
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.6
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.26,
+      "chroma_denoise": 1.2,
+      "highlight_desat": 0.6
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "Reala 100",
+    "tags": [
+      "portrait",
+      "neutral",
+      "fine_grain",
+      "accurate"
+    ],
+    "scenes": [
+      "portrait",
+      "wedding",
+      "travel"
+    ],
+    "character": "Reala 100 真实色负片：肤色精度标杆、整体中性低饱和，反差柔和颗粒极致细腻，曾是日系人像代名词。",
+    "year": 1993,
+    "grain_proxy": 0.1
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.015,
+        1.0,
+        0.985
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.2,
+      "toe": 0.12,
+      "shoulder": 0.28,
+      "brightness": 0.34
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.75,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 7, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 8, \"luminance\": 2}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 6, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.35
+    },
+    "colorcal": {
+      "vibrance": 0.3,
+      "saturation": 0.22
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 48,
+      "highlights_sat": 8,
+      "shadows_hue": 42,
+      "shadows_sat": 4,
+      "balance": 0.6,
+      "strength": 0.6
+    },
+    "skin": {
+      "enabled": false,
+      "strength": 0.0
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.34,
+      "chroma_denoise": 0.8,
+      "highlight_desat": 0.4
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "Ultramax 400",
+    "tags": [
+      "vivid",
+      "warm",
+      "consumer"
+    ],
+    "scenes": [
+      "street",
+      "travel",
+      "everyday"
+    ],
+    "character": "Ultramax 400 消费级彩负：色彩浓艳暖调、红黄突出，反差偏强颗粒可辨，典型快拍便签感。",
+    "year": 2007,
+    "grain_proxy": 0.35
+  }
+}

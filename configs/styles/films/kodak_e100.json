@@ -1,0 +1,97 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        0.998,
+        1.0,
+        1.002
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.26,
+      "toe": 0.1,
+      "shoulder": 0.24,
+      "brightness": 0.3
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.7,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 6, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 0.0}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 5, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 6, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.35
+    },
+    "colorcal": {
+      "vibrance": 0.25,
+      "saturation": 0.24
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 40,
+      "highlights_sat": 3,
+      "shadows_hue": 210,
+      "shadows_sat": 3,
+      "balance": 0.5,
+      "strength": 0.3
+    },
+    "skin": {
+      "enabled": false,
+      "strength": 0.0
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.4,
+      "chroma_denoise": 0.7,
+      "highlight_desat": 0.3
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "Ektachrome E100",
+    "tags": [
+      "slide",
+      "accurate",
+      "vivid",
+      "fine_grain"
+    ],
+    "scenes": [
+      "landscape",
+      "nature",
+      "general"
+    ],
+    "character": "Ektachrome E100 专业反转片：色彩准确浓烈、红与青蓝突出，反差干净锐利颗粒极细，宽容度有限。",
+    "year": 2018,
+    "grain_proxy": 0.1
+  }
+}

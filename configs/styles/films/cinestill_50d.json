@@ -1,0 +1,97 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.18,
+      "toe": 0.14,
+      "shoulder": 0.35,
+      "brightness": 0.32
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.8,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 3, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 2}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "colorcal": {
+      "vibrance": 0.18,
+      "saturation": 0.1
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 45,
+      "highlights_sat": 4,
+      "shadows_hue": 210,
+      "shadows_sat": 2,
+      "balance": 0.5,
+      "strength": 0.3
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.35
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.3,
+      "chroma_denoise": 1.2,
+      "highlight_desat": 0.6
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "CineStill",
+    "label": "CineStill 50D",
+    "tags": [
+      "motion",
+      "clean",
+      "neutral",
+      "fine_grain"
+    ],
+    "scenes": [
+      "daylight",
+      "portrait",
+      "city"
+    ],
+    "character": "CineStill 50D 日光型电影卷转拍：忠实色彩、中性清洁、高光滚降平滑，颗粒极细适合大场景。",
+    "year": 2015,
+    "grain_proxy": 0.08
+  }
+}

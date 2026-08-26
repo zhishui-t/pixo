@@ -12,12 +12,22 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["YoloeSegmenter"]
+__all__ = ["YoloeSegmenter", "MultiModelSegmenter", "UniFaceSegmenter", "RFDetrPersonSegmenter", "SegFormerSceneSegmenter", "GroundedSAMSegmenter"]
 
 
 def __getattr__(name: str) -> Any:
     """按需导入 YoloeSegmenter，避免包导入时触发 torch/ultralytics。"""
-    if name == "YoloeSegmenter":
-        from .yoloe import YoloeSegmenter
-        return YoloeSegmenter
+    mapping = {
+        "YoloeSegmenter": ("yoloe", "YoloeSegmenter"),
+        "MultiModelSegmenter": ("multi_router", "MultiModelSegmenter"),
+        "UniFaceSegmenter": ("uniface_face", "UniFaceSegmenter"),
+        "RFDetrPersonSegmenter": ("rfdetr_person", "RFDetrPersonSegmenter"),
+        "SegFormerSceneSegmenter": ("segformer_scenes",
+                                    "SegFormerSceneSegmenter"),
+        "GroundedSAMSegmenter": ("grounded_sam", "GroundedSAMSegmenter"),
+    }
+    if name in mapping:
+        from importlib import import_module
+        mod, cls = mapping[name]
+        return getattr(import_module("." + mod, __name__), cls)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -1,7 +1,9 @@
-import { Accordion, Paper, Text } from '@mantine/core';
+import { Accordion, Paper, Text, Badge } from '@mantine/core';
 import { DESIGN_TOKENS } from '../theme/tokens';
 import { SectionLabel } from './SectionLabel';
 import { useAppStore } from '../store/useAppStore';
+import { health } from '../api';
+import { useEffect } from 'react';
 import { SliderParam } from './SliderParam';
 
 const HISTOGRAM = [12, 28, 45, 62, 90, 120, 96, 70, 48, 32, 18, 10, 6];
@@ -9,6 +11,21 @@ const HISTOGRAM = [12, 28, 45, 62, 90, 120, 96, 70, 48, 32, 18, 10, 6];
 export function AdjustmentsPanel() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const params = useAppStore((s) => s.paramsByProject[s.activeProjectId] ?? {});
+  // t91：skin 掩码路由能力信号（后端 /api/health 的 segmenter 节）。
+  const skinMaskReady = useAppStore((s) => s.skinMaskReady);
+  const setSkinMaskReady = useAppStore((s) => s.setSkinMaskReady);
+  useEffect(() => {
+    let alive = true;
+    health()
+      .then((h) => {
+        if (!alive) return;
+        setSkinMaskReady(Boolean(h.backend && h.segmenter?.part_prompts?.includes('skin')));
+      })
+      .catch(() => alive && setSkinMaskReady(false));
+    return () => {
+      alive = false;
+    };
+  }, [setSkinMaskReady]);
   const patchProjectParam = useAppStore((s) => s.patchProjectParam);
 
   const value = (stage: string, param: string, fallback = 0): number => {
@@ -50,6 +67,12 @@ export function AdjustmentsPanel() {
             <SliderParam label="色温" stage="whitebalance" param="temp" value={value('whitebalance', 'temp', 5200)} min={1000} max={50000} step={50} unit="K" onPatch={patch} />
             <SliderParam label="色调" stage="whitebalance" param="tint" value={value('whitebalance', 'tint', 0)} min={-150} max={150} step={1} onPatch={patch} />
             <SliderParam label="清晰度" stage="clarity" param="strength" value={value('clarity', 'strength', 0.1)} min={-1} max={1} step={0.01} onPatch={patch} />
+
+            {/* t91：skin 掩码就绪时磨皮限定皮肤区域（精准磨皮）；hair 掩码为人像抠图预留通道。 */}
+            <SliderParam label="皮肤磨皮" stage="skin" param="strength" value={value('skin', 'strength', 0.4)} min={0} max={1} step={0.01} onPatch={patch} />
+            <Badge size="xs" variant="light" color={skinMaskReady ? 'accent' : 'gray'}>
+              {skinMaskReady ? 'skin 掩码就绪 · 磨皮限定皮肤区' : 'skin 掩码未加载 · 全局磨皮回退'}
+            </Badge>
           </Accordion.Panel>
         </Accordion.Item>
 

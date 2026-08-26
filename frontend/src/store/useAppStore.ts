@@ -38,6 +38,8 @@ interface AppState {
   styleCards: StyleCardData[];
   photos: Photo[];
   backend: boolean;
+  /** t91：skin 部位掩码路由是否就绪（null=未探测）。 */
+  skinMaskReady: boolean | null;
   params: ParamPatch;
   paramsByProject: Record<string, ParamPatch>;
   generation: number;
@@ -58,6 +60,7 @@ interface AppState {
 
   setPage: (page: Page) => void;
   setPhotos: (photos: Photo[], backend: boolean) => void;
+  setSkinMaskReady: (v: boolean | null) => void;
   setProjects: (projects: Project[]) => void;
   selectProject: (projectId: string) => void;
   addProject: (name: string) => void;
@@ -144,6 +147,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   styleCards: fetchStyleCards(),
   photos: initialPhotoList,
   backend: false,
+  skinMaskReady: null,
   params: defaultParams(),
   paramsByProject: initialParamsByProject,
   generation: 12,
@@ -168,6 +172,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPage: (page) => set({ page }),
   setPhotos: (photos, backend) =>
     set({ photos, backend, activePhotoId: photos[0]?.id ?? null }),
+  setSkinMaskReady: (v) => set({ skinMaskReady: v }),
   setProjects: (projects) => set({ projects }),
   selectProject: (projectId) =>
     set((state) => {

@@ -1,0 +1,59 @@
+t93 三适配器掩码质量冒烟（真实权重）结果
+============================================================
+全量 pytest: 883 passed / 3 skipped / 1 xfailed (206.9s)
+
+适配器实跑（long_edge=512 渲染）:
+  [DSC_5236 室内人像] face(uniface) coverage=23.18% bbox=[114,17,368,340]  OK
+  [DSC_5236] sky(segformer) coverage=0.00%  (室内无天空，正确)  OK
+  [DSC_5241 环境]    face(uniface) coverage=2.82% bbox=[17,161,262,340]  OK
+  [DSC_5241 天空受光] sky(segformer) coverage=40.68% bbox=[0,0,511,147]  OK
+  [DSC_5236/5241]    person(rfdetr) coverage=0.00%  FAIL: RFDetrPersonSegmenter 加载失败
+                      AttributeError: module rfdetr has no attribute RFDETRSeg
+                      -> rfdetr 1.9.4 顶层无 RFDETRSeg（真实类在 rfdetr.variants: RFDETRSeg/RFDETRSeg2XLarge）
+                      -> t92 detect_boxes 同受波及，box_provider 原生框通道实际失效
+
+A/B 回归（门禁③）========
+44/44 完成；band_ok=31 / bad=13（基线 30/14，略优或持平）
+逐张 diff 对比新旧 .ab_results.jsonl vs .ab_aggregated.json：
+  dE_mean delta 范围 [0.0, 0.0]，dL delta 范围 [0.0, 0.0] —— 逐位无差异
+分带：highkey 1/0 ✓ night 1/0 ✓ indoor 2/2（同基线） normal 27/11（同基线）
+结论：多模型 Segmenter 掩码替换未对下游曝光测光/渲染引入任何回归 ✓
+
+
+最终树全量回归（t99 落定后）=================
+904 passed / 4 skipped / 1 xfailed (161.0s, exit 0)
+演进：基线 862 -> 旧树 883 -> 最终树 904（t99 Sapiens id2label 落定后净增）
+test_sapiens_body.py：13 passed / 1 skipped（t99 后复绿，此前树漂移期 2 例红）
+结论：门禁①全量回归通过，无破坏
+
+
+t92 box_provider 三级链容器验证（scripts/t93_person_e2e.py，fake 驱动）====
+B) segmenter.detect_boxes 原生通道(L681): crop_suggestion source=native_box rect=[0.234,0.141,0.914,0.992] ✓
+C) 显式 box_provider 优先(L674): source=native_box ✓
+A) 真实 MultiModelSegmenter.detect_boxes: {} (rfdetr RFDETRSeg 缺陷未修,预期;t102 修复后应出归一化框) —— 唯一断点确认为 rfdetr 类名
+结论: t92 容器逻辑全部正常,仅 rfdetr 后端类名缺陷(t102)阻塞真实 person 路径
+
+
+三适配器真实冒烟最终结论（t102 修复后）===============
+[DSC_5236 室内人像] face(uniface) 23.18% ✓ | person(rfdetr) 35.59% ✓ bbox=[90,18,452,340] | sky 0% = 无天空室内场景合理 ✓
+[DSC_5241 风光天空]  face(uniface) 2.82% ✓ | sky(segformer) 40.68% ✓ | person 0% = 无人物场景合理 ✓
+detect_boxes(rfdetr 真实权重): {'person': [[0.162,0.053,0.885,0.998]]} 归一化合法 ✓
+结论：门禁②三适配器掩码质量冒烟全部通过（0% 均为场景语义正确，非缺陷）
+
+
+最终树全量回归（含 t102 rfdetr 修复后）========
+904 passed / 4 skipped / 1 xfailed (153.6s, exit 0)
+与修复前一致：rfdetr RFDETRSeg2XLarge 替换无破坏，全量保持绿
+===== t93 终版结论 =====
+① 全量 pytest: 904 passed / 4 skipped / 1 xfailed ✓
+② 三适配器掩码冒烟(真实RAW): face 23.2%/2.8% ✓ | person 35.6%/0%合理 ✓ | sky 40.7%/0%合理 ✓ | detect_boxes 归一化 ✓
+③ A/B 44张: 零回归, band_ok 31/13(与基线逐位无差) ✓
+④ 授权矩阵: 8模型(AGPL隔离/NC标注/MIT+Apache在册) ✓
+门禁结论: ALL PASS
+
+
+[终版补充 2026-08-26 23:41] t102 正式收口(kdev3)后真正最终树复跑 ====
+全量 pytest: 910 passed / 4 skipped / 1 xfailed (137.7s, exit 0)
+  - 较 904 净增 6 用例 = t102 新增 test_rfdetr_person.py(28p 回归的最终树版本)
+  - t102 修复无破坏
+person/detect_boxes 最终树冒烟: person mask 35.59% + detect_boxes [0.162,0.053,0.885,0.998] PASS

@@ -4,7 +4,8 @@
 
 核心职责:
   - YAML/字典规则 schema 求值: priority / condition / action
-    (formula / clamp / step_decay / conflict_policy)
+    (formula / clamp / step_decay / conflict_policy；conflict_policy
+    仅支持 high_priority_wins，非预期值加载期报错）
   - 优先级链: 用户锁定 > 用户软偏好 > 风格卡片 > 系统默认
   - 参数锁定、冲突消歧、曝光方向限幅
   - 终止判断: 目标达标 / 最大3轮 / 连续两轮改善不足 / 不可修复 / 锁定转人工
@@ -70,6 +71,9 @@ _PRIORITY_LEVELS = {
 
 # 曝光方向限幅阈值 (preview 溢出率)
 _EXPOSURE_CLIP_THRESHOLD = 0.025
+
+# 冲突消歧策略唯一合法值（死字段校验，t101 评审：仅支持高优先级胜出）
+_CONFLICT_POLICY_SUPPORTED = frozenset({"high_priority_wins"})
 
 # FINAL_QC 高光溢出阈值
 _QC_OVERFLOW_THRESHOLD = 0.03
@@ -152,6 +156,27 @@ def _enforce_formula_lint(rules: list, metric_keys: Any = None) -> None:
     )
     if problems:
         raise DecideError("规则公式标识符校验失败: " + "; ".join(problems))
+
+
+def _validate_conflict_policy(rules: list) -> None:
+    """死字段校验（t101 评审）：conflict_policy 仅支持 high_priority_wins。
+
+    当前 ''resolve_conflicts'' 唯一实现为高优先级胜出；conflict_policy 是
+    声明性死字段，只在此处做取值白名单加固——非预期值加载期报错，
+    不做任何行为变更。允许缺省（None）保持旧规则兼容。
+    """
+    for rule in rules or []:
+        if not isinstance(rule, dict):
+            continue
+        policy = (rule.get("action") or {}).get("conflict_policy")
+        if policy is None:
+            continue
+        if policy not in _CONFLICT_POLICY_SUPPORTED:
+            rule_id = rule.get("rule_id", "unknown")
+            raise DecideError(
+                f"规则 {rule_id}: conflict_policy 仅支持 "
+                f"{sorted(_CONFLICT_POLICY_SUPPORTED)}, 收到 {policy!r}"
+            )
 
 
 def _lint_rule_formulas(
@@ -239,6 +264,7 @@ def load_rules(source: Any, *, metric_keys: Any = None) -> list[dict]:
             rules = [r for r in data if isinstance(r, dict)]
         else:
             raise DecideError(f"规则文件格式不符: {path}")
+    _validate_conflict_policy(rules)
     _enforce_formula_lint(rules, metric_keys)
     return rules
 
@@ -292,6 +318,7 @@ def _set_param(params: dict, param: str, value: float) -> dict:
 
 
 def _clamp(value: float, rng: Any) -> float:
+    """对绝对结果值做区间钳制（t101 语义显式化）；rng 非法/None 时原样返回。"""
     if rng is None:
         return float(value)
     try:
@@ -509,7 +536,13 @@ def _compute_action(
     context: dict,
     iteration: int,
 ) -> dict:
-    """计算单条规则产生的参数新值。"""
+    """计算单条规则产生的参数新值。
+
+    clamp 语义（t101 评审显式化）：action.clamp 作用于 **绝对结果**
+    （delta/set 计算完成后、落参数前的最终 new_value），而非增量本身。
+    即 delta 模式先累加出绝对结果再钳位；set 模式钳位 raw 后的绝对值。
+    首回合触发时直接落钳位边界是既有行为，保持不变。
+    """
     action = rule.get("action") or {}
     param = action.get("param")
     if not param:
@@ -563,6 +596,8 @@ def _compute_action(
         raise DecideError(f"未知 action.mode: {mode!r}")
 
     rng = action.get("clamp")
+    # t101: clamp 作用于绝对结果（delta/set 计算后、落参数前的最终值），
+    # 非增量本身——delta 模式先累加再整体钳位，首回合即落钳位边界属既有行为。
     new_value = _clamp(new_value, rng)
 
     return {

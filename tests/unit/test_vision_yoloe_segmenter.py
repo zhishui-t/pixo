@@ -229,21 +229,26 @@ def test_yoloe_segmenter_converts_rgb_float_to_bgr_uint8() -> None:
 
 
 def test_agpl_imports_isolated_in_yoloe_only() -> None:
-    """AGPL 隔离：ultralytics 只允许在 yoloe.py；torch 仅允许在 yoloe/aesthetic。"""
+    """隔离门禁：ultralytics 仅 yoloe.py；torch/transformers/rfdetr 在
+    vision 根与非分割模块禁止，segmenters/ 下每个适配器文件即独立隔离岛
+    （t90 多模型扩展）。"""
     vision_dir = (Path(__file__).resolve().parents[2] / "src" / "pixo" / "vision")
-    yoloe_allowed = vision_dir / "segmenters" / "yoloe.py"
+    segmenters_dir = vision_dir / "segmenters"
+    yoloe_allowed = segmenters_dir / "yoloe.py"
     torch_allowed_files = {yoloe_allowed, vision_dir / "aesthetic.py"}
     forbidden_ultralytics = "ultralytics"
-    forbidden_torch = "torch"
+    heavy_roots = {"torch", "transformers", "rfdetr"}
 
     def _assert_allowed(py_file, root):
+        in_segmenters = py_file.parent == segmenters_dir
         if root == forbidden_ultralytics:
             assert py_file == yoloe_allowed, (
                 f"{py_file} 不允许直接 import {root}（AGPL 隔离）"
             )
-        if root == forbidden_torch:
-            assert py_file in torch_allowed_files, (
-                f"{py_file} 不允许直接 import {root}"
+        if root in heavy_roots:
+            assert py_file in torch_allowed_files or in_segmenters, (
+                f"{py_file} 不允许直接 import {root}（仅 aesthetic 与 "
+                f"segmenters/ 各适配器文件内允许）"
             )
 
     for py_file in vision_dir.rglob("*.py"):

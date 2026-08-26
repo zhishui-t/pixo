@@ -63,6 +63,13 @@
       域**（与 docs/metrics/proxy_distribution.md 同法补该域分位），否则依赖
       美学分的选片推荐与终止判定在此类输入下会系统性不触发。标定前生产语义：
       低分≠废片，仅是域外输入。
+        - **已清偿(t98,合成/低纹理域深化)**：合成域分位表已入档
+          docs/metrics/scorer_distribution.md（五大类探针+分位汇总+退化阶梯）。
+          **关键结论**：同场景退化阶梯打分非单调、Spearman ρ≈0.03——域内相对
+          排名自洽性不足，**不可作合成图质检硬结论**；batch synthetic 池改为
+          隔离+池内排序仅供人审参考（include_synthetic 语义扩展见 batch.py
+          MockAgentSelector.select），绝对分仍禁跨域比较。
+
 
 12. **公式守卫日落条款**：
     - 引擎原生 AND/between 落地后，新规则改用原生 condition，存量公式守卫规则

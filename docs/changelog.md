@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-08-25 — 视觉栈替换批 + LUT 库三批 + 高光/判据加固
+
+- 多模型 Segmenter 替换 YOLOE：face→UniFace / person→RF-DETR-Seg 2XL /
+  hair·skin·clothes→Sapiens / 背景→SegFormer-B1 / 开放词汇→GroundedSAM(可选)，
+  {prompt:mask} 契约不变；授权矩阵 8 模型在册（AGPL YOLOE 隔离内、NC Sapiens
+  标注、MIT+Apache 可分发）；懒加载+零掩码降级+隔离岛纪律。
+- rfdetr 导入修复：rfdetr 1.9.4 顶层无 RFDETRSeg → RFDETRSeg2XLarge +
+  pretrain_weights 构造；真机 person 35.6% 掩码+原生框验证。
+- Sapiens id2label 守卫：权威 28 类表纠正 hair=3/skin=16/clothes=7，三来源
+  解析+关键词比对，不一致/未核验拒用对应组——防静默污染磨皮/抠图。
+- 原生框兑现：RF-DETR detect_boxes 归一 xyxy 直供 box_provider 三级链；
+  Raw session state_extras 注入使 exposure 测光 subject_mode=box 真正生效。
+- 视觉批门禁：最终树 910 passed；三适配器真实 RAW 冒烟全过（face/person/sky）；
+  A/B 44 张逐位零回归——掩码替换对下游曝光/渲染无副作用。
+- LUT 胶片卡库：films/ 24 张 + 内置风格卡 4 张（Kodak 系/Fuji 系/电影系/
+  哈苏 NCS/黑白系/Agfa），schema+family 分组+可复跑生成脚本。
+- 高光判据加固：标定表路径 spike 放宽（p99>=1.0 且 med<=-3.3 → ev+0.15），
+  常规带补 clip<=cam*1.5（cam>=1% 应用）；厦门 669 压力 A/B 20 张 0707/2761
+  修复生效，无新超限。
+- 引擎微修：conflict_policy 加载期校验（仅 high_priority_wins）；clamp 绝对
+  语义显式化（行为零变更）；合成域 ρ=0.03 非单调→池隔离+池内排名仅参考。
+- 验收：910 passed / 4 skipped / 1 xfailed；授权核验+真机冒烟+可复跑脚本留档。
+
+
 ## 2026-08-25 — 日落批：公式守卫清零 · VibranceStage 占位处置 · 主题锁防回归门禁
 
 - 公式守卫日落盘点（CI 哨兵固化）：全部规则 yaml 条件已无任何 formula 守卫

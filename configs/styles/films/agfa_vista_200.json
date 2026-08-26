@@ -1,0 +1,97 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.012,
+        1.0,
+        0.988
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.16,
+      "toe": 0.16,
+      "shoulder": 0.28,
+      "brightness": 0.32
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.8,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 5, \"luminance\": 2}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 3, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "colorcal": {
+      "vibrance": 0.18,
+      "saturation": 0.12,
+      "skin_protect": 0.4
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 47,
+      "highlights_sat": 5,
+      "shadows_hue": 40,
+      "shadows_sat": 3,
+      "balance": 0.55,
+      "strength": 0.5
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.32,
+      "chroma_denoise": 0.9,
+      "highlight_desat": 0.45
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Agfa",
+    "label": "Agfa Vista 200",
+    "tags": [
+      "vintage",
+      "warm",
+      "consumer"
+    ],
+    "scenes": [
+      "street",
+      "travel",
+      "daily"
+    ],
+    "character": "Agfa Vista 200 消费级彩负：暖而柔和的欧陆色调，反差适中颗粒略增，肤色带一点奶油感。",
+    "year": 2002,
+    "grain_proxy": 0.32
+  }
+}

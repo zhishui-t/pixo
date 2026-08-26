@@ -336,24 +336,31 @@ def test_synthetic_like_excluded_from_topn_default():
     assert "隔离" in verdict.reason
 
 
-def test_include_synthetic_makes_it_visible():
+def test_include_synthetic_isolates_pool_not_mix():
+    """t98：开关开启时合成候选进入「隔离合成池」可见，但不参与实拍 TopN、
+    不推荐（t98 实测域内相对排名自洽性不足 ρ≈0.03，pooled rank 仅参考）。"""
     result = _domain_pipeline(
         {"p0": (4.5, None), "p1": (3.9, None), "p2": (5.0, "synthetic_like")},
         top_n=2,
         include_synthetic=True,
     )
-    # 开关开启：合成候选按绝对分参与排序并可见（top_n=2 挤掉最低分实拍）
-    assert sorted(result.all_recommended) == ["p0", "p2"]
-    assert "p1" not in result.all_recommended
+    # 合成候选虽绝对分最高，仍不与实拍混排；实拍 TopN 不受影响
+    assert sorted(result.all_recommended) == ["p0", "p1"]
+    by_id = {p.photo_id: p for p in result.groups[0].photos}
+    verdict = by_id["p2"].agent
+    assert verdict is not None
+    assert verdict.recommended is False
+    assert verdict.synthetic_rank == 1
+    assert verdict.synthetic_pool_size == 1
+    assert "合成域" in verdict.reason and "ρ" in verdict.reason
 
 
 def test_selector_level_domain_split_direct():
-    """selector 直测：同输入下开关翻转改变 TopN 成员。"""
+    """selector 直测：同输入下开关翻转不改变实拍 TopN；合成域池内可见但绝不推荐。"""
     from datetime import datetime
 
     base = datetime(2026, 8, 1, 10, 0, 0)
     items = []
-    scores = {}
     table = [("r0", 4.5, None), ("r1", 3.9, None), ("s0", 5.0, "synthetic_like")]
     for i, (pid, overall, hint) in enumerate(table):
         meta = {"photo_id": pid,
@@ -367,4 +374,40 @@ def test_selector_level_domain_split_direct():
     excl = MockAgentSelector(top_n=2, include_synthetic=False).select(items)
     incl = MockAgentSelector(top_n=2, include_synthetic=True).select(items)
     assert "s0" not in excl or not excl["s0"].recommended
-    assert incl["s0"].recommended
+    # t98：开关开启=隔离池可见+池内排序，但绝不推荐
+    assert not incl["s0"].recommended
+    assert incl["s0"].synthetic_rank == 1
+    assert incl["s0"].synthetic_pool_size == 1
+    assert "池内" in incl["s0"].reason
+    # 实拍域 r0（4.5）在两种开关下都进入 TopN 且不被打上合成域标记
+    assert incl["r0"].recommended and incl["r0"].synthetic_rank is None
+
+
+def test_synthetic_pool_internal_ordering_t98():
+    """t98：多合成候选在隔离池内按标定分相对排序（rank 1=池内最高），全部不推荐。"""
+    from datetime import datetime
+
+    base = datetime(2026, 8, 1, 10, 0, 0)
+    items = []
+    table = [("s0", 2.0, "synthetic_like"), ("s1", 4.0, "synthetic_like"),
+             ("s2", 3.0, "synthetic_like"), ("r0", 3.0, None)]
+    for i, (pid, overall, hint) in enumerate(table):
+        meta = {"photo_id": pid,
+                "datetime": (base + __import__("datetime").timedelta(
+                    seconds=i * 5)).isoformat()}
+        item = BatchInput(photo_id=pid, image_rgb=_sharp_image(i), meta=meta)
+        items.append((item, AestheticScore(
+            overall=overall, dimensions={"m": overall},
+            source="pixo", raw_overall=overall, domain_hint=hint)))
+    sel = MockAgentSelector(top_n=2, include_synthetic=True)
+    verdicts = sel.select(items)
+    # 池内排序：s1(4.0) > s2(3.0) > s0(2.0)；rank 1/2/3；全部不推荐
+    assert verdicts["s1"].synthetic_rank == 1
+    assert verdicts["s2"].synthetic_rank == 2
+    assert verdicts["s0"].synthetic_rank == 3
+    assert verdicts["s1"].synthetic_pool_size == 3
+    assert verdicts["s0"].synthetic_pool_size == 3
+    assert all(not verdicts[p].recommended for p in ("s0", "s1", "s2"))
+    # 实拍域不受合成池影响：r0 无合成域标记
+    assert "r0" in verdicts
+    assert verdicts["r0"].synthetic_rank is None

@@ -265,6 +265,11 @@ class SyntheticRenderBackend:
         img = self._apply_exposure(img, params)
         pipe = Pipeline(stages=self.stages, params=params)
         ctx = StageContext("synthetic", prof=None, config={"stages": dict(params)})
+        # t92：loop 侧原生/mask 框经 state_extras 注入，exposure 测光
+        # (subject_mode=box) 与后续 stage 可消费 face_boxes/subject_boxes。
+        extras = getattr(self, "state_extras", None)
+        if isinstance(extras, dict) and extras:
+            ctx.state.update(extras)
         ctx.set_image(img, DOMAIN_LINEAR_RGB)
         pipe.run(ctx)
         out = ctx.image
@@ -313,12 +318,19 @@ class RawRenderBackend:
         params: dict[str, Any],
         long_edge: int = 1024,
     ) -> np.ndarray:
-        """渲染 preview（8-bit）。"""
+        """渲染 preview（8-bit）。
+
+        t92 遗留闭合：把 loop 侧注入的 state_extras（归一化
+        face_boxes/subject_boxes）透传给 RawPreviewSession，使 exposure
+        测光 subject_mode=box 在 raw 会话生效；无框（None/空）时行为与旧版一致。
+        """
         from pixo.render.web.session import RawPreviewSession
 
         session = RawPreviewSession(self.raw_path, self.prof, params=params)
         try:
-            return session.render(long_edge=int(long_edge), output_bps=8)
+            return session.render(
+                long_edge=int(long_edge), output_bps=8,
+                state_extras=getattr(self, "state_extras", None))
         finally:
             session.close()
 
@@ -563,6 +575,9 @@ class SinglePhotoLoop:
         # t31 构图建议：默认关；box_provider 为原生框通道(未来 vision 升级)。
         self.crop_suggest = bool(crop_suggest)
         self.box_provider = box_provider
+        # t92：最近一次归一化框（face_boxes/subject_boxes），粘性注入
+        # 后端 state_extras 供 exposure 测光消费。
+        self._last_norm_boxes: dict[str, list] = {}
         # t47 LLM 建议编排：默认关；开且 dsh.chat 环境齐备才整链运行，
         # accepted 仅注入 decide_context 建议态，rejected/跳过进 trace。
         self.agent_suggest = bool(agent_suggest)
@@ -651,17 +666,55 @@ class SinglePhotoLoop:
                 subjects.append(rect)
         return {"faces": faces, "subjects": subjects}
 
-    def _build_crop_suggestion(self, preview_img, masks):
+    def _build_crop_suggestion(self, preview_img, masks, backend=None):
         """生成构图建议；任何异常降级为 None，不阻断闭环。"""
         try:
+            boxes = None
+            source = "mask_bbox"
             provider = self.box_provider
             if callable(provider):
                 boxes = provider(preview_img) or {}
                 source = "native_box"
             else:
-                boxes = self._boxes_from_masks(masks)
-                boxes["source"] = "mask_bbox"
-                source = "mask_bbox"
+                # t92 原生框直供：segmenter 具备 detect_boxes（如
+                # MultiModelSegmenter→RF-DETR xyxy）时优先于掩码外接。
+                det = getattr(self.segmenter, "detect_boxes", None)
+                native = None
+                if callable(det):
+                    try:
+                        native = det(preview_img, list(self.prompts))
+                    except Exception as exc:  # noqa: BLE001 - 失败回退
+                        logger.warning("detect_boxes 失败，回退 mask_bbox: %s",
+                                       exc)
+                if isinstance(native, dict) and native:
+                    faces: list = []
+                    subjects: list = []
+                    for label, rects in native.items():
+                        tgt = (faces if str(label).lower()
+                               in ("face", "faces", "person", "people")
+                               else subjects)
+                        tgt.extend(list(map(float, r)) for r in (rects or []))
+                    boxes = {"faces": faces, "subjects": subjects}
+                    source = "native_box"
+                else:
+                    boxes = self._boxes_from_masks(masks)
+                    boxes["source"] = "mask_bbox"
+                    source = "mask_bbox"
+            norm_boxes: dict[str, list] = {"face_boxes": [],
+                                           "subject_boxes": []}
+            all_rects = (list((boxes or {}).get("faces") or [])
+                         + list((boxes or {}).get("subjects") or []))
+            if all_rects:
+                norm_boxes["face_boxes"] = [list(map(float, r))
+                                            for r in (boxes.get("faces") or [])]
+                norm_boxes["subject_boxes"] = [list(map(float, r))
+                                               for r in (boxes.get("subjects") or [])]
+                self._last_norm_boxes = norm_boxes
+                if backend is not None:   # 即时同步，供同轮后续渲染消费
+                    try:
+                        backend.state_extras = dict(norm_boxes)
+                    except Exception:  # noqa: BLE001
+                        pass
             # t29 契约：suggest_crop 输入输出均为归一化 rect，直接透传。
             best, candidates = suggest_crop(
                 preview_img, boxes, scorer=self.aesthetic_scorer
@@ -816,6 +869,12 @@ class SinglePhotoLoop:
                     reason="进入第三轮 preview 迭代",
                 )
 
+            # t92：粘性归一化框注入后端（exposure 测光 box 模式消费）；
+            # 首轮无框时为空 dict，不注入。
+            try:
+                backend.state_extras = dict(self._last_norm_boxes or {})
+            except Exception:  # noqa: BLE001 - 注入失败不阻断渲染
+                pass
             preview_img = backend.render_preview(
                 params, long_edge=self.preview_long_edge
             )
@@ -842,7 +901,7 @@ class SinglePhotoLoop:
             crop_suggestion = None
             if self.crop_suggest:
                 crop_suggestion = self._build_crop_suggestion(
-                    preview_img, masks
+                    preview_img, masks, backend=backend
                 )
                 if crop_suggestion is not None:
                     self._add_trace(

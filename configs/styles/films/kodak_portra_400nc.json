@@ -1,0 +1,97 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.008,
+        1.0,
+        0.992
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.1,
+      "toe": 0.15,
+      "shoulder": 0.3,
+      "brightness": 0.32
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.85,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 3, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 2}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "colorcal": {
+      "vibrance": 0.08,
+      "saturation": -0.04,
+      "skin_protect": 0.6
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 45,
+      "highlights_sat": 4,
+      "shadows_hue": 40,
+      "shadows_sat": 2,
+      "balance": 0.55,
+      "strength": 0.4
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.55
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.28,
+      "chroma_denoise": 1.1,
+      "highlight_desat": 0.58
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "Portra 400NC",
+    "tags": [
+      "portrait",
+      "neutral",
+      "soft"
+    ],
+    "scenes": [
+      "portrait",
+      "wedding",
+      "indoor"
+    ],
+    "character": "Portra 400NC 自然色版：媲美 160NC 的低饱和柔和，略暖、反差略增，中等细腻颗粒适合人像。",
+    "year": 2002,
+    "grain_proxy": 0.2
+  }
+}

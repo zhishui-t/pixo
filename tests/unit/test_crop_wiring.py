@@ -209,3 +209,42 @@ def test_adoption_merges_and_preserves_auto_level_rotation(monkeypatch):
         expect[2] - expect[0], expect[3] - expect[1])
     types = _trace_types(result)
     assert "crop_adopted" in types
+
+
+def test_raw_render_backend_forwards_state_extras(monkeypatch):
+    """RawRenderBackend 应把 loop 注入的 state_extras 透传给 RawPreviewSession。"""
+    import pixo.render.web.session as web_session
+    calls: dict = {}
+
+    def recording(self, long_edge=1024, output_bps=8,
+                  decode_mode="cfa_half_native", state_extras=None):
+        calls["state_extras"] = state_extras
+        return np.full((8, 8, 3), 128, dtype=np.uint8)
+
+    monkeypatch.setattr(web_session.RawPreviewSession, "render", recording)
+
+    from pixo.pipeline.loop import RawRenderBackend
+    backend = RawRenderBackend("x.nef", prof=object())
+    backend.state_extras = {"face_boxes": [[0.1, 0.1, 0.4, 0.4]],
+                            "subject_boxes": []}
+    out = backend.render_preview({"exposure": {}}, long_edge=16)
+    assert calls["state_extras"] == {"face_boxes": [[0.1, 0.1, 0.4, 0.4]],
+                                     "subject_boxes": []}
+    assert out.shape == (8, 8, 3)
+
+
+def test_raw_render_backend_no_boxes_forwards_none(monkeypatch):
+    import pixo.render.web.session as web_session
+    calls: dict = {}
+
+    def recording(self, long_edge=1024, output_bps=8,
+                  decode_mode="cfa_half_native", state_extras=None):
+        calls["state_extras"] = state_extras
+        return np.full((8, 8, 3), 0, dtype=np.uint8)
+
+    monkeypatch.setattr(web_session.RawPreviewSession, "render", recording)
+
+    from pixo.pipeline.loop import RawRenderBackend
+    backend = RawRenderBackend("x.nef", prof=object())
+    backend.render_preview({}, long_edge=16)
+    assert calls["state_extras"] is None

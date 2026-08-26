@@ -224,6 +224,42 @@ def test_subject_weighting_differs_from_full_frame():
     assert abs(ev_box - ev_full) > 1e-3, "主体加权应改变 EV"
 
 
+def test_face_priority_over_subject_boxes():
+    # 用例设计：face 框放亮带、subject 框放暗区，且此时候选 EV 为负（高光/低调闸不绑定），
+    # 使 face 优先可被 EV 的准确数值区分。
+    h = w = 128
+    img = _neutral_image(h, w, 0.05)
+    img[:32, :, :] = 0.5                 # 顶部 1/4 亮（face 框区域）
+    img[32:, w // 2:, :] = 0.005         # 右下 3/4 半幅暗（更大的 subject 框）
+    prof = _make_profile()
+    ctx = _make_ctx(img, prof=prof, wb_mode="off",
+                    subject_boxes=[(0.0, 0.5, 1.0, 1.0)])  # 暗的下半部（更大）
+    ctx.state["face_boxes"] = [(0.0, 0.0, 1.0, 0.25)]      # face 优先：亮带
+    stage = ExposureStage({"subject_mode": "box"})
+    probe = _probe_linear_srgb(ctx, img)
+    h1, _w1 = probe.shape[:2]
+    y0, y1 = 0, max(1, int(0.25 * h1))
+    median_face = float(np.median(np.log2(np.maximum(probe[y0:y1, :], 1e-6))))
+    anchor = curve_anchor_target(prof)
+    ev = stage._auto_ev(ctx)
+    assert abs(ev - (anchor - median_face)) < 1e-3, "face 框应优先于更大 subject 框"
+
+
+def test_tiny_box_ignored_falls_back_full_frame():
+    h = w = 128
+    img = _neutral_image(h, w, 0.05)
+    img[:, w // 2:, :] = 0.5
+    prof = _make_profile()
+    ctx = _make_ctx(img, prof=prof, wb_mode="off",
+                    subject_boxes=[(0.5, 0.5, 0.51, 0.51)])  # 面积 1e-4 < 1%
+    stage = ExposureStage({"subject_mode": "box"})
+    probe = _probe_linear_srgb(ctx, img)
+    med_full = float(np.median(np.log2(np.maximum(probe, 1e-6))))
+    anchor = curve_anchor_target(prof)
+    ev = stage._auto_ev(ctx)
+    assert abs(ev - (anchor - med_full)) < 1e-3, "微小框应被忽略，回退全图中位"
+
+
 # ---------------------------------------------------------------------------
 # max_ev 钳位
 # ---------------------------------------------------------------------------
@@ -355,3 +391,70 @@ def test_baseline_scene_window_anchor_safe():
     dark_ctx.raw = _FakeRaw(wb=(1.0, 1.0, 1.791))
     ExposureStage().run(dark_ctx)
     assert dark_ctx.state["baseline_scene_ev"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# t100 spike 高光钳界放宽 (标定表路径): 探针 p99 真实饱和 + 中位偏暗 → +0.15 EV;
+# 平顶亮景 (med 高) 或探针未饱和 → 不触发。
+# ---------------------------------------------------------------------------
+
+def _use_table(monkeypatch, table_rows, tmp_path):
+    """把 _CAL_FILE 指向临时一维标定表, 使表路径生效并清缓存。"""
+    import json as _json
+    import pixo.render.modules.exposure as _mod
+    p = tmp_path / "cal_t100.json"
+    p.write_text(_json.dumps({"cal_table": table_rows}), encoding="utf-8")
+    monkeypatch.setattr(_mod, "_CAL_FILE", p)
+    monkeypatch.setattr(_mod, "_cached_table", None)
+    monkeypatch.setattr(_mod, "_cached_offset", None)
+
+
+def test_spike_lift_applies_on_saturated_dark_median(monkeypatch, tmp_path):
+    # 尖峰景: 中位暗 (0.05→log2=-4.32 ≤ -3.3), 5% 像素饱和 (p99≈8 ≥ 1.0)
+    img = _neutral_image(100, 100, 0.05)
+    img.reshape(-1, 3)[:int(100 * 100 * 0.05)] = 8.0
+    _use_table(monkeypatch, [[-5.0, 1.0], [-4.0, 1.4], [-3.0, 1.8]], tmp_path)
+    ctx = _make_ctx(img, prof=_make_profile(), wb_mode="off")
+    stage = ExposureStage({})
+    ev = stage._auto_ev(ctx)
+    assert ctx.state.get("ev_spike_lift") is True, "spike 场景应触发 lift"
+    from pixo.render.modules.exposure import _load_cal_table, _cal_ev
+    tbl = _load_cal_table()
+    y = _probe_linear_srgb(ctx, img)
+    med = float(np.median(np.log2(np.maximum(y, 1e-6))))
+    base = _cal_ev(med, tbl, None)
+    assert abs(ev - (base + 0.15)) < 1e-6, f"ev={ev} base={base}"
+
+
+def test_spike_lift_skipped_for_bright_median_flat_top(monkeypatch, tmp_path):
+    # 平顶亮景: med 高 (-0.4 > -3.3) 即使 p99 饱和也不触发
+    img = _neutral_image(100, 100, 0.6)
+    img.reshape(-1, 3)[:int(100 * 100 * 0.3)] = 8.0
+    _use_table(monkeypatch, [[-5.0, 1.0], [-4.0, 1.4], [-3.0, 1.8]], tmp_path)
+    ctx = _make_ctx(img, prof=_make_profile(), wb_mode="off")
+    stage = ExposureStage({})
+    ev = stage._auto_ev(ctx)
+    assert not ctx.state.get("ev_spike_lift"), "平顶亮景不应触发 lift"
+    from pixo.render.modules.exposure import _load_cal_table, _cal_ev
+    tbl = _load_cal_table()
+    y = _probe_linear_srgb(ctx, img)
+    med = float(np.median(np.log2(np.maximum(y, 1e-6))))
+    base = _cal_ev(med, tbl, None)
+    assert abs(ev - base) < 1e-6
+
+
+def test_spike_lift_skipped_when_probe_not_saturated(monkeypatch, tmp_path):
+    # 尖峰形状但探针未饱和 (p99=0.5) → 相机不会大量 clip, 不触发
+    img = _neutral_image(100, 100, 0.05)
+    img.reshape(-1, 3)[:int(100 * 100 * 0.05)] = 0.5
+    _use_table(monkeypatch, [[-5.0, 1.0], [-4.0, 1.4], [-3.0, 1.8]], tmp_path)
+    ctx = _make_ctx(img, prof=_make_profile(), wb_mode="off")
+    stage = ExposureStage({})
+    ev = stage._auto_ev(ctx)
+    assert not ctx.state.get("ev_spike_lift"), "探针未饱和不应触发 lift"
+    from pixo.render.modules.exposure import _load_cal_table, _cal_ev
+    tbl = _load_cal_table()
+    y = _probe_linear_srgb(ctx, img)
+    med = float(np.median(np.log2(np.maximum(y, 1e-6))))
+    base = _cal_ev(med, tbl, None)
+    assert abs(ev - base) < 1e-6

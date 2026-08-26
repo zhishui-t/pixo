@@ -147,3 +147,53 @@ def test_lint_passes_known_metrics_inside_all():
         metric_keys=["c1", "c2"],
     )
     assert len(rules) == 1
+
+
+# ---- ⑤ conflict_policy 死字段 + clamp 绝对语义（t101 评审） ----
+
+
+def test_conflict_policy_supports_only_high_priority_wins():
+    """t101: conflict_policy 仅允许 high_priority_wins，非预期值加载期报错。"""
+    ok_rule = {
+        "rule_id": "cp_ok",
+        "condition": {"metric": "contrast", "op": ">", "value": 0.5},
+        "action": {"param": "p", "mode": "delta",
+                   "formula": "current + 0.1",
+                   "conflict_policy": "high_priority_wins"},
+    }
+    rules = load_rules(ok_rule)
+    assert len(rules) == 1 and rules[0]["rule_id"] == "cp_ok"
+
+    # 缺省（None）保持旧规则兼容，不报错。
+    rules = load_rules({"rule_id": "cp_none", "action": {"param": "p",
+                         "value": 1.0}})
+    assert rules[0]["rule_id"] == "cp_none"
+
+    with pytest.raises(DecideError) as exc_info:
+        load_rules({
+            "rule_id": "cp_bad",
+            "condition": {"metric": "contrast", "op": ">", "value": 0.5},
+            "action": {"param": "p", "mode": "delta",
+                       "formula": "current + 0.1",
+                       "conflict_policy": "lowest_wins"},
+        })
+    assert "cp_bad" in str(exc_info.value)
+    assert "high_priority_wins" in str(exc_info.value)
+
+
+def test_clamp_applies_to_absolute_result_not_increment():
+    """t101: clamp 作用于绝对结果（非增量）。
+
+    delta 模式：current=0.5 + value=2.0 -> 绝对结果 2.5，clamp[0, 0.8]
+    应钳到 0.8（若钳在增量上会得到 0.5+0.8=1.3，此处 0.8 证明绝对语义）。
+    """
+    rule = {
+        "rule_id": "clamp_abs",
+        "condition": {"metric": "contrast", "op": ">", "value": 0.5},
+        "action": {"param": "exposure_ev", "mode": "delta",
+                   "value": 2.0, "clamp": [0.0, 0.8]},
+    }
+    results = evaluate_rules([rule], METRICS, params={"exposure_ev": 0.5})
+    assert len(results) == 1
+    # 绝对结果语义：2.5 -> 钳到 0.8；若钳增量会得 1.3。
+    assert results[0]["value"] == pytest.approx(0.8, abs=1e-6)
