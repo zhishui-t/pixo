@@ -13,6 +13,7 @@ PixoAestheticScorer（source="pixo"，权重已在盘），产出：
 import argparse
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -20,18 +21,66 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 ROOT = Path(__file__).resolve().parents[1]
-GROUPS = [
-    ("0711", Path("K:/data/photo/0711/raw")),
-    ("春节", Path("K:/data/photo/2026春节")),
+SCENES = [
+    ("0711", [Path("K:/data/photo/0711/raw")]),
+    ("春节", [Path("K:/data/photo/2026春节")]),
 ]
+# t71+ 协调：厦门高调域外代表样本强制回含（t73 曝光缺口诊断证据）
+FORCE_INCLUDE = {
+    "厦门": ["DSC_0847.NEF"],
+}
+
+BASELINE_NAMES = {
+    "0711": ["DSC_5236.NEF", "DSC_5237.NEF", "DSC_5238.NEF",
+             "DSC_5239.NEF", "DSC_6006.NEF", "DSC_6007.NEF"],
+    "春节": ["DSC_0352.NEF", "DSC_0353.NEF", "DSC_0354.NEF",
+             "DSC_0355.NEF", "DSC_0606.NEF", "DSC_0607.NEF"],
+}
+
+
+def _valid_nefs(folder: Path):
+    return sorted(f for f in folder.glob("*.NEF")
+                  if not f.name.startswith("._"))
+
+
+def build_scene_files():
+    """三场景文件枚举；厦门展开编号子目录。"""
+    out = []
+    for label, dirs in SCENES:
+        files = []
+        for d in dirs:
+            files.extend(_valid_nefs(d))
+        if label == "春节":
+            pass
+        files = sorted(set(files))
+        if files:
+            out.append((label, files))
+    base = Path("K:/data/photo/厦门")
+    if base.is_dir():
+        xm_files = []
+        for d in sorted(d for d in base.iterdir() if d.is_dir()):
+            xm_files.extend(_valid_nefs(d))
+        if xm_files:
+            out.append(("厦门", sorted(set(xm_files))))
+    return out
+
+
+import numpy as _np
+
+
+def stratified(files, n):
+    if len(files) <= n:
+        return list(files)
+    idx = _np.linspace(0, len(files) - 1, n)
+    idx = sorted({int(round(v)) for v in idx})
+    return [files[i] for i in idx]
 DIMS = ("overall", "quality", "composition", "lighting", "color",
         "depth_of_field", "content")
 
 
-def pick_samples(folder: Path):
-    files = sorted(f for f in folder.glob("*.NEF")
-                   if not f.name.startswith("._"))
-    return files[:4] + files[-2:]
+def pick_samples(files, n):
+    """t71 分层抽样：排序后 linspace 均匀取代表点 + 基线强制回含由调用方处理。"""
+    return stratified(files, n)
 
 
 def synthetic_domain_images():
@@ -53,6 +102,7 @@ def _fmt_row(cols):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--long-edge", type=int, default=512)
+    ap.add_argument("--samples-per-scene", type=int, default=20)
     args = ap.parse_args()
 
     from pixo.render.api import Renderer
@@ -65,14 +115,34 @@ def main():
     print("scorer health:", health)
 
     rows = []
+    baseline_rows = []
     timings = []
-    for label, folder in GROUPS:
-        for f in pick_samples(folder):
-            if not f.exists():
-                print("missing", f)
+    skipped = []
+    scene_counts = {}
+    for label, files in build_scene_files():
+        picks = stratified(files, args.samples_per_scene)
+        picked_names = {f.name for f in picks}
+        for bname in BASELINE_NAMES.get(label, []):
+            if bname not in picked_names:
+                match = [f for f in files if f.name == bname]
+                if match:
+                    picks.append(match[0])
+        for fname in FORCE_INCLUDE.get(label, []):
+            if fname not in picked_names:
+                match = [f for f in files if f.name == fname]
+                if match:
+                    picks.append(match[0])
+                    picked_names.add(fname)
+        picks.sort()
+        count_scene = 0
+        for f in picks:
+            try:
+                img = renderer.render_preview_full(
+                    f, long_edge=args.long_edge)
+            except Exception as exc:  # noqa: BLE001 - 坏片跳过并记录
+                skipped.append((f.name, type(exc).__name__))
+                print("SKIP", f.name, type(exc).__name__)
                 continue
-            img = renderer.render_preview_full(f,
-                                               long_edge=args.long_edge)
             t0 = time.perf_counter()
             out = scorer.score(img)
             elapsed = round((time.perf_counter() - t0) * 1000.0, 1)
@@ -80,20 +150,32 @@ def main():
             if out is None:
                 print("score None:", f.name)
                 continue
+            is_base = f.name in BASELINE_NAMES.get(label, [])
             row = {"group": label, "file": f.name,
-                   "elapsed_ms": elapsed}
+                   "is_baseline": is_base, "elapsed_ms": elapsed}
             row.update({k: round(float(out.get(k, float("nan"))), 3)
                         for k in DIMS})
             rows.append(row)
+            if is_base:
+                baseline_rows.append(row)
+            count_scene += 1
             print(f"{f.name}: overall={row['overall']} "
                   f"({elapsed} ms)")
+        scene_counts[label] = count_scene
+        print(f"[{label}] samples={count_scene} skipped={len(skipped)}")
 
-    assert len(rows) >= 12, f"有效样本不足: {len(rows)}"
+    total = len(rows)
+    assert total >= 60, f"扩样后有效样本不足: {total}"
 
     lines = [
-        "# 真评分器七维分布与阈值建议（t58）",
+        "# 真评分器七维分布与阈值建议（t58 基线 / t71 分层扩样）",
         "",
-        f"- 样本：0711 前4+后2、2026春节 前4+后2，共 {len(rows)} 张",
+        f"- 扩样日期：{date.today().isoformat()}",
+        f"- 样本：三场景分层各 {args.samples_per_scene}，合计 {total} 张"
+        + ("；含基线 12 张强制回含" if baseline_rows else ""),
+        "- 场景样本数：" + "、".join(
+            f"{k}={v}" for k, v in scene_counts.items()),
+        f"- 解码失败跳过：{len(skipped)} 张",
         f"- 渲染：render_preview_full(long_edge={args.long_edge})，"
         "全链默认参数",
         "- 评分：PixoAestheticScorer(source=pixo)，权重已在盘；"
@@ -110,7 +192,7 @@ def main():
             [r["group"], r["file"]]
             + [f"{r[k]:.2f}" for k in DIMS] + [f"{r['elapsed_ms']:.0f}"]))
 
-    lines += ["", "## 分位数汇总（实拍域）", "",
+    lines += ["", "## 扩样分位汇总（全部样本）", "",
               _fmt_row(["维度", "p25", "p50", "p75", "min", "max"]),
               _fmt_row(["---"] * 6)]
     for k in DIMS:
@@ -121,6 +203,19 @@ def main():
             f"{np.percentile(vals, 75):.3f}",
             f"{vals.min():.3f}", f"{vals.max():.3f}"]))
     tm = np.array(timings, dtype=np.float64)
+
+    if baseline_rows:
+        lines += ["", "## 基线 12 样本对照列（t58 口径复算）", "",
+                  _fmt_row(["维度", "p25", "p50", "p75", "min", "max"]),
+                  _fmt_row(["---"] * 6)]
+        for k in DIMS:
+            vals = np.array([r[k] for r in baseline_rows],
+                            dtype=np.float64)
+            lines.append(_fmt_row([
+                k, f"{np.percentile(vals, 25):.3f}",
+                f"{np.percentile(vals, 50):.3f}",
+                f"{np.percentile(vals, 75):.3f}",
+                f"{vals.min():.3f}", f"{vals.max():.3f}"]))
     lines.append(_fmt_row([
         "elapsed_ms", f"{np.percentile(tm, 25):.0f}",
         f"{np.percentile(tm, 50):.0f}", f"{np.percentile(tm, 75):.0f}",

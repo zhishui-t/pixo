@@ -87,11 +87,38 @@ def scene_wb_b(p):
 
 
 HIGHLIGHT_CLIP_MEASURE_EDGE = 1024  # 与 ab_vs_camera_thumb 同分辨率度量
-HIGHLIGHT_CLIP_BUDGET_PCT = 2.3     # 硬预算: 验收线 2.5 留余量
+HIGHLIGHT_CLIP_BUDGET_PCT = 2.3     # 绝对预算下限: 验收线 2.5 留余量
+CAM_CLIP_RELATIVE = 1.10            # 相机相对余量: 我们 ≤ 相机clip×1.10
+# 目标 = max(下限, 相机clip×相对余量)。相机缩略图是高光容忍真值:
+# 高调场景相机本就大幅裁切(厦门0847 实测 17.9%), 绝对硬预算会迫使
+# 均值匹配点被拖暗数步复刻欠曝(t73 教训); 以相机为锚自然分层。
 
 
 def _clip_hi_pct(img):
     return float((img.max(axis=2) >= 250).mean()) * 100
+
+
+def cam_thumb_rgb(p):
+    import rawpy
+    with rawpy.imread(str(p)) as raw:
+        t = raw.extract_thumb()
+        if t.format == rawpy.ThumbFormat.JPEG:
+            bgr = cv2.imdecode(np.frombuffer(t.data, np.uint8), cv2.IMREAD_COLOR)
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        else:
+            rgb = np.asarray(t.data)[..., :3].copy()
+    rot = {3: cv2.ROTATE_180, 6: cv2.ROTATE_90_CLOCKWISE,
+           8: cv2.ROTATE_90_COUNTERCLOCKWISE}
+    from pixo.meta import extract as ex
+    o = int((ex(p)["capture"].get("orientation") or 1))
+    if o in rot:
+        rgb = cv2.rotate(rgb, rot[o])
+    return rgb
+
+
+def cam_clip_pct(p):
+    """相机内嵌缩略图 clip_hi (%) —— 高光容忍真值。"""
+    return _clip_hi_pct(cam_thumb_rgb(p))
 
 
 def fit_one(p, r, target_mean_l):
@@ -122,13 +149,17 @@ def fit_one(p, r, target_mean_l):
             hi = mid
     ev = (lo + hi) / 2
     clip = _clip_hi_pct(render_at(ev, HIGHLIGHT_CLIP_MEASURE_EDGE))
+    # 目标 = max(绝对预算, 相机clip×相对余量): 高调大裁切场景由相机锚定
+    # 放宽(防欠曝), 低裁切场景维持均值匹配不动(防相机对齐过度压暗)。
+    target = max(HIGHLIGHT_CLIP_BUDGET_PCT,
+                 cam_clip_pct(p) * CAM_CLIP_RELATIVE)
     for _ in range(8):
-        if clip <= HIGHLIGHT_CLIP_BUDGET_PCT:
+        if clip <= target:
             break
         ev -= 0.03
         clip = _clip_hi_pct(render_at(ev, HIGHLIGHT_CLIP_MEASURE_EDGE))
     print(f"    clip_hi@{HIGHLIGHT_CLIP_MEASURE_EDGE}px={clip:.2f}% "
-          f"(budget {HIGHLIGHT_CLIP_BUDGET_PCT}%) @ EV={ev:+.2f}")
+          f"(target {target:.2f}%) @ EV={ev:+.2f}")
     return ev
 
 

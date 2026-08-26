@@ -54,12 +54,18 @@ def compare(name, ours_u8, ref_u8):
 
 
 if __name__ == "__main__":
+    # 单图模式 (t72): 命令行传入任意 RAW 路径即只跑这些; 缺省跑四样张回归。
+    import sys
+
     dcp = sorted(Path(__file__).resolve().parents[1].joinpath("resources/dcp").glob("*.dcp"))[0]
     r = Renderer(dcp)
-    paths = [Path("K:/data/photo/0711/raw/DSC_5236.NEF"),
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    paths = [Path(a) for a in args] or [
+             Path("K:/data/photo/0711/raw/DSC_5236.NEF"),
              Path("K:/data/photo/0711/raw/DSC_5239.NEF"),
              Path("K:/data/photo/2026春节/DSC_0352.NEF"),
-             Path("K:/data/photo/2026春节/DSC_0355.NEF")]
+             Path("K:/data/photo/2026春节/DSC_0355.NEF"),
+             Path("K:/data/photo/厦门/1/DSC_0847.NEF")]  # 高调缺口回归线(t73/t80)
     for p in paths:
         if not p.exists():
             print("missing", p)

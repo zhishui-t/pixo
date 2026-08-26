@@ -453,35 +453,33 @@ class ExposureStage(Stage):
                 "cal_table_2d" if len(table) == 3 and wb_b is not None else "cal_table")
         else:
             ctx.state["ev_mode"] = "anchor"
-        # 高光保护两道闸:
-        #   1) 软帽: 提亮后 clip_p 分位不越白电平 log2(1/p_hi), 溢出交给
-        #      soft_highlight_rolloff 肩部承接;
-        #   2) 高光预算 (tech_debt#9): 允许 τ (highlight_budget) 比例探针
-        #      进入肩部/白区, ev ≤ log2((1-τ)/p99)。分位选 p99 的实测依据
-        #      见模块 docstring。两道取 min; 平顶高光场景二者均不绑定,
-        #      该类中位匹配过冲由标定表重拟合清偿 (0355 案例)。
-        clip_p = float(self.p(ctx, "clip_p"))
-        p_hi = float(np.percentile(y, clip_p))
-        if p_hi > 0:
-            ev_hi = np.log2(1.0 / p_hi)
-            ev = min(ev, ev_hi)
-        tau = float(self.p(ctx, "highlight_budget"))
-        if tau > 0.0:
-            p_b = float(np.percentile(y, 99.0))
-            if p_b > 0:
-                ev = min(ev, np.log2(max(1.0 - tau, 0.0) / max(p_b, 1e-9)))
-        # 低光保护 (ADR-06 暗场景保暗): 相机预览对暗场景保暗而非拉到中灰,
-        # 中灰锚定的正向 EV 按场景暗度 smoothstep 收敛 —— med 越低保留越少,
-        # 深 low_key_range 档后仅剩 low_key_keep (默认 0.15); 负向 EV 不衰减。
-        # 场景自适应标定表存在时走查表路径, 不经过本启发式。
-        if table is None and ev > 0.0:
-            span = max(float(self.p(ctx, "low_key_range")), 1e-6)
-            knee = float(self.p(ctx, "low_key_knee"))
-            t = min(max((LOG2_GRAY - knee - med) / span, 0.0), 1.0)
-            keep = 1.0 - (1.0 - float(self.p(ctx, "low_key_keep"))) * (
-                t * t * (3.0 - 2.0 * t))
-            ev *= keep
-            ctx.state["ev_low_key_keep"] = float(keep)
+        # 无标定表回退保护组 (table is None 才生效; 标定表路径的均值匹配
+        # 拟合已内含高光感知目标, 运行时哨兵不得二次钳制 —— 厦门高调案例
+        # 0847: 探针 p98=p99≈1.0 时两道闸曾把合法提亮钳死致 dL=-55,
+        # 相机同景容纳 clip 17.9%):
+        #   低光保护 (ADR-06 暗场景保暗): 正向 EV 按场景暗度 smoothstep 收敛;
+        #   高光两道闸 (tech_debt#9): 软帽 log2(1/p_clip_p) 与高光预算
+        #   log2((1-τ)/p99) 取 min, 防锚定模式失控提亮 (分位选 p99 依据见
+        #   模块 docstring)。
+        if table is None:
+            clip_p = float(self.p(ctx, "clip_p"))
+            p_hi = float(np.percentile(y, clip_p))
+            if p_hi > 0:
+                ev = min(ev, np.log2(1.0 / p_hi))
+            tau = float(self.p(ctx, "highlight_budget"))
+            if tau > 0.0:
+                p_b = float(np.percentile(y, 99.0))
+                if p_b > 0:
+                    ev = min(ev, np.log2(max(1.0 - tau, 0.0)
+                                         / max(p_b, 1e-9)))
+            if ev > 0.0:
+                span = max(float(self.p(ctx, "low_key_range")), 1e-6)
+                knee = float(self.p(ctx, "low_key_knee"))
+                t = min(max((LOG2_GRAY - knee - med) / span, 0.0), 1.0)
+                keep = 1.0 - (1.0 - float(self.p(ctx, "low_key_keep"))) * (
+                    t * t * (3.0 - 2.0 * t))
+                ev *= keep
+                ctx.state["ev_low_key_keep"] = float(keep)
         # 用户/规则曝光偏移在自动曝光与高光保护决策之后施加，
         # 确保负向 offset 也能如实压高光、正向 offset 可主动提亮。
         ev += offset
