@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-25 — 性能治理批：评分器预热 · 域外隔离 · llm_review 报表
+
+- 评分器常驻预热：warmup() 预加载+dummy 推理，service startup 钩子挂载
+  （失败不阻断启动），health_info 增 warmed/warmup_ms；PIXO_SCORER_WARMUP=0
+  可跳过——消除首推 15.8s 冷启（稳态 ~20ms）。
+- batch 选片域外隔离：selector.include_synthetic=False 默认按
+  domain_hint="synthetic_like" 分池剔除 TopN（隔离 verdict 可追溯不占位），
+  开关开启并入——真模型上线后合成候选高分混入的污染通道关闭。
+- llm_review 报表块：LoopResult 新增 accepted 逐条明细/rejected 计数与原因
+  分布/notes 指引，供人工审核 UI 或导出直接消费；无建议时键缺席。
+- 验收：862 passed；默认关路径逐位回归一致。
+
 ## 2026-08-25 — 日落批：公式守卫清零 · VibranceStage 占位处置
 
 - 公式守卫日落盘点（CI 哨兵固化）：全部 5 个规则 yaml、9 条活跃规则 condition
