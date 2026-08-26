@@ -454,7 +454,7 @@ class ExposureStage(Stage):
         else:
             ctx.state["ev_mode"] = "anchor"
         # 无标定表回退保护组 (table is None 才生效; 标定表路径的均值匹配
-        # 拟合已内含高光感知目标, 运行时哨兵不得二次钳制 —— 厦门高调案例
+        # 拟合已内含高光感知目标, 运行时哨兵不得二次钳制 —— corpus_xiamen高调案例
         # 0847: 探针 p98=p99≈1.0 时两道闸曾把合法提亮钳死致 dL=-55,
         # 相机同景容纳 clip 17.9%):
         #   低光保护 (ADR-06 暗场景保暗): 正向 EV 按场景暗度 smoothstep 收敛;

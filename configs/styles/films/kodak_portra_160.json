@@ -1,0 +1,96 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.005,
+        1.0,
+        0.995
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.08,
+      "toe": 0.15,
+      "shoulder": 0.3,
+      "brightness": 0.35
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.9,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 3, \"luminance\": 2}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.25
+    },
+    "colorcal": {
+      "vibrance": 0.1,
+      "saturation": 0.02,
+      "skin_protect": 0.55
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 45,
+      "highlights_sat": 3,
+      "shadows_hue": 32,
+      "shadows_sat": 2,
+      "balance": 0.55,
+      "strength": 0.4
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "refine": {
+      "sharpen": 0.28,
+      "chroma_denoise": 1.2,
+      "highlight_desat": 0.6
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "Portra 160",
+    "tags": [
+      "portrait",
+      "neutral",
+      "fine_grain"
+    ],
+    "scenes": [
+      "portrait",
+      "wedding",
+      "still_life"
+    ],
+    "grain_proxy": 0.15,
+    "character": "Portra 160：几乎不偏色、极低颗粒、肤色过渡平滑。",
+    "year": 2011
+  }
+}

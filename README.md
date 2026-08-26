@@ -33,12 +33,13 @@ cd frontend && npm install && npm run dev       # 暗房主题工作台
 
 ## 语料与标定
 
-真实语料：`K:/data/photo`（0711=765 / 春节=256 / 厦门=2407 NEF，
-合计 3428）。分层抽样工具支持 `--samples-per-scene` 复跑：
+尼康 Z 系列 RAW 标定语料（多场景实拍 3400+ 张：日常/节庆/旅拍，
+含高调、夜景、海滨大光比等覆盖），分层抽样工具支持 `--samples-per-scene`
+复跑：
 
-- `docs/metrics/proxy_distribution.md` —— 三代理指标分布（67 样本）
-- `docs/metrics/scorer_distribution.md` —— 真 7 维评分分布（12 样张）
-- `docs/metrics/ab_regression.md` —— 全语料 A/B 回归（44 张分带统计）
+- `docs/metrics/proxy_distribution.md` —— 三代理指标分布
+- `docs/metrics/scorer_distribution.md` —— 真 7 维评分分布
+- `docs/metrics/ab_regression.md` —— 全语料 A/B 回归分带统计
 
 ## 文档索引
 

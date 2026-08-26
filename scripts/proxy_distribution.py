@@ -1,6 +1,6 @@
 """生成三代理指标实测分布表（t41 基线 / t71 全语料分层扩样）。
 
-t71 扩样：三场景（0711 / 2026春节 / 厦门编号子目录）分层抽样，默认
+t71 扩样：三场景（corpus_a / corpus_festival / corpus_xiamen编号子目录）分层抽样，默认
 每场景 20 张（--samples-per-scene 可调），合计 >=60；同时强制包含
 t41 原 12 样本作为基线对照列。输出 docs/metrics/proxy_distribution.md：
 扩样日期标注、逐样表明细、扩样分位汇总、基线(12)对照、P2 六条阈值
@@ -25,21 +25,21 @@ METRICS = ("haze_proxy", "colorfulness_proxy", "tonal_range")
 def _fmt_row(cols):
     return "| " + " | ".join(str(c) for c in cols) + " |"
 
-# 三场景：目录列表（厦门为编号子目录，逐个展开）
+# 三场景：目录列表（corpus_xiamen为编号子目录，逐个展开）
 SCENES = [
-    ("0711", [Path("K:/data/photo/0711/raw")]),
-    ("春节", [Path("K:/data/photo/2026春节")]),
-    ("厦门", []),
+    ("corpus_a", [Path("<corpus>/a/raw")]),
+    ("春节", [Path("<corpus_root>/corpus_festival")]),
+    ("corpus_xiamen", []),
 ]
 
 # t41 基线 12 样本文件名（对照列强制回含）
-# t71+ 协调：厦门高调域外代表样本强制回含（t73 曝光缺口诊断证据）
+# t71+ 协调：corpus_xiamen高调域外代表样本强制回含（t73 曝光缺口诊断证据）
 FORCE_INCLUDE = {
-    "厦门": ["DSC_0847.NEF"],
+    "corpus_xiamen": ["DSC_0847.NEF"],
 }
 
 BASELINE_NAMES = {
-    "0711": ["DSC_5236.NEF", "DSC_5237.NEF", "DSC_5238.NEF",
+    "corpus_a": ["DSC_5236.NEF", "DSC_5237.NEF", "DSC_5238.NEF",
              "DSC_5239.NEF", "DSC_6006.NEF", "DSC_6007.NEF"],
     "春节": ["DSC_0352.NEF", "DSC_0353.NEF", "DSC_0354.NEF",
              "DSC_0355.NEF", "DSC_0606.NEF", "DSC_0607.NEF"],
@@ -69,12 +69,12 @@ def _valid_nefs(folder: Path):
 
 
 def build_scene_files():
-    """返回 [(scene_label, [files...])]；厦门展开编号子目录。"""
+    """返回 [(scene_label, [files...])]；corpus_xiamen展开编号子目录。"""
     out = []
     scenes = []
     for label, dirs in SCENES:
-        if label == "厦门":
-            base = Path("K:/data/photo/厦门")
+        if label == "corpus_xiamen":
+            base = Path("<corpus_root>/corpus_xiamen")
             dirs = sorted(d for d in base.iterdir() if d.is_dir())                 if base.is_dir() else []
             scenes.append((label, dirs))
         else:
@@ -230,7 +230,7 @@ def main():
     # 高调缺口案例档案（t71+ 协调批准）：预算哨兵失效模式首个实证。
     case_file = None
     for label, files in build_scene_files():
-        if label != "厦门":
+        if label != "corpus_xiamen":
             continue
         for f in files:
             if f.name == "DSC_0847.NEF":

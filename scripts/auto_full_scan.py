@@ -188,7 +188,7 @@ def main():
     if args.photo:
         paths = [Path(p) for p in args.photo]
     else:
-        roots = args.dir or [r"K:\data\photo\0711\raw", r"K:\data\photo\2026春节"]
+        roots = args.dir or [r"<corpus_root>\corpus_a\raw", r"<corpus_root>\corpus_festival"]
         all_paths = []
         for root in roots:
             root = Path(root)

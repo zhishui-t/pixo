@@ -2,7 +2,7 @@
 
 - 扩样日期：2026-08-26
 - 样本：三场景分层各 20，合计 68 张；含 t41 基线 12 张强制回含
-- 场景样本数：0711=24、春节=24、厦门=20
+- 场景样本数：corpus_a=24、春节=24、corpus_xiamen=20
 - 形态说明：全语料未发现 JPG 直出层（仅 RAW），双形态对照不可行
 - 解码失败跳过：1 张；明细：DSC_1362.NEF(LibRawOutOfOrderCallError: b'Out of order call of libraw function')
 - 渲染：render_preview_full(long_edge=512)，全链默认参数
@@ -35,7 +35,7 @@
 
 ## 高调缺口案例 DSC_0847（预算哨兵失效模式实证）
 
-- 样本路径：K:\data\photo\厦门\1\DSC_0847.NEF
+- 样本路径：<corpus_root>\corpus_xiamen\1\DSC_0847.NEF
 - 四读数（渲染后灰度域）：gray_med=160.5(0-255口径) / mean=0.638 / p99=0.9925 / p95=0.9925；tonal_range=0.7078
 - 结论：p99≈p95 顶部重合 → 高光仍被 highlight_budget 预算哨兵钳死，合法提亮未放行。
 - 历史对照：t71 首测同图 gray_med=62.9（开发3 报 dL≈-55）；本表复测 160.5 ——期间曝光/暖度标定经并行调整，缺口收窄但哨兵钳制特征仍在。预算/标定修正(t73)引用时以本节最新读数为准。

@@ -1,0 +1,63 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.16,
+      "toe": 0.14,
+      "shoulder": 0.3,
+      "brightness": 0.28
+    },
+    "huesat": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "colorcal": {
+      "vibrance": 0.22,
+      "saturation": 0.08
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.4
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.3,
+      "chroma_denoise": 0.85,
+      "highlight_desat": 0.5
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "Provia 100F",
+    "tags": [
+      "standard",
+      "balanced",
+      "vivid"
+    ],
+    "scenes": [
+      "outdoor",
+      "general"
+    ],
+    "character": "Provia 100F：标准彩正，均衡中带明快，通用性最强；非官方复刻。",
+    "year": 2003
+  }
+}

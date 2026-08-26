@@ -3,13 +3,13 @@
 用法:
   # 生成基线
   python render/tools/gate_golden.py generate \
-      --raw K:/data/photo/0711/raw/DSC_5236.NEF \
+      --raw <corpus>/a/raw/DSC_5236.NEF \
       --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
       --out data/golden/reference/render_bench/goldens/gate --long-edge 512
 
   # 对比当前输出与基线
   python render/tools/gate_golden.py compare \
-      --raw K:/data/photo/0711/raw/DSC_5236.NEF \
+      --raw <corpus>/a/raw/DSC_5236.NEF \
       --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
       --out data/golden/reference/render_bench/goldens/gate --long-edge 512
 

@@ -1,7 +1,7 @@
 {
   "schema": "render-gate-golden-v1",
   "long_edge": 512,
-  "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+  "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
   "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
   "features": {
     "exposure": {
@@ -14,7 +14,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\exposure\\output_u8.npy",
@@ -43,7 +43,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\whitebalance\\output_u8.npy",
@@ -75,7 +75,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\tone\\output_u8.npy",
@@ -103,7 +103,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\hsl\\output_u8.npy",
@@ -136,7 +136,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\split_tone\\output_u8.npy",
@@ -170,7 +170,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\calibration\\output_u8.npy",
@@ -198,7 +198,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\skin\\output_u8.npy",
@@ -227,7 +227,7 @@
         }
       },
       "long_edge": 512,
-      "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+      "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
       "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
       "files": {
         "u8": "gate\\refine\\output_u8.npy",

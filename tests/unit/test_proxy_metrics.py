@@ -21,8 +21,8 @@ from pixo.vision.measure import compute_proxy_metrics
 PROXY_KEYS = ("haze_proxy", "colorfulness_proxy", "tonal_range")
 ROOT = Path(__file__).resolve().parents[2]
 REAL_RAW_SAMPLES = [
-    Path("K:/data/photo/0711/raw/DSC_5236.NEF"),
-    Path("K:/data/photo/2026春节/DSC_0355.NEF"),
+    Path("<corpus>/a/raw/DSC_5236.NEF"),
+    Path("<corpus>/festival/DSC_0355.NEF"),
 ]
 
 

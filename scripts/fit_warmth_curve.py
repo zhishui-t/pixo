@@ -28,18 +28,18 @@ from pixo.render.api import Renderer  # noqa: E402
 REPO = Path(__file__).resolve().parents[1]
 CAL_PATH = REPO / "configs" / "calibration" / "warmth_curve.json"
 
-# 样本: 0355 为治理目标 (基线 da-12/db+14.5), 0711 室内两张对照 (5236 是验收门禁)
+# 样本: 0355 为治理目标 (基线 da-12/db+14.5), corpus_a 室内两张对照 (5236 是验收门禁)
 SAMPLES = [
-    ("0355", "K:/data/photo/2026春节/DSC_0355.NEF"),
-    ("0352", "K:/data/photo/2026春节/DSC_0352.NEF"),
-    ("5236", "K:/data/photo/0711/raw/DSC_5236.NEF"),
-    ("5239", "K:/data/photo/0711/raw/DSC_5239.NEF"),
+    ("0355", "<corpus>/festival/DSC_0355.NEF"),
+    ("0352", "<corpus>/festival/DSC_0352.NEF"),
+    ("5236", "<corpus>/a/raw/DSC_5236.NEF"),
+    ("5239", "<corpus>/a/raw/DSC_5239.NEF"),
 ]
 GATES = {"0355": (6.0, 6.0), "5236": (5.0, None)}  # (|da|<=, |db|<=)
 # 留出验证 (t17 评审③-2): 不参与拟合, --write 前须过 |da| 门禁
 HOLDOUTS = [
-    ("6007", "K:/data/photo/0711/raw/DSC_6007.NEF"),
-    ("0360", "K:/data/photo/2026春节/DSC_0360.NEF"),
+    ("6007", "<corpus>/a/raw/DSC_6007.NEF"),
+    ("0360", "<corpus>/festival/DSC_0360.NEF"),
 ]
 HOLDOUT_GATE = {"6007": 6.0}  # 未列出的留出样本仅观测打印
 BASE_PARAMS = {"tone": {"brightness": 0.25}}       # P0 标准观感

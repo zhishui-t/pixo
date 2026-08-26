@@ -1,6 +1,6 @@
 {
   "schema": "render-bench-preview-v1.6",
-  "raw": "K:\\data\\photo\\0711\\raw\\DSC_5236.NEF",
+  "raw": "K:\\data\\photo\\corpus_a\\raw\\DSC_5236.NEF",
   "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
   "native_available": true,
   "runs": 3,

@@ -90,7 +90,7 @@ HIGHLIGHT_CLIP_MEASURE_EDGE = 1024  # 与 ab_vs_camera_thumb 同分辨率度量
 HIGHLIGHT_CLIP_BUDGET_PCT = 2.3     # 绝对预算下限: 验收线 2.5 留余量
 CAM_CLIP_RELATIVE = 1.10            # 相机相对余量: 我们 ≤ 相机clip×1.10
 # 目标 = max(下限, 相机clip×相对余量)。相机缩略图是高光容忍真值:
-# 高调场景相机本就大幅裁切(厦门0847 实测 17.9%), 绝对硬预算会迫使
+# 高调场景相机本就大幅裁切(corpus_xiamen0847 实测 17.9%), 绝对硬预算会迫使
 # 均值匹配点被拖暗数步复刻欠曝(t73 教训); 以相机为锚自然分层。
 
 

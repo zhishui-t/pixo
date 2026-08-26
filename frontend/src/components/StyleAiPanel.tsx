@@ -14,6 +14,17 @@ const accentA = (alpha: number): string => hexToRgba(T.accent, alpha);
 export function StyleAiPanel() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const styleCards = useAppStore((s) => s.styleCards);
+
+  // t86：按胶片 family 分组浏览（缺 family 归入"其他"）。
+  const families = Array.from(
+    styleCards.reduce<Map<string, typeof styleCards>>((m, c) => {
+      const key = c.family?.trim() || '其他';
+      const bucket = m.get(key);
+      if (bucket) bucket.push(c);
+      else m.set(key, [c]);
+      return m;
+    }, new Map()),
+  );
   const conversations = useAppStore((s) => s.conversations);
   const suggestions = useAppStore((s) => s.suggestionsByProject[s.activeProjectId] ?? []);
   const addProjectMessage = useAppStore((s) => s.addProjectMessage);
@@ -42,19 +53,26 @@ export function StyleAiPanel() {
           <Wand2 size={16} color={T.accent} />
         </Group>
         <Stack gap="sm">
-          {styleCards.map((card) => (
-            <Card key={card.styleId} radius="md" padding="sm" style={{ background: `linear-gradient(135deg, ${accentA(0.10)}, ${T.overlay})`, border: `1px solid ${accentA(0.18)}` }}>
-              <Group justify="space-between">
-                <Text fw={600}>{card.name}</Text>
-                <Badge variant="light" color="indigo">风格</Badge>
-              </Group>
-              <Text size="xs" c="dark.4" mt={4}>{card.description}</Text>
-              <Group gap={4} mt={6}>
-                {Object.entries(card.tags).map(([group, tags]) => (
-                  <Badge key={group} variant="outline" size="xs" color="gray">{group}: {tags.join('/')}</Badge>
-                ))}
-              </Group>
-            </Card>
+          {families.map(([family, cards]) => (
+            <Stack key={family} gap="sm">
+              <Text size="xs" fw={700} c="dark.2" style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                {family}
+              </Text>
+              {cards.map((card) => (
+                <Card key={card.styleId} radius="md" padding="sm" style={{ background: `linear-gradient(135deg, ${accentA(0.10)}, ${T.overlay})`, border: `1px solid ${accentA(0.18)}` }}>
+                  <Group justify="space-between">
+                    <Text fw={600}>{card.name}</Text>
+                    <Badge variant="light" color="accent">风格</Badge>
+                  </Group>
+                  <Text size="xs" c="dark.2" mt={4}>{card.description}</Text>
+                  <Group gap={4} mt={6}>
+                    {Object.entries(card.tags).map(([group, tags]) => (
+                      <Badge key={group} variant="outline" size="xs" color="gray">{group}: {tags.join('/')}</Badge>
+                    ))}
+                  </Group>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       </Card>

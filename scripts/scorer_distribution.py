@@ -1,6 +1,6 @@
 """生成真评分器七维分布表与阈值建议（t58）。
 
-对 12 样张（0711 前4后2、2026春节 前4后2）真实渲染小图后跑
+对 12 样张（corpus_a 前4后2、corpus_festival 前4后2）真实渲染小图后跑
 PixoAestheticScorer（source="pixo"，权重已在盘），产出：
   - docs/metrics/scorer_distribution.md：逐样本七维+耗时明细、
     p25/p50/p75 分位汇总、合成/低纹理域专项（量化"低分≠废片"
@@ -22,16 +22,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENES = [
-    ("0711", [Path("K:/data/photo/0711/raw")]),
-    ("春节", [Path("K:/data/photo/2026春节")]),
+    ("corpus_a", [Path("<corpus>/a/raw")]),
+    ("春节", [Path("<corpus_root>/corpus_festival")]),
 ]
-# t71+ 协调：厦门高调域外代表样本强制回含（t73 曝光缺口诊断证据）
+# t71+ 协调：corpus_xiamen高调域外代表样本强制回含（t73 曝光缺口诊断证据）
 FORCE_INCLUDE = {
-    "厦门": ["DSC_0847.NEF"],
+    "corpus_xiamen": ["DSC_0847.NEF"],
 }
 
 BASELINE_NAMES = {
-    "0711": ["DSC_5236.NEF", "DSC_5237.NEF", "DSC_5238.NEF",
+    "corpus_a": ["DSC_5236.NEF", "DSC_5237.NEF", "DSC_5238.NEF",
              "DSC_5239.NEF", "DSC_6006.NEF", "DSC_6007.NEF"],
     "春节": ["DSC_0352.NEF", "DSC_0353.NEF", "DSC_0354.NEF",
              "DSC_0355.NEF", "DSC_0606.NEF", "DSC_0607.NEF"],
@@ -44,7 +44,7 @@ def _valid_nefs(folder: Path):
 
 
 def build_scene_files():
-    """三场景文件枚举；厦门展开编号子目录。"""
+    """三场景文件枚举；corpus_xiamen展开编号子目录。"""
     out = []
     for label, dirs in SCENES:
         files = []
@@ -55,13 +55,13 @@ def build_scene_files():
         files = sorted(set(files))
         if files:
             out.append((label, files))
-    base = Path("K:/data/photo/厦门")
+    base = Path("<corpus_root>/corpus_xiamen")
     if base.is_dir():
         xm_files = []
         for d in sorted(d for d in base.iterdir() if d.is_dir()):
             xm_files.extend(_valid_nefs(d))
         if xm_files:
-            out.append(("厦门", sorted(set(xm_files))))
+            out.append(("corpus_xiamen", sorted(set(xm_files))))
     return out
 
 

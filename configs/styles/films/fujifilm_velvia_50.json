@@ -1,0 +1,65 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.34,
+      "toe": 0.12,
+      "shoulder": 0.38,
+      "brightness": 0.22
+    },
+    "huesat": {
+      "enabled": true,
+      "strength": 0.45
+    },
+    "colorcal": {
+      "vibrance": 0.35,
+      "saturation": 0.3
+    },
+    "skin": {
+      "enabled": false,
+      "strength": 0.0
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.38,
+      "chroma_denoise": 0.6,
+      "highlight_desat": 0.4
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "Velvia 50",
+    "tags": [
+      "landscape",
+      "nature",
+      "vivid",
+      "high_contrast"
+    ],
+    "scenes": [
+      "landscape",
+      "blue_sky",
+      "foliage"
+    ],
+    "character": "Velvia 50：风光高饱和高反差，蓝绿浓烈、红土夸张；肤色保护关闭以免人像过艳，非官方复刻。",
+    "year": 2005
+  }
+}

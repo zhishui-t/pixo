@@ -1,0 +1,97 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.02,
+        1.0,
+        0.98
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.15,
+      "toe": 0.2,
+      "shoulder": 0.3,
+      "brightness": 0.36,
+      "shadows": 0.06
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.8,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45, \"hue_shift\": 0, \"saturation\": 5, \"luminance\": 0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45, \"hue_shift\": 0, \"saturation\": 8, \"luminance\": 2}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45, \"hue_shift\": 0, \"saturation\": 0, \"luminance\": 0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45, \"hue_shift\": 0, \"saturation\": 0, \"luminance\": 0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45, \"hue_shift\": 0, \"saturation\": 0, \"luminance\": 0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45, \"hue_shift\": 0, \"saturation\": 0, \"luminance\": 0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45, \"hue_shift\": 0, \"saturation\": 0, \"luminance\": 0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45, \"hue_shift\": 0, \"saturation\": 0, \"luminance\": 0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.28
+    },
+    "colorcal": {
+      "vibrance": 0.22,
+      "saturation": 0.08,
+      "skin_protect": 0.5
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 38,
+      "highlights_sat": 8,
+      "shadows_hue": 30,
+      "shadows_sat": 7,
+      "balance": 0.55,
+      "strength": 0.6
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "refine": {
+      "sharpen": 0.25,
+      "chroma_denoise": 1.6,
+      "highlight_desat": 0.5
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "Portra 800",
+    "year": 1998,
+    "tags": [
+      "low_light",
+      "high_iso",
+      "warm",
+      "grain"
+    ],
+    "scenes": [
+      "night_portrait",
+      "indoor"
+    ],
+    "character": "Portra 800：暗光高感暖调，暖 WB 偏移+暖分离色调、阴影微抬、颗粒明显（grain_proxy 0.55）、色度降噪加强。",
+    "grain_proxy": 0.55
+  }
+}

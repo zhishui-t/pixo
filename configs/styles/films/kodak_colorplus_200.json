@@ -1,0 +1,96 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        0.995,
+        1.012,
+        0.99
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.16,
+      "toe": 0.16,
+      "shoulder": 0.3,
+      "brightness": 0.34,
+      "blacks": 0.03
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.8,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 4, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 5, \"saturation\": 3, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": -4, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.28
+    },
+    "colorcal": {
+      "vibrance": 0.08,
+      "saturation": -0.04
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 50,
+      "highlights_sat": 5,
+      "shadows_hue": 70,
+      "shadows_sat": 6,
+      "balance": 0.5,
+      "strength": 0.6
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.15
+    },
+    "refine": {
+      "sharpen": 0.3,
+      "chroma_denoise": 1.0,
+      "highlight_desat": 0.45
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "ColorPlus 200",
+    "tags": [
+      "vintage",
+      "green_cast",
+      "budget"
+    ],
+    "scenes": [
+      "daily",
+      "street",
+      "documentary"
+    ],
+    "grain_proxy": 0.4,
+    "character": "ColorPlus 200：G 通道微升的绿味偏色、阴影绿黄分离色调、低饱和微灰、颗粒较粗。",
+    "year": 2000
+  }
+}

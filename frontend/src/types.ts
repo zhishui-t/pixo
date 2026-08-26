@@ -35,6 +35,8 @@ export interface StyleCardData {
   styleId: string;
   name: string;
   description: string;
+  /** 胶片卡分组键（品牌/系列，t86）；缺省归入"其他"。 */
+  family?: string;
   tags: Record<string, string[]>;
   colorFingerprint?: Record<string, unknown>;
   toneFingerprint?: Record<string, unknown>;

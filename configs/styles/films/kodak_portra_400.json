@@ -1,0 +1,99 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.012,
+        1.0,
+        0.988
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.12,
+      "toe": 0.18,
+      "shoulder": 0.32,
+      "brightness": 0.35,
+      "highlights": -0.05,
+      "shadows": 0.04
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.8,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 6, \"luminance\": 3}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "colorcal": {
+      "vibrance": 0.18,
+      "saturation": 0.05,
+      "skin_protect": 0.6
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 42,
+      "highlights_sat": 6,
+      "shadows_hue": 30,
+      "shadows_sat": 4,
+      "balance": 0.55,
+      "strength": 0.5
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.35
+    },
+    "refine": {
+      "sharpen": 0.3,
+      "chroma_denoise": 1.0,
+      "highlight_desat": 0.55
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "Portra 400",
+    "tags": [
+      "portrait",
+      "warm_skin",
+      "low_contrast",
+      "fine_grain"
+    ],
+    "scenes": [
+      "portrait",
+      "wedding",
+      "indoor"
+    ],
+    "grain_proxy": 0.25,
+    "character": "Portra 400：柔和 toe/shoulder、高光微降饱和、橙色段微亮，颗粒细腻。",
+    "year": 1998
+  }
+}

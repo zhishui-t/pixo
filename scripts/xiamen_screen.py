@@ -15,7 +15,7 @@ from pixo.render.api import Renderer
 from pixo.vision import measure_global, measure_sharpness
 
 DCP = "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
-BASE = Path("K:/data/photo/厦门")
+BASE = Path("<corpus_root>/corpus_xiamen")
 DIRS = ["1", "101XM_02", "102XM_03", "103XM_04"]
 SAMPLE_PER_DIR = 20
 OUT = Path("exports/auto/xiamen_screen")
@@ -26,6 +26,9 @@ def sample_files(d: Path, n: int):
     files = [f for f in files if not f.name.startswith("._")]
     if not files:
         return []
+    if "--all" in sys.argv:
+        # Windows 大小写不敏感: *.NEF 与 *.nef 双模式会重复匹配, 按名去重
+        return sorted({f.name.lower(): f for f in files}.values())
     if len(files) <= n:
         return files
     idx = sorted(set(

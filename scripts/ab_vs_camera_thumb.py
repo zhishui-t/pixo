@@ -61,11 +61,11 @@ if __name__ == "__main__":
     r = Renderer(dcp)
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     paths = [Path(a) for a in args] or [
-             Path("K:/data/photo/0711/raw/DSC_5236.NEF"),
-             Path("K:/data/photo/0711/raw/DSC_5239.NEF"),
-             Path("K:/data/photo/2026春节/DSC_0352.NEF"),
-             Path("K:/data/photo/2026春节/DSC_0355.NEF"),
-             Path("K:/data/photo/厦门/1/DSC_0847.NEF")]  # 高调缺口回归线(t73/t80)
+             Path("<corpus>/a/raw/DSC_5236.NEF"),
+             Path("<corpus>/a/raw/DSC_5239.NEF"),
+             Path("<corpus>/festival/DSC_0352.NEF"),
+             Path("<corpus>/festival/DSC_0355.NEF"),
+             Path("<corpus>/xiamen/set01/DSC_0847.NEF")]  # 高调缺口回归线(t73/t80)
     for p in paths:
         if not p.exists():
             print("missing", p)

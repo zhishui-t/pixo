@@ -1,0 +1,65 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.2,
+      "toe": 0.16,
+      "shoulder": 0.32,
+      "brightness": 0.25
+    },
+    "huesat": {
+      "enabled": true,
+      "strength": 0.15
+    },
+    "colorcal": {
+      "vibrance": -0.05,
+      "saturation": -0.18
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.28,
+      "chroma_denoise": 0.8,
+      "highlight_desat": 0.55
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "Classic Chrome",
+    "tags": [
+      "documentary",
+      "reportage",
+      "muted",
+      "matte"
+    ],
+    "scenes": [
+      "street",
+      "candid",
+      "everyday"
+    ],
+    "character": "Classic Chrome：哑光低饱和纪实观感，蓝灰阴影微冷、整体克制；以低 huesat/负饱和与中高反差 toe 实现，非官方复刻。",
+    "year": 2014
+  }
+}

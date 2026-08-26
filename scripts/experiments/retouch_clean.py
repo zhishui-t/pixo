@@ -30,10 +30,10 @@ SELECTED = [
     ("DSC_5270_raw", "DSC_5270_raw", False),
     ("DSC_5276_raw", "DSC_5276_raw", False),
     ("DSC_5288_raw", "DSC_5288_raw", True),   # out of focus / soft - skip
-    ("DSC_0352_2026春节", "DSC_0352_Spring", False),
-    ("DSC_0358_2026春节", "DSC_0358_Spring", False),
-    ("DSC_0363_2026春节", "DSC_0363_Spring", False),
-    ("DSC_0368_2026春节", "DSC_0368_Spring", False),
+    ("DSC_0352_corpus_festival", "DSC_0352_Spring", False),
+    ("DSC_0358_corpus_festival", "DSC_0358_Spring", False),
+    ("DSC_0363_corpus_festival", "DSC_0363_Spring", False),
+    ("DSC_0368_corpus_festival", "DSC_0368_Spring", False),
 ]
 
 # Typical clean/colorful enhancement params (kept conservative)

@@ -1,0 +1,58 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.15,
+      "toe": 0.1,
+      "shoulder": 0.32,
+      "brightness": 0.28
+    },
+    "huesat": {
+      "enabled": true,
+      "strength": 0.3
+    },
+    "colorcal": {
+      "vibrance": 0.3,
+      "saturation": 0.0
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.28,
+      "chroma_denoise": 0.85,
+      "highlight_desat": 0.45
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "Pro 400H",
+    "tags": [
+      "portrait",
+      "landscape",
+      "airy"
+    ],
+    "scenes": [
+      "outdoor",
+      "overcast"
+    ],
+    "character": "柔和通透、空气感强、青绿阴影的阴天胶片。",
+    "year": 2004
+  }
+}

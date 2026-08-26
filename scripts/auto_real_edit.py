@@ -32,7 +32,7 @@ PROMPTS = [
     "building", "water", "road", "flower", "crowd", "light",
 ]
 
-PHOTOS_0711 = [
+PHOTOS_corpus_a = [
     "DSC_5236.NEF", "DSC_5245.NEF", "DSC_5250.NEF", "DSC_5257.NEF",
     "DSC_5260.NEF", "DSC_5268.NEF",
 ]
@@ -152,8 +152,8 @@ def main() -> None:
     if args.photo:
         photo_paths = [Path(p) for p in args.photo]
     elif args.scan:
-        roots = [Path(r"K:\data\photo\0711\raw"),
-                 Path(r"K:\data\photo\2026春节")]
+        roots = [Path(r"<corpus_root>\corpus_a\raw"),
+                 Path(r"<corpus_root>\corpus_festival")]
         all_paths: list[Path] = []
         for root in roots:
             if root.exists():
@@ -161,8 +161,8 @@ def main() -> None:
         photo_paths = all_paths[args.offset:args.offset + args.count]
     else:
         for base, names in (
-            (Path(r"K:\data\photo\0711\raw"), PHOTOS_0711),
-            (Path(r"K:\data\photo\2026春节"), PHOTOS_SPRING),
+            (Path(r"<corpus_root>\corpus_a\raw"), PHOTOS_corpus_a),
+            (Path(r"<corpus_root>\corpus_festival"), PHOTOS_SPRING),
         ):
             for name in names:
                 p = base / name

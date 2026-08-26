@@ -63,6 +63,7 @@ const mockStyleCards: StyleCardData[] = [
   {
     styleId: 'kodak_portra_400',
     name: 'Kodak Portra 400',
+    family: 'Kodak',
     description: '柔和低反差、肤色暖粉、高光软滚降的经典胶片感。',
     tags: { scene: ['portrait', 'wedding'], light: ['golden_hour'] },
     colorFingerprint: { skin_lab_target: { a: 18, b: 20 } },
@@ -72,6 +73,7 @@ const mockStyleCards: StyleCardData[] = [
   {
     styleId: 'fuji_pro_400h',
     name: 'Fuji Pro 400H',
+    family: 'Fuji',
     description: '柔和通透、空气感强，适合阴天与户外人像。',
     tags: { scene: ['landscape', 'portrait'], light: ['overcast'] },
     colorFingerprint: { skin_lab_target: { a: 14, b: 16 } },

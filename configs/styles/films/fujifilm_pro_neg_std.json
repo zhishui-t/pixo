@@ -1,0 +1,64 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.12,
+      "toe": 0.18,
+      "shoulder": 0.26,
+      "brightness": 0.3
+    },
+    "huesat": {
+      "enabled": true,
+      "strength": 0.16
+    },
+    "colorcal": {
+      "vibrance": 0.05,
+      "saturation": -0.12
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.6
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.24,
+      "chroma_denoise": 1.0,
+      "highlight_desat": 0.65
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "Pro Neg Std",
+    "tags": [
+      "portrait",
+      "low_saturation",
+      "soft"
+    ],
+    "scenes": [
+      "indoor",
+      "wedding",
+      "portrait"
+    ],
+    "character": "Pro Neg Std：人向低饱和软调，婚礼/室内连拍安全牌；非官方复刻。",
+    "year": 2010
+  }
+}

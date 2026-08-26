@@ -1,0 +1,63 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.26,
+      "toe": 0.14,
+      "shoulder": 0.3,
+      "brightness": 0.27
+    },
+    "huesat": {
+      "enabled": false,
+      "strength": 0.0
+    },
+    "colorcal": {
+      "vibrance": 0.0,
+      "saturation": -1.0
+    },
+    "skin": {
+      "enabled": false,
+      "strength": 0.0
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.42,
+      "chroma_denoise": 0.7,
+      "highlight_desat": 0.75
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "Acros 100",
+    "tags": [
+      "monochrome",
+      "fine_grain",
+      "street"
+    ],
+    "scenes": [
+      "street",
+      "portrait_bw"
+    ],
+    "character": "Acros 100：黑白细粒、超细腻灰阶。当前管线无原生 mono Stage，以 colorcal 饱和度 -100% 全去色 + 中高反差近似；原生黑白待 P4。",
+    "year": 2000
+  }
+}

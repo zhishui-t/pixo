@@ -29,8 +29,8 @@ OUT = Path("exports/auto/retouched10")
 
 SELECTED = [
     "DSC_5236_raw", "DSC_5245_raw", "DSC_5269_raw", "DSC_5270_raw",
-    "DSC_5276_raw", "DSC_5288_raw", "DSC_0352_2026春节",
-    "DSC_0358_2026春节", "DSC_0363_2026春节", "DSC_0368_2026春节",
+    "DSC_5276_raw", "DSC_5288_raw", "DSC_0352_corpus_festival",
+    "DSC_0358_corpus_festival", "DSC_0363_corpus_festival", "DSC_0368_corpus_festival",
 ]
 
 PROMPTS = ["person", "face", "sky", "tree", "plant", "mountain",
@@ -115,7 +115,7 @@ def main():
         img = renderer.render_preview_full(raw, long_edge=1024, params=params)
         img = rotate_orientation(img, raw)
         bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        out = OUT / f"{pid.replace('2026春节', 'Spring')}_retouched.jpg"
+        out = OUT / f"{pid.replace('corpus_festival', 'Spring')}_retouched.jpg"
         cv2.imwrite(str(out), bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
 
         am = measure(measurer, bgr, masks)

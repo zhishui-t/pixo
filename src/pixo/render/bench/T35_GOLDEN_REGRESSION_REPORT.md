@@ -3,7 +3,7 @@
 > 日期：2026-08-20
 > 执行：长安小队 · 测试（t35）
 > 依据：`render/docs/FUNCTION_GATE_SPEC.md` §6 golden 回归（L2）
-> 数据源：真实 NEF `K:\data\photo\0711\raw\DSC_5236.NEF`
+> 数据源：真实 NEF `<corpus_root>\corpus_a\raw\DSC_5236.NEF`
 > DCP：`resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp`
 
 ## 1. 交付物
@@ -22,7 +22,7 @@
 
 ```bash
 python render/tools/gate_golden.py generate \
-    --raw K:/data/photo/0711/raw/DSC_5236.NEF \
+    --raw <corpus>/a/raw/DSC_5236.NEF \
     --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
     --out data/golden/reference/render_bench/goldens/gate \
     --long-edge 512
@@ -35,7 +35,7 @@ python render/tools/gate_golden.py generate \
 
 ```bash
 python render/tools/gate_golden.py compare \
-    --raw K:/data/photo/0711/raw/DSC_5236.NEF \
+    --raw <corpus>/a/raw/DSC_5236.NEF \
     --dcp $PIXO_ROOT/resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp \
     --out data/golden/reference/render_bench/goldens/gate \
     --long-edge 512

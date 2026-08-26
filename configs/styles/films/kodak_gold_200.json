@@ -1,0 +1,97 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.03,
+        1.005,
+        0.965
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.2,
+      "toe": 0.14,
+      "shoulder": 0.28,
+      "brightness": 0.34,
+      "whites": 0.03
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.75,
+      "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 7, \"luminance\": 0.0}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 9, \"luminance\": 2}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 4, \"saturation\": -4, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.32
+    },
+    "colorcal": {
+      "vibrance": 0.15,
+      "saturation": 0.12,
+      "hue": -2
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 45,
+      "highlights_sat": 14,
+      "shadows_hue": 40,
+      "shadows_sat": 8,
+      "balance": 0.6,
+      "strength": 0.7
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.2
+    },
+    "refine": {
+      "sharpen": 0.32,
+      "chroma_denoise": 0.9,
+      "highlight_desat": 0.35
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Kodak",
+    "label": "Gold 200",
+    "tags": [
+      "golden",
+      "warm",
+      "vintage"
+    ],
+    "scenes": [
+      "street",
+      "travel",
+      "daily"
+    ],
+    "grain_proxy": 0.35,
+    "character": "Gold 200：强暖 WB 偏移、金黄高光分离色调、黄绿段向金靠拢，颗粒中等。",
+    "year": 1997
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "huesat",
+    "colorcal",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.08,
+      "toe": 0.2,
+      "shoulder": 0.22,
+      "brightness": 0.3
+    },
+    "huesat": {
+      "enabled": true,
+      "strength": 0.2
+    },
+    "colorcal": {
+      "vibrance": 0.12,
+      "saturation": -0.1,
+      "neutral_b_curve": [
+        4,
+        2,
+        0,
+        -2,
+        -4,
+        -6,
+        -8
+      ]
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.5
+    },
+    "stylize": {},
+    "refine": {
+      "sharpen": 0.22,
+      "chroma_denoise": 1.0,
+      "highlight_desat": 0.7
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "Fuji",
+    "label": "社区冲扫风 3515/3510（合卡）",
+    "tags": [
+      "community",
+      "unofficial",
+      "lab_scan",
+      "warm_skin",
+      "teal_shadow",
+      "low_contrast"
+    ],
+    "scenes": [
+      "portrait",
+      "street",
+      "travel"
+    ],
+    "character": "社区冲扫风合卡（覆盖用户点名的 3515 / 3510 两命名）：富士激光冲印在社区流传的近似风格——暖肤、青绿阴影、低反差。该命名为民间俗称而非富士官方 Film Simulation，参数按公认特征参数化并标注为社区近似非官方；两命名差异细微故合并为单卡，如需分叉再拆。",
+    "year": 2020,
+    "official": false,
+    "covers": [
+      "3515",
+      "3510"
+    ],
+    "note": "社区近似非官方：按公认特征参数化（暖肤/青绿影调/低对比），非富士官方 Film Simulation。"
+  }
+}

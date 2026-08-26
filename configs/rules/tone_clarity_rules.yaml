@@ -1,5 +1,5 @@
 # 影调+通透规则包 (P2)。阈值依据 docs/metrics/proxy_distribution.md
-# (t41, 12 样张: 0711 前4后2 + 春节前4后2, render_preview_full@512,
+# (t41, 12 样张: corpus_a 前4后2 + 春节前4后2, render_preview_full@512,
 #  compute_proxy_metrics 统一 [0,1] 域) 重推 —— 原 0.55/0.40/0.35 为
 # 拍脑袋值, 实测 haze 0.0508~0.2477 / tonal 0.3578~0.9121 恒不达。
 # 约定: t59 起原生 all 条件可用; clarity 已迁原生 AND(t60 试点),
