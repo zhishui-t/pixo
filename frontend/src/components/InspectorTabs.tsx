@@ -19,7 +19,7 @@ function ParamGroup({
 }) {
   return (
     <section className="param-group">
-      <div className="param-group-title">{title}</div>
+      <div className="section-label">{title}</div>
       {children}
     </section>
   );

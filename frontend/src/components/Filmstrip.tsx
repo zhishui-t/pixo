@@ -1,9 +1,12 @@
 import { useMemo } from 'react';
+import { DESIGN_TOKENS as T } from '../theme/tokens';
 import { ActionIcon, Badge, Group, NumberInput, Paper, ScrollArea, Select, Text, UnstyledButton } from '@mantine/core';
 import { Star } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import type { ColorLabel, Photo } from '../types';
 
+// 域标签色板：红/黄/绿/蓝/紫为用户数据标记色（Lightroom 惯例），
+// 属数据色而非主题色，故不纳入 DESIGN_TOKENS。
 const COLORS: Array<{ id: ColorLabel; label: string; bg: string }> = [
   { id: 'red', label: '红', bg: '#ff6b6b' },
   { id: 'yellow', label: '黄', bg: '#ffd43b' },
@@ -45,7 +48,7 @@ export function Filmstrip() {
   };
 
   return (
-    <Paper radius="lg" p="md" style={{ height: 220, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 10px 36px rgba(0,0,0,0.06)' }}>
+    <Paper radius="lg" p="md" style={{ height: 240, background: T.panel, border: `1px solid ${T.hairline}`, boxShadow: T.shadowMd }}>
       <Group gap="sm" mb="sm">
         <NumberInput
           size="xs"
@@ -92,7 +95,7 @@ export function Filmstrip() {
           radius="md"
         />
       </Group>
-      <ScrollArea style={{ height: 150 }}>
+      <ScrollArea style={{ height: 172 }}>
         <Group gap="md" wrap="nowrap" align="flex-start">
           {visible.map((photo) => {
             const active = activePhotoId === photo.id;
@@ -102,11 +105,11 @@ export function Filmstrip() {
                   className="film-card"
                   radius="md"
                   p={8}
-                  w={148}
+                  w={164}
                   style={{
-                    background: '#fff',
-                    border: active ? '1px solid rgba(86,134,254,0.55)' : '1px solid rgba(0,0,0,0.06)',
-                    boxShadow: active ? '0 0 0 3px rgba(86,134,254,0.14), 0 14px 32px rgba(86,134,254,0.12)' : '0 6px 18px rgba(0,0,0,0.05)',
+                    background: T.overlay,
+                    border: active ? `1px solid ${T.accent}` : `1px solid ${T.hairline}`,
+                    boxShadow: active ? `0 0 0 3px ${T.selection}, ${T.shadowLg}` : T.shadowMd,
                     transition: 'transform .15s ease, box-shadow .15s ease',
                   }}
                 >
@@ -126,7 +129,7 @@ export function Filmstrip() {
                   <Group gap={1} mt={4}>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <ActionIcon key={n} size="sm" variant="transparent" onClick={(e) => { e.stopPropagation(); setPhotoRating(activeProjectId, photo.id, n); }}>
-                        <Star size={13} fill={(photo.rating ?? 0) >= n ? '#f59e0b' : 'transparent'} color={(photo.rating ?? 0) >= n ? '#f59e0b' : '#adb5bd'} />
+                        <Star size={13} fill={(photo.rating ?? 0) >= n ? T.semantic.warning : 'transparent'} color={(photo.rating ?? 0) >= n ? T.semantic.warning : T.textSecondary} />
                       </ActionIcon>
                     ))}
                   </Group>
@@ -136,7 +139,7 @@ export function Filmstrip() {
               </UnstyledButton>
             );
           })}
-          {visible.length === 0 && <Text c="dimmed" size="sm">当前项目暂无照片</Text>}
+          {visible.length === 0 && <div className="empty-note">暂无照片</div>}
         </Group>
       </ScrollArea>
     </Paper>

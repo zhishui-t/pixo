@@ -74,6 +74,9 @@ export function PhotoLibrary() {
         ))}
       </div>
       <div className="photo-grid">
+        {filtered.length === 0 && (
+          <div className="empty-note">暂无匹配照片</div>
+        )}
         {filtered.map((photo) => (
           <button
             key={photo.id}
@@ -90,7 +93,7 @@ export function PhotoLibrary() {
       </div>
       {burstGroups.length > 0 && (
         <div className="burst-section">
-          <div className="section-title">连拍分组（占位）</div>
+          <div className="section-title">连拍分组</div>
           {burstGroups.map(([groupId, items]) => (
             <details key={groupId} className="burst-group">
               <summary>

@@ -7,6 +7,7 @@ import {
 import { ActionIcon, Badge, Group, Paper, SegmentedControl, Text } from '@mantine/core';
 import { Image as ImageIcon, Maximize2, Move, ZoomIn, ZoomOut } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { DESIGN_TOKENS as T } from '../theme/tokens';
 import { getOriginalSource, getPreviewSource } from '../api';
 
 export function PreviewViewer() {
@@ -50,12 +51,12 @@ export function PreviewViewer() {
         flexDirection: 'column',
         height: '100%',
         overflow: 'hidden',
-        background: '#fff',
-        border: '1px solid rgba(0,0,0,0.06)',
-        boxShadow: '0 14px 42px rgba(0,0,0,0.07)',
+        background: T.panel,
+        border: `1px solid ${T.hairline}`,
+        boxShadow: T.shadowMd,
       }}
     >
-      <Group justify="space-between" p="sm" style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+      <Group justify="space-between" p="sm" style={{ background: T.overlay, borderBottom: `1px solid ${T.hairline}` }}>
         <SegmentedControl
           size="xs"
           value={viewMode}
@@ -125,7 +126,7 @@ export function PreviewViewer() {
         )}
       </div>
 
-      <Group p="sm" gap="xs" justify="center" style={{ background: '#fff', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+      <Group p="sm" gap="xs" justify="center" style={{ background: T.overlay, borderTop: `1px solid ${T.hairline}` }}>
         <ActionIcon variant="light" radius="md" onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}><ZoomOut size={15} /></ActionIcon>
         <ActionIcon variant="light" radius="md" onClick={() => setZoom(Math.min(4, zoom + 0.1))}><ZoomIn size={15} /></ActionIcon>
         <ActionIcon variant="light" radius="md" onClick={() => setZoom(1)}><Maximize2 size={15} /></ActionIcon>

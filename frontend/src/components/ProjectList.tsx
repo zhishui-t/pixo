@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Divider, Group, Paper, ScrollArea, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { FolderPlus, Plus, Search } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { DESIGN_TOKENS as T } from '../theme/tokens';
 
 export function ProjectList() {
   const projects = useAppStore((s) => s.projects);
@@ -41,20 +42,22 @@ export function ProjectList() {
           {visible.map((project) => {
             const active = activeProjectId === project.id;
             return (
-              <UnstyledButton key={project.id} onClick={() => selectProject(project.id)} w="100%">
+              <UnstyledButton key={project.id} className="project-list-btn" onClick={() => selectProject(project.id)} w="100%">
                 <Paper
                   p="sm"
                   radius="md"
                   style={{
                     position: 'relative',
                     overflow: 'hidden',
-                    background: active ? 'linear-gradient(135deg, rgba(86,134,254,0.12), rgba(86,134,254,0.03))' : '#fff',
-                    boxShadow: active ? '0 8px 24px rgba(86,134,254,0.12)' : '0 2px 10px rgba(0,0,0,0.04)',
-                    border: active ? '1px solid rgba(86,134,254,0.22)' : '1px solid rgba(0,0,0,0.06)',
+                    background: active
+                      ? `linear-gradient(135deg, ${T.selection}, ${T.panel})`
+                      : T.panel,
+                    boxShadow: active ? T.shadowLg : T.shadowMd,
+                    border: active ? `1px solid ${T.accent}` : `1px solid ${T.hairline}`,
                   }}
                 >
                   {active && (
-                    <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 4, background: '#5686FE' }} />
+                    <div style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 4, background: T.accent }} />
                   )}
                   <Text size="sm" fw={600}>{project.name}</Text>
                   <Text size="xs" c="dark.4" mt={2}>{project.photoIds.length} 张 · {project.createdAt}</Text>

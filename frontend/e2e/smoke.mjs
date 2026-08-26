@@ -48,6 +48,15 @@ await check('右侧 风格/AI 与 调整 Tab', async () => {
 });
 
 await page.screenshot({ path: 'screenshots/ui_v5.png', fullPage: true });
+
+// t81：审核/设置页暗房主题化截图（存 docs/ui 供对比验收）
+await page.getByTestId('nav-settings').click();
+await page.waitForTimeout(400);
+await page.screenshot({ path: '../docs/ui/t81_settings.png', fullPage: true });
+await page.locator('button', { hasText: '审核队列' }).first().click();
+await page.waitForTimeout(400);
+await page.screenshot({ path: '../docs/ui/t81_review.png', fullPage: true });
+console.log('t81 screenshots saved: docs/ui/t81_settings.png, docs/ui/t81_review.png');
 console.log('Screenshot saved: screenshots/ui_v5.png');
 
 await browser.close();

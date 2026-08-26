@@ -1,4 +1,6 @@
 import { Accordion, Paper, Text } from '@mantine/core';
+import { DESIGN_TOKENS } from '../theme/tokens';
+import { SectionLabel } from './SectionLabel';
 import { useAppStore } from '../store/useAppStore';
 import { SliderParam } from './SliderParam';
 
@@ -19,7 +21,7 @@ export function AdjustmentsPanel() {
   };
 
   return (
-    <Paper radius="md" withBorder p="sm">
+    <Paper radius="md" withBorder p="md" className="adjustments-panel">
       <Text fw={700} mb="sm">调整</Text>
 
       <Paper radius="md" p="xs" mb="sm" withBorder style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 64 }}>
@@ -28,10 +30,20 @@ export function AdjustmentsPanel() {
         ))}
       </Paper>
 
-      <Accordion multiple defaultValue={['basic', 'curve', 'hsl', 'calibration', 'detail', 'split']}>
+      <Accordion
+          multiple
+          defaultValue={['basic', 'curve', 'hsl', 'calibration', 'detail', 'split']}
+          className="adjustments-accordion"
+          styles={{
+            item: { backgroundColor: DESIGN_TOKENS.panel, borderWidth: 0 },
+            control: { fontSize: 13, paddingInline: 10 },
+            panel: { paddingInline: 6, paddingBottom: 10 },
+          }}
+        >
         <Accordion.Item value="basic">
           <Accordion.Control>基本</Accordion.Control>
           <Accordion.Panel>
+            <SectionLabel>曝光 · 白平衡</SectionLabel>
             <SliderParam label="曝光" stage="exposure" param="ev" value={value('exposure', 'ev', 0.28)} min={-2.5} max={2.5} step={0.01} unit="EV" onPatch={patch} />
             <SliderParam label="高光" stage="tone" param="highlights" value={value('tone', 'highlights', -20)} min={-100} max={100} step={1} onPatch={patch} />
             <SliderParam label="阴影" stage="tone" param="shadows" value={value('tone', 'shadows', 10)} min={-100} max={100} step={1} onPatch={patch} />
@@ -44,13 +56,15 @@ export function AdjustmentsPanel() {
         <Accordion.Item value="curve">
           <Accordion.Control>曲线</Accordion.Control>
           <Accordion.Panel>
-            <Text size="xs" c="dimmed">RGB / R / G / B / 亮度 曲线编辑器占位</Text>
+            <SectionLabel>曲线</SectionLabel>
+            <Text size="xs" c="dimmed">曲线编辑器正在开发中，敬请期待</Text>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="hsl">
           <Accordion.Control>HSL</Accordion.Control>
           <Accordion.Panel>
+            <SectionLabel>HSL · 八通道色相</SectionLabel>
             {['红', '橙', '黄', '绿', '青', '蓝', '紫', '品红'].map((color, idx) => (
               <SliderParam
                 key={color}
@@ -70,6 +84,7 @@ export function AdjustmentsPanel() {
         <Accordion.Item value="calibration">
           <Accordion.Control>色彩校准</Accordion.Control>
           <Accordion.Panel>
+            <SectionLabel>色彩校准 · 三轴 HSL</SectionLabel>
             <SliderParam label="红-色相" stage="calibration" param="red_hue" value={0} min={-180} max={180} step={1} onPatch={patch} />
             <SliderParam label="红-饱和度" stage="calibration" param="red_sat" value={0} min={-100} max={100} step={1} onPatch={patch} />
             <SliderParam label="绿-色相" stage="calibration" param="green_hue" value={0} min={-180} max={180} step={1} onPatch={patch} />
@@ -80,6 +95,7 @@ export function AdjustmentsPanel() {
         <Accordion.Item value="detail">
           <Accordion.Control>细节</Accordion.Control>
           <Accordion.Panel>
+            <SectionLabel>细节 · 锐化 / 降噪 / 去朦胧</SectionLabel>
             <SliderParam label="锐化" stage="refine" param="sharpen" value={value('refine', 'sharpen', 0.2)} min={0} max={1} step={0.01} onPatch={patch} />
             <SliderParam label="降噪" stage="refine" param="chroma_denoise" value={value('refine', 'chroma_denoise', 0.5)} min={0} max={5} step={0.1} onPatch={patch} />
             <SliderParam label="去朦胧" stage="dehaze" param="strength" value={0} min={0} max={1} step={0.01} onPatch={patch} />
@@ -89,6 +105,7 @@ export function AdjustmentsPanel() {
         <Accordion.Item value="split">
           <Accordion.Control>分离色调</Accordion.Control>
           <Accordion.Panel>
+            <SectionLabel>分离色调 · 高光 / 阴影</SectionLabel>
             <SliderParam label="高光色相" stage="split_tone" param="highlights_hue" value={0} min={0} max={360} step={1} onPatch={patch} />
             <SliderParam label="高光饱和度" stage="split_tone" param="highlights_sat" value={0} min={0} max={100} step={1} onPatch={patch} />
             <SliderParam label="阴影色相" stage="split_tone" param="shadows_hue" value={0} min={0} max={360} step={1} onPatch={patch} />

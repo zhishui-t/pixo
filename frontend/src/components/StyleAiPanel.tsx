@@ -2,6 +2,14 @@ import { useState } from 'react';
 import { Badge, Button, Card, Divider, Group, ScrollArea, Stack, Text, TextInput } from '@mantine/core';
 import { Check, MessageCircle, Send, Sparkles, Wand2, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { DESIGN_TOKENS as T } from '../theme/tokens';
+
+const hexToRgba = (hex: string, alpha: number): string => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+/** accent 透明度变体——单源取自 tokens，禁止再写 rgba 字面量。 */
+const accentA = (alpha: number): string => hexToRgba(T.accent, alpha);
 
 export function StyleAiPanel() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
@@ -27,15 +35,15 @@ export function StyleAiPanel() {
   };
 
   return (
-    <Stack gap="md" p={4}>
-      <Card radius="lg" p="md" style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 6px 22px rgba(0,0,0,0.05)' }}>
+    <Stack gap="xl" p={4}>
+      <Card radius="lg" p="md" style={{ background: T.panel, border: `1px solid ${T.hairline}`, boxShadow: T.shadowMd }}>
         <Group justify="space-between" mb="sm">
           <Text fw={700}>风格卡片</Text>
-          <Wand2 size={16} color="#5686FE" />
+          <Wand2 size={16} color={T.accent} />
         </Group>
         <Stack gap="sm">
           {styleCards.map((card) => (
-            <Card key={card.styleId} radius="md" padding="sm" style={{ background: 'linear-gradient(135deg, rgba(86,134,254,0.08), #fff)', border: '1px solid rgba(86,134,254,0.12)' }}>
+            <Card key={card.styleId} radius="md" padding="sm" style={{ background: `linear-gradient(135deg, ${accentA(0.10)}, ${T.overlay})`, border: `1px solid ${accentA(0.18)}` }}>
               <Group justify="space-between">
                 <Text fw={600}>{card.name}</Text>
                 <Badge variant="light" color="indigo">风格</Badge>
@@ -51,14 +59,14 @@ export function StyleAiPanel() {
         </Stack>
       </Card>
 
-      <Card radius="lg" p="md" style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 6px 22px rgba(0,0,0,0.05)' }}>
+      <Card radius="lg" p="md" style={{ background: T.panel, border: `1px solid ${T.hairline}`, boxShadow: T.shadowMd }}>
         <Group justify="space-between" mb="sm">
           <Text fw={700}>AI 推荐</Text>
-          <Sparkles size={16} color="#5686FE" />
+          <Sparkles size={16} color={T.accent} />
         </Group>
         <Stack gap="sm">
           {suggestions.map((s) => (
-            <Card key={s.id} radius="md" padding="sm" style={{ background: 'linear-gradient(135deg, rgba(86,134,254,0.1), #fff)', border: '1px solid rgba(86,134,254,0.16)' }}>
+            <Card key={s.id} radius="md" padding="sm" style={{ background: `linear-gradient(135deg, ${accentA(0.12)}, ${T.overlay})`, border: `1px solid ${accentA(0.22)}` }}>
               <Text fw={600}>{s.title}</Text>
               <Text size="xs" c="dark.4" mt={2}>{s.reason}</Text>
               <Badge color="grape" variant="light" mt={4}>置信度 {Math.round(s.confidence * 100)}%</Badge>
@@ -69,14 +77,14 @@ export function StyleAiPanel() {
               </Group>
             </Card>
           ))}
-          {suggestions.length === 0 && <Text c="dimmed" size="sm">暂无推荐</Text>}
+          {suggestions.length === 0 && <div className="empty-note">暂无 AI 推荐</div>}
         </Stack>
       </Card>
 
-      <Card radius="lg" p="md" style={{ display: 'flex', flexDirection: 'column', flex: 1, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 6px 22px rgba(0,0,0,0.05)' }}>
+      <Card radius="lg" p="md" style={{ display: 'flex', flexDirection: 'column', flex: 1, background: T.panel, border: `1px solid ${T.hairline}`, boxShadow: T.shadowMd }}>
         <Group justify="space-between" mb="sm">
           <Text fw={700}>当前项目对话</Text>
-          <MessageCircle size={16} color="#5686FE" />
+          <MessageCircle size={16} color={T.accent} />
         </Group>
         <Divider mb="sm" />
         <ScrollArea style={{ flex: 1, maxHeight: 340, minHeight: 140 }} mb="sm">
@@ -87,8 +95,8 @@ export function StyleAiPanel() {
                 size="sm"
                 style={{
                   alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                  background: m.role === 'user' ? '#5686FE' : '#f1f3f5',
-                  color: m.role === 'user' ? 'white' : '#0f1115',
+                  background: m.role === 'user' ? T.accent : T.overlay,
+                  color: m.role === 'user' ? T.onAccent : T.textPrimary,
                   padding: '8px 12px',
                   borderRadius: 12,
                   borderBottomRightRadius: m.role === 'user' ? 4 : 12,

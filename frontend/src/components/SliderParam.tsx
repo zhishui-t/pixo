@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Badge, Group, NumberInput, Slider, Text } from '@mantine/core';
+import { DESIGN_TOKENS } from '../theme/tokens';
 import type { ParamPatch, Source } from '../types';
 
 interface SliderParamProps {
@@ -12,6 +14,8 @@ interface SliderParamProps {
   unit?: string;
   source?: Source;
   locked?: boolean;
+  /** 双击滑杆区域时的重置目标（缺省 0）。 */
+  defaultValue?: number;
   onPatch: (patch: ParamPatch) => void;
 }
 
@@ -26,26 +30,56 @@ export function SliderParam({
   unit,
   source = 'user',
   locked = false,
+  defaultValue,
   onPatch,
 }: SliderParamProps) {
+  const [dragging, setDragging] = useState(false);
+
   const update = (next: number) => {
     if (locked) return;
     const clamped = Math.max(min, Math.min(max, next));
     onPatch({ [stage]: { [param]: clamped } });
   };
 
+  const reset = () => {
+    if (locked) return;
+    update(defaultValue ?? 0);
+  };
+
   return (
-    <div style={{ opacity: locked ? 0.55 : 1, marginBottom: 10 }}>
+    <div
+      className={`slider-param${dragging ? ' slider-param--dragging' : ''}`}
+      style={{ opacity: locked ? 0.55 : 1 }}
+      onDoubleClick={reset}
+      onPointerDown={() => setDragging(true)}
+      onPointerUp={() => setDragging(false)}
+      onPointerLeave={() => setDragging(false)}
+    >
       <Group justify="space-between" mb={4}>
         <Group gap={6}>
-          <Text size="xs">{label}</Text>
-          {source !== 'user' && <Badge size="xs" variant="light" color="indigo">{source}</Badge>}
-          {locked && <Badge size="xs" variant="light" color="red">🔒</Badge>}
+          <Text size="xs" c={dragging ? undefined : 'dimmed'} fw={dragging ? 600 : 400}>
+            {label}
+          </Text>
+          {source !== 'user' && (
+            <Badge size="xs" variant="light" color="orange">
+              {source}
+            </Badge>
+          )}
+          {locked && (
+            <Badge size="xs" variant="light" color="red">
+              🔒
+            </Badge>
+          )}
         </Group>
-        {unit && <Text size="xs" c="dimmed">{unit}</Text>}
+        {unit && (
+          <Text size="xs" c="dimmed" className="slider-param-unit">
+            {unit}
+          </Text>
+        )}
       </Group>
       <Group gap="xs" align="center">
         <Slider
+          className="slider-param-track"
           style={{ flex: 1 }}
           value={value}
           min={min}
@@ -55,9 +89,24 @@ export function SliderParam({
           onChange={update}
           size="sm"
           label={(v) => v.toFixed(2)}
+          styles={{
+            track: { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+            bar: { backgroundColor: DESIGN_TOKENS.accent },
+            thumb: {
+              backgroundColor: DESIGN_TOKENS.panel,
+              borderColor: DESIGN_TOKENS.accent,
+              borderWidth: 2,
+            },
+            label: {
+              backgroundColor: DESIGN_TOKENS.overlay,
+              color: DESIGN_TOKENS.textPrimary,
+              fontVariantNumeric: 'tabular-nums',
+            },
+          }}
         />
         <NumberInput
-          w={76}
+          className="slider-param-value"
+          w={84}
           size="xs"
           value={value}
           min={min}
@@ -66,6 +115,13 @@ export function SliderParam({
           disabled={locked}
           onChange={(v) => update(Number(v) || 0)}
           hideControls
+          styles={{
+            input: {
+              fontVariantNumeric: 'tabular-nums',
+              textAlign: 'right',
+              backgroundColor: DESIGN_TOKENS.panel,
+            },
+          }}
         />
       </Group>
     </div>

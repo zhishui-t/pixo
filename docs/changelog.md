@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-08-25 — 暗房主题 UI 批：基座 · 三线对齐 · 视觉走查整改
+
+- 主题基座：DESIGN_TOKENS 单一取色源（三层表面 canvas #101214/panel #17191c/
+  overlay #1f2328、暖金 accent #e8a33d 十阶、hairline/radius/柔阴影/语义四色）
+  + createTheme 暗房重定义 forceColorScheme=dark 锁死（产品裁定：暗房单主题
+  为最终形态，Lightroom/C1 行业惯例）。
+- 布局：TopBar 三段式品牌化（暖金竖条+字标/pill 导航/全局动作）、间距放宽、
+  ReviewQueue token 容器；死文件 TopBar.tsx 清除。
+- 面板：SectionLabel 小节微标签组件、SliderParam tabular-nums+拖动高亮+
+  双击重置+暖金滑轨、InspectorTabs 暗房对齐、密度放宽。
+- 库/胶片条/AI面板：Filmstrip 缩略图放大+accent 选中描边、PhotoLibrary 全套
+  token 化样式（原裸默认渲染根因修复）、对话气泡暗色化、空态引导统一。
+- 视觉走查整改（t79 6.5/10→整改）：三页白底面板主题化（near_white 实测
+  0.003%/0.015%，阈值 2%）、焦点环归 tokens 琥珀、warning 语义档分离、
+  light_forced 误导模拟件删除改 theme_locked 断言、工程占位文案清理、
+  MOCK 徽章角标化。
+- 验收：build 绿；862 后端回归保持零影响；截图 docs/ui/ 六张暗态规范集。
+
 ## 2026-08-25 — 性能治理批：评分器预热 · 域外隔离 · llm_review 报表
 
 - 评分器常驻预热：warmup() 预加载+dummy 推理，service startup 钩子挂载

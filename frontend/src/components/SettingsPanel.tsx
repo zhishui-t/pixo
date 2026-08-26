@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Card, Checkbox, Group, NumberInput, Select, Stack, Text, Title } from '@mantine/core';
+import { Boxes, Download, SlidersHorizontal } from 'lucide-react';
+import { DESIGN_TOKENS as T } from '../theme/tokens';
 
 const INITIAL = {
   previewLongEdge: 1024,
@@ -13,10 +15,13 @@ export function SettingsPanel() {
   const [settings, setSettings] = useState(INITIAL);
 
   return (
-    <Stack gap="md">
+    <Stack gap="xl">
       <Title order={3}>设置</Title>
-      <Card radius="md" withBorder>
-        <Text fw={700} mb="sm">渲染</Text>
+      <Card radius="md" withBorder style={{ background: T.panel, borderColor: T.hairline }}>
+        <Group gap={8} mb="sm">
+          <SlidersHorizontal size={15} color={T.accent} />
+          <Text fw={700} mb={0}>渲染</Text>
+        </Group>
         <Group gap="md">
           <Select
             label="预览长边"
@@ -34,8 +39,11 @@ export function SettingsPanel() {
           />
         </Group>
       </Card>
-      <Card radius="md" withBorder>
-        <Text fw={700} mb="sm">输出</Text>
+      <Card radius="md" withBorder style={{ background: T.panel, borderColor: T.hairline }}>
+        <Group gap={8} mb="sm">
+          <Download size={15} color={T.accent} />
+          <Text fw={700} mb={0}>输出</Text>
+        </Group>
         <Group gap="md">
           <Select
             label="格式"
@@ -60,9 +68,12 @@ export function SettingsPanel() {
           />
         </Group>
       </Card>
-      <Card radius="md" withBorder>
-        <Text fw={700} mb="sm">DSH / 模型</Text>
-        <Text size="sm" c="dimmed">DSH 地址与 YOLOE 模型可用性状态为 P2 接入占位。</Text>
+      <Card radius="md" withBorder style={{ background: T.panel, borderColor: T.hairline }}>
+        <Group gap={8} mb="sm">
+          <Boxes size={15} color={T.accent} />
+          <Text fw={700} mb={0}>DSH / 模型</Text>
+        </Group>
+        <Text size="sm" c="dimmed">DSH 服务与模型连接状态将在后续版本提供。</Text>
       </Card>
     </Stack>
   );
