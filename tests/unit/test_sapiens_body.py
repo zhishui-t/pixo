@@ -17,6 +17,13 @@ from pixo.vision.segmenters.sapiens_body import (_part_masks,
 IMG = np.zeros((8, 12, 3), dtype=np.uint8)
 
 
+@pytest.fixture(autouse=True)
+def _allow_restricted(monkeypatch):
+    """sapiens 条目为 internal_development_only，默认被 multi_router 门控；
+    本文件测 canonical 路由/适配器语义，autouse 放行。"""
+    monkeypatch.setenv("PIXO_ALLOW_RESTRICTED", "1")
+
+
 def _fake_backend(prompts_ok):
     class _Fake:
         def segment(self, image_rgb, prompts):

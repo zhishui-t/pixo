@@ -9,7 +9,9 @@
   - SegmenterUnavailable 等异常与降级约定。
 
 设计约束:
-  - 本包不引入 torch/ultralytics，真实 YOLOE 适配留待 P0-3 独立文件。
+  - 包顶层不引入 torch/ultralytics；真实模型适配器位于 segmenters/ 内，
+    重依赖（torch/transformers/rfdetr 等）限各适配器文件内懒 import，
+    ultralytics 仅限 segmenters/yoloe.py（AGPL 隔离）。
 """
 from __future__ import annotations
 

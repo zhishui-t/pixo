@@ -56,7 +56,11 @@ def _has_ort() -> bool:
 
 
 class FairFaceAge:
-    """FairFace 年龄/性别预测轻量封装。"""
+    """FairFace 年龄/性别预测轻量封装。
+
+    懒加载：__init__ 只存配置，首次 predict_face 才加载 ONNX 会话；
+    加载失败缓存结果（_load_failed）避免反复重试。
+    """
 
     def __init__(self, model_path: str | None = None) -> None:
         self.model_path = model_path or _default_model_path()
@@ -64,10 +68,18 @@ class FairFaceAge:
         self.input_name: str | None = None
         self.output_names: list[str] = []
         self._error: str | None = None
+        self._load_failed = False
+
+    def _ensure_loaded(self) -> None:
+        """首次预测时加载会话；失败缓存（_load_failed）不再重试。"""
+        if self.session is not None or self._load_failed:
+            return
         self._load()
+        if self.session is None:
+            self._load_failed = True
 
     def _load(self) -> None:
-        """懒加载 ONNX 会话。"""
+        """加载 ONNX 会话（模型/依赖缺失时置 _error，session 保持 None）。"""
         if not os.path.exists(self.model_path) or not _has_ort():
             self._error = "缺少 fairface.onnx 或 onnxruntime"
             return
@@ -117,8 +129,12 @@ class FairFaceAge:
         Returns:
             (age_bucket, gender, confidence) 或 None。
         """
-        if self.session is None or face_rgb is None:
+        if face_rgb is None:
             return None
+        if self.session is None:
+            self._ensure_loaded()
+            if self.session is None:
+                return None
         try:
             if min(face_rgb.shape[:2]) < 16:
                 return None
@@ -160,18 +176,26 @@ class FairFaceAge:
 _fairface: FairFaceAge | None = None
 
 
-def get_fairface_age() -> FairFaceAge | None:
-    """进程级 FairFace 单例；未就绪时返回 None。"""
+def _shared_fairface() -> FairFaceAge:
+    """模块级单例（对齐 aesthetic.py 单例/缓存风格）。
+
+    构造只存配置不触发加载；predict_face 才懒加载 ONNX 会话。
+    """
     global _fairface
     if _fairface is None:
         _fairface = FairFaceAge()
-    return _fairface if _fairface.ready else None
+    return _fairface
+
+
+def get_fairface_age() -> FairFaceAge | None:
+    """进程级 FairFace 单例；未就绪（未加载/加载失败）时返回 None。"""
+    inst = _shared_fairface()
+    return inst if inst.ready else None
 
 
 def fairface_health_info() -> dict[str, Any]:
-    """构造 FairFace 健康信息。"""
-    instance = get_fairface_age() or FairFaceAge()
-    return instance.health_info()
+    """构造 FairFace 健康信息（复用模块级单例，不触发加载）。"""
+    return _shared_fairface().health_info()
 
 
 __all__ = [

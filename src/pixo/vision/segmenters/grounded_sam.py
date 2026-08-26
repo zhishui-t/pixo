@@ -1,7 +1,9 @@
 """pixo.vision.segmenters.grounded_sam —— 开放词汇分割适配器（可选懒加载）。
 
 两段式：GroundingDINO(tiny) 出框 -> SAM(vit-base) 精修掩码。
-可选后端：仅路由到未知 prompt 且 PIXO_GSAM_ENABLED!=0 时才加载；
+可选后端：默认关闭（opt-in），仅路由到未知 prompt 且 PIXO_GSAM_ENABLED=1
+时才加载——启用会经 transformers 首用自动下载 GroundingDINO+SAM 全套权重
+（合计数 GB 磁盘占用），故不做默认开启；
 缺失/失败抛 SegmenterUnavailable，由路由器降级零掩码。
 第三方推理只存在于本文件（隔离纪律）。
 """
@@ -21,13 +23,21 @@ DEFAULT_SAM = os.environ.get("PIXO_GSAM_SAM", "facebook/sam-vit-base")
 
 
 class GroundedSAMSegmenter(LazyBackendMixin, BaseSegmenter):
-    """开放词汇后端：任意文本 prompt（下划线转空格短语）。"""
+    """开放词汇后端：任意文本 prompt（下划线转空格短语）。
+
+    默认关闭（体积后果：DINO+SAM 首用合计下载数 GB 权重）；
+    PIXO_GSAM_ENABLED=1 显式开启。
+    """
 
     PROMPT_KEYS = ("*",)
 
+    # 轻量探测：仅检查依赖可 import（不触发 from_pretrained 下载）。
+    _PROBE_IMPORTS = ("torch", "transformers")
+
     def enabled(self) -> bool:
-        return os.environ.get("PIXO_GSAM_ENABLED", "1") not in (
-            {"0", "false", "off", "no"}
+        """默认关闭（"0"）；PIXO_GSAM_ENABLED=1 显式开启。"""
+        return os.environ.get("PIXO_GSAM_ENABLED", "0").strip().lower() in (
+            {"1", "true", "on", "yes"}
         )
 
     def _load(self) -> None:

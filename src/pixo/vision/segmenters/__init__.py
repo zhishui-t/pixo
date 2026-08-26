@@ -1,10 +1,13 @@
 """pixo.vision.segmenters —— 真实分割模型适配器。
 
-当前仅包含 YOLOE-26L-seg 适配器（P0-3）：
-  - yoloe.py：唯一允许直接 import torch / ultralytics 的文件（AGPL 隔离）。
+隔离纪律（与 model_licenses.json / docs/tech_debt.md 口径一致）：
+  - ultralytics 仅限 yoloe.py 直接 import（AGPL 隔离，内部研发专用）；
+  - torch/transformers/rfdetr 等重依赖限各适配器文件内懒 import
+    （uniface_face / rfdetr_person / segformer_scenes / grounded_sam /
+    sapiens_body），本包顶层不引入。
 
-本包不主动导入 yoloe，避免在未使用真实模型时加载 torch/ultralytics。
-需要真实分割能力时显式导入：
+本包不主动导入任何适配器，避免未使用真实模型时加载重依赖。
+需要时显式导入：
     from pixo.vision.segmenters.yoloe import YoloeSegmenter
 也支持按需属性访问：from pixo.vision.segmenters import YoloeSegmenter
 """
@@ -12,11 +15,19 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["YoloeSegmenter", "MultiModelSegmenter", "UniFaceSegmenter", "RFDetrPersonSegmenter", "SegFormerSceneSegmenter", "GroundedSAMSegmenter"]
+__all__ = [
+    "YoloeSegmenter",
+    "MultiModelSegmenter",
+    "UniFaceSegmenter",
+    "RFDetrPersonSegmenter",
+    "SegFormerSceneSegmenter",
+    "GroundedSAMSegmenter",
+    "SapiensBodySegmenter",
+]
 
 
 def __getattr__(name: str) -> Any:
-    """按需导入 YoloeSegmenter，避免包导入时触发 torch/ultralytics。"""
+    """按需导入适配器，避免包导入时触发 torch/ultralytics。"""
     mapping = {
         "YoloeSegmenter": ("yoloe", "YoloeSegmenter"),
         "MultiModelSegmenter": ("multi_router", "MultiModelSegmenter"),
@@ -25,6 +36,7 @@ def __getattr__(name: str) -> Any:
         "SegFormerSceneSegmenter": ("segformer_scenes",
                                     "SegFormerSceneSegmenter"),
         "GroundedSAMSegmenter": ("grounded_sam", "GroundedSAMSegmenter"),
+        "SapiensBodySegmenter": ("sapiens_body", "SapiensBodySegmenter"),
     }
     if name in mapping:
         from importlib import import_module

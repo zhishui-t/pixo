@@ -35,6 +35,9 @@ class SegFormerSceneSegmenter(LazyBackendMixin, BaseSegmenter):
 
     PROMPT_KEYS = SUPPORTED
 
+    # 轻量探测：仅检查依赖可 import（不触发 from_pretrained）。
+    _PROBE_IMPORTS = ("torch", "transformers")
+
     def __init__(self, ckpt: str | None = None) -> None:
         self.ckpt = ckpt or DEFAULT_CKPT
         self._model = None

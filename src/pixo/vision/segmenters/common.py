@@ -1,12 +1,16 @@
 """segmenters/common —— 多模型适配器共享助手（无第三方重依赖）。"""
 from __future__ import annotations
 
+import importlib
+import logging
 import os
 
 import cv2
 import numpy as np
 
 from ..exceptions import SegmenterUnavailable
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def warmup_enabled(env_key: str = "PIXO_SEGMENTER_WARMUP") -> bool:
@@ -43,6 +47,10 @@ class LazyBackendMixin:
     _error: str | None = None
     _warned: bool = False
     _warmup_info: dict | None = None
+    # 轻量探测所需的顶层依赖模块名（子类按适配器声明，如
+    # ("torch", "transformers") / ("rfdetr",)）；仅做 import 检查，
+    # 禁止触发 from_pretrained / 完整权重加载。
+    _PROBE_IMPORTS: tuple[str, ...] = ()
 
     def _load(self) -> None:  # pragma: no cover - 由子类覆盖
         raise NotImplementedError
@@ -63,22 +71,31 @@ class LazyBackendMixin:
         except Exception as exc:  # noqa: BLE001
             self._degraded = True
             self._error = f"{type(exc).__name__}: {exc}"
-            print(f"[pixo.vision.segmenters] {type(self).__name__} "
-                  f"加载失败，永久降级: {self._error}")
+            _LOGGER.warning(
+                "[pixo.vision.segmenters] %s 加载失败，永久降级: %s",
+                type(self).__name__, self._error)
             raise SegmenterUnavailable(self._error) from exc
 
     def available(self) -> bool:
-        """探测可用性：依赖可导入且权重可达（不触发完整加载的子类可覆写）。"""
+        """轻量探测可用性：已加载标记 + 依赖可 import。
+
+        不触发 from_pretrained / 完整加载（_probe 仅 import 声明的
+        顶层依赖模块）；永久降级实例恒 False。
+        """
         if self._loaded:
             return True
+        if self._degraded:
+            return False
         try:
             self._probe()
             return True
         except Exception:  # noqa: BLE001
             return False
 
-    def _probe(self) -> None:  # pragma: no cover - 子类按需覆写轻量探针
-        self._load()
+    def _probe(self) -> None:
+        """默认轻量探针：仅 import 子类声明的依赖模块名。"""
+        for module_name in self._PROBE_IMPORTS:
+            importlib.import_module(module_name)
 
     def warmup(self, image: np.ndarray | None = None) -> dict:
         """预加载并跑一次 dummy 推理；返回状态字典并入健康信息。"""

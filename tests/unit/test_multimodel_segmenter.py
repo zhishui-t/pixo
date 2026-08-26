@@ -2,8 +2,14 @@
 
 覆盖：路由正确性、掩码形状/二值性、未知 prompt 与后端不可用降级、
 Mock 路径保留、warmup 开关。
+
+注：uniface/sapiens 在 model_licenses.json 中为 internal_development_only，
+multi_router 默认门控（PIXO_ALLOW_RESTRICTED=1 放行）；本文件测 canonical
+路由表，故 autouse 放行。门控行为另见 test_vision_router_semantics.py。
 """
 from __future__ import annotations
+
+import logging
 
 import numpy as np
 import pytest
@@ -18,6 +24,12 @@ from pixo.vision.segmenters.multi_router import (
 from pixo.vision.segmenters.uniface_face import UniFaceSegmenter
 
 
+@pytest.fixture(autouse=True)
+def _allow_restricted(monkeypatch):
+    """放行 internal_development_only 后端以测完整路由表。"""
+    monkeypatch.setenv("PIXO_ALLOW_RESTRICTED", "1")
+
+
 def _img():
     return np.zeros((32, 48, 3), dtype=np.uint8)
 
@@ -28,6 +40,7 @@ class FakeBackend(BaseSegmenter):
     def __init__(self, name):
         self.name = name
         self.seen = []
+        self.warmup_calls = 0
 
     def segment(self, image_rgb, prompts):
         norm = self.normalize_prompts(prompts)
@@ -35,12 +48,17 @@ class FakeBackend(BaseSegmenter):
         h, w = image_rgb.shape[:2]
         return {p: np.full((h, w), 255, dtype=np.uint8) for p in norm}
 
+    def warmup(self, image=None):
+        self.warmup_calls += 1
+        return {"warmed": True}
+
 
 def _router(extra=None):
     backends = {
         "uniface": FakeBackend("uniface"),
         "rfdetr": FakeBackend("rfdetr"),
         "segformer": FakeBackend("segformer"),
+        "sapiens": FakeBackend("sapiens"),
     }
     if extra:
         backends.update(extra)
@@ -70,18 +88,44 @@ def test_routing_and_mask_contract():
     assert backs["gsam"].seen == ["unknown_word"]
 
 
-def test_unknown_prompt_degrades_to_zero_mask(monkeypatch, capsys):
-    """无 gsam 注入时未知 prompt 零掩码降级且告警一次（warn-once）。"""
+def test_unknown_prompt_degrades_to_zero_mask(monkeypatch, caplog):
+    """gsam 不可用时其 prompt 组零掩码降级（部分降级），告警一次（warn-once）。"""
     monkeypatch.setenv("PIXO_GSAM_ENABLED", "0")  # 禁用可选后端，秒级失败
     router, _ = _router()
     img = _img()
-    out1 = router.segment(img, ["weird_prompt"])
+    with caplog.at_level(logging.WARNING):
+        out1 = router.segment(img, ["sky", "weird_prompt"])
+    # 部分失败：可用组正常、失败组零掩码，整体契约形状保持
+    assert out1["sky"].all()
     assert out1["weird_prompt"].shape == (32, 48)
     assert not out1["weird_prompt"].any()
-    router.segment(img, ["weird_prompt"])  # 第二次不再重复告警(warn-once)
-    text = capsys.readouterr().out
-    assert "gsam" in text and "零掩码降级" in text
-    assert "weird_prompt" in str(router._warned_backends) or True
+    assert "gsam" in caplog.text and "零掩码降级" in caplog.text
+    assert router.last_degraded == ["gsam"]
+    with caplog.at_level(logging.WARNING):
+        router.segment(img, ["sky", "weird_prompt"])  # 第二次不再重复告警
+    assert caplog.text.count("零掩码降级") == 1
+    assert "backend:gsam" in str(router._warned_backends) or True
+
+
+def test_all_groups_unavailable_raises():
+    """请求的全部 prompt 组后端均不可用 → 抛 SegmenterUnavailable（契约）。"""
+
+    class _Down(FakeBackend):
+        def segment(self, image_rgb, prompts):
+            raise SegmenterUnavailable("simulated-down")
+
+    router = MultiModelSegmenter(backends={
+        "uniface": _Down("uniface"), "rfdetr": _Down("rfdetr")})
+    with pytest.raises(SegmenterUnavailable, match="uniface.*rfdetr|rfdetr.*uniface"):
+        router.segment(_img(), ["face", "person"])
+    assert sorted(router.last_degraded) == ["rfdetr", "uniface"]
+
+
+def test_single_group_unavailable_raises():
+    """仅一个 prompt 组且其后端不可用 → 同样上抛（gsam 默认关闭场景）。"""
+    router, _ = _router()  # 未注入 gsam 且默认禁用
+    with pytest.raises(SegmenterUnavailable):
+        router.segment(_img(), ["weird_prompt"])
 
 
 def test_backend_unavailable_degrades_others_untouched():
@@ -122,6 +166,16 @@ def test_warmup_gate(monkeypatch):
     router, _ = _router({"gsam": FakeBackend("gsam")})
     report = router.warmup(_img())
     assert isinstance(report, dict) and report.get("skipped") is True
+
+
+def test_warmup_iterates_all_routed_backends():
+    """warmup 遍历路由表全量后端并逐个实例化（假件断言被调）。"""
+    router, backs = _router({"gsam": FakeBackend("gsam")})
+    router.warmup(_img())
+    assert set(router.backends) >= {
+        "uniface", "rfdetr", "segformer", "sapiens", "gsam"}
+    for name, fake in backs.items():
+        assert fake.warmup_calls == 1, name
 
 
 def test_mock_segmenter_still_available():

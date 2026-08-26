@@ -2,8 +2,9 @@
 
 vision_health() 返回结构化状态供 DSH Agent / UI 展示。
 真实 YOLOE 的信息来自 YoloeSegmenter.health_info()，本模块不直接
-import torch/ultralytics（AGPL 隔离由 render/vision/segmenters/yoloe.py
-单文件承担）。
+import torch/ultralytics（AGPL 隔离由 vision/segmenters/yoloe.py 单文件
+承担；torch/transformers 限各 vision 适配器文件内懒 import）。
+另含 multi_router 聚合条目：各路由后端 loaded/degraded/last_error。
 """
 from __future__ import annotations
 
@@ -26,6 +27,9 @@ except Exception:
     _ORIGINAL_YOLOE_SEGMENTER = None
 
 YoloeSegmenter: Any = _ORIGINAL_YOLOE_SEGMENTER
+
+# multi_router 聚合健康用的模块级单例（构造不触发后端实例化/权重加载）。
+_MULTI_ROUTER: Any = None
 
 
 def _get_yoloe_segmenter_class() -> Any | None:
@@ -142,6 +146,53 @@ def _yoloe_health_info() -> dict[str, Any]:
         return _unavailable_real_info(f"获取 YOLOE 健康信息失败：{exc}")
 
 
+def _multi_router_health_info() -> dict[str, Any]:
+    """multi_router 聚合健康：各路由后端 loaded/degraded/last_error。
+
+    复用模块级单例路由（构造只建路由表，不实例化后端/不加载权重，
+    对齐 aesthetic.py 单例缓存风格）；异常时返回 error 占位。
+    """
+    global _MULTI_ROUTER
+    try:
+        if _MULTI_ROUTER is None:
+            from .segmenters.multi_router import MultiModelSegmenter
+
+            _MULTI_ROUTER = MultiModelSegmenter()
+        backends = _MULTI_ROUTER.health()
+        last_degraded = list(backends.get("last_degraded", []))
+        per_backend = {
+            k: v for k, v in backends.items() if k != "last_degraded"
+        }
+        any_loaded = any(
+            bool(e.get("loaded")) for e in per_backend.values())
+        return {
+            "name": "MultiModelSegmenter",
+            "type": "real",
+            "provider": "multi-router",
+            "available": True,  # 聚合条目恒可查；各后端可用性见 backends
+            "ready": any_loaded,
+            "loaded": any_loaded,
+            "version": None,
+            "detail": (
+                f"prompt 路由聚合（{len(per_backend)} 个后端条目，"
+                f"{len(last_degraded)} 个最近降级）"
+            ),
+            "backends": per_backend,
+            "last_degraded": last_degraded,
+        }
+    except Exception as exc:
+        return {
+            "name": "MultiModelSegmenter",
+            "type": "real",
+            "provider": "multi-router",
+            "available": False,
+            "ready": False,
+            "loaded": False,
+            "version": None,
+            "detail": f"multi_router 健康信息获取失败：{exc}",
+        }
+
+
 def vision_health(
     yoloe_segmenter: Any | None = None,
 ) -> dict[str, Any]:
@@ -173,6 +224,7 @@ def vision_health(
     aesthetic_info = _safe_health(aesthetic_health_info)
     horizon_info = _safe_health(horizon_health_info)
     fairface_info = _safe_health(fairface_health_info)
+    multi_router_info = _safe_health(_multi_router_health_info)
     overall_ready = bool(real_info.get("ready", False))
 
     return {
@@ -194,6 +246,7 @@ def vision_health(
             "horizon_detector": dict(horizon_info),
             "fairface": dict(fairface_info),
             "fairface_age": dict(fairface_info),
+            "multi_router": dict(multi_router_info),
         },
         "mock_segmenter": dict(mock_info),
         "mock": dict(mock_info),
@@ -202,6 +255,7 @@ def vision_health(
         "aesthetic": dict(aesthetic_info),
         "horizon": dict(horizon_info),
         "fairface": dict(fairface_info),
+        "multi_router": dict(multi_router_info),
     }
 
 

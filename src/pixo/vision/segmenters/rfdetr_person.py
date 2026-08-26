@@ -6,10 +6,14 @@ RF-DETR-Seg 2XL（roboflow，Apache-2.0；权重经 pip 包首用自动下载，
 """
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 
 from ..base import BaseSegmenter
 from .common import LazyBackendMixin, to_binary_mask
+
+_LOG = logging.getLogger(__name__)
 
 SUPPORTED = ("person", "subject")
 
@@ -19,11 +23,15 @@ class RFDetrPersonSegmenter(LazyBackendMixin, BaseSegmenter):
 
     PROMPT_KEYS = SUPPORTED
 
+    # 轻量探测：仅检查依赖可 import（不触发权重下载）。
+    _PROBE_IMPORTS = ("rfdetr",)
+
     def __init__(self, model_uri: str | None = None,
                  threshold: float = 0.5) -> None:
         self.model_uri = model_uri
         self.threshold = float(threshold)
         self._model = None
+        self._detect_warned = False
 
     def _load(self) -> None:
         # t102 修复: 顶层没有 RFDETRSeg（仅 variants 出口），
@@ -76,7 +84,8 @@ class RFDetrPersonSegmenter(LazyBackendMixin, BaseSegmenter):
         """原生检测框直供（t92）：归一化 [x0,y0,x1,y1] ∈[0,1]。
 
         取最大面积实例的 xyxy，按请求的 person/subject 键返回（与
-        segment 的最大实例掩码语义一致）。模型不可用/无检出返回空 dict。
+        segment 的最大实例掩码语义一致）。模型不可用/无检出返回空 dict
+        （best-effort 语义保留；失败仅每实例一次 warning，不抛）。
         """
         self.validate_image(image_rgb)
         norm = [q for q in self.normalize_prompts(prompts)
@@ -87,7 +96,13 @@ class RFDetrPersonSegmenter(LazyBackendMixin, BaseSegmenter):
             self._ensure_loaded()
             detections = self._model.predict(image_rgb[..., :3],
                                              threshold=self.threshold)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 - 原生框 best-effort 回退
+            if not self._detect_warned:
+                self._detect_warned = True
+                _LOG.warning(
+                    "[pixo.vision.segmenters] RFDetrPersonSegmenter "
+                    "detect_boxes 失败，回退 mask_bbox "
+                    "(%s: %s)", type(exc).__name__, exc)
             return {}
 
         xyxy = getattr(detections, "xyxy", None)

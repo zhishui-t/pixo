@@ -259,7 +259,10 @@ class PixoAestheticScorer:
                 "warmup_ms": None,
                 "skipped": True,
             }
-            print("[pixo.vision.aesthetic] 评分器预热被关闭(PIXO_SCORER_WARMUP)")
+            _LOGGER.warning(
+                "[pixo.vision.aesthetic] 评分器预热被关闭"
+                "(PIXO_SCORER_WARMUP)"
+            )
             return dict(self._warmup_info)
 
         dummy = (
@@ -277,8 +280,8 @@ class PixoAestheticScorer:
             "warmup_ms": elapsed_ms,
             "skipped": False,
         }
-        print(
-            "[pixo.vision.aesthetic] 评分器预热完成:",
+        _LOGGER.info(
+            "[pixo.vision.aesthetic] 评分器预热完成: %s",
             self._warmup_info,
         )
         return dict(self._warmup_info)
