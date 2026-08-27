@@ -14,8 +14,6 @@ def test_vision_models_manifest_loads():
     """模型清单可加载，且包含核心模型。"""
     data = load_vision_models()
     ids = {item["id"] for item in data["models"]}
-    assert "yoloe-26l-seg" in ids
-    assert "mobileclip2-b" in ids
     assert "aesthetic-scorer" in ids
     assert "openai-clip-vit-base-patch32" in ids
     assert "fairface-onnx" in ids
@@ -34,9 +32,11 @@ def test_vision_models_fields_complete():
 
 
 def test_vision_models_no_unused_entries():
-    """模型清单只保留实际接入或随 YOLOE 必需的模型。"""
+    """模型清单只保留实际接入的模型（t110 已移除 YOLOE 及随链条目）。"""
     data = load_vision_models()
     ids = {item["id"] for item in data["models"]}
+    assert "yoloe-26l-seg" not in ids
+    assert "mobileclip2-b" not in ids
     assert "yunet-face-detector" not in ids
     assert "mediapipe-face-landmarker" not in ids
     assert "nima-inception-onnx" not in ids

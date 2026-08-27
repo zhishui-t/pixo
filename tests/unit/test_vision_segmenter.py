@@ -11,7 +11,6 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pixo.vision import health as health_module
 from pixo.vision import (
     BaseSegmenter,
     EmptyImageError,
@@ -118,19 +117,18 @@ def test_segmenter_protocol_runtime_check():
 
 
 def test_vision_health_reports_not_ready_with_mock_only():
-    """真实模型未加载时 vision_health 应报告未就绪，但仍打通 YOLOE 健康信息。"""
+    """真实模型未加载时 vision_health 应报告未就绪，但仍打通 multi_router
+    聚合健康信息（t110 后真实分割栈缺省取 multi_router 聚合）。"""
     health = vision_health()
 
     assert health["status"] == "not_ready"
     assert health["ready"] is False
     assert health["available"] is False
-    assert health["segmenter"]["available"] is False
+    assert health["segmenter"]["name"] == "MultiModelSegmenter"
     assert health["segmenter"]["ready"] is False
     assert health["segmenter"]["loaded"] is False
-    assert health["segmenter"]["model_path"]
-    assert health["models"]["yoloe_seg"]["loaded"] is False
-    assert health["models"]["yoloe_seg"]["version"] == "0.1.0"
-    assert "未就绪" in health["segmenter"]["detail"]
+    assert health["models"]["segmenter"]["name"] == "MultiModelSegmenter"
+    assert "multi_router" in health["models"]
 
     # Mock 可用于测试，但不能作为生产模型就绪
     assert health["mock"]["available"] is True
@@ -138,8 +136,8 @@ def test_vision_health_reports_not_ready_with_mock_only():
     assert health["mock"]["version"] == "0.1.0"
 
 
-class _FakeYoloeSegmenter:
-    """用于测试的 YoloeSegmenter 健康状态桩。"""
+class _FakeRealSegmenter:
+    """用于测试的真实分割器健康状态桩。"""
 
     def __init__(
         self,
@@ -152,11 +150,11 @@ class _FakeYoloeSegmenter:
         self._model_path = model_path
 
     def health_info(self) -> dict:
-        detail = "YOLOE-26L-seg 已就绪。" if self._ready else "尚未加载"
+        detail = "真实分割器已就绪。" if self._ready else "尚未加载"
         return {
-            "name": "YOLOE-26L-seg",
+            "name": "FakeSegmenter",
             "type": "real",
-            "provider": "ultralytics",
+            "provider": "fake",
             "available": self._ready,
             "ready": self._ready,
             "loaded": self._ready,
@@ -166,48 +164,73 @@ class _FakeYoloeSegmenter:
         }
 
 
-def test_vision_health_reflects_loaded_yoloe_segmenter():
-    """已加载 YOLOE 时，vision_health 的 real/yoloe 信息与实例一致。"""
-    fake = _FakeYoloeSegmenter(
-        ready=True, version="8.4.99", model_path="/models/yoloe.pt"
+def test_vision_health_reflects_loaded_real_segmenter():
+    """注入已就绪真实分割器时，vision_health 的 segmenter 信息与实例一致。"""
+    fake = _FakeRealSegmenter(
+        ready=True, version="8.4.99", model_path="/models/fake.pt"
     )
-    health = vision_health(yoloe_segmenter=fake)
+    health = vision_health(segmenter=fake)
 
     assert health["status"] == "ready"
     assert health["ready"] is True
     assert health["available"] is True
-    for key in ("segmenter", "yoloe_segmenter", "yoloe"):
+    for key in ("segmenter",):
         assert health[key]["ready"] is True
         assert health[key]["available"] is True
         assert health[key]["loaded"] is True
         assert health[key]["version"] == "8.4.99"
-        assert health[key]["model_path"] == "/models/yoloe.pt"
-    for key in ("yoloe_seg", "yoloe_segmenter", "yoloe", "segmenter"):
-        assert health["models"][key]["ready"] is True
+        assert health[key]["model_path"] == "/models/fake.pt"
+    for key in ("segmenter", "multi_router"):
+        assert key in health["models"]
     assert health["models"]["segmenter"]["status"] == "ready"
 
 
-def test_vision_health_reflects_unloaded_yoloe_segmenter():
-    """未加载 YOLOE 时，注入实例的 not_ready 状态应原样反映。"""
-    fake = _FakeYoloeSegmenter(
-        ready=False, version="0.1.0", model_path="/missing/yoloe.pt"
+def test_vision_health_reflects_unloaded_real_segmenter():
+    """注入未加载真实分割器时，实例的 not_ready 状态应原样反映。"""
+    fake = _FakeRealSegmenter(
+        ready=False, version="0.1.0", model_path="/missing/fake.pt"
     )
-    health = vision_health(yoloe_segmenter=fake)
+    health = vision_health(segmenter=fake)
 
     assert health["status"] == "not_ready"
     assert health["ready"] is False
     assert health["segmenter"]["ready"] is False
     assert health["segmenter"]["loaded"] is False
-    assert health["segmenter"]["model_path"] == "/missing/yoloe.pt"
+    assert health["segmenter"]["model_path"] == "/missing/fake.pt"
     assert health["segmenter"]["detail"] == "尚未加载"
 
 
-def test_vision_health_uses_monkeypatched_yoloe_segmenter(monkeypatch):
-    """vision_health 通过 YoloeSegmenter 类获取健康信息，便于注入测试。"""
-    fake = _FakeYoloeSegmenter(ready=True, version="test-ver", model_path="mock.pt")
-    monkeypatch.setattr(health_module, "YoloeSegmenter", lambda: fake)
-    health = vision_health()
+def test_heavy_imports_isolated_in_adapters() -> None:
+    """隔离门禁：全 vision 包禁止直接 import ultralytics（t110 AGPL 清偿
+    后应零命中）；torch/transformers/rfdetr 仅限 aesthetic.py 与
+    segmenters/ 各适配器文件内（t90 多模型扩展隔离岛纪律）。"""
+    import ast
+    from pathlib import Path
 
-    assert health["segmenter"]["ready"] is True
-    assert health["segmenter"]["version"] == "test-ver"
-    assert health["segmenter"]["model_path"] == "mock.pt"
+    vision_dir = (Path(__file__).resolve().parents[2] / "src" / "pixo" / "vision")
+    segmenters_dir = vision_dir / "segmenters"
+    torch_allowed_files = {vision_dir / "aesthetic.py"}
+    forbidden_ultralytics = "ultralytics"
+    heavy_roots = {"torch", "transformers", "rfdetr"}
+
+    def _assert_allowed(py_file, root):
+        in_segmenters = py_file.parent == segmenters_dir
+        if root == forbidden_ultralytics:
+            raise AssertionError(
+                f"{py_file} 不允许直接 import {root}（AGPL 依赖已清零，t110）"
+            )
+        if root in heavy_roots:
+            assert py_file in torch_allowed_files or in_segmenters, (
+                f"{py_file} 不允许直接 import {root}（仅 aesthetic 与 "
+                f"segmenters/ 各适配器文件内允许）"
+            )
+
+    for py_file in vision_dir.rglob("*.py"):
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    _assert_allowed(py_file, alias.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    _assert_allowed(py_file, node.module.split(".")[0])
