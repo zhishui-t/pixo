@@ -69,9 +69,11 @@ def _lut_cache_put(key: tuple, lut: LUT3D) -> None:
 
 
 def load_lut(style_id: str) -> LUT3D:
-    """加载注册 LUT (缓存), 并预热 256³ 查表。
+    """加载注册 LUT (缓存)。仅解析 .cube（快）；不预热 256³ 查表。
 
-    首次加载含建表 ~16s (一次); 之后 apply 命中缓存 ~0.2s (half_size)。
+    256³ u8 表由 ``apply()`` 惰性构建——现仅测试与金样本生成器走该路径；
+    stylize 生产路径走 ``apply_f32``（native float 四面体）不建表，加载期
+    建表（~16s/表）已成为纯浪费，t111 移除。
     """
     key = ("id", str(style_id))
     lut = _lut_cache_get(key)
@@ -81,7 +83,6 @@ def load_lut(style_id: str) -> LUT3D:
     if not name:
         raise KeyError(f"未注册 LUT: {style_id} (可选: {list(_LUT_REGISTRY)})")
     lut = LUT3D.from_cube(_LUT_DIR / name)
-    lut._build_table()  # 预热查表 (一次性, 分块)
     _lut_cache_put(key, lut)
     return lut
 
@@ -91,12 +92,12 @@ def load_lut_path(path) -> LUT3D:
 
     供 stylize stage 的 lut_path 参数使用；此前 StylizeStage._loaded 把
     路径串喂给 load_lut（注册表查不到必然 KeyError），本入口才是路径语义。
+    同 load_lut：仅解析，不预热 u8 表。
     """
     key = ("path", str(path))
     lut = _lut_cache_get(key)
     if lut is not None:
         return lut
     lut = LUT3D.from_cube(Path(path))
-    lut._build_table()
     _lut_cache_put(key, lut)
     return lut

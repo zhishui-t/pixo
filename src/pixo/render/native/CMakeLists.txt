@@ -26,6 +26,7 @@ add_library(pixo_render_native SHARED
     src/colorcal.cpp
     src/refine.cpp
     src/stage_kernels.cpp
+    src/lut3d.cpp
 )
 
 # MinGW 默认加 lib 前缀, 这里去掉, 统一输出 pixo_render_native.dll

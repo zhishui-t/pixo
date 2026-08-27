@@ -7,6 +7,8 @@
   - apply_local_warm_sat_native: M1 broad 分支整段内核。
   - colorcal_apply_lab_f32: colorcal 全量 Lab float 域内核 (v1.2.0, 生产路径);
     colorcal_apply_lab (uint8 Lab 域) 为兼容保留。
+  - lut3d_apply_f32: stylize 3D LUT 四面体插值 float 内核 (v1.3.0, 生产路径,
+    逐位对齐 lut3d.lookup 的 float32 语义)。
   - version: ABI 版本查询 (major==1 才视为可用)。
 
 若 DLL 不存在或加载失败, 本模块保持可导入, 由调用方回退纯 Python。
@@ -172,6 +174,18 @@ class PixoRenderClarityParams(ctypes.Structure):
         ("gray", ctypes.POINTER(ctypes.c_float)),
         ("smallBlur", ctypes.POINTER(ctypes.c_float)),
         ("largeBlur", ctypes.POINTER(ctypes.c_float)),
+    ]
+
+
+class PixoRenderLut3DParams(ctypes.Structure):
+    _fields_ = [
+        ("lut", ctypes.POINTER(ctypes.c_float)),    # size^3 * 3, [r,g,b] 序
+        ("size", ctypes.c_int),                     # N >= 2
+        ("domainMin", ctypes.c_float),              # f32(DOMAIN_MIN)
+        ("domainSpan", ctypes.c_float),             # f32(DOMAIN_MAX - DOMAIN_MIN)
+        ("shaper", ctypes.POINTER(ctypes.c_float)), # 可选 1D LUT, None = 无
+        ("shaperSize", ctypes.c_int),               # shaper 非空时 >= 2
+        ("strength", ctypes.c_double),              # 0..1 混合 (f64 对齐 Python)
     ]
 
 
@@ -360,6 +374,18 @@ if _DLL_PATH.exists():
                 ctypes.c_int,                     # width
                 ctypes.c_int,                     # height
                 ctypes.POINTER(PixoRenderClarityParams),
+            ]
+        # 1.3.0: stylize LUT3D 四面体插值 float 内核 (对齐 lut3d.lookup 的
+        # float32 语义)。旧 v1.2 DLL 未导出时不影响加载, 调用方
+        # (core/lut3d.py apply_f32) 回退纯 numpy lookup 实现。
+        if hasattr(_lib, "PixoRenderLut3DApplyF32"):
+            _lib.PixoRenderLut3DApplyF32.restype = ctypes.c_int
+            _lib.PixoRenderLut3DApplyF32.argtypes = [
+                ctypes.POINTER(ctypes.c_float),   # rgb
+                ctypes.POINTER(ctypes.c_float),   # out
+                ctypes.c_int,                     # width
+                ctypes.c_int,                     # height
+                ctypes.POINTER(PixoRenderLut3DParams),
             ]
 
         # ABI 版本检查：v1.0 旧 DLL 没有 PixoRenderVersion 符号时容忍加载,
@@ -623,6 +649,67 @@ def clarity_apply(rgb: np.ndarray, strength: float, gray: np.ndarray,
         smallBlur=_f32_ptr(sb),
         largeBlur=_f32_ptr(lb))
     ret = _lib.PixoRenderClarityApply(
+        arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        out.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.c_int(w), ctypes.c_int(h), ctypes.byref(params))
+    _check_status(ret)
+    return out
+
+
+def lut3d_apply_f32(rgb: np.ndarray, lut: np.ndarray,
+                    domain_min: float = 0.0, domain_max: float = 1.0,
+                    shaper: np.ndarray | None = None,
+                    strength: float = 1.0) -> np.ndarray:
+    """调用 C++ 3D LUT 四面体插值内核 (v1.3.0)；返回 float32 RGB (H,W,3)。
+
+    与 render.core.lut3d.LUT3D.lookup 逐位对齐 (权重/MAC 在 float64、
+    末端舍入 float32, 与 numpy NEP50 数组提升语义一致):
+      rgb   : (H,W,3) float32 ∈ [0,1] (越界按 DOMAIN 窗口截断, 与 lookup 一致);
+      lut   : (N,N,N,3) float32 表数据 (索引序 [r,g,b], r 最慢 b 最快);
+      shaper: 可选 (m,) float32 1D shaper (先于 3D 查表线性插值);
+      strength: 0..1 与原图混合 (0=原图), 与 apply() 的混合语义一致但全程
+              float 不经 u8 量化。
+    无状态设计: 表指针每次调用传入, 缓存由 LUT3D 实例侧管理。
+    DLL < 1.3.0 未导出该符号时抛 RuntimeError, 调用方回退 numpy lookup。
+    """
+    _require_lib()
+    if not hasattr(_lib, "PixoRenderLut3DApplyF32"):
+        raise RuntimeError("native lut3d F32 kernel unavailable (DLL 未导出)")
+    arr = np.ascontiguousarray(rgb, dtype=np.float32)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(f"rgb 须为 (H,W,3), 实际 {arr.shape}")
+    table = np.ascontiguousarray(lut, dtype=np.float32)
+    if table.ndim != 4 or table.shape[3] != 3 or \
+            table.shape[0] != table.shape[1] or table.shape[1] != table.shape[2]:
+        raise ValueError(f"lut 须为 (N,N,N,3), 实际 {table.shape}")
+    size = int(table.shape[0])
+    if size < 2:
+        raise ValueError(f"lut size 至少 2, 实际 {size}")
+    if shaper is not None:
+        sh = np.ascontiguousarray(shaper, dtype=np.float32).reshape(-1)
+        if sh.size < 2:
+            raise ValueError(f"shaper 至少 2 点, 实际 {sh.size}")
+        shaper_size = int(sh.size)
+        shaper_ptr = sh.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    else:
+        shaper_size = 0
+        shaper_ptr = None
+    if not (float(domain_max) > float(domain_min)):
+        raise ValueError(f"非法 DOMAIN: [{domain_min}, {domain_max}]")
+    h, w = arr.shape[:2]
+    out = np.empty((h, w, 3), dtype=np.float32)
+    params = PixoRenderLut3DParams(
+        lut=table.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        size=size,
+        domainMin=float(domain_min),
+        # span 以 Python float64 计算后舍入 f32, 对齐 numpy 标量语义
+        # ((x-dmin)/(dmax-dmin) 中 span 先 f64 后 f32) —— 见内核头注释。
+        domainSpan=float(domain_max) - float(domain_min),
+        shaper=shaper_ptr,
+        shaperSize=shaper_size,
+        strength=float(strength),
+    )
+    ret = _lib.PixoRenderLut3DApplyF32(
         arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
         ctypes.c_int(w), ctypes.c_int(h), ctypes.byref(params))
@@ -927,6 +1014,7 @@ __all__ = ["available", "load_error", "version", "rgb_to_hsv", "hsv_to_rgb",
            "PixoRenderVersion", "PixoRenderColorCalParams", "PixoRenderCfaDecodeParams",
            "PixoRenderExposureParams", "PixoRenderMatrixApply3Params",
            "PixoRenderToneApplyLut1DParams", "PixoRenderClarityParams",
+           "PixoRenderLut3DParams",
            "apply_local_warm_sat_native", "decode_cfa_half",
            "colorcal_apply_lab", "colorcal_apply_lab_f32", "gamut_soft",
            "PixoRenderRefineSatProtectionParams",
@@ -935,4 +1023,4 @@ __all__ = ["available", "load_error", "version", "rgb_to_hsv", "hsv_to_rgb",
            "PixoRenderWarmGammaParams", "refine_sat_protection", "refine_sharpen",
            "refine_chroma", "refine_highlight", "refine_apply",
            "warm_sat_gamma_u8", "exposure_apply", "matrix_apply3",
-           "tone_apply_lut1d", "clarity_apply"]
+           "tone_apply_lut1d", "clarity_apply", "lut3d_apply_f32"]

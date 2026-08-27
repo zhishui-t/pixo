@@ -1,6 +1,8 @@
 """Stage stylize (order=60) —— 风格化 (gamma_rgb → gamma_rgb)。
 
-复用 render.core.lut.LUT3D (sRGB gamma 域查表, 性能已验证 0.21s)。
+复用 render.core.lut.LUT3D (sRGB gamma 域查表)。float 直查路径
+(apply_f32, native C++ 四面体内核 v1.3.0) 为生产路径 —— 全程 float 无
+u8 量化; 旧 u8 256³ 查表路径 (apply) 保留给既有调用方/测试。
 LUT 通过 params["lut"] 传入 (LUT3D 实例) 或 params["lut_path"] 惰性加载。
 
 参数:
@@ -9,8 +11,6 @@ LUT 通过 params["lut"] 传入 (LUT3D 实例) 或 params["lut_path"] 惰性加�
   lut_strength  强度 0..1 (0=不套)
 """
 from __future__ import annotations
-
-import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_GAMMA_RGB
@@ -52,6 +52,8 @@ class StylizeStage(Stage):
         strength = float(self.p(ctx, "lut_strength"))
         if lut is None or strength <= 0.0:
             return
-        u8 = (np.clip(ctx.image, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
-        out8 = lut.apply(u8, strength=strength)
-        ctx.set_image(out8.astype(np.float32) / 255.0, DOMAIN_GAMMA_RGB)
+        # float 直查路径 (native C++ 四面体内核, v1.3.0): 输入不经 u8 量化、
+        # 输出不落 /255 网格, 回收旧 u8 路径 ~0.22 ΔE 的量化损失。
+        # native 缺席时 apply_f32 内部回退 numpy lookup (同式, 慢但正确)。
+        out = lut.apply_f32(ctx.image, strength=strength)
+        ctx.set_image(out, DOMAIN_GAMMA_RGB)

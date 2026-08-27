@@ -98,8 +98,14 @@ def _interp1d(lut: np.ndarray, x: np.ndarray) -> np.ndarray:
 class LUT3D:
     """3D LUT: 四面体插值查找 (Kasson 1993)。
 
-    应用性能: 256³ 预计算查表 (分块构建, 峰值内存 <512MB, 惰性缓存),
-    之后 apply() 直接整数索引, half_size (3032x2020) ≈ 0.2s。
+    应用性能 (两条路径):
+      - apply_f32 (生产, stylize): native C++ 四面体内核 (v1.3.0), 全程
+        float 无 u8 量化 (预览 ~0.1s / 全幅 ~0.4s, OpenMP); native 缺席时
+        回退 numpy lookup (同式, 慢 ~8×)。
+      - apply (u8 兼容路径, 保留给既有调用方/测试): 256³ 预计算查表
+        (分块构建, 峰值内存 <512MB, 惰性缓存), 之后整数索引,
+        half_size (3032x2020) ≈ 0.2s —— 但输入/输出被 u8 网格量化
+        (~0.2-0.4 ΔE 精度损失, float 化改造的动因)。
     """
 
     def __init__(self, data: np.ndarray, shaper: np.ndarray | None = None,
@@ -147,6 +153,42 @@ class LUT3D:
         """
         t = self._prepare_input(np.asarray(x, dtype=np.float32))
         return tetrahedral_interp(self.data, t * self.scale)
+
+    def apply_f32(self, img: np.ndarray, strength: float = 1.0) -> np.ndarray:
+        """应用 LUT 到 float RGB 图 (H,W,3) —— 全程 float, 无 u8 量化。
+
+        生产路径 (stylize stage): native DLL >= 1.3.0 的 C++ 四面体内核
+        (PixoRenderLut3DApplyF32) —— 与 lookup() 同一算式、同一精度语义
+        (权重/MAC 在 float64, 末端舍入 float32; 等价性由
+        tests/unit/test_lut_native.py 锁定, 实测逐位相等),
+        预览档 ~0.1s / 全幅 ~0.4s 量级。无状态: 表/shaper 指针每次传入。
+
+        回退路径 (native 不可用): numpy lookup() (同式同结果, 但慢 ~8×,
+        本机基线预览档 ~4.7s / 全幅 ~18.7s —— 仅保正确性, 性能不达预览档)。
+
+        img     : (H,W,3) float32, 建议 [0,1]; 越界值按 DOMAIN 窗口截断
+                  (与 lookup 一致)。输出不截断 —— LUT 表值域外的尾部保留。
+        strength: 0..1 与原图混合 (0=原图), float 域直接混合 (不经 u8 网格,
+                  混合式与 apply() 的 strength 语义一致)。
+        """
+        img = np.asarray(img, dtype=np.float32)
+        if img.ndim != 3 or img.shape[2] != 3:
+            raise ValueError(f"img 须为 (H,W,3), 实得 {img.shape}")
+        strength = float(strength)
+        try:
+            from .._native import (available as _native_available,
+                                   lut3d_apply_f32 as _native_lut3d)
+            if _native_available():
+                return _native_lut3d(
+                    img, self.data, domain_min=self.domain_min,
+                    domain_max=self.domain_max, shaper=self.shaper,
+                    strength=strength)
+        except Exception:
+            pass  # native 不可用/失败 → numpy 回退 (同式, 慢但正确)
+        out = self.lookup(img)
+        if strength < 1.0:
+            out = img * (1.0 - strength) + out * strength
+        return out.astype(np.float32, copy=False)
 
     def _build_table(self, chunk: int = 16) -> None:
         """分块预计算 256³ 查表 (uint8 输出, 最终 50MB)。

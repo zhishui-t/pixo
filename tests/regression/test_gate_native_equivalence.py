@@ -8,6 +8,7 @@ import pytest
 from pixo.render import _native as native
 from pixo.render.core.curves import apply_lut1d_fast
 from pixo.render.core.enhance import _gray, clarity
+from pixo.render.core.lut3d import LUT3D
 from pixo.render.modules.exposure import soft_highlight_rolloff
 
 pytestmark = pytest.mark.gate
@@ -44,3 +45,16 @@ def test_clarity_native_equiv(random_small):
     out_n = native.clarity_apply(random_small, s, g, small, large)
     out_p = clarity(random_small, strength=s)
     assert np.abs(out_n - out_p).max() <= 1e-6
+
+
+def test_lut3d_native_equiv(random_small):
+    """v1.3.0 lut3d 四面体内核 vs LUT3D.lookup (numpy 参考)。"""
+    n = 17
+    rng = np.random.default_rng(20260826)
+    data = rng.random((n, n, n, 3), dtype=np.float32) * 1.1 - 0.05
+    lut = LUT3D(data, domain_min=0.1, domain_max=0.9)
+    img = np.clip(random_small, -0.2, 1.2)   # 覆盖 DOMAIN 窗口外截断
+    out_n = lut.apply_f32(img, strength=0.6)
+    ref = lut.lookup(img)
+    ref = img * (1.0 - 0.6) + ref * 0.6
+    assert np.abs(out_n - ref.astype(np.float32)).max() <= 1e-6

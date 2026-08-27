@@ -347,29 +347,34 @@ def _patch_native(monkeypatch):
 
 
 def test_decode_cache_lru_evicts_oldest_not_all(monkeypatch, tmp_path):
+    """字节预算 LRU (PIXO_DECODE_CACHE_MB): 超预算淘汰最旧而非全清; 命中刷新
+    recency 后新插入淘汰的是次旧条目 (原条数上限版行为在字节预算下等价保留)。"""
     calls = _patch_native(monkeypatch)
     monkeypatch.setattr(core_io, "_DECODE_CACHE_DIR", tmp_path / "dc")
     monkeypatch.setattr(core_io, "_DECODE_CACHE", OrderedDict())
+    # fake 条目 (4,4,3) float32 = 192 B; 预算 1 KiB → 5 条 (960B) 达标,
+    # 第 6 条 (1152B) 触发淘汰最旧一条。
+    monkeypatch.setenv("PIXO_DECODE_CACHE_MB", str(1024 / 2**20))
 
     paths = []
-    for i in range(9):  # 超过 _LRU_MAX=8
+    for i in range(6):  # 第 6 条超预算 → 淘汰最旧 f0
         p = tmp_path / f"f{i}.nef"
         p.write_bytes(b"x" * (i + 1))  # size 不同 → key 不同
         paths.append(p)
         core_io.decode_cfa_half(_FakeIoRaw(), raw_path=p)
-    assert len(calls) == 9
-    assert len(core_io._DECODE_CACHE) == 8  # 全清会变 1
+    assert len(calls) == 6
+    assert len(core_io._DECODE_CACHE) == 5  # 全清会变 1
 
     # 命中刷新 recency 后再插入新 key：淘汰的是次旧而非刚命中的热点
-    core_io.decode_cfa_half(_FakeIoRaw(), raw_path=paths[8])  # 命中最旧(第9个)
+    core_io.decode_cfa_half(_FakeIoRaw(), raw_path=paths[5])  # 命中最旧(第6个)
     p_new = tmp_path / "f_new.nef"
     p_new.write_bytes(b"y" * 99)
     core_io.decode_cfa_half(_FakeIoRaw(), raw_path=p_new)
-    assert len(calls) == 10
-    assert len(core_io._DECODE_CACHE) == 8
-    # paths[8] 刚被访问过必须仍在缓存；最久未访问的 paths[1] 被淘汰
+    assert len(calls) == 7
+    assert len(core_io._DECODE_CACHE) == 5
+    # paths[5] 刚被访问过必须仍在缓存；最久未访问的 paths[1] 被淘汰
     keys = {k[0] for k in core_io._DECODE_CACHE}
-    assert str(paths[8]) in keys
+    assert str(paths[5]) in keys
     assert str(paths[1]) not in keys
 
 
@@ -420,6 +425,22 @@ def test_load_lut_path_cached_and_lru_capped(lut_env, monkeypatch, tmp_path):
     lut1 = lut_mod.load_lut_path(cube)
     lut2 = lut_mod.load_lut_path(cube)
     assert lut1 is lut2            # 命中缓存，同一对象
+    # t111: 加载不再预热 256³ 表（stylize 走 apply_f32），builds 应为 0
+    assert len(lut_env["builds"]) == 0
+    # u8 表由 apply() 惰性构建，且只建一次——fixture 的 no-op 建表会让
+    # apply 拿到 None 表，这里换成"分配零表+记录"的假件（零分配瞬时）
+    import numpy as np
+
+    def fake_build(self, chunk=16):
+        if self._table is not None:   # 镜像真实现的幂等守卫（:199）
+            return
+        lut_env["builds"].append(1)
+        self._table = np.zeros((256, 256, 256, 3), dtype=np.uint8)
+
+    monkeypatch.setattr(lut3d.LUT3D, "_build_table", fake_build)
+    probe = np.zeros((2, 2, 3), dtype=np.uint8)
+    lut1.apply(probe)
+    lut1.apply(probe)
     assert len(lut_env["builds"]) == 1
 
     for i in range(5):  # 加 5 个不同路径 → 总 6 超上限 4
@@ -427,7 +448,7 @@ def test_load_lut_path_cached_and_lru_capped(lut_env, monkeypatch, tmp_path):
         _write_cube(p, f"b{i}")
         lut_mod.load_lut_path(p)
     assert len(lut_mod._LUT_CACHE) == lut_mod._LUT_CACHE_MAX == 4
-    assert len(lut_env["builds"]) == 6  # 每个新路径只构建一次
+    assert len(lut_env["builds"]) == 1  # 纯加载不建表（t111）
 
 
 def test_load_lut_and_path_share_one_cache(lut_env, monkeypatch, tmp_path):
