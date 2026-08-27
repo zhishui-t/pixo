@@ -5,6 +5,8 @@
     的 NumPy 实现 (用于 apply_local_warm_sat 热点)。
   - rgb_to_hsv_f32 / hsv_to_rgb_f32: float32 版本。
   - apply_local_warm_sat_native: M1 broad 分支整段内核。
+  - colorcal_apply_lab_f32: colorcal 全量 Lab float 域内核 (v1.2.0, 生产路径);
+    colorcal_apply_lab (uint8 Lab 域) 为兼容保留。
   - version: ABI 版本查询 (major==1 才视为可用)。
 
 若 DLL 不存在或加载失败, 本模块保持可导入, 由调用方回退纯 Python。
@@ -234,8 +236,20 @@ if _DLL_PATH.exists():
         if hasattr(_lib, "PixoRenderColorCalApplyLab"):
             _lib.PixoRenderColorCalApplyLab.restype = ctypes.c_int
             _lib.PixoRenderColorCalApplyLab.argtypes = [
-                ctypes.POINTER(ctypes.c_float),   # lab
+                ctypes.POINTER(ctypes.c_float),   # lab (uint8 Lab 域, float 视图)
                 ctypes.POINTER(ctypes.c_uint8),   # labOut
+                ctypes.c_int,                     # width
+                ctypes.c_int,                     # height
+                ctypes.POINTER(PixoRenderColorCalParams),
+            ]
+        # 1.2.0: colorcal float Lab 域内核 (cv2 float Lab: L∈[0,100], a/b 中心
+        # 0, float32 入/出)。旧 v1.1 DLL 未导出时不影响加载, 调用方
+        # (modules/color_cal.py) 回退纯 Python float 实现。
+        if hasattr(_lib, "PixoRenderColorCalApplyLabF32"):
+            _lib.PixoRenderColorCalApplyLabF32.restype = ctypes.c_int
+            _lib.PixoRenderColorCalApplyLabF32.argtypes = [
+                ctypes.POINTER(ctypes.c_float),   # lab (float Lab 域)
+                ctypes.POINTER(ctypes.c_float),   # labOut (float Lab 域)
                 ctypes.c_int,                     # width
                 ctypes.c_int,                     # height
                 ctypes.POINTER(PixoRenderColorCalParams),
@@ -654,7 +668,11 @@ def apply_local_warm_sat_native(rgb: np.ndarray, params: PixoRenderWarmSatParams
 
 
 def colorcal_apply_lab(lab: np.ndarray, params: PixoRenderColorCalParams) -> np.ndarray:
-    """调用 C++ M2 全量 Lab 内核；返回 uint8 Lab (H,W,3)。"""
+    """调用 C++ M2 全量 Lab 内核（旧, uint8 Lab 域）；返回 uint8 Lab (H,W,3)。
+
+    16bit 精度改造后生产 stage 改用 colorcal_apply_lab_f32; 本内核仅为
+    ABI 向后兼容与 scripts/measure_u8_precision.py 保真自检保留。
+    """
     _require_lib()
     if not hasattr(_lib, "PixoRenderColorCalApplyLab"):
         raise RuntimeError("native colorcal kernel unavailable (DLL 未导出)")
@@ -666,6 +684,35 @@ def colorcal_apply_lab(lab: np.ndarray, params: PixoRenderColorCalParams) -> np.
     ret = _lib.PixoRenderColorCalApplyLab(
         arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
+        ctypes.c_int(w),
+        ctypes.c_int(h),
+        ctypes.byref(params),
+    )
+    _check_status(ret)
+    return out
+
+
+def colorcal_apply_lab_f32(lab: np.ndarray,
+                           params: PixoRenderColorCalParams) -> np.ndarray:
+    """调用 C++ float Lab 域全量内核；返回 float32 Lab (H,W,3)。
+
+    输入/输出均为 cv2 float Lab 坐标 (L∈[0,100], a/b 中心 0) —— 注意与旧
+    colorcal_apply_lab 的 uint8 Lab 域 (L∈[0,255], a/b 中心 128) 是两套标度,
+    换算 L_f=L_u8*100/255, a_f=a_u8-128, b_f=b_u8-128。params 结构两内核
+    同布局 (曲线值为 a/b 偏移, 域不变; 亮度节点由内核各自解释)。
+    DLL < 1.2.0 未导出该符号时抛 RuntimeError, 调用方回退纯 Python float 实现。
+    """
+    _require_lib()
+    if not hasattr(_lib, "PixoRenderColorCalApplyLabF32"):
+        raise RuntimeError("native colorcal F32 kernel unavailable (DLL 未导出)")
+    arr = np.ascontiguousarray(lab, dtype=np.float32)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(f"lab 须为 (H,W,3), 实际 {arr.shape}")
+    h, w = arr.shape[:2]
+    out = np.empty((h, w, 3), dtype=np.float32)
+    ret = _lib.PixoRenderColorCalApplyLabF32(
+        arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        out.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
         ctypes.c_int(w),
         ctypes.c_int(h),
         ctypes.byref(params),
@@ -881,7 +928,8 @@ __all__ = ["available", "load_error", "version", "rgb_to_hsv", "hsv_to_rgb",
            "PixoRenderExposureParams", "PixoRenderMatrixApply3Params",
            "PixoRenderToneApplyLut1DParams", "PixoRenderClarityParams",
            "apply_local_warm_sat_native", "decode_cfa_half",
-           "colorcal_apply_lab", "gamut_soft", "PixoRenderRefineSatProtectionParams",
+           "colorcal_apply_lab", "colorcal_apply_lab_f32", "gamut_soft",
+           "PixoRenderRefineSatProtectionParams",
            "PixoRenderRefineSharpenParams", "PixoRenderRefineChromaParams",
            "PixoRenderRefineHighlightParams", "PixoRenderRefineApplyParams",
            "PixoRenderWarmGammaParams", "refine_sat_protection", "refine_sharpen",

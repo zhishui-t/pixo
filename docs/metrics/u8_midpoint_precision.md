@@ -335,3 +335,11 @@ python scripts/measure_u8_precision.py --pick-only
 Baseline.dcp`, 生产预设 `configs/styles/lr_adobe_standard_baseline.json` 与
 `lr_baseline.json`, LUT 注册表指向的 `guanlan/luts`。脚本不修改任何 src/ 代码,
 所有 patch 仅进程内 monkeypatch。
+
+---
+
+## 附记（t109 改造落地）
+
+- **colorcal Lab 路径已完成 float 化**（native 新内核 `PixoRenderColorCalApplyLabF32` + Python float 镜像 + legacy u8 链仅作异常兜底）：上表 colorcal 行的 0.81 ΔE / 24.7% 像素越阈**已兑现回收**，交叉验证见 test_native_colorcal 精度哨兵（输出不再钉死 1/255 网格）；暗样本（DSC_5236）收益更大（legacy vs float mean 1.075 ΔE / 47.8% 越阈）。附带修复：Python 肤色掩码误用中性校正后 a/b 的真 bug。
+- **stylize LUT 决策为不实施**（numpy float 插值慢 8.1×、最优向量化仍 3.9×、零 gather 算术下界亦超预算 3.5×——本机基准），后续若回收走 native C++ 内核路线（另案）。
+- **refine warm HSV** 维持原判（视 lr_baseline 预设使用率），sat_protection 不值得改。

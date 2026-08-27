@@ -1,5 +1,11 @@
 """量化渲染管线三处 uint8 中转量化的精度代价 (16-bit 导出精度改造 go/no-go 依据)。
 
+[状态更新 t109] colorcal Lab 路径已完成 float 化改造 (native F32 内核
+PixoRenderColorCalApplyLabF32 + Python float 镜像, 旧 u8 链保留为 legacy
+兜底)。本脚本的 colorcal 段因此测量的是 legacy-u8 链 vs float 生产路径的
+增益 (即已兑现的收益, 保留作历史依据与回归参照); stylize/refine 段仍为
+现状测量。详细结论见 docs/metrics/u8_midpoint_precision.md 附记。
+
 被测三处量化点 (渲染深审定位, 详见 docs/metrics/u8_midpoint_precision.md):
   1. modules/color_cal.py  全量 Lab 路径:
        - 输入端  : `u8 = (img*255+0.5).astype(np.uint8)` + `cv2.cvtColor(u8, RGB2LAB)`

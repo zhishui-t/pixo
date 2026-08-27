@@ -1,5 +1,10 @@
 """Stage colorcal (order=50) —— 色彩校准 (gamma_rgb → gamma_rgb, Lab 域)。
 
+16bit 精度改造: 全量路径 float 全链 (cv2 float Lab, L∈[0,100], a/b 中心 0),
+不再经 uint8 Lab 中转; uint8 Lab 域与 float Lab 域的逐处换算见
+_NEUTRAL_CENTERS_F 处注释。仅中性校正的快速路径 _apply_neutral_fast 的
+u8 测量端未动 (生产预设不走该路径, W4 未测)。
+
 原则 (替代旧管线 HSV +12 饱和 / WB_CAL=0.9 全局补丁):
   - **中性轴校准**: neutral_a/neutral_b 只作用于低色度区 (高斯权重按 C 衰减),
     修正系统性中性偏色, 但不污染饱和色 (WB_CAL 的教训)。
@@ -29,6 +34,55 @@ from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_GAMMA_RGB
 
 _NEUTRAL_CENTERS = np.array([8, 32, 72, 128, 184, 224, 248], dtype=np.float32)
+
+# ---- float Lab 域 (16bit 精度改造) ----
+# 全量路径不再经 uint8 Lab 中转 (W4 实测三段量化合计 0.81 ΔE76 / 24.7% 像素
+# >1ΔE, 见 docs/metrics/u8_midpoint_precision.md)。cv2 float Lab 与 uint8 Lab
+# 是两套标度: float 域 L∈[0,100]、a/b 中心 0; uint8 域 L∈[0,255]、a/b 中心 128。
+# 换算: L_f = L_u8*100/255; a_f = a_u8-128; b_f = b_u8-128。
+# a/b 轴两域只差常数偏移 128, 单位长度相同 —— 所有 a/b 偏移量 (neutral_a/b、
+# 曲线值、skin_trim)、色度 C 及其阈值 (plateau=12, neutral_sigma, vibrance
+# 参考色度 128) 数值不变; 只有 L 轴 (差 2.55 倍) 与中心偏移量需要换算:
+#   - 曲线插值亮度节点: uint8 域 _NEUTRAL_CENTERS → float 域 _NEUTRAL_CENTERS_F
+#   - 肤色椭圆中心: (140,150)_u8 → (12,22)_f (半径/倾角/软边不变)
+#   - 色相旋转中心: 128 → 0
+#   - 输出限幅: L [0,255]→[0,100], a/b [0,255]→[-128,127]
+_NEUTRAL_CENTERS_F = _NEUTRAL_CENTERS.astype(np.float64) * (100.0 / 255.0)
+
+# 肤色椭圆 float Lab 域常量 (core/skin.py 的 uint8 域中心 140/150 偏移 -128;
+# 半径 22/14、倾角 0.65、软边 0.25 与 a/b 轴单位一起保持不变)。
+_SKIN_F_A = 12.0
+_SKIN_F_B = 22.0
+_SKIN_F_MAJOR = 22.0
+_SKIN_F_MINOR = 14.0
+_SKIN_F_ANGLE = 0.65
+_SKIN_F_SOFT = 0.25
+
+
+def _rgb_to_lab_f(img: np.ndarray) -> np.ndarray:
+    """float RGB [0,1] → cv2 float Lab (float32, L∈[0,100], a/b 中心 0)。"""
+    return cv2.cvtColor(np.ascontiguousarray(img, dtype=np.float32),
+                        cv2.COLOR_RGB2LAB)
+
+
+def _lab_f_to_rgb(lab: np.ndarray) -> np.ndarray:
+    """cv2 float Lab → float RGB [0,1] 附近 (越界值由 gamut_soft/clip 收)。"""
+    return cv2.cvtColor(np.ascontiguousarray(lab, dtype=np.float32),
+                        cv2.COLOR_LAB2RGB)
+
+
+def _skin_mask_lab_f(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """float Lab 域肤色椭圆软掩码 —— 与 colorcal.cpp SkinMaskF32 同式
+    (uint8 域 core/skin.py::skin_mask 的换域版, 去掉 RGB→u8→Lab 量化)。"""
+    cos_a, sin_a = np.cos(_SKIN_F_ANGLE), np.sin(_SKIN_F_ANGLE)
+    da = a - np.float32(_SKIN_F_A)
+    db = b - np.float32(_SKIN_F_B)
+    u = da.astype(np.float64) * cos_a + db.astype(np.float64) * sin_a
+    v = -da.astype(np.float64) * sin_a + db.astype(np.float64) * cos_a
+    d2 = (u / _SKIN_F_MAJOR) ** 2 + (v / _SKIN_F_MINOR) ** 2
+    d = np.sqrt(np.maximum(d2, 0.0)).astype(np.float32)
+    t = np.clip((d - 1.0) / _SKIN_F_SOFT, 0.0, 1.0)
+    return (1.0 - t * t * (3.0 - 2.0 * t)).astype(np.float32)
 
 # 场景色偏窗口 (问题清单 B4/A4): 同一暖尾色温下方向不一致的 outlier,
 # 用 (wb_R, wb_B) 二维窗口做有界 Lab 色偏修正 (单键 wb_B 无法区分)。
@@ -281,111 +335,204 @@ class ColorCalStage(Stage):
             return
 
         gs = float(self.p(ctx, "gamut_soft"))
-        u8 = (img * 255.0 + 0.5).astype(np.uint8)
-        lab = cv2.cvtColor(u8, cv2.COLOR_RGB2LAB).astype(np.float32)
-
-        # M2 原生全量 Lab 路径: 一次计算 skinMask, 消除 Python 侧重复计算。
-        native_ok = False
+        # ---- 16bit 精度改造: 全量路径 float 全链, 分层回退 ----
+        # ① native F32 内核 PixoRenderColorCalApplyLabF32 (DLL ≥1.2.0):
+        #    cv2 float Lab (L∈[0,100], a/b 中心 0) 入/出, 生产首选;
+        # ② 纯 Python float Lab 实现 (与 ① 逐式对应): 仅依赖本模块已用的
+        #    cv2 float cvtColor, 无新增环境依赖 → ① 不可用时总可达;
+        # ③ 旧 u8 链 _full_path_u8_legacy: 原 uint8 Lab 往返实现逐行保留,
+        #    仅当 ② 也失败 (cv2 float Lab 转换不可用等异常环境) 才兜底。
+        #    旧 native uint8 内核 (PixoRenderColorCalApplyLab) 仅为 ABI 向后
+        #    兼容保留导出, 本 stage 不再路由。域换算清单见模块头
+        #    _NEUTRAL_CENTERS_F 处注释。
         try:
-            from .._native import (available as _native_available,
-                                   colorcal_apply_lab as _native_colorcal_apply_lab,
-                                   gamut_soft as _native_gamut_soft,
-                                   PixoRenderColorCalParams)
-            if _native_available():
-                curve_a = (np.asarray(a_curve, dtype=np.float32)
-                           if a_curve is not None else None)
-                curve_b = (np.asarray(b_curve, dtype=np.float32)
-                           if b_curve is not None else None)
-                params = PixoRenderColorCalParams(
-                    saturation=sat, vibrance=vib, hueDeg=hue,
-                    neutralA=na, neutralB=nb, neutralSigma=sigma,
-                    skinProtect=skin, skinTrimA=skin_trim_da,
-                    skinTrimB=skin_trim_db,
-                    curveA=(curve_a.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-                            if curve_a is not None else None),
-                    curveB=(curve_b.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-                            if curve_b is not None else None))
-                lab2 = _native_colorcal_apply_lab(lab, params)
-                out = cv2.cvtColor(lab2, cv2.COLOR_LAB2RGB)
-                out = out.astype(np.float32) / 255.0
-                if gs > 0.0:
-                    out = _native_gamut_soft(out, gs)
-                else:
-                    out = np.clip(out, 0.0, 1.0)
-                ctx.set_image(out, DOMAIN_GAMMA_RGB)
-                native_ok = True
-        except Exception:
+            lab = _rgb_to_lab_f(img)
             native_ok = False
+            try:
+                from .._native import (available as _native_available,
+                                       colorcal_apply_lab_f32 as _native_cc_f32,
+                                       gamut_soft as _native_gamut_soft,
+                                       PixoRenderColorCalParams)
+                if _native_available():
+                    curve_a = (np.asarray(a_curve, dtype=np.float32)
+                               if a_curve is not None else None)
+                    curve_b = (np.asarray(b_curve, dtype=np.float32)
+                               if b_curve is not None else None)
+                    params = PixoRenderColorCalParams(
+                        saturation=sat, vibrance=vib, hueDeg=hue,
+                        neutralA=na, neutralB=nb, neutralSigma=sigma,
+                        skinProtect=skin, skinTrimA=skin_trim_da,
+                        skinTrimB=skin_trim_db,
+                        curveA=(curve_a.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+                                if curve_a is not None else None),
+                        curveB=(curve_b.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+                                if curve_b is not None else None))
+                    lab2 = _native_cc_f32(lab, params)
+                    out = _lab_f_to_rgb(lab2)
+                    if gs > 0.0:
+                        out = _native_gamut_soft(out, gs)
+                    else:
+                        out = np.clip(out, 0.0, 1.0)
+                    ctx.set_image(out, DOMAIN_GAMMA_RGB)
+                    native_ok = True
+            except Exception:
+                native_ok = False
 
-        if not native_ok:
-            L, a, b = lab[:, :, 0], lab[:, :, 1], lab[:, :, 2]
-            C = np.sqrt((a - 128.0) ** 2 + (b - 128.0) ** 2)
+            if not native_ok:
+                # ② 纯 Python float Lab 域实现 (与 colorcal.cpp
+                #    ApplyColorCalLabF32 逐式对应)
+                L, a, b = lab[:, :, 0], lab[:, :, 1], lab[:, :, 2]
+                # C 与 u8 域 |a-128,b-128| 同单位同值 (a/b 轴只差常数偏移)
+                C = np.sqrt(a * a + b * b)
 
-            # 1) 中性轴校准: 标量 + 按亮度分段曲线, 平台+高斯尾权重按 C 衰减
-            #    (不动饱和色)。S5 修复: 与快速路径 _apply_neutral_fast 同一口径
-            #    (C<=plateau(12) 全量, 之后高斯衰减), 消除同参数快/慢路径分歧;
-            #    native 侧 (colorcal.cpp) 已同口径重编, 两侧逐位一致
-            #    (test_native_colorcal / test_gate_colorcal 严格等价把守)。
-            if na != 0.0 or nb != 0.0 or a_curve is not None or b_curve is not None:
-                plateau = 12.0
-                tail = np.maximum(C - plateau, 0.0)
-                w = np.exp(-(tail ** 2) / (2.0 * sigma * sigma))
-                if a_curve is not None or b_curve is not None:
-                    a_off = (np.interp(L, _NEUTRAL_CENTERS, a_curve).astype(np.float32)
-                             if a_curve is not None else 0.0)
-                    b_off = (np.interp(L, _NEUTRAL_CENTERS, b_curve).astype(np.float32)
-                             if b_curve is not None else 0.0)
-                    a = a + (na + a_off) * w
-                    b = b + (nb + b_off) * w
-                else:
-                    a = a + na * w
-                    b = b + nb * w
+                # 1) 中性轴校准: 标量 + 按亮度分段曲线, 平台+高斯尾权重按 C
+                #    衰减 (不动饱和色)。曲线插值节点用 float L 域
+                #    _NEUTRAL_CENTERS_F (曲线值本身是 a/b 偏移, 域不变)。
+                #    S5 修复: 与快速路径 _apply_neutral_fast 同一口径
+                #    (C<=plateau(12) 全量, 之后高斯衰减), 消除同参数快/慢路径
+                #    分歧; native 侧 (colorcal.cpp) 已同口径, 两侧等价
+                #    (test_native_colorcal / test_gate_colorcal 把守)。
+                if na != 0.0 or nb != 0.0 or a_curve is not None or b_curve is not None:
+                    plateau = 12.0
+                    tail = np.maximum(C - plateau, 0.0)
+                    w = np.exp(-(tail ** 2) / (2.0 * sigma * sigma))
+                    if a_curve is not None or b_curve is not None:
+                        a_off = (np.interp(L, _NEUTRAL_CENTERS_F, a_curve).astype(np.float32)
+                                 if a_curve is not None else 0.0)
+                        b_off = (np.interp(L, _NEUTRAL_CENTERS_F, b_curve).astype(np.float32)
+                                 if b_curve is not None else 0.0)
+                        a = a + (na + a_off) * w
+                        b = b + (nb + b_off) * w
+                    else:
+                        a = a + na * w
+                        b = b + nb * w
 
-            # 1b) 肤色区显式偏移 + 肤色保护共用同一个椭圆软掩码 (修复重复计算)
-            skin_mask2d = None
-            if skin_trim_active or skin > 0.0:
-                from ..core.skin import skin_mask as _skin_mask_ellipse
-                skin_mask2d = _skin_mask_ellipse(u8).astype(np.float32)
-            if skin_trim_active:
-                a = a + skin_trim_da * skin_mask2d
-                b = b + skin_trim_db * skin_mask2d
+                # 1b) 肤色区显式偏移 + 肤色保护共用同一个椭圆软掩码
+                #     (float Lab 域椭圆 _skin_mask_lab_f)。掩码取**原始** Lab
+                #     a/b (校正前, 与 native aOrig/bOrig 及旧链 skin_mask(u8)
+                #     同口径), 不随中性偏移移动。
+                skin_mask2d = None
+                if skin_trim_active or skin > 0.0:
+                    skin_mask2d = _skin_mask_lab_f(lab[:, :, 1], lab[:, :, 2])
+                if skin_trim_active:
+                    a = a + skin_trim_da * skin_mask2d
+                    b = b + skin_trim_db * skin_mask2d
 
-            # 2) 色相旋转
-            if hue != 0.0:
-                rad = np.deg2rad(hue)
-                ca, cb = a - 128.0, b - 128.0
-                a = 128.0 + ca * np.cos(rad) - cb * np.sin(rad)
-                b = 128.0 + ca * np.sin(rad) + cb * np.cos(rad)
+                # 2) 色相旋转 (float 域绕中心 0; u8 域绕 128)
+                if hue != 0.0:
+                    rad = np.deg2rad(hue)
+                    ca64, cb64 = a.astype(np.float64), b.astype(np.float64)
+                    a = ca64 * np.cos(rad) - cb64 * np.sin(rad)
+                    b = ca64 * np.sin(rad) + cb64 * np.cos(rad)
 
-            # 3) 饱和度 + 自然饱和度 (肤色保护)
-            gain = 1.0 + sat
-            if vib != 0.0:
-                # 自然饱和度: 按现有色度反向加权 (低饱和多增)
-                gain = gain + vib * np.clip(1.0 - C / 128.0, 0.0, 1.0)
-            if skin > 0.0:
-                # 肤色保护: 椭圆肤色软掩码 (engine.skin.skin_mask, 与磨皮 Stage 共用,
-                # 替代旧线性角框), 保护系数衰减增益
-                gain = 1.0 + (gain - 1.0) * (1.0 - skin * skin_mask2d)
-            a = 128.0 + (a - 128.0) * gain
-            b = 128.0 + (b - 128.0) * gain
+                # 3) 饱和度 + 自然饱和度 (肤色保护)。增益以 float32 标量起步
+                #    (镜像 native 的 1.0f + saturation), 保证两侧数值贴合;
+                #    vibrance 参考色度 128 与 C 同单位, 域不变。
+                gain = np.float32(1.0 + sat)
+                if vib != 0.0:
+                    # 自然饱和度: 按现有色度反向加权 (低饱和多增)
+                    gain = gain + np.float32(vib) * np.clip(
+                        np.float32(1.0) - C / np.float32(128.0),
+                        np.float32(0.0), np.float32(1.0))
+                if skin > 0.0:
+                    # 肤色保护: 椭圆肤色软掩码 (与 _skin_mask_lab_f 同一椭圆,
+                    # 替代旧线性角框), 保护系数衰减增益
+                    gain = np.float32(1.0) + (gain - np.float32(1.0)) * (
+                        np.float32(1.0) - np.float32(skin) * skin_mask2d)
+                a = a * gain
+                b = b * gain
 
-            lab2 = np.stack([L, a, b], axis=-1)
-            lab2 = np.clip(lab2, 0, 255).astype(np.uint8)
-            out = cv2.cvtColor(lab2, cv2.COLOR_LAB2RGB)
+                # 限幅 [0,100]/[-128,127] = 旧 u8 链 clip(lab2,0,255)(Lab255
+                # 域) 的 float 域等价口径
+                lab2 = np.stack([np.clip(L, 0.0, 100.0),
+                                 np.clip(a, -128.0, 127.0),
+                                 np.clip(b, -128.0, 127.0)],
+                                axis=-1).astype(np.float32)
+                out = _lab_f_to_rgb(lab2)   # float 出, 不再 ×255 量化
 
-            # 4) 色域软压缩: 越界通道按比例向灰回拉 (防 Lab 往返导致的硬裁)
-            out = out.astype(np.float32) / 255.0
-            if gs > 0.0:
-                over = np.maximum(out - 1.0, 0.0)
-                scale = 1.0 / (1.0 + gs * over.sum(axis=-1, keepdims=True))
-                out = out * scale
-            ctx.set_image(np.clip(out, 0.0, 1.0).astype(np.float32), DOMAIN_GAMMA_RGB)
+                # 4) 色域软压缩: 越界通道按比例向灰回拉 (防 Lab 往返导致的硬裁)
+                if gs > 0.0:
+                    over = np.maximum(out - 1.0, 0.0)
+                    scale = 1.0 / (1.0 + gs * over.sum(axis=-1, keepdims=True))
+                    out = out * scale
+                ctx.set_image(np.clip(out, 0.0, 1.0).astype(np.float32),
+                              DOMAIN_GAMMA_RGB)
+        except Exception:
+            # ③ 旧 u8 链兜底 (② 失败 = cv2 float Lab 转换不可用等异常环境)
+            self._full_path_u8_legacy(ctx, img, sat, vib, hue, na, nb, sigma,
+                                      skin, skin_trim_da, skin_trim_db,
+                                      a_curve, b_curve, gs)
         if scene_active:
             ctx.results[-1].metrics["scene_trim"] = [float(scene_da), float(scene_db)]
         if skin_trim_active:
             ctx.results[-1].metrics["skin_trim"] = [skin_trim_da, skin_trim_db]
         if scene_hue_active:
             ctx.results[-1].metrics["scene_hue"] = scene_hue_deg
+
+    def _full_path_u8_legacy(self, ctx: StageContext, img: np.ndarray,
+                             sat: float, vib: float, hue: float,
+                             na: float, nb: float, sigma: float, skin: float,
+                             skin_trim_da: float, skin_trim_db: float,
+                             a_curve, b_curve, gs: float) -> None:
+        """③ 旧 u8 链兜底: 改造前全量路径的 uint8 Lab 往返实现, 逐行原样保留。
+
+        三段量化 (输入 RGB→u8 + cv2 uint8 Lab / uint8 Lab 出 / uint8
+        LAB2RGB→/255) 合计 0.81 ΔE76 (W4, docs/metrics/u8_midpoint_precision.md),
+        仅当 ② 纯 Python float 实现 也失败 (cv2 float Lab 转换不可用等异常
+        环境) 才会走到这里。u8 域坐标: L∈[0,255], a/b 中心 128。
+        """
+        u8 = (img * 255.0 + 0.5).astype(np.uint8)
+        lab = cv2.cvtColor(u8, cv2.COLOR_RGB2LAB).astype(np.float32)
+        L, a, b = lab[:, :, 0], lab[:, :, 1], lab[:, :, 2]
+        C = np.sqrt((a - 128.0) ** 2 + (b - 128.0) ** 2)
+
+        if na != 0.0 or nb != 0.0 or a_curve is not None or b_curve is not None:
+            plateau = 12.0
+            tail = np.maximum(C - plateau, 0.0)
+            w = np.exp(-(tail ** 2) / (2.0 * sigma * sigma))
+            if a_curve is not None or b_curve is not None:
+                a_off = (np.interp(L, _NEUTRAL_CENTERS, a_curve).astype(np.float32)
+                         if a_curve is not None else 0.0)
+                b_off = (np.interp(L, _NEUTRAL_CENTERS, b_curve).astype(np.float32)
+                         if b_curve is not None else 0.0)
+                a = a + (na + a_off) * w
+                b = b + (nb + b_off) * w
+            else:
+                a = a + na * w
+                b = b + nb * w
+
+        skin_mask2d = None
+        if (skin_trim_da != 0.0 or skin_trim_db != 0.0) or skin > 0.0:
+            from ..core.skin import skin_mask as _skin_mask_ellipse
+            skin_mask2d = _skin_mask_ellipse(u8).astype(np.float32)
+        if skin_trim_da != 0.0 or skin_trim_db != 0.0:
+            a = a + skin_trim_da * skin_mask2d
+            b = b + skin_trim_db * skin_mask2d
+
+        if hue != 0.0:
+            rad = np.deg2rad(hue)
+            ca, cb = a - 128.0, b - 128.0
+            a = 128.0 + ca * np.cos(rad) - cb * np.sin(rad)
+            b = 128.0 + ca * np.sin(rad) + cb * np.cos(rad)
+
+        gain = 1.0 + sat
+        if vib != 0.0:
+            gain = gain + vib * np.clip(1.0 - C / 128.0, 0.0, 1.0)
+        if skin > 0.0:
+            gain = 1.0 + (gain - 1.0) * (1.0 - skin * skin_mask2d)
+        a = 128.0 + (a - 128.0) * gain
+        b = 128.0 + (b - 128.0) * gain
+
+        lab2 = np.stack([L, a, b], axis=-1)
+        lab2 = np.clip(lab2, 0, 255).astype(np.uint8)
+        out = cv2.cvtColor(lab2, cv2.COLOR_LAB2RGB)
+
+        out = out.astype(np.float32) / 255.0
+        if gs > 0.0:
+            over = np.maximum(out - 1.0, 0.0)
+            scale = 1.0 / (1.0 + gs * over.sum(axis=-1, keepdims=True))
+            out = out * scale
+        ctx.set_image(np.clip(out, 0.0, 1.0).astype(np.float32), DOMAIN_GAMMA_RGB)
 
     # ---- 仅中性校正的快速路径 (基座默认) ----
     _BAND_EDGES = [0, 16, 48, 96, 160, 208, 240, 256]
