@@ -1,10 +1,11 @@
 """Stage exposure (order=10) —— 曝光矫正 (linear_cam 域, 场景参考)。
 
 原理 (替代旧 EXPOSURE_CAL_TABLE 拟合表 + 两轮探测迭代):
-  - 曝光锚点定义在**影调级消费的域**: 线性 sRGB (矩阵后)。用 1/4 降采样探针
-    做一次 WB×CM×CC×Bradford×sRGB 变换 (与 whitebalance Stage 共享
-    engine.color.cam_to_xyz, 消除旧 build_probe_matrix 的重复矩阵合成),
-    在该域 log2 中位定标 —— 一次到位, 无迭代、无场景拟合表。
+  - 曝光锚点定义在**影调级消费的域**: 线性 sRGB (矩阵后)。用固定 256 长边
+    面积均值探针 (tier 无关, 见 _probe_sample) 做一次 WB×CM×CC×Bradford×sRGB
+    变换 (与 whitebalance Stage 共享 engine.color.cam_to_xyz, 消除旧
+    build_probe_matrix 的重复矩阵合成), 在该域 log2 中位定标 —— 一次到位,
+    无迭代、无场景拟合表。
   - 锚点 = 令影调曲线输出中灰 (≈gamma 117) 的线性输入 (curve_anchor_target)。
   - 基线曝光偏移 (DCP BaselineExposureOffset) 与每机 target_offset 常量计入。
   - 高光保护软滚降: EV 上限保证 clip_p 分位不越白电平 (裁切预算 100-clip_p %),
@@ -156,6 +157,44 @@ def _luma_proxy(cam_rgb: np.ndarray) -> np.ndarray:
             + 0.25 * cam_rgb[:, :, 2]).astype(np.float32)
 
 
+# 探针固定网格长边: ≈ 默认预览档 1024 的 1/4 (旧 ::4 跨步在默认档的
+# 有效探针分辨率), 保持"1/4 探针"的分辨率语义不变。
+_PROBE_LONG_EDGE = 256
+
+
+def _probe_sample(cam: np.ndarray) -> np.ndarray:
+    """探针取样: 任意 tier 图 → 固定 256 长边网格的面积均值块。
+
+    跨 tier 一致性来源 (修复 tier 间曝光决策口径漂移): 旧实现直接在
+    **当前 tier 图**上 cam[::4,::4] 跨步取点, 采样网格随 tier 尺度变化 ——
+    同一 RAW 在 512/1024/2048/全尺寸档取到的是不同物理位置、不同 resize
+    深度的点样本, 逐点噪声/高频未被同等平均, 中位/分位统计随档漂移,
+    EV 决策在 preview 与 export 间不一致 (用户预览调好的画面导出后
+    曝光漂移)。面积均值块近似是 resize 不变量 (INTER_AREA 块均值对
+    resize 级联近似可交换: decode→tier→probe ≈ decode→probe), 因此把
+    探针网格**钉死在帧坐标** (长边 256): 任何 tier 的探针都逼近同一组
+    物理块的面积均值, 统计量与 tier 无关 (实测 med 档间散度 ~0.015
+    log2 → ~0.001; 默认 1024 档 EV 不变, 详见
+    tests/unit/test_exposure_tier_consistency.py)。
+
+    输入长边 ≤ 256 (单测小图/低分辨率) 时回退旧 ::4 跨步取样, 兼容既有
+    调用方; cv2 不可用时同样回退 (保持探针可用性优先于跨档一致性)。
+    """
+    h, w = cam.shape[:2]
+    long_edge = max(h, w)
+    if long_edge <= _PROBE_LONG_EDGE:
+        return cam[::4, ::4]
+    scale = _PROBE_LONG_EDGE / float(long_edge)
+    try:
+        import cv2
+        return cv2.resize(np.ascontiguousarray(cam),
+                          (max(1, int(round(w * scale))),
+                           max(1, int(round(h * scale)))),
+                          interpolation=cv2.INTER_AREA)
+    except Exception:
+        return cam[::4, ::4]
+
+
 def _vignette_lift_linear(img: np.ndarray, k: float) -> np.ndarray:
     """抗暗角径向增益 (线性域): g(r) = 1 + k·r², r 归一化到角落 = 1。
 
@@ -252,16 +291,18 @@ def _baseline_scene_ev(wb_b: float, logmed: float, windows: np.ndarray) -> float
 
 
 def _probe_linear_srgb(ctx: StageContext, cam: np.ndarray) -> np.ndarray:
-    """1/4 降采样探针: 相机RGB → 线性 sRGB (与 whitebalance Stage 同链路), 返回亮度。
+    """固定网格面积均值探针: 相机RGB → 线性 sRGB (与 whitebalance Stage 同
+    链路), 返回亮度。
 
-    共享 engine.color.cam_to_xyz, 消除旧 build_probe_matrix 的重复矩阵合成
-    (旧实现误用 ForwardMatrix 且手工拼 XYZ→sRGB/Bradford 矩阵)。
+    取样经 _probe_sample 规范到帧坐标固定网格 (tier 无关, 一致性来源见其
+    docstring); 共享 engine.color.cam_to_xyz, 消除旧 build_probe_matrix 的
+    重复矩阵合成 (旧实现误用 ForwardMatrix 且手工拼 XYZ→sRGB/Bradford 矩阵)。
     """
     from ..core.color import cam_to_xyz
     from .white_balance import auto_wb_linear
     from ..core.io import camera_neutral_wb
 
-    small = cam[::4, ::4]
+    small = _probe_sample(cam)
     if ctx.prof is None:
         return _luma_proxy(small)
 
@@ -423,7 +464,7 @@ class ExposureStage(Stage):
         return max(valid, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]))
 
     def _auto_ev(self, ctx: StageContext) -> float:
-        # 探针: 影调级消费的线性 sRGB 域亮度 (1/4 降采样)
+        # 探针: 影调级消费的线性 sRGB 域亮度 (固定网格面积均值, tier 无关)
         y = _probe_linear_srgb(ctx, ctx.image)
         region = None
         box = self._subject_box(ctx)
