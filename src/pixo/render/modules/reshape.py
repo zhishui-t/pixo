@@ -78,7 +78,11 @@ class ClarityStage(Stage):
         if s <= 0.0:
             return
         img = np.clip(ctx.image, 0.0, 1.0).astype(np.float32)
-        is_preview = (bool(ctx.config.get("preview")) or bool(ctx.config.get("long_edge"))
+        # M6: 优先读 ctx.mode ("preview"/"export", 三渲染入口显式传入);
+        # config 键判断保留为向后兼容回退 (直接构造 ctx 的老调用方/测试)。
+        # 预览判定结果与旧实现一致: 生产入口 mode=preview ⟺ config 键真值。
+        is_preview = (getattr(ctx, "mode", "export") == "preview"
+                      or bool(ctx.config.get("preview")) or bool(ctx.config.get("long_edge"))
                       or bool(ctx.config.get("decode_mode")))
         if is_preview:
             # P1 A/B 微调: 预览 clarity 强度封顶 0.25, 压低低分辨率 r/b p99。

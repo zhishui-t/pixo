@@ -11,9 +11,13 @@ import numpy as np
 import pytest
 
 from pixo.render.core.calibration import DcpProfile
+from pixo.render.core.tone import srgb_decode
 from pixo.render import api
 from pixo.render.api import (Renderer, RenderIntent, RawInput, RawMetadata,
                                CameraCalibration)
+from pixo.render.pipeline.context import DOMAIN_GAMMA_RGB
+
+import pixo.render.core.io as core_io
 
 
 _NIKON_CM1 = [1.1643, -0.653, 0.0726, -0.4355, 1.2179, 0.2449, -0.0231, 0.0811, 0.7571]
@@ -36,18 +40,38 @@ def renderer(monkeypatch):
     return Renderer("fake.dcp")
 
 
+class _FakeRawHandle:
+    """decode_raw 返回的 raw 句柄替身 (只需 close)。"""
+    def close(self):
+        pass
+
+
+def _fake_decode_raw(path, half_size=False):
+    return np.zeros((4, 4, 3), np.float32), _FakeRawHandle()
+
+
 class FakePipe:
-    """假 Pipeline: 记录 params, run_file 返回可辨识的 gamma uint8。"""
+    """假 Pipeline: 记录 params。
+
+    run_file 返回可辨识的 gamma uint8 (render_adjusted 契约);
+    run 写 gamma float (L9 后 render 调整路径走 runner, 不再量化)。
+    """
     def __init__(self, prof, params):
         self.prof = prof
         self.params = params
 
-    def run_file(self, raw_path, half_size=False):
+    def _gamma(self, ev):
         # 有 exposure 参数则抬高输出 (模拟曝光调整)
+        return np.clip(np.zeros((4, 4, 3), np.float32) + 80.0 + float(ev) * 40.0,
+                       0.0, 255.0)
+
+    def run_file(self, raw_path, half_size=False):
         ev = self.params.get("exposure", {}).get("mode", 0.0)
-        base = np.zeros((4, 4, 3), np.float32) + 80.0
-        out = np.clip(base + float(ev) * 40.0, 0, 255).astype(np.uint8)
-        return out
+        return self._gamma(ev).astype(np.uint8)
+
+    def run(self, ctx):
+        ev = self.params.get("exposure", {}).get("mode", 0.0)
+        ctx.set_image(self._gamma(ev) / 255.0, DOMAIN_GAMMA_RGB)
 
 
 def _make_renderer_with_pipe(monkeypatch, renderer):
@@ -57,6 +81,8 @@ def _make_renderer_with_pipe(monkeypatch, renderer):
     captured = {}
     monkeypatch.setattr(api, "render_dcp_linear",
                         lambda *a, **k: (captured.setdefault("called", 0) or 0) and None or np.full((4, 4, 3), 40.0, np.float32))
+    # L9 调整路径直接 decode_raw + runner (不再经 run_file uint8 量化)
+    monkeypatch.setattr(core_io, "decode_raw", _fake_decode_raw)
     return renderer, captured
 
 
@@ -92,6 +118,7 @@ def test_exposure_no_longer_raises_and_increases_mean(renderer, monkeypatch):
     monkeypatch.setattr(api, "build_default_pipeline",
                         lambda prof, params=None: FakePipe(prof, params or {}))
     monkeypatch.setattr(api, "render_dcp_linear", lambda *a, **k: np.zeros((4,4,3), np.float32))
+    monkeypatch.setattr(core_io, "decode_raw", _fake_decode_raw)
     base = renderer.render(_raw(renderer), CameraCalibration(profile=None, camera_entry={}),
                           RenderIntent(exposure=0.0))
     out = renderer.render(_raw(renderer), CameraCalibration(profile=None, camera_entry={}),
@@ -110,6 +137,7 @@ def test_stages_change_output(renderer, monkeypatch):
         return FakePipe(prof, params or {})
     monkeypatch.setattr(api, "build_default_pipeline", _pipe)
     monkeypatch.setattr(api, "render_dcp_linear", lambda *a, **k: np.zeros((4,4,3), np.float32))
+    monkeypatch.setattr(core_io, "decode_raw", _fake_decode_raw)
     # stages 带 exposure.mode → 输出抬高
     out = renderer.render(_raw(renderer), CameraCalibration(profile=None, camera_entry={}),
                           RenderIntent(stages={"exposure": {"mode": 1.0}}))
@@ -131,6 +159,7 @@ def test_render_with_adjust_clip_linear(renderer, monkeypatch):
     """有调整时 render 返回线性 float32 (dng_srgb_decode 后), clip ≥0。"""
     monkeypatch.setattr(api, "build_default_pipeline",
                         lambda prof, params=None: FakePipe(prof, params or {}))
+    monkeypatch.setattr(core_io, "decode_raw", _fake_decode_raw)
     out = renderer.render(_raw(renderer), CameraCalibration(profile=None, camera_entry={}),
                           RenderIntent(exposure=0.5))
     assert out.dtype == np.float32
@@ -138,11 +167,46 @@ def test_render_with_adjust_clip_linear(renderer, monkeypatch):
     assert (out <= 1.0).all() or out.max() > 0.0  # 有限线性域
 
 
+def test_render_adjusted_path_avoids_u8_quantization(renderer, monkeypatch):
+    """L9: 调整路径不再经 8bit 量化 —— 非 1/255 网格的 gamma 值逐位保留。
+
+    旧实现 gamma→uint8→/255→srgb_decode, 输出只能落在量化网格的解码值上;
+    新实现直接解码管线 gamma float, 输出 == srgb_decode(gamma) 逐位相等。
+    """
+    gamma_val = 0.5 + 1.0 / 1024.0   # 不在 uint8 量化网格上
+
+    class _GammaPipe(FakePipe):
+        def run(self, ctx):
+            ctx.set_image(np.full((4, 4, 3), gamma_val, np.float32),
+                          DOMAIN_GAMMA_RGB)
+
+    monkeypatch.setattr(api, "build_default_pipeline", _GammaPipe)
+    monkeypatch.setattr(core_io, "decode_raw", _fake_decode_raw)
+    out = renderer.render(_raw(renderer), CameraCalibration(profile=None, camera_entry={}),
+                          RenderIntent(exposure=0.5))
+    expected = np.clip(srgb_decode(np.float32(gamma_val)), 0.0, None)
+    assert np.array_equal(out, np.full((4, 4, 3), expected, np.float32))
+
+
+def test_render_adjusted_linear_matches_gamma_float_decode(renderer, monkeypatch):
+    """调整路径与 render_adjusted 的 gamma 值同源 (uint8 量化前), EV 单调。"""
+    monkeypatch.setattr(api, "build_default_pipeline",
+                        lambda prof, params=None: FakePipe(prof, params or {}))
+    monkeypatch.setattr(core_io, "decode_raw", _fake_decode_raw)
+    out0 = renderer.render(_raw(renderer), CameraCalibration(profile=None, camera_entry={}),
+                           RenderIntent(exposure=0.5))
+    out1 = renderer.render(_raw(renderer), CameraCalibration(profile=None, camera_entry={}),
+                           RenderIntent(exposure=1.0))
+    # FakePipe gamma: 100/255 vs 120/255 → 线性均值单调升
+    assert float(out1.mean()) > float(out0.mean())
+
+
 def test_render_file_default_and_intent(renderer, monkeypatch):
     """render_file 默认 + 带 intent 两条路径都正常 (返回线性 float32)。"""
     monkeypatch.setattr(api, "build_default_pipeline",
                         lambda prof, params=None: FakePipe(prof, params or {}))
     monkeypatch.setattr(api, "render_dcp_linear", lambda *a, **k: np.full((4,4,3), 0.3, np.float32))
+    monkeypatch.setattr(core_io, "decode_raw", _fake_decode_raw)
     monkeypatch.setattr(renderer, "calibrate",
                         lambda raw_path: CameraCalibration(profile=None, camera_entry={}))
     # 默认

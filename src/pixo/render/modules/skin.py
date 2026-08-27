@@ -79,7 +79,11 @@ class SkinStage(Stage):
         if strength <= 0.0:
             return
 
-        is_preview = (bool(ctx.config.get("preview")) or bool(ctx.config.get("long_edge"))
+        # M6: 优先读 ctx.mode ("preview"/"export", 三渲染入口显式传入);
+        # config 键判断保留为向后兼容回退 (直接构造 ctx 的老调用方/测试)。
+        # 预览判定结果与旧实现一致: 生产入口 mode=preview ⟺ config 键真值。
+        is_preview = (getattr(ctx, "mode", "export") == "preview"
+                      or bool(ctx.config.get("preview")) or bool(ctx.config.get("long_edge"))
                       or bool(ctx.config.get("decode_mode")))
         if is_preview:
             # P1 预览：磨皮整体在降采样分辨率计算（掩码 + 引导滤波），再上采样。

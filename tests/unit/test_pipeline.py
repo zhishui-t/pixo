@@ -32,10 +32,12 @@ from pixo.render.pipeline.graph import (
     DOMAIN_LINEAR_CAM,
     DOMAIN_LINEAR_RGB,
     Pipeline,
+    PipelineError,
     Stage,
     StageContext,
 )
 from pixo.render.modules.exposure import ExposureStage
+from pixo.render.modules.skin import SkinStage
 from pixo.render.modules.tone_map import ToneStage, _check_highlight_compress_curve
 from pixo.render.modules.white_balance import (
     WARMTH_SLOPE_BOUNDS,
@@ -418,3 +420,166 @@ def test_highlight_compress_curve_validation():
         _check_highlight_compress_curve([[2.0, 0.0], [1.0, 0.0]])
     with _pytest.raises(ValueError):
         _check_highlight_compress_curve([[1.0, 0.0], [2.0, 0.6]])
+
+
+# ---------------------------------------------------------------------------
+# 8) domain_out 后验 (深审遗留项: run 只校验 domain_in, 输出域靠自觉)
+# ---------------------------------------------------------------------------
+
+class _LiarStage(Stage):
+    """声明 domain_out=gamma_rgb 但实际写 linear_rgb 的假 Stage。"""
+
+    name = "liar_stage"
+    order = 999
+    domain_in = DOMAIN_LINEAR_CAM
+    domain_out = DOMAIN_GAMMA_RGB
+
+    def process(self, ctx: StageContext) -> None:
+        ctx.set_image(ctx.image * 1.0, DOMAIN_LINEAR_RGB)
+
+
+def test_domain_out_postcheck_raises_pipeline_error():
+    """process 实际写入域 != 声明 domain_out → PipelineError。"""
+    ctx = StageContext("x.NEF")
+    ctx.set_image(np.zeros((4, 4, 3), np.float32), DOMAIN_LINEAR_CAM)
+    with pytest.raises(PipelineError, match="liar_stage"):
+        _LiarStage().run(ctx)
+
+
+def test_domain_out_postcheck_message_contains_domains():
+    """报错信息含 stage 名 + 实际/声明两域。"""
+    ctx = StageContext("x.NEF")
+    ctx.set_image(np.zeros((4, 4, 3), np.float32), DOMAIN_LINEAR_CAM)
+    with pytest.raises(PipelineError) as ei:
+        _LiarStage().run(ctx)
+    msg = str(ei.value)
+    assert DOMAIN_GAMMA_RGB in msg and DOMAIN_LINEAR_RGB in msg
+
+
+def test_domain_out_identity_skip_not_validated():
+    """恒等直通 (不 set_image) 不触发后验: "未写即未变"。
+
+    compose 无裁剪/旋转路径即此语义 (声明 linear_rgb→linear_rgb 不写);
+    甚至声明了域转换但未写也放行 (未写 = 图像与域都没动)。
+    """
+
+    class _NoopStage(Stage):
+        name = "noop_stage"
+        domain_in = DOMAIN_LINEAR_CAM
+        domain_out = DOMAIN_GAMMA_RGB
+
+        def process(self, ctx: StageContext) -> None:
+            return
+
+    ctx = StageContext("x.NEF")
+    ctx.set_image(np.zeros((4, 4, 3), np.float32), DOMAIN_LINEAR_CAM)
+    _NoopStage().run(ctx)                      # 不抛
+    assert ctx.domain == DOMAIN_LINEAR_CAM
+
+
+def test_domain_out_write_matching_domain_passes():
+    """写入与声明一致的域正常通过后验。"""
+
+    class _HonestStage(Stage):
+        name = "honest_stage"
+        domain_in = DOMAIN_LINEAR_CAM
+        domain_out = DOMAIN_LINEAR_CAM
+
+        def process(self, ctx: StageContext) -> None:
+            ctx.set_image(ctx.image * 2.0, DOMAIN_LINEAR_CAM)
+
+    ctx = StageContext("x.NEF")
+    ctx.set_image(np.ones((4, 4, 3), np.float32), DOMAIN_LINEAR_CAM)
+    _HonestStage().run(ctx)
+    assert ctx.image.max() == 2.0
+
+
+# ---------------------------------------------------------------------------
+# 9) param_schema 不可变默认 (L1: 类属性 {} 可被 update 污染)
+# ---------------------------------------------------------------------------
+
+def test_param_schema_base_is_immutable():
+    """基类 param_schema 为只读代理: 下标赋值抛 TypeError, update 不可用。"""
+    with pytest.raises(TypeError):
+        Stage.param_schema["enabled"] = {"type": "bool"}
+    # mappingproxy 无 update 方法 → 任何 update 污染路径直接 AttributeError
+    with pytest.raises((TypeError, AttributeError)):
+        Stage.param_schema.update({"enabled": {"type": "bool"}})
+    assert dict(Stage.param_schema) == {}
+    # 读取接口不受影响
+    assert Stage.param_schema.get("enabled") is None
+
+
+def test_param_schema_subclass_rebind_unaffected():
+    """子类整体重绑定 param_schema = {...} 不受基类只读代理影响。"""
+
+    class _SchemaStage(Stage):
+        name = "schema_stage"
+        param_schema = {"strength": {"type": "float", "min": 0.0, "max": 1.0}}
+
+        def process(self, ctx: StageContext) -> None:
+            return
+
+    assert isinstance(_SchemaStage.param_schema, dict)
+    assert _SchemaStage.param_schema["strength"]["min"] == 0.0
+    # 子类自己的 dict 可正常使用 (校验读取路径)
+    ctx = StageContext("x.NEF", config={"stages": {"schema_stage": {"strength": 9.0}}})
+    with pytest.raises(ValueError, match="strength"):
+        _SchemaStage().p(ctx, "strength")
+
+
+# ---------------------------------------------------------------------------
+# 10) ctx.mode 显式化 (M6): clarity/skin 预览判定优先读 mode
+# ---------------------------------------------------------------------------
+
+def _gradient_image(h: int = 64, w: int = 64) -> np.ndarray:
+    y, x = np.mgrid[0:h, 0:w]
+    img = np.stack([x / w, y / h, (x + y) / (w + h)], axis=-1)
+    rng = np.random.default_rng(11)
+    return (img * 0.8 + rng.random((h, w, 3)) * 0.2).astype(np.float32)
+
+
+def test_stage_context_mode_default_export():
+    """StageContext.mode 缺省 "export" (老调用方语义不变), 可显式传 preview。"""
+    assert StageContext("x.NEF").mode == "export"
+    assert StageContext("x.NEF", mode="preview").mode == "preview"
+
+
+def test_clarity_mode_preview_without_config_keys():
+    """clarity: mode="preview" 且无 config 键 → 预览分支。
+
+    与 legacy config {"preview": True} 路径逐位一致 (同一分支同一算子);
+    mode="export" 走全质量分支 (强度不封顶 + 原分辨率) → 输出不同。
+    """
+    img = _gradient_image()
+
+    ctx_mode = StageContext("x.NEF", mode="preview")
+    ctx_mode.set_image(img.copy(), DOMAIN_GAMMA_RGB)
+    ctx_legacy = StageContext("x.NEF", config={"preview": True})
+    ctx_legacy.set_image(img.copy(), DOMAIN_GAMMA_RGB)
+    ClarityStage().process(ctx_mode)
+    ClarityStage().process(ctx_legacy)
+    assert np.array_equal(ctx_mode.image, ctx_legacy.image)
+
+    ctx_export = StageContext("x.NEF", mode="export")
+    ctx_export.set_image(img.copy(), DOMAIN_GAMMA_RGB)
+    ClarityStage().process(ctx_export)
+    assert not np.array_equal(ctx_mode.image, ctx_export.image)
+
+
+def test_skin_mode_preview_takes_priority_with_fallback():
+    """skin: mode="preview" 无 config 键走预览分支; legacy config 键仍作回退。
+
+    第二个 ctx mode="export" 但 config preview=True → 回退判定 → 预览分支,
+    两者的输出逐位一致 (同一分支)。
+    """
+    img = _gradient_image()
+    outs = []
+    for mode, config in (("preview", None), ("export", {"preview": True})):
+        ctx = StageContext("x.NEF", config=config, mode=mode)
+        ctx.set_image(img.copy(), DOMAIN_GAMMA_RGB)
+        # 预览分支 div=2 → small 32x32; 提供匹配掩码避免 skin_mask 随机性
+        ctx.state["skin_mask"] = np.zeros((32, 32), np.uint8)
+        SkinStage().process(ctx)
+        outs.append(ctx.image.copy())
+    assert np.array_equal(outs[0], outs[1])

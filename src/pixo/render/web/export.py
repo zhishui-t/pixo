@@ -15,8 +15,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Optional
 
-import numpy as np
-
 from .encode import encode_image
 
 _EXT = {
@@ -33,11 +31,11 @@ def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8):
     """Full-quality 4s 主线：full-res decode + 完整 12 stage。
 
     返回 uint8 (output_bps=8) 或 uint16 (output_bps=16)。
+    样板 (ctx 构建/注入/终检/量化) 收敛在 pipeline.runner (三入口共用)。
     """
     from pixo.render.core.io import camera_neutral_wb_cached, decode_raw
-    from pixo.render.pipeline.context import (DOMAIN_GAMMA_RGB, DOMAIN_LINEAR_CAM,
-                                         StageContext)
     from pixo.render.pipeline.presets import build_default_pipeline
+    from pixo.render.pipeline.runner import run_full_pipeline
 
     if output_bps not in (8, 16):
         raise ValueError("output_bps 只支持 8 或 16")
@@ -45,32 +43,26 @@ def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8):
     img, raw = decode_raw(str(raw_path), half_size=False)
     try:
         pipe = build_default_pipeline(prof=prof, params=params)
-        # 显式补 decode_mode/long_edge 键（falsy 值）：clarity/skin 的
-        # is_preview 判定式为
-        #   bool(config.get("preview")) or bool(config.get("long_edge"))
-        #   or bool(config.get("decode_mode"))
-        # (modules/reshape.py / modules/skin.py)。export 走全尺寸主线，
-        # 必须**非** preview 语义 —— 缺省键本就判 False，但显式写
-        # long_edge=0 / decode_mode=None 让语义自说明，并防后续代码
-        # 直接 config["decode_mode"] 取键时 KeyError 或误设真值。
-        ctx = StageContext(
-            raw_path, raw=raw, prof=prof,
-            config={"stages": dict(params), "half_size": False,
-                    "preview": False, "long_edge": 0, "decode_mode": None})
-        ctx.set_image(img, DOMAIN_LINEAR_CAM)
-        ctx.state["half_size"] = False
+        state_inject = {}
         try:
-            ctx.state["camera_wb"] = camera_neutral_wb_cached(raw, raw_path)
+            state_inject["camera_wb"] = camera_neutral_wb_cached(raw, raw_path)
         except Exception:
             pass
-        pipe.run(ctx)
-        if ctx.domain != DOMAIN_GAMMA_RGB:
-            raise RuntimeError(
-                f"导出管线最终域不是 {DOMAIN_GAMMA_RGB} 而是 {ctx.domain}")
-        out = ctx.image
-        if output_bps == 16:
-            return (np.clip(out, 0.0, 1.0) * 65535.0 + 0.5).astype(np.uint16)
-        return (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+        # 显式补 decode_mode/long_edge 键（falsy 值）：clarity/skin 的
+        # is_preview 判定式为
+        #   ctx.mode == "preview" or bool(config.get("preview"))
+        #   or bool(config.get("long_edge")) or bool(config.get("decode_mode"))
+        # (modules/reshape.py / modules/skin.py)。export 走全尺寸主线，
+        # 必须**非** preview 语义 —— mode="export" 显式声明，缺省键本就判
+        # False，但显式写 long_edge=0 / decode_mode=None 让语义自说明，
+        # 并防后续代码直接 config["decode_mode"] 取键时 KeyError 或误设真值。
+        return run_full_pipeline(
+            img, prof, params,
+            config={"stages": dict(params), "half_size": False,
+                    "preview": False, "long_edge": 0, "decode_mode": None},
+            output_bps=output_bps, mode="export",
+            raw_path=raw_path, raw=raw, state_inject=state_inject,
+            pipe=pipe, label="导出管线")
     finally:
         try:
             raw.close()

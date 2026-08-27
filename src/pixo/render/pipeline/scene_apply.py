@@ -37,6 +37,13 @@ def load_scene_presets() -> dict:
     return _cache
 
 
+def _reset_caches() -> None:
+    """测试隔离钩子: 还原模块级场景预设缓存初始态 (与 exposure/
+    white_balance/tone_map 的同名钩子配套, 供测试 fixture 使用)。"""
+    global _cache
+    _cache = None
+
+
 def apply_scene_preset(scene_id: str) -> Tuple[Dict[str, dict], Optional[str]]:
     """场景 id → (params 覆盖, LUT id)。
 

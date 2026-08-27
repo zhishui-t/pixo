@@ -52,18 +52,29 @@ class StageParams:
 class StageContext:
     """管线运行上下文: 图像 + 域 + 元数据 + 各 Stage 输出。"""
 
+    # 渲染模式合法值 (M6 显式化): preview = 降采样预览链 (clarity/skin 等
+    # 走降采样口径), export = 全质量主线。
+    MODE_PREVIEW = "preview"
+    MODE_EXPORT = "export"
+
     def __init__(self, raw_path: Union[str, Path], raw=None, prof=None,
-                 config: Optional[Dict[str, Any]] = None):
+                 config: Optional[Dict[str, Any]] = None,
+                 mode: str = MODE_EXPORT):
         self.raw_path = Path(raw_path)
         self.raw = raw            # rawpy.RawPy 对象 (生命周期由 Pipeline 管理)
         self.prof = prof          # DcpProfile | None
         self.config = config or {}
+        # 渲染模式 (M6): "preview" / "export"。缺省 export —— 直接构造 ctx
+        # 的老调用方语义不变 (clarity/skin 的 config 键回退仍生效)。
+        self.mode = mode
         self.image: Optional[np.ndarray] = None
         self.domain: Optional[str] = None
+        self.image_writes = 0     # set_image 计数 (Stage.run 的 domain_out 后验)
         self.state: Dict[str, Any] = {}      # Stage 间共享状态 (ev, wb, cct, 矩阵...)
         self.results: List["StageResult"] = []
 
     def set_image(self, img: np.ndarray, domain: str):
+        self.image_writes += 1
         self.image = img
         self.domain = domain
 

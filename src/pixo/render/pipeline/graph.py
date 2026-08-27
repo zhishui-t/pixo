@@ -6,7 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from numbers import Integral, Real
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, Union
+from types import MappingProxyType
+from typing import Any, Dict, List, Mapping, Optional, Type, Union
 
 import numpy as np
 
@@ -14,6 +15,11 @@ from .context import (  # noqa: F401
     DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB,
     StageParams, StageContext, StageResult,
 )
+
+
+class PipelineError(RuntimeError):
+    """管线契约违约 (Stage 声明输出域与实际写入不符等)。"""
+
 
 class Stage(ABC):
     """渲染 Stage 插件基类。
@@ -33,7 +39,9 @@ class Stage(ABC):
     # 参数 schema: {"<name>": {"type": "float"|"int"|"str"|"bool"|"float_or_str",
     #                          "min": .., "max": .., "choices": [...]}}
     # 各字段均可选; float_or_str 额外放行数值向量 (如 whitebalance 手动 [r,g,b] 系数)。
-    param_schema: Dict[str, dict] = {}
+    # 基类默认为只读代理 (L1): 防止 update/赋值污染类级共享状态;
+    # 子类整体重绑定 param_schema = {...} 不受影响。
+    param_schema: Mapping[str, dict] = MappingProxyType({})
 
     def __init__(self, params: Optional[Dict[str, Any]] = None):
         defaults = self.default_params()
@@ -129,7 +137,7 @@ class Stage(ABC):
                 f"[{self.name}] 参数 '{key}' 非法: 值 {value!r} 不在允许值 {schema['choices']}")
 
     def run(self, ctx: StageContext) -> StageResult:
-        """统一执行入口 (Pipeline 调用): 校验域 → process → 记录。"""
+        """统一执行入口 (Pipeline 调用): 校验域 → process → 后验输出域 → 记录。"""
         if self.domain_in and ctx.domain != self.domain_in:
             raise ValueError(
                 f"[{self.name}] 域不匹配: 期望输入 {self.domain_in}, 实际 {ctx.domain}")
@@ -137,8 +145,18 @@ class Stage(ABC):
                              domain_in=self.domain_in, domain_out=self.domain_out)
         ctx.results.append(result)   # 先入链, process 内可写 metrics
         t0 = time.perf_counter()
+        writes_before = ctx.image_writes
         self.process(ctx)
         result.time_s = time.perf_counter() - t0
+        # domain_out 后验 (深审遗留项): process 实际写入 (set_image) 后,
+        # ctx.domain 必须等于声明的 domain_out; 未写 = 恒等直通合法
+        # (如 compose 无裁剪/旋转路径不 set_image, "未写即未变")。
+        if (self.domain_out is not None
+                and ctx.image_writes > writes_before
+                and ctx.domain != self.domain_out):
+            raise PipelineError(
+                f"[{self.name}] 域不匹配: 声明输出 {self.domain_out}, "
+                f"实际写入 {ctx.domain}")
         return result
 
 
@@ -289,5 +307,6 @@ class Pipeline:
 __all__ = [
     "DOMAIN_LINEAR_CAM", "DOMAIN_LINEAR_RGB", "DOMAIN_GAMMA_RGB",
     "StageParams", "StageContext", "StageResult", "Stage",
-    "register_stage", "STAGE_REGISTRY", "available_stages", "Pipeline",
+    "PipelineError", "register_stage", "STAGE_REGISTRY", "available_stages",
+    "Pipeline",
 ]

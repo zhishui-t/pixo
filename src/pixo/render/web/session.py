@@ -24,9 +24,9 @@ import numpy as np
 import rawpy
 
 from pixo.render.core.io import decode_cfa_half
-from pixo.render.pipeline.context import (DOMAIN_GAMMA_RGB, DOMAIN_LINEAR_CAM,
-                                     StageContext)
 from pixo.render.pipeline.presets import build_default_pipeline
+from pixo.render.pipeline.runner import (finalize_gamma_output,
+                                         prepare_render_ctx)
 
 from .encode import encode_image
 
@@ -308,21 +308,24 @@ class RawPreviewSession:
         tier_key = (int(long_edge), decode_mode, version)
         img = self._get_tier(long_edge, decode_mode, key=tier_key)
 
-        pipe = build_default_pipeline(prof=self.prof, params=params)
-        ctx = StageContext(
-            self.raw_path, prof=self.prof,
-            config={"stages": dict(params), "half_size": True,
-                    "decode_mode": decode_mode, "long_edge": int(long_edge)})
-        ctx.set_image(img.copy(), DOMAIN_LINEAR_CAM)
-        ctx.state["half_size"] = True
-        wb = self._decode_wb.get((decode_mode, version))
-        if wb is not None:
-            ctx.state["camera_wb"] = wb
+        # 样板前半 (ctx 构建/LINEAR_CAM/state 注入) 收敛到 pipeline.runner;
+        # 下面的 stage 缓存循环是 session 专属差异，保留在此。
+        # state 注入语义与旧内联实现一致: camera_wb 有值才注入;
         # t92 遗留闭合：归一化框（face_boxes/subject_boxes）注入 state，
         # exposure 测光 subject_mode=box 在 raw 会话同样生效
         # （与 SyntheticRenderBackend._render 的注入语义一致）。
+        state_inject: dict = {}
+        wb = self._decode_wb.get((decode_mode, version))
+        if wb is not None:
+            state_inject["camera_wb"] = wb
         if isinstance(state_extras, dict) and state_extras:
-            ctx.state.update(state_extras)
+            state_inject.update(state_extras)
+        pipe = build_default_pipeline(prof=self.prof, params=params)
+        ctx = prepare_render_ctx(
+            pipe, img, self.raw_path, self.prof,
+            config={"stages": dict(params), "half_size": True,
+                    "decode_mode": decode_mode, "long_edge": int(long_edge)},
+            mode="preview", state_inject=state_inject, copy_input=True)
 
         # 跨级参数依赖: 部分 stage 直接读其它 stage 的参数 (如 exposure 探针读
         # whitebalance 的 mode/temp/tint), 仅用本 stage 参数指纹会让这些 stage
@@ -379,12 +382,7 @@ class RawPreviewSession:
                     self._evict_stage_cache()
                 input_fp = output_fp
 
-        if ctx.domain != DOMAIN_GAMMA_RGB:
-            raise RuntimeError(
-                f"预览管线最终域不是 {DOMAIN_GAMMA_RGB} 而是 {ctx.domain}")
-        if output_bps == 16:
-            return (np.clip(ctx.image, 0.0, 1.0) * 65535.0 + 0.5).astype(np.uint16)
-        return (np.clip(ctx.image, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+        return finalize_gamma_output(ctx, output_bps, label="预览管线")
 
     # ---- 异步 generation 防御 ----
     def _accept_async_result(self, generation: int, result: np.ndarray) -> bool:

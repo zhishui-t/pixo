@@ -18,6 +18,28 @@ from .core.tone import srgb_decode
 from .core.calibration import DcpProfile, load_dcp
 
 
+def _apply_orientation(img: np.ndarray, orientation) -> np.ndarray:
+    """按 EXIF orientation (1/3/6/8) 旋转图像; 其它值原样返回 (L11 去重)。"""
+    import cv2
+    o = int(orientation)
+    if o == 3:
+        return cv2.rotate(img, cv2.ROTATE_180)
+    if o == 6:
+        return cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    if o == 8:
+        return cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    return img
+
+
+def _orientation_from_exif(raw_path: Union[str, Path]) -> int:
+    """读 EXIF orientation; 缺失/异常回退 1 (不转)。"""
+    try:
+        from pixo.meta import extract as _extract
+        return int((_extract(raw_path)["capture"].get("orientation") or 1))
+    except Exception:
+        return 1
+
+
 @dataclass
 class RawMetadata:
     path: Path
@@ -102,13 +124,14 @@ class Renderer:
         decode_mode:
           - "cfa_half_native": 优先 C++ CFA 2×2 分箱；失败回退 rawpy AHD half。
           - 其它值: 直接走 rawpy AHD half 回退路径。
+
+        样板 (ctx 构建/注入/终检/量化) 收敛在 pipeline.runner (三入口共用)。
         """
         import cv2
         import rawpy
 
         from .core.io import decode_cfa_half
-        from .pipeline.context import (DOMAIN_GAMMA_RGB, DOMAIN_LINEAR_CAM,
-                                       StageContext)
+        from .pipeline.runner import run_full_pipeline
 
         raw_path = Path(raw_path)
         params = dict(params or {})
@@ -144,31 +167,20 @@ class Renderer:
                                  interpolation=cv2.INTER_AREA)
 
             pipe = build_default_pipeline(prof=self.profile, params=params)
-            config = {
-                "stages": dict(params),
-                "half_size": True,
-                "decode_mode": decode_mode,
-                "long_edge": int(long_edge),
-                "preview": True,
-            }
-            ctx = StageContext(raw_path, raw=raw, prof=self.profile,
-                               config=config)
-            ctx.set_image(img, DOMAIN_LINEAR_CAM)
-            ctx.state["half_size"] = True
+            state_inject = {}
             try:
                 from .core.io import camera_neutral_wb_cached
-                ctx.state["camera_wb"] = camera_neutral_wb_cached(raw, raw_path)
+                state_inject["camera_wb"] = camera_neutral_wb_cached(raw, raw_path)
             except Exception:
                 pass
-            pipe.run(ctx)
-            out = ctx.image
-            if ctx.domain != DOMAIN_GAMMA_RGB:
-                raise RuntimeError(
-                    f"预览管线最终域不是 {DOMAIN_GAMMA_RGB} 而是 {ctx.domain}")
-
-            if output_bps == 16:
-                return (np.clip(out, 0.0, 1.0) * 65535.0 + 0.5).astype(np.uint16)
-            return (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+            return run_full_pipeline(
+                img, self.profile, params,
+                config={"stages": dict(params), "half_size": True,
+                        "decode_mode": decode_mode, "long_edge": int(long_edge),
+                        "preview": True},
+                output_bps=output_bps, mode="preview",
+                raw_path=raw_path, raw=raw, state_inject=state_inject,
+                pipe=pipe, label="预览管线")
         finally:
             try:
                 raw.close()
@@ -182,14 +194,46 @@ class Renderer:
 
     def render(self, raw: RawInput, calib: CameraCalibration,
                intent: Optional[RenderIntent] = None) -> np.ndarray:
+        """渲染为线性 sRGB float32 (H,W,3), 可 >1 (高光余量)。
+
+        - 默认 intent (无调整): render_dcp_linear 底座, 天然线性直出;
+        - 带 intent: 全链渲染到 gamma float 后 srgb_decode 回线性 (L9 修复:
+          旧实现经 render_adjusted 的 uint8 量化往返, 线性输出精度受损;
+          gamma encode→decode 的 float 往返本身近无损, 损失全在 8bit 量化,
+          现直接取管线 float 输出解码, 免除量化损失)。
+        """
         if intent is None:
             intent = RenderIntent()
         if float(intent.exposure) == 0.0 and not (intent.stages or {}):
             return render_dcp_linear(
                 raw.metadata.path, self.dcp_path, cache=self.cache)
-        disp = self.render_adjusted(raw.metadata.path, intent, half_size=False)
-        lin = srgb_decode(np.asarray(disp, dtype=np.float32) / 255.0)
+        gamma = self._render_adjusted_gamma_float(raw.metadata.path, intent)
+        lin = srgb_decode(np.asarray(gamma, dtype=np.float32))
         return np.clip(np.asarray(lin, dtype=np.float32), 0.0, None)
+
+    def _render_adjusted_gamma_float(self, raw_path, intent: RenderIntent) -> np.ndarray:
+        """调整路径: 全链渲染, 返回 gamma 域 float32 (不量化)。
+
+        状态语义与 render_adjusted→run_file 一致 (half_size=False,
+        config 只带 stages; 不注入 camera_wb state), 仅免去 8bit 量化。
+        """
+        from .core.io import decode_raw
+        from .pipeline.runner import run_pipeline_float
+
+        raw_path = Path(raw_path)
+        params = self._params_from_intent(intent)
+        img, raw = decode_raw(str(raw_path), half_size=False)
+        try:
+            return run_pipeline_float(
+                img, self.profile, params,
+                config={"stages": dict(params), "half_size": False},
+                mode="export", raw_path=raw_path, raw=raw,
+                pipe=build_default_pipeline(prof=self.profile, params=params))
+        finally:
+            try:
+                raw.close()
+            except Exception:
+                pass
 
     def render_camera_matched(self, raw_path: Union[str, Path], long_edge: int = 1024,
                                params: Optional[dict] = None, output_bps: int = 8,
@@ -216,17 +260,7 @@ class Renderer:
             else:
                 cam = thumb.data
         cam_rgb = cv2.cvtColor(cam, cv2.COLOR_BGR2RGB)
-        try:
-            from pixo.meta import extract as _extract
-            o = int((_extract(raw_path)["capture"].get("orientation") or 1))
-            if o == 3:
-                cam_rgb = cv2.rotate(cam_rgb, cv2.ROTATE_180)
-            elif o == 6:
-                cam_rgb = cv2.rotate(cam_rgb, cv2.ROTATE_90_CLOCKWISE)
-            elif o == 8:
-                cam_rgb = cv2.rotate(cam_rgb, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        except Exception:
-            pass
+        cam_rgb = _apply_orientation(cam_rgb, _orientation_from_exif(raw_path))
 
         target = cam_rgb.astype(np.float32).mean(axis=(0, 1))
         base_mean = base.astype(np.float32).mean(axis=(0, 1))
@@ -250,17 +284,7 @@ class Renderer:
         wb["trim"] = trim.tolist()
         final = self.render_preview_full(
             raw_path, long_edge=long_edge, params=final_params, output_bps=output_bps)
-        try:
-            from pixo.meta import extract as _extract
-            o = int((_extract(raw_path)["capture"].get("orientation") or 1))
-            if o == 3:
-                final = cv2.rotate(final, cv2.ROTATE_180)
-            elif o == 6:
-                final = cv2.rotate(final, cv2.ROTATE_90_CLOCKWISE)
-            elif o == 8:
-                final = cv2.rotate(final, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        except Exception:
-            pass
+        final = _apply_orientation(final, _orientation_from_exif(raw_path))
         return final
 
     def render_file(self, raw_path: Union[str, Path],
