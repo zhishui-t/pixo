@@ -19,10 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from pixo.pipeline.loop import RawRenderBackend
 from pixo.render.api import Renderer
 from pixo.vision.measure import VisionMeasure
-from pixo.vision.segmenters.yoloe import YoloeSegmenter
+from pixo.vision.segmenters.multi_router import MultiModelSegmenter
 
 DCP = r"resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
-YOLOE_MODEL = r"K:\work\project\guanlan\models\yoloe-26l-seg.pt"
 OUT = Path("exports/auto/full_scan")
 PROMPTS = ["person", "face", "sky", "tree", "plant", "mountain",
            "building", "water", "road", "flower", "crowd", "light"]
@@ -120,7 +119,7 @@ def process_one(renderer, measurer, segmenter, raw_path, max_iterations, out_dir
         full_masks = resize_masks(masks, img.shape[:2])
         m = measurer.measure(img, full_masks, image_id=pid,
                              render_version="pixo_render_0.1",
-                             detection_version="yoloe26l_seg_v1")
+                             detection_version="multi_v1")
         issues = issues_from_measurement(m)
         history.append({"iteration": it, "ev": ev, "issues": issues,
                         "global": {k: (m.get("global") or {}).get(k)
@@ -143,7 +142,7 @@ def process_one(renderer, measurer, segmenter, raw_path, max_iterations, out_dir
         full_masks = resize_masks(masks, final_img.shape[:2])
         final_m = measurer.measure(final_img, full_masks, image_id=pid,
                                    render_version="pixo_render_0.1",
-                                   detection_version="yoloe26l_seg_v1")
+                                   detection_version="multi_v1")
 
     after_path = out_dir / f"{pid}_full.jpg"
     cv2.imwrite(str(after_path), cv2.cvtColor(final_img, cv2.COLOR_RGB2BGR),
@@ -202,7 +201,8 @@ def main():
 
     renderer = Renderer(DCP)
     measurer = VisionMeasure()
-    segmenter = YoloeSegmenter(model_path=YOLOE_MODEL, conf_threshold=0.05, device="cpu")
+    # t110: YOLOE 适配器已移除（AGPL 清偿），改用 multi 路由栈
+    segmenter = MultiModelSegmenter()
     OUT.mkdir(parents=True, exist_ok=True)
     report_path = OUT / f"full_scan_{int(time.time())}.json"
     report = {"photos": []}

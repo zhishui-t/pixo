@@ -6,5 +6,5 @@
 - `vision_models.json`
 
 细分目录：
-- `segmentation/`：分割模型（YOLOE-26L-seg 等）引用。
+- `segmentation/`：分割模型（multi 路由栈各后端）引用。
 - `aesthetic/`：美学/评分模型引用。

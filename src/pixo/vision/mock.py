@@ -1,6 +1,6 @@
 """pixo.vision.mock —— MockSegmenter 合成 mask，用于测量/闭环测试。
 
-本实现仅依赖 NumPy，不引入 torch/ultralytics，不接真实语义模型。
+本实现仅依赖 NumPy，不引入 torch 等重依赖，不接真实语义模型。
 MockSegmenter 按 prompt 生成确定性的几何 mask，shape 与输入图像一致。
 """
 from __future__ import annotations

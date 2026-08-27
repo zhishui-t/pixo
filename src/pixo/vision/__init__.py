@@ -9,9 +9,9 @@
   - SegmenterUnavailable 等异常与降级约定。
 
 设计约束:
-  - 包顶层不引入 torch/ultralytics；真实模型适配器位于 segmenters/ 内，
-    重依赖（torch/transformers/rfdetr 等）限各适配器文件内懒 import，
-    ultralytics 仅限 segmenters/yoloe.py（AGPL 隔离）。
+  - 包顶层不引入 torch 等重依赖；真实模型适配器位于 segmenters/ 内，
+    重依赖（torch/transformers/rfdetr 等）限各适配器文件内懒 import
+    （ultralytics 依赖已随 YOLOE 移除清零，t110 AGPL 清偿）。
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ from .geometry import (
     detect_horizon_angle,
     horizon_health_info,
 )
-from .health import VISION_PACKAGE_VERSION, get_yoloe_segmenter, vision_health
+from .health import VISION_PACKAGE_VERSION, vision_health
 from .measure import (
     VisionMeasure,
     measure_global,
@@ -67,7 +67,6 @@ __all__ = [
     "get_fairface_age",
     "fairface_health_info",
     "vision_health",
-    "get_yoloe_segmenter",
     "VISION_PACKAGE_VERSION",
     "SegmenterError",
     "SegmenterUnavailable",

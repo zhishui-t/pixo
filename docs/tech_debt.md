@@ -4,14 +4,19 @@
 
 ## 关键技术债
 
-1. **YOLOE AGPL-3.0 发布阻断**：
-   - 当前仓库允许 AGPL 隔离使用：ultralytics 仅限
-     `src/pixo/vision/segmenters/yoloe.py` 直接 import（AGPL 隔离）；
-     torch/transformers 限 vision 各适配器文件内懒 import。
-   - `model_licenses.json` 中 `usage=internal_development_only` 的后端
-     （YOLOE/uniface/sapiens）由 multi_router 构造时门控：默认不注册进
-     路由，需 `PIXO_ALLOW_RESTRICTED=1` 显式放行。
-   - 对外发布前需替换模型、企业授权，或从发布分支移除 AGPL 运行时依赖。
+1. **YOLOE AGPL-3.0 发布阻断**（已清偿，t110 移除 YOLOE，AGPL 依赖清零）：
+   - 历史脉络：仓库曾允许 AGPL 隔离使用——ultralytics 仅限
+     `src/pixo/vision/segmenters/yoloe.py` 直接 import（AGPL 隔离）。
+   - t110 处置：YOLOE 适配器（segmenters/yoloe.py）、runtime
+     `PIXO_SEGMENTER=yoloe` 分支、vision_health yoloe 条目、模型台账
+     （model_licenses.json / vision_models.json 的 YOLOE-26L-seg 与随链
+     mobileclip2_b.ts）已全部移除，ultralytics/torch-AGPL 链依赖清零，
+     grep 全仓无残留；其开放词汇角色由 multi 路由栈
+     （RF-DETR/SegFormer/UniFace/Sapiens + 可选 GroundedSAM）承接。
+   - 仍有效的关联约束：`model_licenses.json` 中
+     `usage=internal_development_only` 的后端（uniface/sapiens）由
+     multi_router 构造时门控：默认不注册进路由，需
+     `PIXO_ALLOW_RESTRICTED=1` 显式放行。
 
 2. **DNG SDK clean-room 复审**：
    - 部分实现注释仍引用 Adobe DNG SDK；发布前需确认 clean-room 或重写。

@@ -7,7 +7,7 @@
             mean_luminance、highlight_clip_ratio。
 
 设计说明：
-  - 仅依赖 numpy 与 opencv-python，不引入 torch/ultralytics。
+  - 仅依赖 numpy 与 opencv-python，不引入 torch 等重依赖。
   - 输入统一按 RGB 展示空间处理；uint8 与 float32 均可，内部转为
     0-255 浮点亮度后测量。
   - 不符合真实分割/不可靠区域时按架构文档约定降级，不抛异常。

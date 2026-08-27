@@ -230,7 +230,7 @@ onCommit(patch)          // 拖拽结束：最终提交 + 记 trace
 
 | 分区 | 内容 |
 |---|---|
-| 模型 | vision 各模型路径与可用性状态灯；**YOLOE AGPL 隔离提示**（研发期可用，发布前必须替换/授权） |
+| 模型 | vision 各模型路径与可用性状态灯；**NC 后端门控提示**（uniface/sapiens 默认受限，需 `PIXO_ALLOW_RESTRICTED=1`） |
 | DSH | DSH Web 地址、trusted hosts、会话模型选择、聊天面板开关 |
 | 渲染 | preview long_edge(512/1024/2048)、输出位深(8/16)、decode_mode、渲染 worker 数 |
 | 输出 | 默认格式（JPEG/WebP/PNG16/TIFF16/raw48）、质量、导出目录、GPS 剥离开关 |
@@ -239,7 +239,7 @@ onCommit(patch)          // 拖拽结束：最终提交 + 记 trace
 
 ### 4.11 通用：StatusBar / Toasts / 空态
 
-- 底部状态栏：`generation #12 · 预览 1024 · 渲染 0.4s · native ✓ · YOLOE ✓(CPU)`；
+- 底部状态栏：`generation #12 · 预览 1024 · 渲染 0.4s · native ✓ · multi ✓`；
 - 全局 toast：渲染失败、模型未就绪、参数被钳位、导入完成；
 - 空态：无照片 → 导入引导；无测量 → “模型未就绪，转人工”提示。
 
@@ -391,7 +391,7 @@ GET    /api/schema/params               # param_schema 汇总（动态渲染滑�
 ├──────────────┴────────────────────────────────┴────────────────┤
 │时间线: SCREENED ✓ → BASE_RENDERED ✓ → EXPOSURE_ALIGNING(迭代2) → │
 │  ── FINAL_QC → ACCEPTED        [转人工复核] [撤销] [接受当前结果]  │
-│状态栏: gen#12 · 预览1024 · 0.41s · native✓ · YOLOE✓ · DSH✓        │
+│状态栏: gen#12 · 预览1024 · 0.41s · native✓ · multi✓ · DSH✓         │
 └──────────────────────────────────────────────────────────────────┘
 ```
 

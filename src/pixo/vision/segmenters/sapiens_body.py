@@ -3,9 +3,9 @@
 Meta Sapiens 分割家族（facebook/sapiens-seg-*，Humans300K 28 类语义），
 暴露 hair/skin/clothes/body 四个部位 prompt。许可 CC-BY-NC-4.0
 （Sapiens2 License 口径）：开源项目可用，商用分发需替换或隔离——
-已登记 model_licenses.json，与 YOLOE 的 AGPL internal-only 台账
-区分 NC 特性。第三方推理(torch/transformers)只存在于本文件
-（t90 隔离纪律）。
+已登记 model_licenses.json（internal_development_only，NC 特性
+区别于 MIT/Apache 可分发后端）。第三方推理(torch/transformers)
+只存在于本文件（t90 隔离纪律）。
 
 hair 掩码同时为人像抠图预留通道（下游 matting 任务消费）。
 

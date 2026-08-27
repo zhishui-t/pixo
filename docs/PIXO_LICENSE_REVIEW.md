@@ -3,6 +3,13 @@
 > 日期：2026-08-22
 > 范围：`pixo/` 与项目 Python 运行时依赖/模型/迁移代码
 > 结论：**当前仅适合内部研发；发布前存在 YOLOE AGPL、DNG clean-room、模型权重许可、第三方声明缺失等阻断项。**
+>
+> **更新（2026-08-26，t110）**：下述阻断项之首——YOLOE AGPL——已清偿：
+> `src/pixo/vision/segmenters/yoloe.py` 适配器、runtime `PIXO_SEGMENTER=yoloe`
+> 分支、vision_health/模型台账对应条目已全部移除，仓库不再含 ultralytics/
+> AGPL 运行时依赖（其开放词汇角色由 multi 路由栈承接，NC 后端门控不变）。
+> 其余阻断项（DNG clean-room、第三方声明等）仍有效。正文为 2026-08-22
+> 原始审计快照，其中 YOLOE/ultralytics 相关条目仅作历史记录。
 
 ---
 

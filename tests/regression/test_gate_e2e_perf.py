@@ -1,4 +1,4 @@
-"""Gate: P1-7 真实 NEF + YOLOE/mock 端到端性能门禁。
+"""Gate: P1-7 真实 NEF + mock/多模型分割 端到端性能门禁。
 
 无 RAW_PATH 时只跑合成图结构基准；有 RAW_PATH 时按预算断言：
   - 单张闭环 ≤30s；

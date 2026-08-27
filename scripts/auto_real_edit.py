@@ -1,7 +1,7 @@
 """Autonomous real-photo Pixo loop: render -> segment -> measure -> decide -> iterate.
 
 Selects representative NEFs from the real photo folders, runs the real
-RawRenderBackend + YOLOE segmenter + VisionMeasure + Decide loop, and saves
+RawRenderBackend + multi-router segmenter + VisionMeasure + Decide loop, and saves
 before/after previews, full result, and a JSON report for later review.
 """
 from __future__ import annotations
@@ -22,10 +22,9 @@ from pixo.decide.rules import DEFAULT_RULES
 from pixo.pipeline.loop import RawRenderBackend, SinglePhotoLoop
 from pixo.render.api import Renderer
 from pixo.vision.measure import VisionMeasure
-from pixo.vision.segmenters.yoloe import YoloeSegmenter
+from pixo.vision.segmenters.multi_router import MultiModelSegmenter
 
 DCP = r"resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
-YOLOE_MODEL = r"K:\work\project\guanlan\models\yoloe-26l-seg.pt"
 OUT_ROOT = Path("exports/auto")
 PROMPTS = [
     "person", "face", "sky", "tree", "plant", "mountain",
@@ -177,14 +176,15 @@ def main() -> None:
 
     renderer = Renderer(DCP)
     measurer = VisionMeasure()
-    segmenter = YoloeSegmenter(model_path=YOLOE_MODEL, conf_threshold=0.05, device="cpu")
-    print(f"YOLOE ready={segmenter.ready}", flush=True)
+    # t110: YOLOE 适配器已移除（AGPL 清偿），改用 multi 路由栈
+    segmenter = MultiModelSegmenter()
+    print(f"multi_router backends={segmenter.routed_backend_names()}", flush=True)
 
     report_path = OUT_ROOT / "report" / f"auto_report_{int(time.time())}.json"
     report: dict = {
         "started": time.strftime("%Y-%m-%d %H:%M:%S"),
         "dcp": DCP,
-        "yoloe": YOLOE_MODEL,
+        "segmenter": "multi_router",
         "prompts": PROMPTS,
         "max_iterations": args.max_iterations,
         "photos": [],

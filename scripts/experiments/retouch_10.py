@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from pixo.meta import extract
 from pixo.render.api import Renderer
 from pixo.vision.measure import VisionMeasure
-from pixo.vision.segmenters.yoloe import YoloeSegmenter
+from pixo.vision.segmenters.multi_router import MultiModelSegmenter
 
 DCP = "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 CAL_REPORT = Path("exports/auto/calibrated/calibration_report.json")
@@ -63,8 +63,7 @@ def main():
 
     renderer = Renderer(DCP)
     measurer = VisionMeasure()
-    segmenter = YoloeSegmenter(model_path=r"K:\work\project\guanlan\models\yoloe-26l-seg.pt",
-                               conf_threshold=0.05, device="cpu")
+    segmenter = MultiModelSegmenter()  # t110: YOLOE 移除后改用 multi 路由栈
     OUT.mkdir(parents=True, exist_ok=True)
 
     results = []

@@ -14,7 +14,6 @@ sky/plant/mountain/tree/grass->segformer | hair/skin/clothes/body->sapiens |
 的后端仅在 PIXO_ALLOW_RESTRICTED=1 时注册进路由表，否则跳过并告警
 （JSON 解析失败不阻断：全注册+告警）。
 测试可经 backends= 注入假件；不注入则按需实例化真实适配器。
-（yoloe 后端不在此路由表：AGPL/重依赖，不在默认实例化集，见 yoloe.py。）
 """
 from __future__ import annotations
 
@@ -47,8 +46,6 @@ DEFAULT_ROUTE = "gsam"
 _LICENSE_BACKENDS: dict[str, str] = {
     "uniface": "uniface-face-parsing",
     "sapiens": "facebook/sapiens-seg-0.3b",
-    # yoloe（YOLOE-26L-seg，internal_development_only）不在路由表，
-    # 由 runtime PIXO_SEGMENTER=yoloe 显式选用，不经此门控。
 }
 
 _LICENSES_WARNED = False
@@ -250,7 +247,6 @@ class MultiModelSegmenter(BaseSegmenter):
 
         各后端自身受 PIXO_SEGMENTER_WARMUP 门控与懒加载保护；
         显式 enabled()=False 的后端（如默认关闭的 gsam）跳过预热。
-        yoloe 不在路由表（AGPL/重依赖，不在默认实例化集），不预热。
         """
         if not warmup_enabled():
             return {"skipped": True}

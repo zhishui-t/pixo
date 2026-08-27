@@ -7,7 +7,7 @@ SegmenterUnavailable。
 
 实现约定:
   - Mask 值为 0/255，shape 为 (H, W)。
-  - 真实模型接入只应放在 segmenters/ 适配器内，本包不引入 torch/ultralytics。
+  - 真实模型接入只应放在 segmenters/ 适配器内，本包不引入 torch 等重依赖。
 """
 from __future__ import annotations
 

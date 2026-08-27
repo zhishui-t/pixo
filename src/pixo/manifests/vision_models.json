@@ -1,32 +1,8 @@
 {
   "schema_version": "1.0",
-  "updated": "2026-08-22",
+  "updated": "2026-08-26",
   "description": "Pixo Vision 相关模型清单，仅登记不拷贝大文件。",
   "models": [
-    {
-      "id": "yoloe-26l-seg",
-      "name": "YOLOE-26L-seg",
-      "purpose": "开放词汇实例分割/主体定位，输出 prompt mask",
-      "path_or_source": "$GUANLAN_ROOT/models/yoloe-26l-seg.pt",
-      "size": "76 MB",
-      "size_bytes": 79417413,
-      "license": "AGPL-3.0",
-      "publishable": false,
-      "pixo_status": "adapter_in_pixo_vision_segmenters_yoloe",
-      "notes": "产品化前必须替换或购买 Ultralytics 企业授权；只允许通过 Segmenter 接口调用。"
-    },
-    {
-      "id": "mobileclip2-b",
-      "name": "mobileclip2_b.ts",
-      "purpose": "YOLOE 内置英文文本编码器，用于 prompt-free 开放词汇",
-      "path_or_source": "$GUANLAN_ROOT/models/mobileclip2_b.ts",
-      "size": "243 MB",
-      "size_bytes": 253794476,
-      "license": "AGPL-3.0 / 随 Ultralytics 模型链，需单独核验",
-      "publishable": false,
-      "pixo_status": "bundled_with_yoloe_adapter",
-      "notes": "英文 CLIP 编码器，中文提示词无效；许可随模型链核验。"
-    },
     {
       "id": "aesthetic-scorer",
       "name": "aesthetic_scorer.pt",

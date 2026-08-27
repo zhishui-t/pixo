@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-26 — t110 YOLOE 移除批（AGPL 依赖清零）
+
+- 移除 YOLOE 分割器（唯一 AGPL-3.0 依赖，tech_debt #1 发布阻断项清偿）：
+  删 `src/pixo/vision/segmenters/yoloe.py` 与其单测；`PIXO_SEGMENTER`
+  收敛为 `mock|multi`；vision_health 去除 yoloe 条目，真实分割栈缺省
+  报 multi_router 聚合；vision_models.json / model_licenses.json 删
+  YOLOE-26L-seg 与随链 mobileclip2_b.ts 条目。
+- 遗留命名清理：loop `_detection_version` 由 "yoloe26l_seg_v1" 改中性
+  "segmenter_v1"（全仓无测试/金样本钉死该串）；隔离门禁测试保留并改为
+  "ultralytics 全仓禁入 + torch/transformers 限适配器懒 import"。
+- scripts 五个实验驱动（auto_full_scan/auto_full_refine/auto_manual_
+  fallback/auto_real_edit/retouch_10）改用 MultiModelSegmenter。
+- 开放词汇兜底：原 YOLOE 94 词开放词汇能力由 multi 路由
+  （route 表内 prompt + 可选 GroundedSAM，`PIXO_GSAM_ENABLED=1`）承接。
+- 验收：grep 全仓无活引用（历史文档注记除外）；基线无回归。
+
 ## 2026-08-25 — 视觉栈替换批 + LUT 库三批 + 高光/判据加固
 
 - 多模型 Segmenter 替换 YOLOE：face→UniFace / person→RF-DETR-Seg 2XL /

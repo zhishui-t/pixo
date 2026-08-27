@@ -45,7 +45,6 @@ _DEFAULT_MAX_SESSIONS = 8
 _DETECTION_VERSIONS = {
     "mock": "mock_v1",
     "multi": "multi_v1",
-    "yoloe": "yoloe_v1",
 }
 
 
@@ -125,7 +124,7 @@ class PixoServiceRuntime:
         # FastAPI 线程池化路由下的 photos/sessions 并发变更锁。
         self._lock = threading.Lock()
 
-        # 测量分割器：env PIXO_SEGMENTER（mock|multi|yoloe），缺省 mock
+        # 测量分割器：env PIXO_SEGMENTER（mock|multi），缺省 mock
         # 保持现行为（避免意外下载/加载真实模型）。
         self._segmenter_requested = (
             os.environ.get("PIXO_SEGMENTER", "mock").strip().lower() or "mock"
@@ -136,7 +135,7 @@ class PixoServiceRuntime:
     # ---- 默认工厂 ----
 
     def _build_segmenter(self, requested: str) -> Any:
-        """按类型构造分割器；multi/yoloe 懒 import，不可用回退 mock 并告警。"""
+        """按类型构造分割器；multi 懒 import，不可用回退 mock 并告警。"""
         if requested == "mock":
             return MockSegmenter()
         try:
@@ -146,13 +145,9 @@ class PixoServiceRuntime:
                 )
 
                 seg = MultiModelSegmenter()
-            elif requested == "yoloe":
-                from pixo.vision.segmenters.yoloe import YoloeSegmenter
-
-                seg = YoloeSegmenter()
             else:
                 raise ValueError(
-                    f"未知 PIXO_SEGMENTER: {requested!r}（可选 mock|multi|yoloe）"
+                    f"未知 PIXO_SEGMENTER: {requested!r}（可选 mock|multi）"
                 )
             self.segmenter_type = requested
             return seg

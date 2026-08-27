@@ -1270,8 +1270,8 @@ class SinglePhotoLoop:
         return "pixo_render_0.1"
 
     def _detection_version(self) -> str:
-        """当前检测版本标识。"""
-        return "yoloe26l_seg_v1"
+        """当前检测版本标识（中性命名：随实际注入的分割器栈语义稳定）。"""
+        return "segmenter_v1"
 
     def _run_final_qc(
         self,

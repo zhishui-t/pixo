@@ -9,7 +9,7 @@
 | openai/clip-vit-base-patch32（backbone） | HF hub 自动下载 | **MIT** | OpenAI 官方 CLIP 仓库许可 |
 
 两条目均已登记进仓库根 `model_licenses.json`（usage=redistribution_allowed_with_license_notice，
-发布需附 MIT 声明；与 YOLOE 的 AGPL internal_development_only 口径不同，无隔离要求）。
+发布需附 MIT 声明；无 internal_development_only 隔离要求）。
 GitHub 侧 `rsinema/aesthetic-scorer` 仓库已 404（API 另受限流），权威渠道为 Hugging Face。
 
 ## 2. 权重获取
@@ -23,7 +23,7 @@ GitHub 侧 `rsinema/aesthetic-scorer` 仓库已 404（API 另受限流），权�
 ## 3. 代码变更
 - `_default_model_path()` 默认路径 src/models/aesthetic_scorer.pt → **resources/models/aesthetic/aesthetic_scorer.pt**；
   `PIXO_AESTHETIC_MODEL` env 覆盖保留。
-- 打包口径：wheel 不捆绑权重（同 YOLOE 先例）；安装态用 env 或随发行版分发该文件。
+- 打包口径：wheel 不捆绑权重（沿既定先例）；安装态用 env 或随发行版分发该文件。
 
 ## 4. CLIP backbone 首跑
 - transformers 经 HF 缓存自动下载 `models--openai--clip-vit-base-patch32`

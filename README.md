@@ -10,7 +10,8 @@ Pixo 是一套自研 RAW 照片渲染与 AI 修图系统：
 - **渲染引擎**（`src/pixo/render`）：DNG 对齐解码 → 13 阶段管线
   （曝光标定/白平衡/HSL/colorcal/skin/stylize/refine…）→ gamma 输出；
   支持 .cube LUT 惰性加载、暗房主题工作台。
-- **视觉**（`src/pixo/vision`）：YOLOE 分割、7 维美学评分器
+- **视觉**（`src/pixo/vision`）：多模型分割路由（UniFace/RF-DETR/SegFormer/Sapiens
+  + 可选 GroundedSAM；AGPL 依赖已清零，t110）、7 维美学评分器
   （CLIP backbone，MIT 权重已部署+常驻预热）、轻量代理指标三件套。
 - **决策**（`src/pixo/decide`）：确定性规则引擎——原生 AND/between 条件、
   优先级链（用户锁定＞偏好＞风格卡＞默认）、参数锁定、step_decay 收敛；

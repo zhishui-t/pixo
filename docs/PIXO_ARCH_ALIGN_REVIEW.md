@@ -6,6 +6,10 @@
 > 代码基线：`$PIXO_ROOT/pixo` @ `7c737a6 refactor: 迁移至 render 包并全量改名 RawLux -> Pixo Render`
 > 评审对象：`docs/架构设计文档.md`（v0.1.0rc，917 行）
 > 交付范围：差距表 / 管线顺序确认 / guanlan 复用评估 / 风险与对策 / DSH Agent 与前端打包方案 / P0-P2 路线图
+>
+> **注（2026-08-26，t110）**：本文为评审时点快照。文中的 YOLOE-26L-seg 方案已于
+> t110 移除（AGPL 依赖清偿清零），现役分割栈为 multi 路由（UniFace/RF-DETR/
+> SegFormer/Sapiens + 可选 GroundedSAM）；相关表述仅作历史记录。
 
 ---
 
