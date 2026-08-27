@@ -100,7 +100,12 @@ int ApplyColorCalLab(const float* lab, std::uint8_t* labOut, int width, int heig
 
         if (neutralActive) {
             const float sigma = params.neutralSigma;
-            const float w = std::exp(-(C * C) / (2.0f * sigma * sigma));
+            // 平台+高斯尾权重 (S5 对齐): C <= plateau(12) 全量校正, 之后按
+            // sigma 高斯衰减 —— 与 modules/color_cal.py 全量 Lab 路径及
+            // _apply_neutral_fast 快速路径同一口径, 消除 native/Python 分歧。
+            const float plateau = 12.0f;
+            const float tail = std::max(C - plateau, 0.0f);
+            const float w = std::exp(-(tail * tail) / (2.0f * sigma * sigma));
             if (hasCurves) {
                 const float aOff = params.curveA != nullptr ? InterpCurve(L, params.curveA) : 0.0f;
                 const float bOff = params.curveB != nullptr ? InterpCurve(L, params.curveB) : 0.0f;

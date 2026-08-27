@@ -33,7 +33,12 @@ def _reference_lab(u8, sat, vib, hue, na, nb, sigma, skin,
     L, a, b = lab[:, :, 0], lab[:, :, 1], lab[:, :, 2]
     C = np.sqrt((a - 128.0) ** 2 + (b - 128.0) ** 2)
     if na != 0.0 or nb != 0.0 or curve_a is not None or curve_b is not None:
-        w = np.exp(-(C ** 2) / (2.0 * sigma * sigma))
+        # 平台+高斯尾权重: 与 modules/color_cal.py 全量 Lab 路径 (S5) 及
+        # native DLL (colorcal.cpp, 已对齐重编) 同口径 —— C<=plateau(12)
+        # 全量校正, 之后按 sigma 高斯衰减。
+        plateau = 12.0
+        tail = np.maximum(C - plateau, 0.0)
+        w = np.exp(-(tail ** 2) / (2.0 * sigma * sigma))
         if curve_a is not None or curve_b is not None:
             a_off = (np.interp(L, _NEUTRAL_CENTERS, curve_a).astype(np.float32)
                      if curve_a is not None else 0.0)
@@ -123,13 +128,11 @@ def test_gamut_soft_matches_reference(native_required):
 def test_colorcal_stage_native_matches_fallback(native_required, monkeypatch):
     rng = np.random.default_rng(20260820)
     img = rng.uniform(0.0, 1.0, size=(32, 32, 3)).astype(np.float32)
-    # S5 后 Python 全量回退的中性权重是"平台+高斯尾", native 仍是纯高斯:
-    # 中性偏移非零时两者已知分歧 (待 native 重编对齐, 有界性由
-    # tests/regression/test_gate_colorcal.py 的分歧上界测试把守), 故本测试
-    # 的严格等价只覆盖中性偏移为零的组合。
+    # native DLL 已对齐 S5 "平台+高斯尾" 中性权重口径 (colorcal.cpp 重编),
+    # 中性偏移非零的组合恢复严格逐位等价 (不再回避 na/nb != 0)。
     cfg = {"stages": {"colorcal": {
         "saturation": 0.2, "vibrance": 0.15, "hue": 5.0,
-        "neutral_a": 0.0, "neutral_b": 0.0, "neutral_mode": "static",
+        "neutral_a": 1.0, "neutral_b": -1.0, "neutral_mode": "static",
         "skin_protect": 0.7, "gamut_soft": 0.5,
     }}}
     stage = ColorCalStage()

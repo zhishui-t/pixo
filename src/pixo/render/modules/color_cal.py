@@ -324,7 +324,8 @@ class ColorCalStage(Stage):
             # 1) 中性轴校准: 标量 + 按亮度分段曲线, 平台+高斯尾权重按 C 衰减
             #    (不动饱和色)。S5 修复: 与快速路径 _apply_neutral_fast 同一口径
             #    (C<=plateau(12) 全量, 之后高斯衰减), 消除同参数快/慢路径分歧;
-            #    native 侧 (colorcal.cpp) 仍为纯高斯, 对齐待 DLL 重编 (已知分歧)。
+            #    native 侧 (colorcal.cpp) 已同口径重编, 两侧逐位一致
+            #    (test_native_colorcal / test_gate_colorcal 严格等价把守)。
             if na != 0.0 or nb != 0.0 or a_curve is not None or b_curve is not None:
                 plateau = 12.0
                 tail = np.maximum(C - plateau, 0.0)
