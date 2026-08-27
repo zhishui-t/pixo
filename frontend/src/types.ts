@@ -26,6 +26,25 @@ export type PhotoState =
   | 'MANUAL_REVIEW'
   | 'REJECTED';
 
+/**
+ * Filmstrip 状态过滤词（UI 选项）→ PhotoState 集合的映射。
+ * 过滤词是粗分组，与后端状态机枚举一一不对应，故按集合判断：
+ * pending=未处理（含筛图完成）、processing=管线中、accepted=终态通过、
+ * review=需人工处理（含拒绝终态）。'全部' 由调用方短路，不进表。
+ */
+export const STATUS_FILTER_SETS: Readonly<Record<string, ReadonlySet<PhotoState>>> = {
+  pending: new Set<PhotoState>(['RAW_PENDING', 'SCREENED']),
+  processing: new Set<PhotoState>([
+    'BASE_RENDERED',
+    'EXPOSURE_ALIGNING',
+    'COLOR_CORRECTING',
+    'STYLE_APPLIED',
+    'FINAL_QC',
+  ]),
+  accepted: new Set<PhotoState>(['ACCEPTED']),
+  review: new Set<PhotoState>(['MANUAL_REVIEW', 'REJECTED']),
+};
+
 /** GET /api/photos、GET /api/photos/{id} 的 photo 对象（runtime.photo_dict）。 */
 export interface Photo {
   photo_id: string;

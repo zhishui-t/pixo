@@ -13,6 +13,7 @@ import {
   getExportStatus as getExportStatusRemote,
   getHealth as getHealthRemote,
   listPhotos as listPhotosRemote,
+  originalUrl as remoteOriginalUrl,
   updateParams as updateParamsRemote,
   previewUrl as remotePreviewUrl,
   submitExport as submitExportRemote,
@@ -38,6 +39,28 @@ export async function fetchPhotos(): Promise<{ photos: Photo[]; backend: boolean
     backendAvailable = false;
     return { photos: mockGetPhotos(), backend: false };
   }
+}
+
+/**
+ * 后端 Photo → 前端 PhotoView：补齐 Filmstrip 依赖的展示字段。
+ * - name：path 的文件名（去目录分隔符，兼容 / 与 \）。
+ * - takenAt：created_at（排序键 'date' 用）。
+ * - status：state（Filmstrip 状态过滤的数据源，见 types.ts STATUS_FILTER_SETS）。
+ * - thumbnail：有会话时用首会话当前 generation 预览（gen 省略，服务端按会话
+ *   当前代渲染）；无会话（RAW_PENDING 尚未建会话）时留 undefined，Filmstrip
+ *   渲染 CSS 占位卡片。
+ */
+export function toPhotoView(photo: Photo): PhotoView {
+  const name = photo.path.split(/[\\/]/).pop() ?? photo.photo_id;
+  return {
+    ...photo,
+    name,
+    takenAt: photo.created_at,
+    status: photo.state,
+    thumbnail: photo.sessions[0]
+      ? remotePreviewUrl(photo.sessions[0], null, 512, 80)
+      : undefined,
+  };
 }
 
 export async function health(): Promise<HealthInfo & { backend: boolean }> {
@@ -145,10 +168,18 @@ export function getPreviewSource(sessionId: string, generation: number): string 
 }
 
 export function getOriginalSource(sessionId: string): string {
-  // TODO(backend)：后端目前只有 /api/sessions/{id}/image（处理图），
-  // 没有 original 原图端点。接入前统一返回 mock 原图占位，
-  // 避免把处理图误当原图接进对比视图（Split 左侧/原图模式）。
-  void sessionId;
+  // 契约：GET /api/sessions/{id}/image?original=1&long_edge=...（decode-only、
+  // 无调整的原图；无 gen 参数——原图与 generation 无关）。后端在线时直连该
+  // URL；端点落地前线上会 404（或 demo-session 未建会话时 404），由
+  // PreviewViewer 的 img onError 回退 getMockOriginalSource()，不闪断。
+  if (backendAvailable) {
+    return remoteOriginalUrl(sessionId);
+  }
+  return mockPreviewDataUrl(0, false);
+}
+
+/** 原图加载失败（在线契约端点 404 / 网络错误）时的本地占位，与离线模式同源。 */
+export function getMockOriginalSource(): string {
   return mockPreviewDataUrl(0, false);
 }
 

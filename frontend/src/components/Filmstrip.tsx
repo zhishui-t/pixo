@@ -3,7 +3,8 @@ import { DESIGN_TOKENS as T } from '../theme/tokens';
 import { ActionIcon, Badge, Group, NumberInput, Paper, ScrollArea, Select, Text, UnstyledButton } from '@mantine/core';
 import { Star } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import type { ColorLabel, PhotoView } from '../types';
+import { STATUS_FILTER_SETS } from '../types';
+import type { ColorLabel, PhotoState, PhotoView } from '../types';
 
 // 域标签色板：红/黄/绿/蓝/紫为用户数据标记色（Lightroom 惯例），
 // 属数据色而非主题色，故不纳入 DESIGN_TOKENS。
@@ -31,7 +32,14 @@ export function Filmstrip() {
     const filtered = photos.filter((photo) => {
       if (filmFilter.rating !== null && (photo.rating ?? 0) !== filmFilter.rating) return false;
       if (filmFilter.color && photo.colorLabel !== filmFilter.color) return false;
-      if (filmFilter.status !== '全部' && photo.status !== filmFilter.status) return false;
+      // 状态过滤词（pending/processing/accepted/review）与后端 PhotoState
+      // 枚举不一一对应：按 STATUS_FILTER_SETS 集合判断，数据源字段是
+      // PhotoView.status（mock/后端映射均填 state 值），缺省回退 photo.state。
+      if (filmFilter.status !== '全部') {
+        const set = STATUS_FILTER_SETS[filmFilter.status];
+        const state = (photo.status ?? photo.state) as PhotoState;
+        if (!set || !set.has(state)) return false;
+      }
       if (filmFilter.scene && photo.scene !== filmFilter.scene) return false;
       return true;
     });
@@ -113,7 +121,15 @@ export function Filmstrip() {
                     transition: 'transform .15s ease, box-shadow .15s ease',
                   }}
                 >
-                  <img src={photo.thumbnail} alt={photo.name} style={{ width: '100%', borderRadius: 8, aspectRatio: '3/2', objectFit: 'cover' }} />
+                  {/* thumbnail 为 undefined（后端照片尚未建会话，见 api.toPhotoView）
+                      时用 CSS 占位卡，避免 <img src=undefined> 的破图图标；mock 照片恒有缩略图，不走此分支。 */}
+                  {photo.thumbnail ? (
+                    <img src={photo.thumbnail} alt={photo.name} style={{ width: '100%', borderRadius: 8, aspectRatio: '3/2', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', aspectRatio: '3/2', borderRadius: 8, background: T.overlay, border: `1px dashed ${T.hairline}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text size="xs" c="dimmed">未建会话</Text>
+                    </div>
+                  )}
                   <Group gap={5} mt={8}>
                     {COLORS.map((c) => (
                       <ActionIcon

@@ -10,7 +10,7 @@ import { ActionIcon, Badge, Button, Group, Paper, SegmentedControl, Text } from 
 import { Image as ImageIcon, Maximize2, Move, ZoomIn, ZoomOut } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { DESIGN_TOKENS as T } from '../theme/tokens';
-import { getMockSessionId, getOriginalSource, getPreviewSource } from '../api';
+import { getMockOriginalSource, getMockSessionId, getOriginalSource, getPreviewSource } from '../api';
 
 export function PreviewViewer() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -20,12 +20,26 @@ export function PreviewViewer() {
   const zoom = useAppStore((s) => s.zoom);
   const setZoom = useAppStore((s) => s.setZoom);
   const generation = useAppStore((s) => s.generation);
+  // 连接灯同源的在线标志：fetchPhotos 探测成功翻转 backendAvailable 发生在
+  // 首渲染之后，原图 URL 的 useMemo 需依赖它重算，否则一直停留在 mock 占位。
+  const backendOnline = useAppStore((s) => s.backend);
   // 后端在线时 store 会缓存 ensureSession 建立的真实会话 id；mock 模式回退 demo。
   const sessionId = useAppStore((s) => s.sessionId) ?? getMockSessionId();
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
 
-  const original = useMemo(() => getOriginalSource(sessionId), [sessionId]);
+  // 原图层：在线模式指向契约端点 GET /api/sessions/{id}/image?original=1
+  // （decode-only 原图，见 api.getOriginalSource 注释）；端点落地前会 404，
+  // 由 onError 同帧回退 mock data URL 占位（不闪断，无网络往返）。
+  // 离线模式 src 本就是 mock data URL，不触发回退。
+  const original = useMemo(
+    () => getOriginalSource(sessionId),
+    [sessionId, backendOnline],
+  );
+  const [originalSrc, setOriginalSrc] = useState(original);
+  useEffect(() => {
+    setOriginalSrc(original);
+  }, [original]);
   const processed = useMemo(
     () => getPreviewSource(sessionId, generation),
     [sessionId, generation],
@@ -113,7 +127,16 @@ export function PreviewViewer() {
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           }}
         >
-          <img className="preview-img original-layer" src={original} alt="original" draggable={false} />
+          <img
+            className="preview-img original-layer"
+            src={originalSrc}
+            alt="original"
+            draggable={false}
+            onError={() => {
+              const fallback = getMockOriginalSource();
+              if (originalSrc !== fallback) setOriginalSrc(fallback);
+            }}
+          />
           {viewMode !== 'original' && (
             <img
               ref={imgRef}

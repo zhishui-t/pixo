@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActionIcon, AppShell, Group, Text, Tooltip } from '@mantine/core';
 import { Download, Inbox, LayoutGrid, Settings, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { DESIGN_TOKENS as T } from './theme/tokens';
-import { fetchPhotos, pollExport, submitExport, getMockSessionId } from './api';
+import { fetchPhotos, getMockSessionId, pollExport, submitExport, toPhotoView } from './api';
 import { useAppStore } from './store/useAppStore';
 import { ProjectList } from './components/ProjectList';
 import { PreviewViewer } from './components/PreviewViewer';
@@ -30,13 +30,20 @@ export default function App() {
   const backend = useAppStore((s) => s.backend);
   const setPhotos = useAppStore((s) => s.setPhotos);
 
-  // 挂载探测一次后端：setPhotos 会同步 photos + backend 标志，
-  // 让顶栏连接灯反映真实连接状态（mock 模式自动回退）。
+  // 挂载探测一次后端（fetchPhotos 即探测：GET /api/photos 成败决定 backendAvailable）：
+  // setPhotos 会同步 photos + backend 标志，并在后端在线时把 PhotoView 化的
+  // 后端照片装入 photosByProject（Filmstrip 数据源），顶栏连接灯随之真实。
+  // mock 模式回退初始 mock 数据，行为与不探测时完全一致。
   useEffect(() => {
     let alive = true;
     fetchPhotos()
       .then((result) => {
-        if (alive) setPhotos(result.photos, result.backend);
+        if (!alive) return;
+        if (result.backend) {
+          setPhotos(result.photos.map(toPhotoView), true);
+        } else {
+          setPhotos(result.photos, false);
+        }
       })
       .catch(() => {
         /* fetchPhotos 内部已降级 mock，不会 reject；防御性吞掉 */

@@ -132,3 +132,16 @@ export function previewUrl(
   const genQuery = gen !== null ? `&gen=${gen}` : '';
   return `${API_BASE}/api/sessions/${sessionId}/image?long_edge=${longEdge}&fmt=jpeg&quality=${quality}${genQuery}`;
 }
+
+/**
+ * GET /api/sessions/{session_id}/image?original=1 —— decode-only 原图 URL。
+ * 契约端点（无调整、与 generation 无关，故不带 gen 参数）；端点落地前
+ * 请求可能 404，由调用方（api/index.getOriginalSource）负责回退占位。
+ */
+export function originalUrl(
+  sessionId: string,
+  longEdge = 1024,
+  quality = 88,
+): string {
+  return `${API_BASE}/api/sessions/${sessionId}/image?original=1&long_edge=${longEdge}&fmt=jpeg&quality=${quality}`;
+}

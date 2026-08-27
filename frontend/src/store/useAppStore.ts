@@ -176,7 +176,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setPage: (page) => set({ page }),
   setPhotos: (photos, backend) =>
-    set({ photos, backend, activePhotoId: photos[0]?.photo_id ?? null }),
+    set((state) => ({
+      photos,
+      backend,
+      activePhotoId: photos[0]?.photo_id ?? null,
+      // 后端在线时把后端照片装入当前项目的 Filmstrip 数据源（项目仍是
+      // 本地概念，最小正确：只覆盖当前 activeProject 的槽位）；
+      // mock 模式维持初始 mock 映射不动（项目-照片分组仅前端概念）。
+      photosByProject: backend
+        ? { ...state.photosByProject, [state.activeProjectId]: photos }
+        : state.photosByProject,
+    })),
   setSkinMaskReady: (v) => set({ skinMaskReady: v }),
   setProjects: (projects) => set({ projects }),
   selectProject: (projectId) =>
