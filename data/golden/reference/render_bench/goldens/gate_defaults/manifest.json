@@ -1,0 +1,642 @@
+{
+  "schema": "render-gate-raw-v1",
+  "features": {
+    "wb_as_shot_default": {
+      "feature": "wb_as_shot_default",
+      "params": {
+        "whitebalance": {
+          "mode": "as_shot"
+        }
+      },
+      "long_edge": 512,
+      "samples": {
+        "night_lowlight": {
+          "raw": "<corpus>/festival/DSC_0470.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\wb_as_shot_default\\night_lowlight\\output_u8.npy",
+            "u16": "gate_defaults\\wb_as_shot_default\\night_lowlight\\output_u16.npy"
+          },
+          "sha256_u8": "e16d0dc34ee59e351e587eb3dc5c7e667a799110102e9cc69e8ef57feb93e977",
+          "sha256_u16": "104ab5242103df06671cda396d9db9e4257c6efebe49a6d8bc506e79e70238b6",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "day_normal": {
+          "raw": "<corpus>/xiamen/102XM_03/DSC_2705.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\wb_as_shot_default\\day_normal\\output_u8.npy",
+            "u16": "gate_defaults\\wb_as_shot_default\\day_normal\\output_u16.npy"
+          },
+          "sha256_u8": "dba353e5f3f0ad9f1cde823efccafd0df43918d9e10ace07229fdc0642854e32",
+          "sha256_u16": "8c3c36b7b564258a638a6b2dde5d8e860e068e5593abf4f5ea58661c76e48db4",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "high_key_bright": {
+          "raw": "<corpus>/xiamen/101XM_02/DSC_1836.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\wb_as_shot_default\\high_key_bright\\output_u8.npy",
+            "u16": "gate_defaults\\wb_as_shot_default\\high_key_bright\\output_u16.npy"
+          },
+          "sha256_u8": "1cf808160e2007b21541cb7d174bf09a682673eff7f08eacf35b390f1338d92b",
+          "sha256_u16": "2b7a839a0d5699b673269ef6ffdeecc6529bf9d775f59f67107f2f25e7654562",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "portrait_tele": {
+          "raw": "<corpus>/xiamen/1/DSC_0466.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\wb_as_shot_default\\portrait_tele\\output_u8.npy",
+            "u16": "gate_defaults\\wb_as_shot_default\\portrait_tele\\output_u16.npy"
+          },
+          "sha256_u8": "36ed1928638bd79a2830a87f9decae4f70e6178677e54af24b795a6af0e87e21",
+          "sha256_u16": "288b2fab93f44d637004f3db166e7fe1c14a050d1685468dc1d324be0f2d259c",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "wide_angle": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2797.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\wb_as_shot_default\\wide_angle\\output_u8.npy",
+            "u16": "gate_defaults\\wb_as_shot_default\\wide_angle\\output_u16.npy"
+          },
+          "sha256_u8": "4a6c7984a4d352b6c6cf143fc11bb2b563c58f6d623fcd642b04636242f17981",
+          "sha256_u16": "eb31aa0bf505cea94df59ee38bceab02a6e0d22d9ded86dcc619cadbee754974",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "high_contrast": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2801.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\wb_as_shot_default\\high_contrast\\output_u8.npy",
+            "u16": "gate_defaults\\wb_as_shot_default\\high_contrast\\output_u16.npy"
+          },
+          "sha256_u8": "e73942b0333d20e2864fc13d584749588cec38505381455de91f34ada767d55e",
+          "sha256_u16": "d1ad951a1af2e64103149866b149346615092828069c9747f5f1dab2a1a209a1",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        }
+      }
+    },
+    "exposure_auto_default": {
+      "feature": "exposure_auto_default",
+      "params": {
+        "exposure": {
+          "mode": "auto"
+        }
+      },
+      "long_edge": 512,
+      "samples": {
+        "night_lowlight": {
+          "raw": "<corpus>/festival/DSC_0470.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\exposure_auto_default\\night_lowlight\\output_u8.npy",
+            "u16": "gate_defaults\\exposure_auto_default\\night_lowlight\\output_u16.npy"
+          },
+          "sha256_u8": "e16d0dc34ee59e351e587eb3dc5c7e667a799110102e9cc69e8ef57feb93e977",
+          "sha256_u16": "104ab5242103df06671cda396d9db9e4257c6efebe49a6d8bc506e79e70238b6",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "day_normal": {
+          "raw": "<corpus>/xiamen/102XM_03/DSC_2705.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\exposure_auto_default\\day_normal\\output_u8.npy",
+            "u16": "gate_defaults\\exposure_auto_default\\day_normal\\output_u16.npy"
+          },
+          "sha256_u8": "dba353e5f3f0ad9f1cde823efccafd0df43918d9e10ace07229fdc0642854e32",
+          "sha256_u16": "8c3c36b7b564258a638a6b2dde5d8e860e068e5593abf4f5ea58661c76e48db4",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "high_key_bright": {
+          "raw": "<corpus>/xiamen/101XM_02/DSC_1836.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\exposure_auto_default\\high_key_bright\\output_u8.npy",
+            "u16": "gate_defaults\\exposure_auto_default\\high_key_bright\\output_u16.npy"
+          },
+          "sha256_u8": "1cf808160e2007b21541cb7d174bf09a682673eff7f08eacf35b390f1338d92b",
+          "sha256_u16": "2b7a839a0d5699b673269ef6ffdeecc6529bf9d775f59f67107f2f25e7654562",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "portrait_tele": {
+          "raw": "<corpus>/xiamen/1/DSC_0466.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\exposure_auto_default\\portrait_tele\\output_u8.npy",
+            "u16": "gate_defaults\\exposure_auto_default\\portrait_tele\\output_u16.npy"
+          },
+          "sha256_u8": "36ed1928638bd79a2830a87f9decae4f70e6178677e54af24b795a6af0e87e21",
+          "sha256_u16": "288b2fab93f44d637004f3db166e7fe1c14a050d1685468dc1d324be0f2d259c",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "wide_angle": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2797.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\exposure_auto_default\\wide_angle\\output_u8.npy",
+            "u16": "gate_defaults\\exposure_auto_default\\wide_angle\\output_u16.npy"
+          },
+          "sha256_u8": "4a6c7984a4d352b6c6cf143fc11bb2b563c58f6d623fcd642b04636242f17981",
+          "sha256_u16": "eb31aa0bf505cea94df59ee38bceab02a6e0d22d9ded86dcc619cadbee754974",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "high_contrast": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2801.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\exposure_auto_default\\high_contrast\\output_u8.npy",
+            "u16": "gate_defaults\\exposure_auto_default\\high_contrast\\output_u16.npy"
+          },
+          "sha256_u8": "e73942b0333d20e2864fc13d584749588cec38505381455de91f34ada767d55e",
+          "sha256_u16": "d1ad951a1af2e64103149866b149346615092828069c9747f5f1dab2a1a209a1",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        }
+      }
+    },
+    "compose_param": {
+      "feature": "compose_param",
+      "params": {
+        "compose": {
+          "mode": "ratio",
+          "ratio": "16:9",
+          "center": [
+            0.5,
+            0.5
+          ]
+        }
+      },
+      "long_edge": 512,
+      "samples": {
+        "night_lowlight": {
+          "raw": "<corpus>/festival/DSC_0470.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\compose_param\\night_lowlight\\output_u8.npy",
+            "u16": "gate_defaults\\compose_param\\night_lowlight\\output_u16.npy"
+          },
+          "sha256_u8": "f6dba856841e49c7c7c97c3a8c5599da00150b20485e8ef21e14ead59d18fad1",
+          "sha256_u16": "e4f2da9edc0622997a55c8345568cd4715a29b788cf4f83326deb862973af550",
+          "shape_u8": [
+            288,
+            512,
+            3
+          ],
+          "shape_u16": [
+            288,
+            512,
+            3
+          ]
+        },
+        "day_normal": {
+          "raw": "<corpus>/xiamen/102XM_03/DSC_2705.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\compose_param\\day_normal\\output_u8.npy",
+            "u16": "gate_defaults\\compose_param\\day_normal\\output_u16.npy"
+          },
+          "sha256_u8": "56a7cca244352c6b305f7945c90aa36d771580c46864b9e62550bcf962a0cc94",
+          "sha256_u16": "dd89c7c6c4b0981f3e65c9f05a1e4993360dc2185a59c70113ae951175da0a41",
+          "shape_u8": [
+            288,
+            512,
+            3
+          ],
+          "shape_u16": [
+            288,
+            512,
+            3
+          ]
+        },
+        "high_key_bright": {
+          "raw": "<corpus>/xiamen/101XM_02/DSC_1836.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\compose_param\\high_key_bright\\output_u8.npy",
+            "u16": "gate_defaults\\compose_param\\high_key_bright\\output_u16.npy"
+          },
+          "sha256_u8": "e6e771c01585e2ee93b3c8c0d17120d495980dbd5c60efd2f288e6163e3ba1ec",
+          "sha256_u16": "7a2995d6728e845da189516fce457ba30a728e60c42c36277ebed76b3f197a10",
+          "shape_u8": [
+            288,
+            512,
+            3
+          ],
+          "shape_u16": [
+            288,
+            512,
+            3
+          ]
+        },
+        "portrait_tele": {
+          "raw": "<corpus>/xiamen/1/DSC_0466.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\compose_param\\portrait_tele\\output_u8.npy",
+            "u16": "gate_defaults\\compose_param\\portrait_tele\\output_u16.npy"
+          },
+          "sha256_u8": "02ce22d22344dc86ae4d91bbd59dbb8c1a9aad8ccc7e60ed182e339263454641",
+          "sha256_u16": "83eec6f2ea17639200353549346954dffe7f4c49c7c28b7201bfc8a4b1158ad2",
+          "shape_u8": [
+            288,
+            512,
+            3
+          ],
+          "shape_u16": [
+            288,
+            512,
+            3
+          ]
+        },
+        "wide_angle": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2797.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\compose_param\\wide_angle\\output_u8.npy",
+            "u16": "gate_defaults\\compose_param\\wide_angle\\output_u16.npy"
+          },
+          "sha256_u8": "a44319d41dae8cf4f6f7176f94e41daff993992354d3a821188b940937e9e3bf",
+          "sha256_u16": "28ae9f26d2fbe360715b563030568dca5552ba77d5722547d51b22465dea7e13",
+          "shape_u8": [
+            288,
+            512,
+            3
+          ],
+          "shape_u16": [
+            288,
+            512,
+            3
+          ]
+        },
+        "high_contrast": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2801.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\compose_param\\high_contrast\\output_u8.npy",
+            "u16": "gate_defaults\\compose_param\\high_contrast\\output_u16.npy"
+          },
+          "sha256_u8": "4e9ba53453b2ef7460b951856787433d0f78aadb2643d5a55d731257642cf6ab",
+          "sha256_u16": "bcdeb5ad4ca0b87678ec534c066ac7b50e451c1cc51c9fd3be74c99e86a90a47",
+          "shape_u8": [
+            288,
+            512,
+            3
+          ],
+          "shape_u16": [
+            288,
+            512,
+            3
+          ]
+        }
+      }
+    },
+    "clarity_default": {
+      "feature": "clarity_default",
+      "params": {
+        "clarity": {
+          "enabled": true,
+          "strength": 0.3
+        }
+      },
+      "long_edge": 512,
+      "samples": {
+        "night_lowlight": {
+          "raw": "<corpus>/festival/DSC_0470.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\clarity_default\\night_lowlight\\output_u8.npy",
+            "u16": "gate_defaults\\clarity_default\\night_lowlight\\output_u16.npy"
+          },
+          "sha256_u8": "e16d0dc34ee59e351e587eb3dc5c7e667a799110102e9cc69e8ef57feb93e977",
+          "sha256_u16": "104ab5242103df06671cda396d9db9e4257c6efebe49a6d8bc506e79e70238b6",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "day_normal": {
+          "raw": "<corpus>/xiamen/102XM_03/DSC_2705.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\clarity_default\\day_normal\\output_u8.npy",
+            "u16": "gate_defaults\\clarity_default\\day_normal\\output_u16.npy"
+          },
+          "sha256_u8": "dba353e5f3f0ad9f1cde823efccafd0df43918d9e10ace07229fdc0642854e32",
+          "sha256_u16": "8c3c36b7b564258a638a6b2dde5d8e860e068e5593abf4f5ea58661c76e48db4",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "high_key_bright": {
+          "raw": "<corpus>/xiamen/101XM_02/DSC_1836.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\clarity_default\\high_key_bright\\output_u8.npy",
+            "u16": "gate_defaults\\clarity_default\\high_key_bright\\output_u16.npy"
+          },
+          "sha256_u8": "1cf808160e2007b21541cb7d174bf09a682673eff7f08eacf35b390f1338d92b",
+          "sha256_u16": "2b7a839a0d5699b673269ef6ffdeecc6529bf9d775f59f67107f2f25e7654562",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "portrait_tele": {
+          "raw": "<corpus>/xiamen/1/DSC_0466.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\clarity_default\\portrait_tele\\output_u8.npy",
+            "u16": "gate_defaults\\clarity_default\\portrait_tele\\output_u16.npy"
+          },
+          "sha256_u8": "36ed1928638bd79a2830a87f9decae4f70e6178677e54af24b795a6af0e87e21",
+          "sha256_u16": "288b2fab93f44d637004f3db166e7fe1c14a050d1685468dc1d324be0f2d259c",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "wide_angle": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2797.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\clarity_default\\wide_angle\\output_u8.npy",
+            "u16": "gate_defaults\\clarity_default\\wide_angle\\output_u16.npy"
+          },
+          "sha256_u8": "4a6c7984a4d352b6c6cf143fc11bb2b563c58f6d623fcd642b04636242f17981",
+          "sha256_u16": "eb31aa0bf505cea94df59ee38bceab02a6e0d22d9ded86dcc619cadbee754974",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        },
+        "high_contrast": {
+          "raw": "<corpus>/xiamen/103XM_04/DSC_2801.NEF",
+          "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+          "files": {
+            "u8": "gate_defaults\\clarity_default\\high_contrast\\output_u8.npy",
+            "u16": "gate_defaults\\clarity_default\\high_contrast\\output_u16.npy"
+          },
+          "sha256_u8": "e73942b0333d20e2864fc13d584749588cec38505381455de91f34ada767d55e",
+          "sha256_u16": "d1ad951a1af2e64103149866b149346615092828069c9747f5f1dab2a1a209a1",
+          "shape_u8": [
+            341,
+            512,
+            3
+          ],
+          "shape_u16": [
+            341,
+            512,
+            3
+          ]
+        }
+      }
+    }
+  },
+  "long_edge": 512,
+  "dcp": "K:\\work\\project\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+  "samples": {
+    "night_lowlight": {
+      "ref": "<corpus>/festival/DSC_0470.NEF",
+      "note": "night_lowlight EXIF 驱动选样",
+      "exif": {
+        "dir": "festival",
+        "datetime": "2026-02-17T19:34:08.420000+08:00",
+        "iso": 400,
+        "shutter": "1/2",
+        "shutter_s": 0.5,
+        "aperture": "f/4.0",
+        "focal_mm": 47.0,
+        "metering": "matrix",
+        "exp_comp": 0.0,
+        "orientation": 8,
+        "wb_as_shot": "auto"
+      }
+    },
+    "day_normal": {
+      "ref": "<corpus>/xiamen/102XM_03/DSC_2705.NEF",
+      "note": "day_normal EXIF 驱动选样",
+      "exif": {
+        "dir": "xiamen/102XM_03",
+        "datetime": "2026-02-22T15:53:34.230000+08:00",
+        "iso": 100,
+        "shutter": "1/640",
+        "shutter_s": 0.0015625,
+        "aperture": "f/4.0",
+        "focal_mm": 27.5,
+        "metering": "spot",
+        "exp_comp": 0.0,
+        "orientation": 1,
+        "wb_as_shot": "auto"
+      }
+    },
+    "high_key_bright": {
+      "ref": "<corpus>/xiamen/101XM_02/DSC_1836.NEF",
+      "note": "high_key_bright EXIF 驱动选样",
+      "exif": {
+        "dir": "xiamen/101XM_02",
+        "datetime": "2026-02-21T13:55:25.840000+08:00",
+        "iso": 200,
+        "shutter": "1/4000",
+        "shutter_s": 0.00025,
+        "aperture": "f/4.0",
+        "focal_mm": 39.0,
+        "metering": "spot",
+        "exp_comp": 0.0,
+        "orientation": 8,
+        "wb_as_shot": "auto"
+      }
+    },
+    "portrait_tele": {
+      "ref": "<corpus>/xiamen/1/DSC_0466.NEF",
+      "note": "portrait_tele EXIF 驱动选样",
+      "exif": {
+        "dir": "xiamen/1",
+        "datetime": "2026-02-17T18:28:55.550000+08:00",
+        "iso": 1600,
+        "shutter": "1/160",
+        "shutter_s": 0.00625,
+        "aperture": "f/4.0",
+        "focal_mm": 120.0,
+        "metering": "spot",
+        "exp_comp": 0.0,
+        "orientation": 8,
+        "wb_as_shot": "auto"
+      }
+    },
+    "wide_angle": {
+      "ref": "<corpus>/xiamen/103XM_04/DSC_2797.NEF",
+      "note": "wide_angle EXIF 驱动选样",
+      "exif": {
+        "dir": "xiamen/103XM_04",
+        "datetime": "2026-02-25T09:53:43.190000+08:00",
+        "iso": 100,
+        "shutter": "1/1250",
+        "shutter_s": 0.0008,
+        "aperture": "f/4.0",
+        "focal_mm": 24.0,
+        "metering": "spot",
+        "exp_comp": 0.0,
+        "orientation": 1,
+        "wb_as_shot": "auto"
+      }
+    },
+    "high_contrast": {
+      "ref": "<corpus>/xiamen/103XM_04/DSC_2801.NEF",
+      "note": "high_contrast EXIF 驱动选样",
+      "exif": {
+        "dir": "xiamen/103XM_04",
+        "datetime": "2026-02-25T09:54:11.370000+08:00",
+        "iso": 100,
+        "shutter": "1/6400",
+        "shutter_s": 0.00015625,
+        "aperture": "f/4.0",
+        "focal_mm": 120.0,
+        "metering": "spot",
+        "exp_comp": 0.0,
+        "orientation": 1,
+        "wb_as_shot": "auto"
+      }
+    }
+  },
+  "reviewer": "t108-auto-verified (主代理复核, 待用户终审)"
+}
