@@ -37,13 +37,16 @@
 """
 from __future__ import annotations
 
-import json
+import logging
 from pathlib import Path
 
 import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, DOMAIN_LINEAR_CAM, register_stage
 from ..core.curves import curve_anchor_target
+from ..core import calibration_store
+
+_LOGGER = logging.getLogger(__name__)
 
 LOG2_GRAY = float(np.log2(0.18))  # ≈ -2.474 (无 DCP 时的回退锚点)
 
@@ -61,21 +64,34 @@ _SPIKE_EV_LIFT = 0.15   # 有界提亮幅度 (EV), max_ev 内钳位
 #   {"cal_table": [[m_log2, ev], ...]} —— 场景自适应表: 线性中位亮度 → 所需 EV。
 #   相机预览曝光是场景自适应的 (暗场景保暗), 单常量无法复现; 表结点 ≥3 时
 #   曝光 Stage 查表 (否则回退锚点 + target_offset)。
+# 文件读取统一走 core.calibration_store (mtime+size 失效 + 负缓存 + 线程安全);
+# _cached_offset/_cached_table 保留为模块级 memo (兼容既有测试对这两个符号的
+# 重置用法), memo 失效时以 refresh=True 强制读盘 —— 与旧实现"memo 置空即重读
+# 磁盘"的语义一致。
 _CAL_FILE = Path(__file__).resolve().parent.parent / "target_offset.json"
 _cached_offset: float | None = None
 _cached_table: tuple | None = None
+# mode 非法类型 (bool/容器等) 的一次性告警去重 (按类型名; _reset_caches 清空)。
+_MODE_TYPE_WARNED: set = set()
+
+
+def _reset_caches() -> None:
+    """测试隔离钩子: 还原本模块缓存初始态, 并一并重置 calibration_store。"""
+    global _cached_offset, _cached_table
+    _cached_offset = None
+    _cached_table = None
+    _MODE_TYPE_WARNED.clear()
+    calibration_store.reset()
 
 
 def _load_target_offset() -> float:
     """读每机 target_offset 标定 (文件不存在 → 0.0)。"""
     global _cached_offset
     if _cached_offset is None:
+        doc = calibration_store.load_json(_CAL_FILE, refresh=True)
         try:
-            if _CAL_FILE.exists():
-                _cached_offset = float(json.loads(
-                    _CAL_FILE.read_text(encoding="utf-8")).get("target_offset", 0.0))
-            else:
-                _cached_offset = 0.0
+            _cached_offset = 0.0 if doc is None else float(
+                doc.get("target_offset", 0.0))
         except Exception:
             _cached_offset = 0.0
     return _cached_offset
@@ -96,9 +112,10 @@ def _load_cal_table() -> tuple | None:
     global _cached_table
     if _cached_table is None:
         _cached_table = False
-        try:
-            if _CAL_FILE.exists():
-                tbl = json.loads(_CAL_FILE.read_text(encoding="utf-8")).get("cal_table")
+        doc = calibration_store.load_json(_CAL_FILE, refresh=True)
+        if doc is not None:
+            try:
+                tbl = doc.get("cal_table")
                 if tbl and len(tbl) >= 3:
                     widths = {len(t) for t in tbl}
                     if widths == {2}:
@@ -121,8 +138,8 @@ def _load_cal_table() -> tuple | None:
                                 ws.append(float(sel[:, 1].mean()))
                                 ys.append(float(sel[:, 2].mean()))
                             _cached_table = (np.array(xs), np.array(ws), np.array(ys))
-        except Exception:
-            _cached_table = False
+            except Exception:
+                _cached_table = False
     return _cached_table if _cached_table else None
 
 
@@ -413,9 +430,20 @@ class ExposureStage(Stage):
             ctx.state["ev_mode"] = "baseline"
             ctx.state["baseline_curve_ev"] = curve_ev
             ctx.state["baseline_scene_ev"] = scene_ev
-        elif isinstance(mode, (int, float)) and mode != "auto":
+        elif (isinstance(mode, (int, float)) and not isinstance(mode, bool)
+              and mode != "auto"):
+            # L2 bool 陷阱: bool 是 int 子类, 不排除会把 mode=True 误当
+            # ev=1.0; bool 与其他非法类型 (容器等) 落入 auto 分支并一次性告警。
             ev = float(mode)
         else:
+            if (isinstance(mode, bool)
+                    or not isinstance(mode, (int, float, str, type(None)))):
+                tname = type(mode).__name__
+                if tname not in _MODE_TYPE_WARNED:
+                    _MODE_TYPE_WARNED.add(tname)
+                    _LOGGER.warning(
+                        "[exposure] mode 类型非法: %s=%r (合法: \"auto\"|\"off\"|"
+                        "\"baseline\"|EV 数值), 回退 auto", tname, mode)
             ev = self._auto_ev(ctx)
         ev = float(np.clip(ev, -float(self.p(ctx, "max_ev")), float(self.p(ctx, "max_ev"))))
         # 记录增益前的传感器饱和掩码 (供 WB 级做高光中性化):

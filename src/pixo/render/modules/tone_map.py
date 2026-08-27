@@ -24,12 +24,15 @@ RGB 三通道共用同一条亮度曲线 ⇒ 中性灰在任何亮度层级保�
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
 from ..core.curves import (make_filmic_lut, make_base_curve_lut, apply_lut1d,
                       apply_lut1d_fast, parse_profile_curve, curve_lut_from_points)
+from ..core import calibration_store
 
 _LUT_CACHE = {}
 # DcpProfile 影调曲线 LUT 缓存：id(prof) 键 + **值里持 prof 强引用**。
@@ -40,44 +43,55 @@ _LUT_CACHE = {}
 _PROFILE_CACHE: dict[int, tuple] = {}
 _LRFIT_CACHE = None
 _N_FAST = 16384  # 热路径 LUT 级数 (最近邻, 量化误差 <1/32768 不可感知)
+# LR 标定文件 (包内资源, 默认不存在): 文件 I/O/缓存统一走
+# core.calibration_store —— 缺失时由 store 负缓存 (旧实现每次调用都
+# p.exists() stat 探测), 存在时按 (mtime_ns, size) 失效重读。
+_LR_CAL_FILE = Path(__file__).resolve().parent.parent / "lr_tone_curve.json"
+
+
+def _reset_caches() -> None:
+    """测试隔离钩子: 还原影调 LUT / lrfit 标定缓存并重置 calibration_store。
+
+    _PROFILE_CACHE 不清: 键为 DcpProfile 实例 (强引用防 id 复用的修复保持
+    不动), 与文件标定加载无关, 条目跨 reset 恒有效。
+    """
+    global _LRFIT_CACHE
+    _LRFIT_CACHE = None
+    _LUT_CACHE.clear()
+    calibration_store.reset()
 
 
 def _get_lrfit():
     """LR 标定 v3: (gains[3], 共享曲线 LUT) float32 0..1; 文件缺失 → None。
 
-    engine/lr_tone_curve.json 格式:
+    render/lr_tone_curve.json 格式:
       {"version": 3, "gains": [r,g,b], "curve": [1024 点 0..255]}
     语义 (tools/fit_lr_tone_v2.py 拟合):
       - gains: 线性域逐通道增益, 吸收 LR 与我们的全局色差 (亮度标度+WB/色调方向);
       - curve: 一条共享影调曲线 (v1 三通道曲线的均值, 已去除单张照片的
         WB 烘焙), 三通道同曲线 → 中性像素任意层级保持中性。
     历史教训 (2026-08): v1 逐通道 CDF 曲线把拟合照片的白平衡烘焙进曲线,
-    换一张照片 (5236) 就整体发蓝 (用户报"一黄一蓝, RGB 标反?"), 实为
-    逐通道直方图匹配的跨图缺陷, 不是通道标反。
+      换一张照片 (5236) 就整体发蓝 (用户报"一黄一蓝, RGB 标反?"), 实为
+      逐通道直方图匹配的跨图缺陷, 不是通道标反。
+    文件读取走 core.calibration_store (负缓存: 缺失不再每次 stat);
+    解析/防呆逻辑与迁移前逐行一致。
     """
     global _LRFIT_CACHE
     if _LRFIT_CACHE is None:
-        try:
-            import json as _json
-            from pathlib import Path as _P
-            p = _P(__file__).resolve().parent.parent / "lr_tone_curve.json"
-            if not p.exists():
-                _LRFIT_CACHE = None
-            else:
-                data = _json.loads(p.read_text(encoding="utf-8"))
-                gains = np.asarray(data.get("gains", [1.0, 1.0, 1.0]),
+        doc = calibration_store.load_json(_LR_CAL_FILE)
+        if doc is not None:
+            try:
+                gains = np.asarray(doc.get("gains", [1.0, 1.0, 1.0]),
                                    dtype=np.float32)
-                curve = np.asarray(data["curve"], dtype=np.float64) / 255.0
+                curve = np.asarray(doc["curve"], dtype=np.float64) / 255.0
                 # 防呆: 曲线退化 (如 0..1 误存又除 255) 时直接判无效
-                if float(curve.max()) < 0.1:
-                    _LRFIT_CACHE = None
-                else:
+                if float(curve.max()) >= 0.1:
                     grid = np.linspace(0.0, 1.0, _N_FAST, dtype=np.float64)
                     lut = np.interp(grid, np.linspace(0.0, 1.0, len(curve)),
                                     curve).astype(np.float32)
                     _LRFIT_CACHE = (gains, lut)
-        except Exception:
-            _LRFIT_CACHE = None
+            except Exception:
+                _LRFIT_CACHE = None
     return _LRFIT_CACHE
 
 

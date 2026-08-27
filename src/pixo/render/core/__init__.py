@@ -10,6 +10,7 @@
 
 当前阶段: 各子模块为 render 原生实现。
 """
-from . import io, color, calibration, curves, tone, warp  # noqa: F401
+from . import io, color, calibration, curves, tone, warp, calibration_store  # noqa: F401
 
-__all__ = ["io", "color", "calibration", "curves", "tone", "warp"]
+__all__ = ["io", "color", "calibration", "curves", "tone", "warp",
+           "calibration_store"]

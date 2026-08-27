@@ -20,14 +20,48 @@ import rawpy
 # rawpy 首次访问 raw_image_visible / raw_pattern / black_level 等属性会触发
 # DNG/RAW 解压（实测 ~1.3s）；同一文件重复预览时直接复用最终 RGB，避免重复解压。
 # 磁盘缓存用于跨进程冷启动：首次 CFA 解码后落盘，后续新进程直接加载 half RGB。
-# LRU（上限 _LRU_MAX）：原实现满 8 条全清，热点条目被连带逐出导致重复解压。
+# 容量治理 (R2 条数 LRU 上限 8 → 字节预算): 条目实测量级差异巨大 (本机实测
+# 一次解码 ≈ 70 MiB, 见 _decode_cache_budget_bytes 注释), 按条数上限对不同
+# 尺寸档/机型无法表达统一内存意图。改为字节预算: env PIXO_DECODE_CACHE_MB
+# (缺省 2048), 条目按数组 nbytes 计, 超预算淘汰最旧直到达标; OrderedDict
+# LRU 结构与命中 move_to_end 保持不变。
 _DECODE_CACHE: "OrderedDict[tuple, np.ndarray]" = OrderedDict()
 _DECODE_CACHE_DIR = Path(
     os.environ.get(
         "PIXO_RENDER_DECODE_CACHE_DIR",
         str(Path(__file__).resolve().parents[1] / "bench" / "cache" / "decode")))
 
+# WB 系数缓存条目极小 (3 float), 保持条数 LRU; 解码缓存改字节预算 (见上)。
 _LRU_MAX = 8
+# 解码缓存字节预算缺省 (MiB)。本机 bench/cache/decode 实测单条解码条目
+# (2020, 3032, 3) float32 = 73,495,680 B ≈ 70.1 MiB → 缺省 2048 MiB ≈ 29 条,
+# 取代旧 8 条 (~561 MiB) 上限; 亦兼容 quarter 档 (~17 MiB) 等小条目高频复用。
+_DECODE_CACHE_MB_DEFAULT = 2048.0
+
+
+def _decode_cache_budget_bytes() -> int:
+    """解码缓存字节预算: env PIXO_DECODE_CACHE_MB (MiB, 缺省 2048)。
+
+    非法值回退缺省; ≤0 视为关闭解码缓存 (每次仍可用磁盘缓存预热)。
+    每次 put 时读取 env (解码本身秒级, 一次 getenv 可忽略), 便于测试
+    与运行时调参即时生效。
+    """
+    raw = os.environ.get("PIXO_DECODE_CACHE_MB")
+    mb = _DECODE_CACHE_MB_DEFAULT
+    if raw is not None:
+        try:
+            mb = float(raw)
+        except ValueError:
+            mb = _DECODE_CACHE_MB_DEFAULT
+    if mb <= 0.0:
+        return 0
+    return int(mb * 1024 * 1024)
+
+
+def _entry_nbytes(value) -> int:
+    """条目字节估算: ndarray 用 nbytes, 其余 (monkeypatch 注入等) 记 0。"""
+    n = getattr(value, "nbytes", None)
+    return int(n) if n else 0
 
 
 def _lru_get(cache: dict, key: tuple):
@@ -44,13 +78,36 @@ def _lru_get(cache: dict, key: tuple):
 
 
 def _lru_put(cache: dict, key: tuple, value, limit: int = _LRU_MAX) -> None:
-    """LRU 写入：插入并刷新 recency，超限淘汰最旧一条（不再全清）。"""
+    """LRU 写入（条数上限, 供 _WB_CACHE 等): 插入并刷新 recency，超限淘汰最旧。"""
     cache[key] = value
     move_to_end = getattr(cache, "move_to_end", None)
     if move_to_end is not None:
         move_to_end(key)
     while len(cache) > limit:
         oldest = next(iter(cache))
+        del cache[oldest]
+
+
+def _decode_cache_put(cache: dict, key: tuple, value) -> None:
+    """解码缓存写入（字节预算 LRU）：插入刷新 recency，超预算淘汰最旧。
+
+    - 预算 ≤0 → 不写缓存（关闭）；
+    - 超预算时从最旧端淘汰直到达标；单条即超预算时保留最新一条
+      （刚解码即丢会使缓存彻底失效、每次重复解码）；
+    - 兼容被 monkeypatch 成普通 dict 的 cache（无 move_to_end 时跳过刷新，
+      淘汰按插入序迭代）。
+    """
+    budget = _decode_cache_budget_bytes()
+    if budget <= 0:
+        return
+    cache[key] = value
+    move_to_end = getattr(cache, "move_to_end", None)
+    if move_to_end is not None:
+        move_to_end(key)
+    total = sum(_entry_nbytes(v) for v in cache.values())
+    while total > budget and len(cache) > 1:
+        oldest = next(iter(cache))
+        total -= _entry_nbytes(cache[oldest])
         del cache[oldest]
 
 
@@ -118,7 +175,7 @@ def decode_cfa_half(raw: rawpy.RawPy, output_scale: float = 1.0,
         try:
             out = np.load(cache_path, allow_pickle=False)
             if cache_key is not None:
-                _lru_put(_DECODE_CACHE, cache_key, out)
+                _decode_cache_put(_DECODE_CACHE, cache_key, out)
             return out
         except Exception:
             pass
@@ -153,7 +210,7 @@ def decode_cfa_half(raw: rawpy.RawPy, output_scale: float = 1.0,
         output_scale=float(output_scale),
     )
     if cache_key is not None:
-        _lru_put(_DECODE_CACHE, cache_key, out)
+        _decode_cache_put(_DECODE_CACHE, cache_key, out)
         if cache_path is not None:
             try:
                 np.save(cache_path, out, allow_pickle=False)
@@ -367,7 +424,8 @@ def camera_neutral_wb(raw: rawpy.RawPy) -> np.ndarray:
 
 
 # 相机 WB 缓存：raw.camera_whitebalance 首次访问同样会触发 DNG 解压（~1.3s）。
-# 与 _DECODE_CACHE 同款 LRU（满额淘汰最旧一条，不再全清）。
+# 条目极小 (3 float), 保持条数 LRU (_lru_put, 满额淘汰最旧一条);
+# 解码缓存 (_DECODE_CACHE) 已改字节预算 (_decode_cache_put)。
 _WB_CACHE: "OrderedDict[tuple, np.ndarray]" = OrderedDict()
 
 

@@ -44,8 +44,6 @@
 from __future__ import annotations
 
 import logging
-import json
-import os
 from numbers import Real
 from pathlib import Path
 
@@ -56,6 +54,7 @@ from ..pipeline.graph import DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB
 from ..core.color import (cam_to_linear_srgb_matrix, cct_from_wb,
                      interpolate_forward_matrix, temp_tint_to_wb)
 from ..core.calibration import DcpProfile
+from ..core import calibration_store
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -107,11 +106,28 @@ def _check_warmth_curve(curve) -> np.ndarray:
 
 # t14 WB 分桶治理: 每机暖度标定曲线 (scripts/fit_warmth_curve.py --write 产物)。
 #   存在时 Stage 缺省加载 (warm_cal_file 开关), 替代单一斜率模型; 缺失/非法
-#   回退斜率模型, 行为兼容。缓存键含 mtime/size, 改标定文件即时生效。
-DEFAULT_WARM_CAL_FILE = (Path(__file__).resolve().parents[4] /
-                         "configs" / "calibration" / "warmth_curve.json")
+#   回退斜率模型, 行为兼容。文件读取统一走 core.calibration_store —— 其
+#   (mtime_ns, size) 失效语义即本模块旧 _WARM_CAL_CACHE 的缓存键, 改标定
+#   文件即时生效的行为保留; 缺失文件由 store 负缓存 (不再每次 stat)。
+#   路径解析: 仓库根 configs/ 优先经 calibration_store.resolve_repo_root
+#   (PIXO_CONFIG_ROOT 环境 → 向上找 pyproject.toml, 与 know/paths 同法),
+#   解析失败回退旧的 parents[4] 布局 (editable 安装下两者同一路径)。
+_ROOT = calibration_store.resolve_repo_root()
+DEFAULT_WARM_CAL_FILE = ((_ROOT if _ROOT is not None
+                          else Path(__file__).resolve().parents[4])
+                         / "configs" / "calibration" / "warmth_curve.json")
+# 校验结果缓存: id(共享 doc) → (doc, {"curve","domain"})。doc 由 store 缓存并
+# 直返同一对象, 条目持 doc 强引用 ⇒ id 不可能被复用张冠李戴; 文件变化 →
+# store 重读返回新 doc → id 变化 → 重新校验 (等价旧 (path, mtime, size) 键)。
 _WARM_CAL_CACHE: dict = {}
 _WARM_DOMAIN_WARNED: set = set()
+
+
+def _reset_caches() -> None:
+    """测试隔离钩子: 还原暖度标定缓存/一次性告警集, 并重置 calibration_store。"""
+    _WARM_CAL_CACHE.clear()
+    _WARM_DOMAIN_WARNED.clear()
+    calibration_store.reset()
 
 
 def _load_warm_cal(path):
@@ -120,16 +136,16 @@ def _load_warm_cal(path):
     JSON 格式: {"knots": [[wb_B, r, g, b], ...], "_domain": {"wb_B": [lo, hi]}}
     (fit_warmth_curve.py --write 产物)。返回 {"curve": ndarray|None,
     "domain": (lo, hi)|None}; 结点经 _check_warmth_curve 全量校验。
+    文件 I/O/缓存走 core.calibration_store (mtime+size 失效 + 负缓存 +
+    线程安全); 返回值结构与迁移前完全一致。
     """
-    try:
-        st = os.stat(path)
-        key = (str(path), st.st_mtime_ns, st.st_size)
-    except OSError:
+    doc = calibration_store.load_json(path)
+    if doc is None:
         return None
-    if key not in _WARM_CAL_CACHE:
+    entry = _WARM_CAL_CACHE.get(id(doc))
+    if entry is None or entry[0] is not doc:
         curve, domain = None, None
         try:
-            doc = json.loads(Path(path).read_text(encoding="utf-8"))
             curve = _check_warmth_curve(doc["knots"])
             dom = (doc.get("_domain") or {}).get("wb_B")
             if (isinstance(dom, (list, tuple)) and len(dom) == 2
@@ -137,8 +153,9 @@ def _load_warm_cal(path):
                 domain = (float(dom[0]), float(dom[1]))
         except Exception:
             curve, domain = None, None
-        _WARM_CAL_CACHE[key] = {"curve": curve, "domain": domain}
-    return _WARM_CAL_CACHE[key]
+        entry = (doc, {"curve": curve, "domain": domain})
+        _WARM_CAL_CACHE[id(doc)] = entry
+    return entry[1]
 
 
 def apply_warmth(wb: np.ndarray, prof, warmth: float = 1.0,

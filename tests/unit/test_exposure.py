@@ -40,11 +40,14 @@ def _no_cal_file(monkeypatch):
     标定文件是环境数据, 若存在会改变 _auto_ev 走查表路径, 使锚点类断言
     全部失效。加载行为的专项测试 (test_target_offset_default_loads_...) 会
     自行 monkeypatch 覆盖。
+
+    _reset_caches() 是 W 系列新增的测试隔离钩子: 一并把 _cached_offset/
+    _cached_table 还原初始态并重置 core.calibration_store (含负缓存),
+    取代旧的对两个私有符号逐一置 None 的写法 (用法演示)。
     """
+    _exposure_mod._reset_caches()
     monkeypatch.setattr(_exposure_mod, "_CAL_FILE",
                         _exposure_mod._CAL_FILE.parent / "__nonexistent_cal__.json")
-    monkeypatch.setattr(_exposure_mod, "_cached_table", None)
-    monkeypatch.setattr(_exposure_mod, "_cached_offset", None)
 
 # 真实 Nikon Z 5 II Camera Standard 矩阵 (与 T2 测试一致, 确定性用例)
 _NIKON_CM1 = [1.1643, -0.653, 0.0726, -0.4355, 1.2179, 0.2449, -0.0231, 0.0811, 0.7571]
@@ -177,6 +180,65 @@ def test_target_offset_default_loads_calibration_file(tmp_path, monkeypatch):
     monkeypatch.setattr(exposure_mod, "_CAL_FILE", tmp_path / "missing.json")
     monkeypatch.setattr(exposure_mod, "_cached_offset", None)
     assert ExposureStage().default_params()["target_offset"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# mode bool 陷阱 (L2): bool 是 int 子类, 旧数值分支会把 mode=True 当 ev=1.0
+# ---------------------------------------------------------------------------
+
+def test_mode_bool_rejected_by_param_schema():
+    """参数校验层 (float_or_str) 拒收 bool: mode=True 直接 ValueError。"""
+    ctx = _make_ctx(_neutral_image(64, 64, 0.3))
+    with pytest.raises(ValueError, match="mode"):
+        ExposureStage({"mode": True}).process(ctx)
+
+
+def test_mode_bool_falls_back_to_auto_with_warning(monkeypatch, caplog):
+    """分支级防呆: 绕过校验层直击 process, mode=True 不再当 ev=1.0。
+
+    回退 auto 路径 (ev 与 mode="auto" 一致) 并打一次性 warning。
+    """
+    from pixo.render.pipeline.graph import Stage as _Stage
+    _orig_p = _Stage.p
+
+    def _p_override(self, ctx, key, default=None):
+        if key == "mode":
+            return True
+        return _orig_p(self, ctx, key, default)
+
+    monkeypatch.setattr(_Stage, "p", _p_override)
+
+    img = _neutral_image(64, 64, 0.3)
+    ev_auto = float(np.clip(
+        ExposureStage()._auto_ev(_make_ctx(img)), -2.5, 2.5))
+    ctx = _make_ctx(img)
+    with caplog.at_level("WARNING", logger="pixo.render.modules.exposure"):
+        ExposureStage().run(ctx)
+        ExposureStage().run(_make_ctx(img))      # 第二次: 告警不重复
+    assert ctx.state["ev"] == pytest.approx(ev_auto)   # ≠ ev=1.0 数值分支
+    warns = [r for r in caplog.records if "mode 类型非法" in r.getMessage()]
+    assert len(warns) == 1  # 一次性 (按类型名去重)
+
+
+def test_mode_container_type_falls_back_to_auto(monkeypatch, caplog):
+    """其他非法类型 (list) 同样回退 auto + 告警 (数值向量对 exposure 无意义)。"""
+    from pixo.render.pipeline.graph import Stage as _Stage
+    _orig_p = _Stage.p
+
+    def _p_override(self, ctx, key, default=None):
+        if key == "mode":
+            return [1.0, 2.0, 3.0]
+        return _orig_p(self, ctx, key, default)
+
+    monkeypatch.setattr(_Stage, "p", _p_override)
+    img = _neutral_image(64, 64, 0.3)
+    ev_auto = float(np.clip(
+        ExposureStage()._auto_ev(_make_ctx(img)), -2.5, 2.5))
+    ctx = _make_ctx(img)
+    with caplog.at_level("WARNING", logger="pixo.render.modules.exposure"):
+        ExposureStage().run(ctx)
+    assert ctx.state["ev"] == pytest.approx(ev_auto)
+    assert any("mode 类型非法" in r.getMessage() for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
