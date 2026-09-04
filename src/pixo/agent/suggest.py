@@ -22,7 +22,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable
 
-from .patch_protocol import review_patches
+from .patch_protocol import OKLCH_DIMENSION_DOC, review_patches
 from .tools import _dsh_chat_config, _dsh_chat_real
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,8 +36,10 @@ __all__ = [
 
 _PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
-# patch 协议说明（内嵌进系统提示词；与 patch_protocol 校验器同源约束）
-PATCH_SCHEMA_DOC = """## 参数补丁输出协议
+# patch 协议说明（内嵌进系统提示词；与 patch_protocol 校验器同源约束）。
+# oklch 量纲说明自 patch_protocol.OKLCH_DIMENSION_DOC 单一出处内嵌——
+# 防 LLM 生成 oklch 域越域建议（h≥360 / C 超包络 / L 越界）。
+_PATCH_SCHEMA_DOC_BASE = """## 参数补丁输出协议
 只输出一个 JSON 数组，每个元素形如：
 {"param": "<语义点路径如 tone.brightness>",
  "op": "set" | "delta",
@@ -46,8 +48,10 @@ PATCH_SCHEMA_DOC = """## 参数补丁输出协议
 约束：
 - op=set 为绝对设定，op=delta 为相对步进；
 - 用户锁定参数（locked）禁止出现；
-- 不确定就不要输出该补丁；宁缺毋滥。
 """
+PATCH_SCHEMA_DOC = (_PATCH_SCHEMA_DOC_BASE
+                    + f"- {OKLCH_DIMENSION_DOC}\n"
+                    + "- 不确定就不要输出该补丁；宁缺毋滥。\n")
 
 FEW_SHOT_EXAMPLE = """## 示例
 输入摘要: {"metrics": {"haze_proxy": 0.24, "mean_luminance": 96}}

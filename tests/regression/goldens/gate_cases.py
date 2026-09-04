@@ -25,10 +25,20 @@ FEATURES = (
     "exposure", "whitebalance", "curves", "huesat", "clarity", "colorcal",
     "calibration", "hsl", "hsl_oklch", "split_tone", "split_tone_oklab",
     "skin", "skin_oklch", "stylize", "refine",
+    # 标定数据敏感 case (t36 §5 门禁缺口关闭): 触达正式标定表的 auto 路径,
+    # 换表即漂移 (前置 15 case 均为纯函数+显式参数, 对表替换零敏感)。
+    "exposure_cal_auto", "warmth_cal_auto",
 )
 
 _DCP_PATH = (Path(__file__).resolve().parents[3] / "resources" / "dcp"
                      / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp")
+
+
+class _CalAutoRaw:
+    """标定 auto case 的最小 raw 桩: _auto_ev 经 state["camera_wb"] 取 wb_B,
+    raw 仅需满足 _subject_box 的 getattr 探测 (无 subject box → 全图探针)。"""
+
+    camera_whitebalance = [2.0, 1.0, 1.5, 1.0]
 
 
 def _color_steps():
@@ -133,6 +143,45 @@ def compute(feature: str) -> np.ndarray:
         img = _random_small()
         gray = RefineStage._gray(img)
         return RefineStage._sharpen_gray(img, 0.25, gray)
+    if feature == "exposure_cal_auto":
+        # 正式曝光标定表敏感 case (t36 §5): 走 ExposureStage._auto_ev 完整
+        # auto 决策链 —— 固定网格 med 探针 (真 DCP cam→sRGB) → 二维表
+        # (src/pixo/render/target_offset.json) med 主键 + wb_B 邻域二次插值
+        # (ctx.state["camera_wb"] 驱动)。平坦场亮度定标使探针 med ≈ −4.54,
+        # 落在表结点密集段 (−4.632/−4.555/−4.478…, 非端点钳位); wb_B = 1.5
+        # 落在 1.371~1.506 插值段 —— 换表即漂移。ev 应用与现有 exposure case
+        # 同式 (线性增益 + soft_highlight_rolloff)。
+        from pixo.render.core.calibration import load_dcp
+        from pixo.render.pipeline.graph import DOMAIN_LINEAR_CAM, StageContext
+        from pixo.render.modules.exposure import ExposureStage
+        prof = load_dcp(_DCP_PATH)
+        rng = np.random.default_rng(20260904)
+        img = np.full((64, 64, 3), 0.04, dtype=np.float32)
+        img += (rng.random((64, 64, 1)).astype(np.float32) - 0.5) * 0.004
+        ctx = StageContext(
+            "cal_auto.nef", raw=_CalAutoRaw(), prof=prof,
+            config={"stages": {"exposure": {"target_offset": 0.0}}})
+        ctx.set_image(img, DOMAIN_LINEAR_CAM)
+        ctx.state["camera_wb"] = np.array([2.0, 1.0, 1.5], dtype=np.float32)
+        ev = ExposureStage()._auto_ev(ctx)
+        return soft_highlight_rolloff(img * np.float32(2.0 ** ev), knee=0.9)
+    if feature == "warmth_cal_auto":
+        # 正式 warmth 分桶曲线敏感 case (t36 §5): _load_warm_cal 读
+        # configs/calibration/warmth_curve.json (缺失/非法即 raise —— 不允许
+        # 静默回退制造"仍在锁表"假象) → apply_warmth 曲线分支 (优先于内置
+        # 斜率模型) 得三通道增益, 乘种子线性 cam RGB (运行时同式)。
+        # wb_B = 2.0 取结点 1.8027~2.3984 插值段 (增益非恒等, 对结点值敏感)。
+        from pixo.render.modules.white_balance import (
+            DEFAULT_WARM_CAL_FILE, _load_warm_cal, apply_warmth)
+        cal = _load_warm_cal(DEFAULT_WARM_CAL_FILE)
+        if cal is None or cal.get("curve") is None:
+            raise RuntimeError(
+                "正式 warmth 曲线缺失/非法: warmth_cal_auto case 依赖 "
+                "configs/calibration/warmth_curve.json")
+        wb = np.array([1.244, 1.0, 2.0], dtype=np.float32)
+        gain = apply_warmth(wb, None, warmth=1.0,
+                            cal={"curve": cal["curve"]})
+        return _random_small() * gain
     raise KeyError(f"未知 golden feature: {feature}")
 
 

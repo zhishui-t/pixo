@@ -9,7 +9,9 @@
   1. 结构 schema：param/op/value 必备且类型正确；value 统一
      ``math.isfinite`` 校验（NaN/Infinity/-Infinity 一律拒绝——Python
      json.loads 默认接受这三类字面量，且 NaN 与任何比较均为 False，
-     会静默绕过第 4 段越界预检）；
+     会静默绕过第 4 段越界预检）；结构值（如 hsl.bands JSON 字符串）
+     额外经 oklch 域量纲预检——色相角 ∉[0,360) 硬拒并命名，C/饱和度
+     超常规幅度为语义提示（不改变拒绝结论，通道保持只收数值）；
   2. ParamRef：拆解出的 stage 存在于 STAGE_REGISTRY，且 param 在该
      Stage 的 param_schema 中；decide 层扁平方言（如 exposure_ev）
      不接受；
@@ -26,6 +28,7 @@ apply_patches(params, review) 是纯函数：deepcopy 后落地——set 直接
 from __future__ import annotations
 
 import copy
+import json
 import math
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
@@ -37,6 +40,8 @@ from pixo.render.pipeline.graph import STAGE_REGISTRY
 __all__ = [
     "PatchReview",
     "ALLOWED_OPS",
+    "OKLCH_DIMENSION_DOC",
+    "OKLCH_SAT_HINT_LIMIT",
     "review_patches",
     "apply_patches",
 ]
@@ -78,6 +83,81 @@ def _rng_for(stage: str, name: str):
     return (entry.get("min"), entry.get("max"))
 
 
+# ---------------------------------------------------------------------------
+# oklch 域量纲防御（锚点: docs/UI_OKLCH_SPEC.md §4）
+# ---------------------------------------------------------------------------
+
+# band saturation (±%) 超此幅度仅给语义提示（内核对 C 增强有色域包络
+# 软限幅承接, sRGB 包络峰 C≈0.33）, 不硬拒——与色相角硬约束区分。
+OKLCH_SAT_HINT_LIMIT = 100.0
+
+# 协议内嵌量纲说明（suggest.PATCH_SCHEMA_DOC 引用; 单一出处, 测试断言锚点）。
+# 防 LLM 生成 oklch 域越域建议: 色相角/色度/明度三轴量纲一次说清。
+OKLCH_DIMENSION_DOC = (
+    "oklch 域量纲：色相 h∈[0,360)；色度 C 为绝对量、典型 0–0.33"
+    "（sRGB 包络峰 ≈0.33，常见照片 0.06–0.18，C<0.02 中性保护）；"
+    "明度 L∈[0,1]（锚点见 docs/UI_OKLCH_SPEC.md §4）。"
+    "结构参数（如 hsl.bands）不经补丁通道提交，只收数值。"
+)
+
+
+def _oklch_band_issues(bands) -> tuple[list[str], list[str]]:
+    """逐 band 域感知检查 → (硬拒项, 语义提示项)。
+
+    仅检显式 ``domain=="oklch"`` 的 band——无 domain 键的 band 按 Stage
+    缺省 (color_domain="hsv") 归属 HSV 内核, 不在 oklch 量纲内:
+      - hue_center ∉ [0,360)（含非数值/±Inf/360 本身）→ 硬拒：运行时
+        内核虽有 %360 求模兜底, 语义上 380°/720° 是无效建议, 闸门拒绝
+        而非静默求模；
+      - saturation 超常规幅度 → 语义提示：C 增强方向有软限幅, 提示而
+        非硬拒（显式设计, 见 OKLCH_SAT_HINT_LIMIT）。
+    """
+    hard: list[str] = []
+    hints: list[str] = []
+    for i, band in enumerate(bands):
+        if not isinstance(band, dict):
+            continue
+        if str(band.get("domain", "hsv")).strip().lower() != "oklch":
+            continue
+        label = band.get("name") or f"#{i}"
+        hc = band.get("hue_center")
+        if (not isinstance(hc, (int, float)) or isinstance(hc, bool)
+                or not math.isfinite(float(hc))
+                or not (0.0 <= float(hc) < 360.0)):
+            hard.append(f"band {label} hue_center={hc!r} ∉ [0,360)")
+        sat = band.get("saturation")
+        if (isinstance(sat, (int, float)) and not isinstance(sat, bool)
+                and math.isfinite(float(sat))
+                and abs(float(sat)) > OKLCH_SAT_HINT_LIMIT):
+            hints.append(f"band {label} saturation={sat!r}% 超常规幅度 "
+                         f"(建议 |saturation|≤{OKLCH_SAT_HINT_LIMIT:.0f})")
+    return hard, hints
+
+
+def _bands_reject_reason(raw: str) -> str:
+    """hsl.bands 结构字符串的域感知拒绝理由。
+
+    通道保持关闭（补丁协议当前只收数值, apply 无结构值落地路径）, 但拒绝
+    理由按 oklch 域量纲给出可行动反馈: 色相角越界硬拒命名, C/饱和超幅为
+    语义提示——LLM/运维能看到"为什么不行、改到哪", 而非笼统的类型错误。
+    """
+    base = ("hsl.bands 为结构值（8 band dict 列表），补丁通道当前只收数值，"
+            "结构参数不经此通道提交")
+    try:
+        bands = json.loads(raw)
+    except Exception as exc:                  # noqa: BLE001 — 拒绝理由含解析错误
+        return f"{base}；JSON 解析失败: {exc}"
+    if not isinstance(bands, (list, tuple)):
+        return f"{base}；需为 JSON 数组，实际 {type(bands).__name__}"
+    hard, hints = _oklch_band_issues(bands)
+    parts = [base]
+    if hard:
+        parts.append("oklch 域量纲越界（硬拒）: " + "；".join(hard))
+    if hints:
+        parts.append("域提示: " + "；".join(hints))
+    return "；".join(parts)
+
+
 def _validate_one(
     item: Any,
     locked: set,
@@ -98,6 +178,9 @@ def _validate_one(
                     "'stage.param' 形式（如 exposure.target_offset）")
         return f"param {param!r} 不符合 'stage.param' 形态"
     if not isinstance(value, (int, float)) or isinstance(value, bool):
+        if isinstance(value, str) and param == "hsl.bands":
+            # 结构值域感知预检（通道保持关闭, 见 _bands_reject_reason）
+            return _bands_reject_reason(value)
         return f"value 必须是数值，实际 {value!r}"
     if not math.isfinite(value):
         # NaN/Infinity：json.loads 默认接受字面量，且 NaN 与任何比较均

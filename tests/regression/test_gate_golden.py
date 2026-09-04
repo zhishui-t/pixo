@@ -32,7 +32,9 @@ def test_manifest_schema_and_files():
         f"实际为 {manifest.get('schema')!r}；若为 {generate_gate_goldens.RAW_SCHEMA} "
         f"则说明混入了 render/tools 的真实 RAW manifest，两套条目结构互不兼容")
     features = manifest.get("features", {})
-    assert len(features) == 15, f"golden feature 数量 {len(features)} != 15"
+    assert len(features) == 17, f"golden feature 数量 {len(features)} != 17"
+    # 17 = 前置 15 (纯函数+显式参数) + exposure_cal_auto/warmth_cal_auto
+    # (t36 §5 门禁缺口关闭: 触达正式曝光表与 warmth 曲线的标定数据敏感 case)
     # reviewer 必须非空：golden 变更不得脱离复核静默合入。
     reviewer = str(manifest.get("reviewer") or "").strip()
     assert reviewer, "manifest.reviewer 为空：golden 基线必须由 reviewer 复核后合入"
