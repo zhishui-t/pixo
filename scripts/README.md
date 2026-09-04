@@ -9,6 +9,13 @@
 - `eval_rp_ccm_ab.py` —— DCP vs DCP+RP-CCM 双轨 ΔE2000 A/B 报告（markdown 落 `.artifacts/`，只报告不切默认；`--selftest` 校验 CIEDE2000 实现）
 - `fit_skin_oklch.py` —— 皮肤椭圆 OKLab 重拟合（厦门/春节语料，pixo.meta 拍摄日分组；正样本=旧 cv2-Lab 椭圆∩person 分割（RF-DETR）；产出 `configs/color/skin_oklab.json` + `.artifacts/fit_skin_oklch.md` 旧/新召回/误报对照，设计 §3；`--per-group` 组均衡抽样、`--resume` 采样缓存重放）
 - `convert_hsm_to_oklch.py` —— DCP HueSatMap/LookTable（90×16×16）离线采样转 OKLCh 控制点云（`configs/color/hsm_oklch_<slug>.json`，只产数据不接运行时，供 M-D1 标定；`--table auto` 真 HSM 优先、缺席回退 LookTable）
+
+## 阶段二 可微标定（calib/）
+- `calib/diff_core.py` —— torch 可微代理（θ 全 nn.Parameter）：decode→exposure(ev+rolloff)→whitebalance(camera_wb×warmth×WB 矩阵链+高光中性化)→[RP-CCM]→tone(sRGB EOTF LUT 线性插值)→colorcal 中性快速路径（CCT 分桶曲线）。可微策略=前向逐位复刻/反向平滑近似（clip 前向硬+反向 tanh 软梯度；colorcal tint 前向直调 cv2 u8 整数路径+反向 float Lab 雅可比；静态量 θ0 冻结）。torch 只进 scripts/（阶段二 t30，设计 §1）
+- `calib/surrogate_fidelity.py` —— 保真门（θ 优化硬前置）：同输入同 θ 下 surrogate vs render_preview_full 中性参数（clarity/refine/skin 等 θ 无关空间观感 stage 显式关）ΔE2000 median ≤0.05 / p95 ≤0.3，语料 ≥10 张，真值 ΔE 复用 eval_rp_ccm_ab（含 --selftest 自检），报告落 `.artifacts/surrogate_fidelity.md`
+- `calib/theta_io.py` —— θ 五组件上下料（warmth knots[5] / 曝光二维表 / 中性曲线 / RP-CCM[18] / skin 椭圆[5]）：从现有 configs 加载初值供 diff_core/优化器取参，按**原 schema** 写回 `configs/color/calib_out/`（不覆盖源文件，对照留档；非 θ 字段原样保留）；load→save→load 数值逐位恒等 + CLI 自检（阶段二 t31，设计 §2）
+- `calib/optimize.py` —— θ 端到端联合优化 + G-5 收口：Huber-smoothed Lab proxy（ΔE2000 不可微只做评估——训练看 proxy、决策看真值）+ scene_constraints 罚项（warmth 单调/二阶平滑、曝光表 2D TV、中性曲线单调、skin 轴正性；均值化=λ 量纲归一）；Adam(1e-3) 预热→L-BFGS 精修，真值恶化自动回滚；每 checkpoint 全语料真 ΔE2000 median/p95；曝光表经 `_cal_ev` 同式权重进链（逐张 ev=w·ev_table）；`--resume` npz 采样缓存（fit_skin 模式）；G-5 拍摄日分组 RP-CCM 拟合 + 门槛线（median≥15%/无单照片回归>1JND/p95 不劣化/≥2 相机）写入 `.artifacts/calib_run.md`，新表落 `configs/color/calib_out/`（阶段二 t32，设计 §3+§4）
+- `calib/eval_stage2.py` —— 标定前后真值对照评估（新表 calib_out/ vs 现行 configs 全语料双轨，θ0/θ* 经 theta_io 双载 + t32 npz 采样缓存重放）：端到端口径（θ 全链含表 ev，无 gain 对齐——曝光差是标定对象）+ 色度口径（eval_rp_ccm_ab 同式逐照片增益对齐 + orientation 6/8 逆旋转），真 ΔE2000 median/p95；分带统计（拍摄日 + wb_B 光照三带）与 G-5 门槛线逐项独立核对（B/C 轨系数读 rp_ccm_by_group.json，D 轨现行 rp 参考）；checkpoint 与 calib_run.md 数值自动交叉核对；报告落 `.artifacts/stage2_eval.md` + 机器可读 `.artifacts/stage2_eval.json`，seed+语料清单可复现，**只建议不切默认**（阶段二 t33，设计 §5）
 - `ab_intent_compare.py` —— 意图级 HSV vs OKLCh 编辑域 A/B 对照（同一调整意图两域内核渲染同一语料 ≥20 张含厦门样张：扇区内/外 ΔE2000 + 高光色相落点误差 + 近白色度强加；种子+语料清单可复现，报告落 `.artifacts/ab_intent_report.md`，设计 §6；`--selftest` 复用 CIEDE2000 文献对自检）
 - `ab_vs_camera_thumb.py` —— 全链渲染 vs 相机预览的感知 A/B（Lab ΔE / dL / 高光暗部裁切）
 - `score_photos.py` —— 批量评分分级（good / mediocre / skip）

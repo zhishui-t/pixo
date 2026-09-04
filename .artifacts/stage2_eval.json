@@ -1,0 +1,99 @@
+{
+ "schema": "pixo.stage2_eval.v1",
+ "generated": "2026-09-04T14:39:07",
+ "seed": 20260904,
+ "corpus": "exports/auto/full_scan",
+ "n_photos": 54,
+ "groups": [
+  "2026-02-10",
+  "2026-02-14",
+  "2026-07-01",
+  "2026-07-05"
+ ],
+ "cameras": [
+  "NIKON Z5_2"
+ ],
+ "dcp": "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+ "long_edge": 512,
+ "stride": 3,
+ "cache": ".artifacts/calib_opt_samples.npz",
+ "ckpt_note": "calib_out == ckpt θ 逐位一致",
+ "e2e": {
+  "theta0": {
+   "median": 6.65750856145313,
+   "p95": 16.78796205613705,
+   "mean": 7.889042941678273
+  },
+  "theta_star": {
+   "median": 4.243619837951438,
+   "p95": 15.036932042611987,
+   "mean": 5.789908211969869
+  },
+  "median_improvement": 0.3625813923061354
+ },
+ "chroma": {
+  "A0": {
+   "median": 6.1904958650512345,
+   "p95": 16.755686855481684,
+   "mean": 7.566610315067961,
+   "n_px": 575685,
+   "n_photos": 54
+  },
+  "A": {
+   "median": 5.981652734105856,
+   "p95": 15.416626497392976,
+   "mean": 7.355040075311646,
+   "n_px": 583650,
+   "n_photos": 54
+  },
+  "B": {
+   "median": 4.777038779591385,
+   "p95": 15.306156803069406,
+   "mean": 6.231673719849187,
+   "n_px": 583650,
+   "n_photos": 54
+  },
+  "C": {
+   "median": 4.236342772137402,
+   "p95": 15.11818636398696,
+   "mean": 5.777910575278306,
+   "n_px": 583650,
+   "n_photos": 54
+  },
+  "D": {
+   "median": 5.732045209284001,
+   "p95": 16.017668377853692,
+   "mean": 7.224676342772748,
+   "n_px": 583650,
+   "n_photos": 54
+  }
+ },
+ "g5": {
+  "median_a": 5.981652734105856,
+  "median_b": 4.777038779591385,
+  "median_improvement": 0.2013848025055131,
+  "gate_improve15": true,
+  "worst_photo_regression": 0.8147032809984296,
+  "gate_no_regression": true,
+  "p95_a": 15.416626497392976,
+  "p95_b": 15.306156803069406,
+  "gate_p95": true,
+  "n_cameras": 1,
+  "cameras": [
+   "NIKON Z5_2"
+  ],
+  "gate_2cameras": false,
+  "n_photos_paired": 54
+ },
+ "t32_cross": {
+  "e2e_theta0": "6.658/16.788",
+  "e2e_theta_star": "4.244/15.037",
+  "e2e_verdict": "一致 ✅",
+  "g5_a": "5.982",
+  "g5_b": "4.777",
+  "g5_c": "4.236",
+  "g5_verdict": "一致 ✅"
+ },
+ "skipped": [],
+ "report": ".artifacts\\stage2_eval.md"
+}
