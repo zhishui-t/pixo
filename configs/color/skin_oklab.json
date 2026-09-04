@@ -1,0 +1,260 @@
+{
+  "schema": "pixo.skin_oklab.v1",
+  "source": "scripts/fit_skin_oklch.py",
+  "white_point_note": "A3: 样本遴选与对照基准以 cv2.COLOR_RGB2LAB 实现语义为准 (D65 白点, uint8 输出 L/a/b∈0..255, a/b 中心 128), 不照抄设计文档的 'Lab(D65)' 措辞; 新椭圆工作域 OKLab 为 sRGB D65 (Ottosson 2020), 与 core.oklab 管线同源, 全程无 D50/Bradford 适配。",
+  "corpus": {
+    "roots": [
+      "K:/data/photo/2026春节",
+      "K:/data/photo/厦门"
+    ],
+    "n_photos": 85,
+    "n_photos_failed": 43,
+    "dcp": "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+    "long_edge": 640,
+    "seg_threshold": 0.5,
+    "max_per_photo": 20000,
+    "coverage": 0.96,
+    "chroma_core": 0.04
+  },
+  "samples": {
+    "n_skin": 381322,
+    "n_bg": 804732,
+    "n_person_nonskin": 549698
+  },
+  "constants": {
+    "SKIN_OKLAB_A": 0.01516,
+    "SKIN_OKLAB_B": 0.06125,
+    "SKIN_OKLAB_MAJOR": 0.045692,
+    "SKIN_OKLAB_MINOR": 0.045192,
+    "SKIN_OKLAB_ANGLE": 0.191122,
+    "SKIN_OKLAB_SOFT_BAND": 0.25
+  },
+  "new_ellipse_fit": {
+    "center_a": 0.01516,
+    "center_b": 0.06125,
+    "major": 0.045692,
+    "minor": 0.045192,
+    "angle_deg": 10.9505,
+    "trimmed": 967,
+    "coverage": 0.96,
+    "n_fit": 192509
+  },
+  "baseline_ellipse": {
+    "center_a": 140.0,
+    "center_b": 150.0,
+    "major": 22.0,
+    "minor": 14.0,
+    "angle_deg": 37.2423,
+    "domain": "cv2.COLOR_RGB2LAB uint8 (a/b 中心 128)",
+    "constants": {
+      "SKIN_LAB_A": 140.0,
+      "SKIN_LAB_B": 150.0,
+      "SKIN_MAJOR": 22.0,
+      "SKIN_MINOR": 14.0,
+      "SKIN_ANGLE": 0.65
+    }
+  },
+  "comparison": {
+    "pooled": {
+      "old": {
+        "recall": 1.0,
+        "fp_bg": 0.2705,
+        "fp_person_nonskin": 0.0,
+        "area": 967.6
+      },
+      "new": {
+        "recall": 0.8316,
+        "fp_bg": 0.2578,
+        "fp_person_nonskin": 0.1926,
+        "area": 0.006487,
+        "recall_core": 0.9552
+      }
+    },
+    "per_group": {
+      "2026-02-10": {
+        "old": {
+          "recall": 1.0,
+          "fp_bg": 0.7463,
+          "fp_person_nonskin": 0.0,
+          "area": 967.6
+        },
+        "new": {
+          "recall": 0.2662,
+          "fp_bg": 0.3058,
+          "fp_person_nonskin": 0.0,
+          "area": 0.000228,
+          "recall_core": 0.9552
+        }
+      },
+      "2026-02-14": {
+        "old": {
+          "recall": 1.0,
+          "fp_bg": 0.9281,
+          "fp_person_nonskin": 0.0,
+          "area": 967.6
+        },
+        "new": {
+          "recall": 0.7921,
+          "fp_bg": 0.4828,
+          "fp_person_nonskin": 0.0577,
+          "area": 0.002839,
+          "recall_core": 0.9552
+        }
+      },
+      "2026-02-15": {
+        "old": {
+          "recall": 1.0,
+          "fp_bg": 0.092,
+          "fp_person_nonskin": 0.0,
+          "area": 967.6
+        },
+        "new": {
+          "recall": 0.4114,
+          "fp_bg": 0.027,
+          "fp_person_nonskin": 0.1361,
+          "area": 0.000914,
+          "recall_core": 0.9552
+        }
+      },
+      "2026-02-19": {
+        "old": {
+          "recall": 1.0,
+          "fp_bg": 0.053,
+          "fp_person_nonskin": 0.0,
+          "area": 967.6
+        },
+        "new": {
+          "recall": 0.6225,
+          "fp_bg": 0.0039,
+          "fp_person_nonskin": 0.001,
+          "area": 0.000922,
+          "recall_core": 0.9551
+        }
+      },
+      "2026-02-25": {
+        "old": {
+          "recall": 1.0,
+          "fp_bg": 0.1276,
+          "fp_person_nonskin": 0.0,
+          "area": 967.6
+        },
+        "new": {
+          "recall": 0.2291,
+          "fp_bg": 0.0,
+          "fp_person_nonskin": 0.0,
+          "area": 7.5e-05,
+          "recall_core": 0.9551
+        }
+      },
+      "2026-04-24": {
+        "old": {
+          "recall": 1.0,
+          "fp_bg": 0.2286,
+          "fp_person_nonskin": 0.0,
+          "area": 967.6
+        },
+        "new": {
+          "recall": 0.5394,
+          "fp_bg": 0.1555,
+          "fp_person_nonskin": 0.1269,
+          "area": 0.001792,
+          "recall_core": 0.9553
+        }
+      }
+    }
+  },
+  "per_group_fit": {
+    "2026-02-10": {
+      "n_photos": 2,
+      "n_skin": 32861,
+      "ellipse": {
+        "center_a": 0.019394,
+        "center_b": 0.037997,
+        "major": 0.008576,
+        "minor": 0.008444,
+        "angle_deg": 88.9906,
+        "trimmed": 14,
+        "coverage": 0.96,
+        "n_fit": 2954
+      }
+    },
+    "2026-02-14": {
+      "n_photos": 7,
+      "n_skin": 114060,
+      "ellipse": {
+        "center_a": 0.02741,
+        "center_b": 0.062307,
+        "major": 0.03801,
+        "minor": 0.023775,
+        "angle_deg": 24.0962,
+        "trimmed": 470,
+        "coverage": 0.96,
+        "n_fit": 93503
+      }
+    },
+    "2026-02-15": {
+      "n_photos": 8,
+      "n_skin": 95013,
+      "ellipse": {
+        "center_a": -0.006045,
+        "center_b": 0.057569,
+        "major": 0.020407,
+        "minor": 0.014259,
+        "angle_deg": -75.6174,
+        "trimmed": 198,
+        "coverage": 0.96,
+        "n_fit": 39238
+      }
+    },
+    "2026-02-19": {
+      "n_photos": 1,
+      "n_skin": 14448,
+      "ellipse": {
+        "center_a": 0.003146,
+        "center_b": 0.054554,
+        "major": 0.020015,
+        "minor": 0.014661,
+        "angle_deg": 77.0749,
+        "trimmed": 42,
+        "coverage": 0.96,
+        "n_fit": 8175
+      }
+    },
+    "2026-02-25": {
+      "n_photos": 7,
+      "n_skin": 21953,
+      "ellipse": {
+        "center_a": 0.040881,
+        "center_b": 0.020815,
+        "major": 0.007137,
+        "minor": 0.003336,
+        "angle_deg": 34.5392,
+        "trimmed": 25,
+        "coverage": 0.96,
+        "n_fit": 4946
+      }
+    },
+    "2026-04-24": {
+      "n_photos": 6,
+      "n_skin": 78754,
+      "ellipse": {
+        "center_a": 0.000853,
+        "center_b": 0.062869,
+        "major": 0.031548,
+        "minor": 0.018083,
+        "angle_deg": 51.1182,
+        "trimmed": 217,
+        "coverage": 0.96,
+        "n_fit": 43033
+      }
+    }
+  },
+  "notes": [
+    "正样本 = 旧 cv2-Lab 椭圆硬核 ∩ person 分割掩码 (弱监督, 无人工标注); 旧椭圆 recall≡1.0 由构造决定 (fp_person_nonskin=0 同理, 定义性零), 对照价值在于同等色度肤召回下背景误报的削减。",
+    "像素源 = pixo 中性渲染 (exposure 0.0 / trim [1,1,1]), 与 t2 语料口径一致。",
+    "召回/误报的三族定义见 samples; area 为各自域内 π·major·minor, 跨域 (u8 Lab vs OKLab) 不可直接比较, 对照以召回/误报为准。",
+    "person 内非肤族 (发/衣) 在旧椭圆过宽的语料 (如红衣人像) 上可不足 500 样本, 此时 fp_person_nonskin 记 None (—) —— 空缺本身即旧椭圆 过宽的证据。",
+    "方法学结论 (本语料实测): 正样本云含大量近中性像素 (C<0.03 占 32%), 密度矩/支撑包围拟合都会被拽向中性带 (fp_bg 0.27→0.75, 反而恶化); 色度核 (--chroma-core) 定形符合旧椭圆设计意图 (中心=平均色度肤色), 代价是主动放弃近中性带召回 (该带本应由中性保护机制兜底), 换来 fp_bg 首次低于旧椭圆。recall=全体正样本召回, recall_core=C>=0.04 色度核召回 (诚实口径)。"
+  ],
+  "created": "2026-09-04T09:06:24"
+}

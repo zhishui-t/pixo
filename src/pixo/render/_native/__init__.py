@@ -9,6 +9,9 @@
     colorcal_apply_lab (uint8 Lab 域) 为兼容保留。
   - lut3d_apply_f32: stylize 3D LUT 四面体插值 float 内核 (v1.3.0, 生产路径,
     逐位对齐 lut3d.lookup 的 float32 语义)。
+  - srgb_to_oklab_f32 / oklab_to_srgb_f32: Oklab F32 平面版转换内核 (v1.4.0),
+    逐位对齐 core.oklab (sRGB 侧 float32, L/a/b 平面 float64, 设计 §1.3);
+    srgb_to_oklab / oklab_to_srgb 为带 numpy 回退的便捷封装。
   - version: ABI 版本查询 (major==1 才视为可用)。
 
 若 DLL 不存在或加载失败, 本模块保持可导入, 由调用方回退纯 Python。
@@ -186,6 +189,36 @@ class PixoRenderLut3DParams(ctypes.Structure):
         ("shaper", ctypes.POINTER(ctypes.c_float)), # 可选 1D LUT, None = 无
         ("shaperSize", ctypes.c_int),               # shaper 非空时 >= 2
         ("strength", ctypes.c_double),              # 0..1 混合 (f64 对齐 Python)
+    ]
+
+
+class PixoRenderSrgbToOklabParams(ctypes.Structure):
+    """gamma sRGB f32 (H,W,3) -> Oklab f64 平面 L/a/b; stride 单位见字段注释。"""
+
+    _fields_ = [
+        ("rgb", ctypes.POINTER(ctypes.c_float)),
+        ("width", ctypes.c_int),
+        ("height", ctypes.c_int),
+        ("stride", ctypes.c_int),        # rgb 行距 (float 元素数, >= width*3)
+        ("l", ctypes.POINTER(ctypes.c_double)),
+        ("a", ctypes.POINTER(ctypes.c_double)),
+        ("b", ctypes.POINTER(ctypes.c_double)),
+        ("planeStride", ctypes.c_int),   # L/a/b 行距 (double 元素数, >= width)
+    ]
+
+
+class PixoRenderOklabToSrgbParams(ctypes.Structure):
+    """Oklab f64 平面 L/a/b -> gamma sRGB f32 (H,W,3)。"""
+
+    _fields_ = [
+        ("l", ctypes.POINTER(ctypes.c_double)),
+        ("a", ctypes.POINTER(ctypes.c_double)),
+        ("b", ctypes.POINTER(ctypes.c_double)),
+        ("planeStride", ctypes.c_int),   # L/a/b 行距 (double 元素数, >= width)
+        ("rgb", ctypes.POINTER(ctypes.c_float)),
+        ("width", ctypes.c_int),
+        ("height", ctypes.c_int),
+        ("stride", ctypes.c_int),        # rgb 行距 (float 元素数, >= width*3)
     ]
 
 
@@ -386,6 +419,18 @@ if _DLL_PATH.exists():
                 ctypes.c_int,                     # width
                 ctypes.c_int,                     # height
                 ctypes.POINTER(PixoRenderLut3DParams),
+            ]
+        # 1.4.0: Oklab F32 平面版转换内核 (与 core/oklab.py 逐位一致, 设计
+        # §2.4)。旧 v1.3 DLL 未导出时不影响加载, 便捷封装回退纯 numpy 实现。
+        if hasattr(_lib, "PixoRenderSrgbToOklabF32"):
+            _lib.PixoRenderSrgbToOklabF32.restype = ctypes.c_int
+            _lib.PixoRenderSrgbToOklabF32.argtypes = [
+                ctypes.POINTER(PixoRenderSrgbToOklabParams),
+            ]
+        if hasattr(_lib, "PixoRenderOklabToSrgbF32"):
+            _lib.PixoRenderOklabToSrgbF32.restype = ctypes.c_int
+            _lib.PixoRenderOklabToSrgbF32.argtypes = [
+                ctypes.POINTER(PixoRenderOklabToSrgbParams),
             ]
 
         # ABI 版本检查：v1.0 旧 DLL 没有 PixoRenderVersion 符号时容忍加载,
@@ -717,6 +762,108 @@ def lut3d_apply_f32(rgb: np.ndarray, lut: np.ndarray,
     return out
 
 
+def srgb_to_oklab_f32(rgb: np.ndarray) -> np.ndarray:
+    """调用 C++ Oklab 正向内核 (v1.4.0); 返回 Oklab float64 (H,W,3)。
+
+    gamma sRGB float32 (H,W,3) -> Oklab float64, 与 core.oklab.srgb_to_oklab
+    逐位一致 (设计 §1.3 dtype 契约: Oklab 内部工作域出口 f64; f32 交接会把
+    往返误差放大到 ~7e-7)。DLL < 1.4.0 未导出时抛 RuntimeError。
+    """
+    _require_lib()
+    if not hasattr(_lib, "PixoRenderSrgbToOklabF32"):
+        raise RuntimeError("native oklab kernel unavailable (DLL 未导出)")
+    arr = np.ascontiguousarray(rgb, dtype=np.float32)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(f"rgb 须为 (H,W,3), 实际 {arr.shape}")
+    h, w = arr.shape[:2]
+    l = np.empty((h, w), dtype=np.float64)
+    a = np.empty((h, w), dtype=np.float64)
+    b = np.empty((h, w), dtype=np.float64)
+    params = PixoRenderSrgbToOklabParams(
+        rgb=arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        width=w, height=h, stride=w * 3,
+        l=l.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        a=a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        b=b.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        planeStride=w,
+    )
+    ret = _lib.PixoRenderSrgbToOklabF32(ctypes.byref(params))
+    _check_status(ret)
+    return np.stack([l, a, b], axis=-1)
+
+
+def oklab_to_srgb_f32(lab: np.ndarray) -> np.ndarray:
+    """调用 C++ Oklab 逆向内核 (v1.4.0); 返回 gamma sRGB float32 (H,W,3)。
+
+    Oklab (H,W,3) -> sRGB float32, 与 core.oklab.oklab_to_srgb 逐位一致
+    (linear 域 clip 到 [0,1] 后编码, 末端舍入 f32)。DLL < 1.4.0 未导出时抛
+    RuntimeError。
+    """
+    _require_lib()
+    if not hasattr(_lib, "PixoRenderOklabToSrgbF32"):
+        raise RuntimeError("native oklab kernel unavailable (DLL 未导出)")
+    arr = np.ascontiguousarray(lab, dtype=np.float64)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(f"lab 须为 (H,W,3), 实际 {arr.shape}")
+    h, w = arr.shape[:2]
+    l = np.ascontiguousarray(arr[..., 0])
+    a = np.ascontiguousarray(arr[..., 1])
+    b = np.ascontiguousarray(arr[..., 2])
+    out = np.empty((h, w, 3), dtype=np.float32)
+    params = PixoRenderOklabToSrgbParams(
+        l=l.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        a=a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        b=b.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        planeStride=w,
+        rgb=out.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        width=w, height=h, stride=w * 3,
+    )
+    ret = _lib.PixoRenderOklabToSrgbF32(ctypes.byref(params))
+    _check_status(ret)
+    return out
+
+
+def _oklab_numpy_impl(name: str):
+    # 延迟导入: _native 先于 core 加载时避免导入环 (core.oklab 不反向依赖本模块)
+    from pixo.render.core import oklab as _oklab
+
+    return getattr(_oklab, name)
+
+
+def srgb_to_oklab(rgb: np.ndarray) -> np.ndarray:
+    """gamma sRGB -> Oklab, native 优先, 不可用回退 core.oklab numpy 实现。
+
+    native 路径 (F32 平面版) 仅当输入为 float32 (H,W,3) 时走 —— f32 是渲染
+    域 dtype 契约; 其它 dtype (如 f64 精密输入) 走 numpy, 避免被静默量化。
+    两路径结果与 core.oklab.srgb_to_oklab 逐位一致 (验收见
+    tests/unit/test_native_oklab.py)。
+    """
+    arr = np.asarray(rgb)
+    if (arr.dtype == np.float32 and arr.ndim == 3 and arr.shape[2] == 3
+            and available() and hasattr(_lib, "PixoRenderSrgbToOklabF32")):
+        try:
+            return srgb_to_oklab_f32(arr)
+        except RuntimeError:
+            pass  # 内核异常时回退 numpy, 不放大为调用方错误
+    return _oklab_numpy_impl("srgb_to_oklab")(rgb)
+
+
+def oklab_to_srgb(lab: np.ndarray) -> np.ndarray:
+    """Oklab -> gamma sRGB float32, native 优先, 不可用回退 core.oklab numpy 实现。
+
+    (H,W,3) 且 native 可用时走 F32 内核; 任意 dtype 均安全 (两路径都先转
+    f64 计算)。其它形状 (...,3) 走 numpy (core 支持任意 (...,3))。
+    """
+    arr = np.asarray(lab)
+    if (arr.ndim == 3 and arr.shape[2] == 3
+            and available() and hasattr(_lib, "PixoRenderOklabToSrgbF32")):
+        try:
+            return oklab_to_srgb_f32(arr)
+        except RuntimeError:
+            pass
+    return _oklab_numpy_impl("oklab_to_srgb")(lab)
+
+
 def apply_local_warm_sat_native(rgb: np.ndarray, params: PixoRenderWarmSatParams):
     """调用 C++ 完整 M1 内核（broad + spot）。
 
@@ -1023,4 +1170,6 @@ __all__ = ["available", "load_error", "version", "rgb_to_hsv", "hsv_to_rgb",
            "PixoRenderWarmGammaParams", "refine_sat_protection", "refine_sharpen",
            "refine_chroma", "refine_highlight", "refine_apply",
            "warm_sat_gamma_u8", "exposure_apply", "matrix_apply3",
-           "tone_apply_lut1d", "clarity_apply", "lut3d_apply_f32"]
+           "tone_apply_lut1d", "clarity_apply", "lut3d_apply_f32",
+           "PixoRenderSrgbToOklabParams", "PixoRenderOklabToSrgbParams",
+           "srgb_to_oklab_f32", "oklab_to_srgb_f32", "srgb_to_oklab", "oklab_to_srgb"]

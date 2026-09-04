@@ -1,0 +1,22 @@
+# graphify: exclude non-code corpus files (docs/data/media) so extract runs headless
+docs/
+data/
+exports/
+resources/
+_tools/
+.artifacts/
+*.md
+*.txt
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.json
+*.json5
+*.yaml
+*.yml
+*.csv
+*.xlsx
+*.html

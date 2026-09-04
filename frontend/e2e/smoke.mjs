@@ -47,6 +47,33 @@ await check('右侧 风格/AI 与 调整 Tab', async () => {
   await page.locator('text=基本').first().waitFor({ timeout: 3000 });
 });
 
+// t8：色彩编辑域双轨（hsv 默认零变化 / oklch 增量控件 / 往返无损）。
+await check('t8 默认域 hsv：oklch 专属控件不渲染', async () => {
+  if (await page.locator('[data-testid="hue-ring"]').count()) throw new Error('hue-ring 残留');
+  if (await page.locator('[data-testid="band-row-yellow-expand"]').count()) throw new Error('band 展开钮残留');
+  if (await page.locator('[data-testid="split-hue-highlights"]').count()) throw new Error('谱轨残留');
+  await page.locator('text=高光饱和度').first().waitFor({ timeout: 3000 });
+});
+
+await check('t8 切 OKLCh：域标注/展开行/谱轨出现', async () => {
+  await page.locator('[data-testid="domain-toggle"]').first().locator('text=OKLCh').click();
+  await page.locator('text=HSL · 八通道色相（OKLCh 感知域）').first().waitFor({ timeout: 5000 });
+  await page.locator('[data-testid="band-row-yellow-expand"]').click();
+  await page.locator('[data-testid="band-yellow-center"]').waitFor({ timeout: 3000 });
+  await page.locator('[data-testid="split-hue-highlights"]').scrollIntoViewIfNeeded();
+  await page.locator('[data-testid="split-hue-highlights"]').waitFor({ timeout: 3000 });
+});
+
+await check('t8 切回 HSV：控件消失数值保留（往返无损）', async () => {
+  await page.locator('[data-testid="domain-toggle"]').first().locator('text=HSV').click();
+  await page.waitForTimeout(800);
+  if (await page.locator('[data-testid="hue-ring"]').count()) throw new Error('hue-ring 残留');
+  if (await page.locator('[data-testid="band-yellow-center"]').count()) throw new Error('center 滑杆残留');
+  if (await page.locator('[data-testid="split-hue-highlights"]').count()) throw new Error('谱轨残留');
+  await page.locator('text=高光饱和度').first().waitFor({ timeout: 3000 });
+});
+await page.waitForTimeout(400);
+
 await page.screenshot({ path: 'screenshots/ui_v5.png', fullPage: true });
 
 // t81：审核/设置页暗房主题化截图（存 docs/ui 供对比验收）

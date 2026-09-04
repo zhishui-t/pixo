@@ -72,3 +72,9 @@ docs/metrics/.*.jsonl
 docs/metrics/.*.json
 docs/metrics/*_result.txt
 !docs/metrics/*.md
+
+# ---- stage1: graphify 缓存与 artifacts 大文件 ----
+.graphify/
+src/pixo/.graphify/
+.artifacts/*.npz
+.artifacts/*.log

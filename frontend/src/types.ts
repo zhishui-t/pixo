@@ -162,6 +162,13 @@ export interface TimelineInfo {
 
 // ---------- 渲染参数 ----------
 
+/**
+ * 色彩编辑域（设计 §1.2 双轨开关）：hsv=旧内核（缺省，存量行为逐位不变）、
+ * oklch=OKLCh 感知域。Stage 级参数（hsl/split_tone 的 color_domain），
+ * 前端只 patch 不换算——两域角度不可互相换算（UI_OKLCH_SPEC §2.1）。
+ */
+export type ColorDomain = 'hsv' | 'oklch';
+
 /** hsl 单个色段（render/core/hsl.py DEFAULT_BANDS；五字段必填带界）。 */
 export interface HslBand {
   name: string;
@@ -170,6 +177,8 @@ export interface HslBand {
   hue_shift: number;
   saturation: number;
   luminance: number;
+  /** band schema v2（设计 §2.2）：UI 提交时盖戳当前域；缺省后端按 Stage color_domain 归属。 */
+  domain?: ColorDomain;
 }
 
 /**
@@ -204,8 +213,12 @@ export interface ParamPatch {
     chroma_denoise?: number;
     highlight_desat?: number;
   };
-  /** bands 为 8 个色段 dict 的列表（后端 float_or_str 也接受 JSON 字符串）。 */
-  hsl?: { enabled?: boolean; bands?: HslBand[]; smooth?: number };
+  /**
+   * bands 为 8 个色段 dict 的列表（后端 float_or_str 也接受 JSON 字符串）；
+   * null = 恢复该域默认带（modules/hsl.py _resolve_bands 对 None 回 DEFAULT_BANDS /
+   * DEFAULT_BANDS_OKLCH）。color_domain 为编辑域开关（设计 §1.2）。
+   */
+  hsl?: { enabled?: boolean; bands?: HslBand[] | null; smooth?: number; color_domain?: ColorDomain };
   calibration?: {
     enabled?: boolean;
     shadow_tint?: number;
@@ -224,6 +237,8 @@ export interface ParamPatch {
     highlights_sat?: number;
     balance?: number;
     strength?: number;
+    /** 编辑域开关（设计 §2.3）：hsl/split_tone 双域后端均已就绪（modules/split_tone.py 与 HslStage 同枚举分派），patch 经 PUT params 深合并生效；UI 保留规格 §5.3 的回读门控作兜底。 */
+    color_domain?: ColorDomain;
   };
 }
 

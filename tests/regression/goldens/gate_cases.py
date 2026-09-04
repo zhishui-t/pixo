@@ -11,17 +11,20 @@ from pixo.render.core.color import temp_tint_to_wb
 from pixo.render.core.curves import apply_lut1d, make_base_curve_lut
 from pixo.render.core.enhance import clarity
 from pixo.render.core.hsl import hsl_adjust_rgb
+from pixo.render.core.hsl_oklch import DEFAULT_BANDS_OKLCH, oklch_adjust_rgb
 from pixo.render.core.huesat import apply_local_warm_sat
 from pixo.render.core.lut3d import LUT3D
-from pixo.render.core.skin import skin_mask
+from pixo.render.core.skin import skin_mask, skin_mask_oklab
 from pixo.render.core.split_tone import split_tone_rgb
+from pixo.render.core.split_tone_oklab import split_tone_oklab_rgb
 from pixo.render.core.usercal import apply_usercal_rgb
 from pixo.render.modules.exposure import soft_highlight_rolloff
 from pixo.render.modules.refine import RefineStage
 
 FEATURES = (
     "exposure", "whitebalance", "curves", "huesat", "clarity", "colorcal",
-    "calibration", "hsl", "split_tone", "skin", "stylize", "refine",
+    "calibration", "hsl", "hsl_oklch", "split_tone", "split_tone_oklab",
+    "skin", "skin_oklch", "stylize", "refine",
 )
 
 _DCP_PATH = (Path(__file__).resolve().parents[3] / "resources" / "dcp"
@@ -90,10 +93,36 @@ def compute(feature: str) -> np.ndarray:
         bands = [{"name": "red", "hue_center": 0.0, "width": 40.0,
                   "hue_shift": 5.0, "saturation": 20.0, "luminance": 0.0}]
         return hsl_adjust_rgb(_color_steps(), bands)
+    if feature == "hsl_oklch":
+        # OKLCh 域 8 带典型参数（设计 §2.5）：DEFAULT_BANDS_OKLCH 骨架
+        # （感知色相角中心 + domain:"oklch" 戳）+ 红带 hue/sat、绿带 sat、
+        # 蓝带 hue/lum 典型量（与 hsv 版 hsl case 同量级），三条参数路径
+        # （hue_shift/saturation 软限幅/luminance）各至少一条被触达。
+        # 输入用种子随机图而非 _color_steps()：纯色是 sRGB 色域顶点，
+        # 软限幅在包络处渐近 + clip 精确拉回，色阶图上多数行会"巧合地"
+        # 逐位不动，锁不住掩码形状；随机图覆盖全色相/色度平面。
+        bands = [dict(b) for b in DEFAULT_BANDS_OKLCH]
+        bands[0]["hue_shift"] = 5.0    # red 29°
+        bands[0]["saturation"] = 20.0
+        bands[3]["saturation"] = 15.0  # green 145°
+        bands[5]["hue_shift"] = -8.0   # blue 264°
+        bands[5]["luminance"] = 10.0
+        return oklch_adjust_rgb(_random_small(), bands)
     if feature == "split_tone":
         return split_tone_rgb(_color_steps(), 30.0, 30.0, 210.0, 40.0)
+    if feature == "split_tone_oklab":
+        # 与 hsv 版 split_tone case 完全同参（30/30/210/40），供 reviewer
+        # 在同一输入上做 hsv↔oklch 域 A/B 对照（语义对齐验证）。
+        return split_tone_oklab_rgb(_color_steps(), 30.0, 30.0, 210.0, 40.0)
     if feature == "skin":
         return skin_mask(_skin_patch()).astype(np.float32)
+    if feature == "skin_oklch":
+        # OKLab 域肤色掩码（终审 G-1）：与 hsv 版 skin case 同一 _skin_patch()
+        # 输入构造，走 skin_mask_oklab（float [0,1] 契约，显式 /255；uint8 直传
+        # 在函数内同为 /255，逐位等价）。锁定 SKIN_OKLAB_* 椭圆几何：经典肤色块
+        # (210,155,130) 应在核内（d≈0.85 → 全量 1），128 灰底应在核外（d≈1.43 → 0），
+        # 常数漂移使 d 越过 1±band 边界即翻红。
+        return skin_mask_oklab(_skin_patch() / 255.0).astype(np.float32)
     if feature == "stylize":
         g = np.linspace(0.0, 1.0, 2, dtype=np.float32)
         r, gg, b = np.meshgrid(g, g, g, indexing="ij")

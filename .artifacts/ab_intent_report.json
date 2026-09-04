@@ -1,0 +1,978 @@
+{
+ "seed": 20260904,
+ "args": {
+  "corpus": "exports/auto/full_scan",
+  "raw": null,
+  "limit": 24,
+  "seed": 20260904,
+  "dcp": "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+  "preview_edge": 512,
+  "stride": 2,
+  "out_dir": ".artifacts",
+  "out": null,
+  "selftest": false
+ },
+ "corpus": [
+  {
+   "photo_id": "X1_DSC_0466",
+   "raw": "K:\\data\\photo\\厦门\\1\\DSC_0466.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X1_DSC_0608",
+   "raw": "K:\\data\\photo\\厦门\\1\\DSC_0608.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X1_DSC_0618",
+   "raw": "K:\\data\\photo\\厦门\\1\\DSC_0618.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X2_DSC_1534",
+   "raw": "K:\\data\\photo\\厦门\\101XM_02\\DSC_1534.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X2_DSC_1548",
+   "raw": "K:\\data\\photo\\厦门\\101XM_02\\DSC_1548.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X2_DSC_1560",
+   "raw": "K:\\data\\photo\\厦门\\101XM_02\\DSC_1560.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X3_DSC_2498",
+   "raw": "K:\\data\\photo\\厦门\\102XM_03\\DSC_2498.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X3_DSC_2510",
+   "raw": "K:\\data\\photo\\厦门\\102XM_03\\DSC_2510.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X4_DSC_2747",
+   "raw": "K:\\data\\photo\\厦门\\103XM_04\\DSC_2747.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "X4_DSC_2760",
+   "raw": "K:\\data\\photo\\厦门\\103XM_04\\DSC_2760.NEF",
+   "group": "厦门"
+  },
+  {
+   "photo_id": "DSC_0356_2026春节",
+   "raw": "K:\\data\\photo\\2026春节\\DSC_0356.NEF",
+   "group": "2026春节"
+  },
+  {
+   "photo_id": "DSC_0361_2026春节",
+   "raw": "K:\\data\\photo\\2026春节\\DSC_0361.NEF",
+   "group": "2026春节"
+  },
+  {
+   "photo_id": "DSC_5239_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5239.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5244_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5244.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5245_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5245.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5257_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5257.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5260_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5260.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5268_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5268.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5270_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5270.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5273_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5273.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5275_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5275.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5277_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5277.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5279_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5279.NEF",
+   "group": "full_scan"
+  },
+  {
+   "photo_id": "DSC_5288_raw",
+   "raw": "K:\\data\\photo\\0711\\raw\\DSC_5288.NEF",
+   "group": "full_scan"
+  }
+ ],
+ "skipped": [],
+ "dropped": [],
+ "summary": {
+  "orange_sat+10": {
+   "kind": "hsl",
+   "desc": "+10 橙饱和",
+   "center_hsv": 30.0,
+   "center_oklch": 55.0,
+   "width": 45.0,
+   "in_a": {
+    "n": 92844,
+    "median": 1.2644324012173809,
+    "p95": 1.9451234363852716
+   },
+   "in_b": {
+    "n": 92844,
+    "median": 1.0327529708223981,
+    "p95": 1.6385070828669002
+   },
+   "out_a": {
+    "n": 928778,
+    "median": 0.0,
+    "p95": 0.10133103842017517
+   },
+   "out_b": {
+    "n": 928778,
+    "median": 0.0,
+    "p95": 0.0005353878587399146
+   },
+   "dis_a": {
+    "n": 29002,
+    "median": 0.32220097988434937,
+    "p95": 1.0394449685671636
+   },
+   "dis_b": {
+    "n": 29002,
+    "median": 0.011757731875881392,
+    "p95": 0.42956488959112316
+   },
+   "ratio_in": 0.8167719917870465,
+   "label_in": "更弱",
+   "ratio_out": null,
+   "verdict_out": "不劣于(小值)",
+   "ratio_out_p95": null,
+   "verdict_out_p95": "不劣于(小值)"
+  },
+  "green_hue+10": {
+   "kind": "hsl",
+   "desc": "+10° 绿色相平移",
+   "center_hsv": 120.0,
+   "center_oklch": 145.0,
+   "width": 45.0,
+   "in_a": {
+    "n": 57145,
+    "median": 0.2395437588450866,
+    "p95": 0.43508345590981146
+   },
+   "in_b": {
+    "n": 57145,
+    "median": 1.537908635340021,
+    "p95": 2.7966216907127204
+   },
+   "out_a": {
+    "n": 851159,
+    "median": 0.0,
+    "p95": 0.045870338318382574
+   },
+   "out_b": {
+    "n": 851159,
+    "median": 0.0,
+    "p95": 0.43789503259297796
+   },
+   "dis_a": {
+    "n": 142320,
+    "median": 0.05559957793367037,
+    "p95": 0.35691693905126687
+   },
+   "dis_b": {
+    "n": 142320,
+    "median": 1.116054959095921,
+    "p95": 2.880285416926115
+   },
+   "ratio_in": 6.420157397357155,
+   "label_in": "更强",
+   "ratio_out": null,
+   "verdict_out": "不劣于(小值)",
+   "ratio_out_p95": null,
+   "verdict_out_p95": "不劣于(小值)"
+  },
+  "split_highlights_warm": {
+   "kind": "split",
+   "desc": "高光暖移 (highlights hue45/sat30, strength1, balance0.5)",
+   "target_h_oklch_b": 45.0,
+   "target_h_oklch_a": 81.3,
+   "zone_a": {
+    "n": 135292,
+    "median": 14.508406494351783,
+    "p95": 22.102866994629053
+   },
+   "zone_b": {
+    "n": 135292,
+    "median": 21.446849223120953,
+    "p95": 29.84018974560093
+   },
+   "outzone_a": {
+    "n": 418655,
+    "median": 0.0907905963443315,
+    "p95": 0.8206290159796281
+   },
+   "outzone_b": {
+    "n": 418655,
+    "median": 0.3055050811338007,
+    "p95": 2.1877219290311563
+   },
+   "land_a": {
+    "n": 115913,
+    "median": 11.269523616406275,
+    "p95": 48.78037539985053
+   },
+   "land_b": {
+    "n": 114903,
+    "median": 4.480244746160366,
+    "p95": 21.813100340095332
+   },
+   "nearwhite_c_a": {
+    "n": 22390,
+    "median": 0.07561527536053904,
+    "p95": 0.07561527536053904
+   },
+   "nearwhite_c_b": {
+    "n": 22390,
+    "median": 0.011530671973145511,
+    "p95": 0.036848580317736794
+   },
+   "ratio_land": 0.39755404919139486,
+   "verdict_land": "不劣于",
+   "ratio_land_p95": 0.4471695873862047,
+   "verdict_land_p95": "不劣于",
+   "ratio_nearwhite_c": 0.15249130441126404,
+   "verdict_nearwhite_c": "不劣于"
+  }
+ },
+ "rows": [
+  {
+   "photo_id": "X1_DSC_0466",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 1.128501401427933,
+    "in_b": 0.8139518081095658,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 13,
+    "n_dis": 67
+   },
+   "green_hue+10": {
+    "in_a": 0.22112578530320204,
+    "in_b": 1.4410692961026947,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 376,
+    "n_dis": 94
+   },
+   "split_highlights_warm": {
+    "zone_a": 17.965798248164404,
+    "zone_b": 15.325983804525524,
+    "land_a": 10.574144751273224,
+    "land_b": 5.34534724996135,
+    "cw_a": 0.07559713672956511,
+    "cw_b": 0.012044464948357593,
+    "n_zone": 10073
+   }
+  },
+  {
+   "photo_id": "X1_DSC_0608",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 0.6351018526842387,
+    "in_b": 0.3424042413927962,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 45,
+    "n_dis": 6765
+   },
+   "green_hue+10": {
+    "in_a": 0.21953195162301878,
+    "in_b": 1.7499855176832209,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 407,
+    "n_dis": 1961
+   },
+   "split_highlights_warm": {
+    "zone_a": 10.813817536977753,
+    "zone_b": 18.463830515522506,
+    "land_a": 11.93373516172727,
+    "land_b": 19.45034971295101,
+    "cw_a": 0.07379647983617682,
+    "cw_b": 0.03946095712458559,
+    "n_zone": 985
+   }
+  },
+  {
+   "photo_id": "X1_DSC_0618",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 0.7682487008076839,
+    "in_b": 0.6115379697601939,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 85,
+    "n_dis": 477
+   },
+   "green_hue+10": {
+    "in_a": 0.3325575042158187,
+    "in_b": 1.706027498398063,
+    "out_a": 0.0,
+    "out_b": 0.004357563706128607,
+    "n_in": 8719,
+    "n_dis": 6918
+   },
+   "split_highlights_warm": {
+    "zone_a": 18.527396609327056,
+    "zone_b": 8.440278113469123,
+    "land_a": 10.518056819057335,
+    "land_b": 6.828553280255008,
+    "cw_a": 0.07561527536053904,
+    "cw_b": 0.011530671973145511,
+    "n_zone": 18862
+   }
+  },
+  {
+   "photo_id": "X2_DSC_1534",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 0.7767895733685898,
+    "in_b": 0.49760364533365153,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 18,
+    "n_dis": 151
+   },
+   "green_hue+10": {
+    "in_a": 0.37456488018696826,
+    "in_b": 2.282613862689562,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 4695,
+    "n_dis": 17458
+   },
+   "split_highlights_warm": {
+    "zone_a": 11.176239717182728,
+    "zone_b": 21.72865832270131,
+    "land_a": 27.878307077432964,
+    "land_b": 7.282300272259761,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 921
+   }
+  },
+  {
+   "photo_id": "X2_DSC_1548",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 0.7139968076974963,
+    "in_b": 0.6501366016437684,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 2,
+    "n_dis": 256
+   },
+   "green_hue+10": {
+    "in_a": 0.37289210860610966,
+    "in_b": 2.3045441910154154,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 3826,
+    "n_dis": 8423
+   },
+   "split_highlights_warm": {
+    "zone_a": 10.199474187453783,
+    "zone_b": 22.324306922620615,
+    "land_a": 26.653960362368565,
+    "land_b": 7.302924170086669,
+    "cw_a": 0.07298576341227683,
+    "cw_b": 0.040183139824598646,
+    "n_zone": 593
+   }
+  },
+  {
+   "photo_id": "X2_DSC_1560",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 0.7877319405681475,
+    "in_b": 0.45451405781959126,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 21,
+    "n_dis": 231
+   },
+   "green_hue+10": {
+    "in_a": 0.3380932674936444,
+    "in_b": 2.195462938338358,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 2761,
+    "n_dis": 12519
+   },
+   "split_highlights_warm": {
+    "zone_a": 10.251153499908108,
+    "zone_b": 22.3951325162323,
+    "land_a": 26.57331431162561,
+    "land_b": 7.816858646122796,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 639
+   }
+  },
+  {
+   "photo_id": "X3_DSC_2498",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 1.0701976912599795,
+    "in_b": 0.8542681458748054,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 4,
+    "n_dis": 453
+   },
+   "green_hue+10": {
+    "in_a": 0.13526378764714225,
+    "in_b": 1.35521846465222,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 5572,
+    "n_dis": 11167
+   },
+   "split_highlights_warm": {
+    "zone_a": 19.59757498502539,
+    "zone_b": 28.237235267175656,
+    "land_a": 31.59755093841045,
+    "land_b": 8.700528440565307,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 23287
+   }
+  },
+  {
+   "photo_id": "X3_DSC_2510",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 1.221344583786565,
+    "in_b": 0.9869983205441997,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 191,
+    "n_dis": 3000
+   },
+   "green_hue+10": {
+    "in_a": 0.21412802595641972,
+    "in_b": 1.3832109128759342,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 5783,
+    "n_dis": 23117
+   },
+   "split_highlights_warm": {
+    "zone_a": 16.358566991869438,
+    "zone_b": 27.674261121084047,
+    "land_a": 40.98498673401579,
+    "land_b": 1.2922572731137336,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 10270
+   }
+  },
+  {
+   "photo_id": "X4_DSC_2747",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 0.5835987914203571,
+    "in_b": 0.41696045311015056,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 37,
+    "n_dis": 2256
+   },
+   "green_hue+10": {
+    "in_a": 0.0696947728435409,
+    "in_b": 1.1211470156850538,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 202,
+    "n_dis": 11159
+   },
+   "split_highlights_warm": {
+    "zone_a": 10.720944758956707,
+    "zone_b": 23.319921554149534,
+    "land_a": 38.441122790700035,
+    "land_b": 9.674720955544359,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 12529
+   }
+  },
+  {
+   "photo_id": "X4_DSC_2760",
+   "group": "厦门",
+   "orange_sat+10": {
+    "in_a": 0.7513196629600694,
+    "in_b": 0.6400321004050454,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 1349,
+    "n_dis": 1929
+   },
+   "green_hue+10": {
+    "in_a": 0.11187612301615685,
+    "in_b": 1.1595146925398847,
+    "out_a": 0.0,
+    "out_b": 0.00867399941189825,
+    "n_in": 40,
+    "n_dis": 2947
+   },
+   "split_highlights_warm": {
+    "zone_a": 10.315741258807254,
+    "zone_b": 21.977485882326864,
+    "land_a": 24.979177634610878,
+    "land_b": 6.254482471819699,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 1141
+   }
+  },
+  {
+   "photo_id": "DSC_0356_2026春节",
+   "group": "2026春节",
+   "orange_sat+10": {
+    "in_a": 1.2649209946314128,
+    "in_b": 1.0352017397144768,
+    "out_a": 0.23539167953868664,
+    "out_b": 0.09186231990478189,
+    "n_in": 41457,
+    "n_dis": 335
+   },
+   "green_hue+10": {
+    "in_a": null,
+    "in_b": null,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 0,
+    "n_dis": 0
+   },
+   "split_highlights_warm": {
+    "zone_a": 7.555249453388333,
+    "zone_b": 6.533193184811932,
+    "land_a": 3.7074737883715443,
+    "land_b": 2.633170998783413,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 11822
+   }
+  },
+  {
+   "photo_id": "DSC_0361_2026春节",
+   "group": "2026春节",
+   "orange_sat+10": {
+    "in_a": 1.3513312666353152,
+    "in_b": 1.0873884233532942,
+    "out_a": 0.06548035247239048,
+    "out_b": 0.0,
+    "n_in": 38778,
+    "n_dis": 404
+   },
+   "green_hue+10": {
+    "in_a": null,
+    "in_b": null,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 0,
+    "n_dis": 2
+   },
+   "split_highlights_warm": {
+    "zone_a": 7.511286575425739,
+    "zone_b": 6.485883542218012,
+    "land_a": 2.644187022759226,
+    "land_b": 3.1326487206391107,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 14492
+   }
+  },
+  {
+   "photo_id": "DSC_5239_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.8155921780295262,
+    "in_b": 0.6372829823900981,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 8364,
+    "n_dis": 4276
+   },
+   "green_hue+10": {
+    "in_a": null,
+    "in_b": null,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 0,
+    "n_dis": 26
+   },
+   "split_highlights_warm": {
+    "zone_a": 6.2760309457455445,
+    "zone_b": 13.888825747020622,
+    "land_a": 10.081698453794814,
+    "land_b": 4.7789275077130355,
+    "cw_a": 0.07376305640832664,
+    "cw_b": 0.03789176527201396,
+    "n_zone": 806
+   }
+  },
+  {
+   "photo_id": "DSC_5244_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": null,
+    "in_b": null,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 0,
+    "n_dis": 0
+   },
+   "green_hue+10": {
+    "in_a": 0.2259886236833396,
+    "in_b": 1.6420498202949263,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 10602,
+    "n_dis": 14775
+   },
+   "split_highlights_warm": {
+    "zone_a": 11.858532505700378,
+    "zone_b": 20.180446476126292,
+    "land_a": 28.447442203957692,
+    "land_b": 10.069400130033372,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 254
+   }
+  },
+  {
+   "photo_id": "DSC_5245_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.7224355372229785,
+    "in_b": 0.6442859160657406,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 4,
+    "n_dis": 0
+   },
+   "green_hue+10": {
+    "in_a": 0.24236607064444615,
+    "in_b": 1.5574269976324242,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 9001,
+    "n_dis": 10811
+   },
+   "split_highlights_warm": {
+    "zone_a": 18.527396609327056,
+    "zone_b": 8.386016330088669,
+    "land_a": 10.515964829967004,
+    "land_b": 4.003132306750942,
+    "cw_a": 0.07561527536053904,
+    "cw_b": 0.011530671973145511,
+    "n_zone": 8664
+   }
+  },
+  {
+   "photo_id": "DSC_5257_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.8519992284029532,
+    "in_b": 0.6115505010170672,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 4,
+    "n_dis": 199
+   },
+   "green_hue+10": {
+    "in_a": null,
+    "in_b": null,
+    "out_a": 0.0,
+    "out_b": 0.0023001308194191246,
+    "n_in": 0,
+    "n_dis": 233
+   },
+   "split_highlights_warm": {
+    "zone_a": 7.376490046409709,
+    "zone_b": 19.144717734348127,
+    "land_a": 28.97567142493969,
+    "land_b": 10.01554454754509,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 31
+   }
+  },
+  {
+   "photo_id": "DSC_5260_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.6640254862834972,
+    "in_b": 0.5716973124969505,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 5,
+    "n_dis": 330
+   },
+   "green_hue+10": {
+    "in_a": 0.07647856663356875,
+    "in_b": 1.1887347101820556,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 749,
+    "n_dis": 1732
+   },
+   "split_highlights_warm": {
+    "zone_a": 10.657726536240315,
+    "zone_b": 22.96172574115924,
+    "land_a": 24.30294272945079,
+    "land_b": 6.75561178480001,
+    "cw_a": 0.07341177139346546,
+    "cw_b": 0.03900985635893254,
+    "n_zone": 3793
+   }
+  },
+  {
+   "photo_id": "DSC_5268_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.6832495673523347,
+    "in_b": 0.5647855166148451,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 184,
+    "n_dis": 554
+   },
+   "green_hue+10": {
+    "in_a": 0.16097142985413196,
+    "in_b": 0.7446536318774082,
+    "out_a": 0.0,
+    "out_b": 0.00017267545181810732,
+    "n_in": 10,
+    "n_dis": 2451
+   },
+   "split_highlights_warm": {
+    "zone_a": 10.460441202835034,
+    "zone_b": 10.89458629822153,
+    "land_a": 12.747818662878927,
+    "land_b": 3.9442591641677467,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 62
+   }
+  },
+  {
+   "photo_id": "DSC_5270_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.7445197988393005,
+    "in_b": 0.6265884287487641,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 169,
+    "n_dis": 565
+   },
+   "green_hue+10": {
+    "in_a": 0.16283731435165677,
+    "in_b": 0.7596843183303851,
+    "out_a": 0.0,
+    "out_b": 0.00015846302034976963,
+    "n_in": 8,
+    "n_dis": 2512
+   },
+   "split_highlights_warm": {
+    "zone_a": 9.620302264857193,
+    "zone_b": 11.314159925672353,
+    "land_a": 4.508355083611022,
+    "land_b": 2.7383843935175634,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 45
+   }
+  },
+  {
+   "photo_id": "DSC_5273_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.7981420364517227,
+    "in_b": 0.6745466733856866,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 500,
+    "n_dis": 841
+   },
+   "green_hue+10": {
+    "in_a": 0.968929292640083,
+    "in_b": 4.003912701195994,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 29,
+    "n_dis": 1228
+   },
+   "split_highlights_warm": {
+    "zone_a": 8.632560674815462,
+    "zone_b": 6.191645419995423,
+    "land_a": 14.976050985957158,
+    "land_b": 0.9134446708140018,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 34
+   }
+  },
+  {
+   "photo_id": "DSC_5275_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 0.8050157255396386,
+    "in_b": 0.6599945772685345,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 398,
+    "n_dis": 638
+   },
+   "green_hue+10": {
+    "in_a": 0.3018555297176905,
+    "in_b": 1.3388873920328475,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 11,
+    "n_dis": 1526
+   },
+   "split_highlights_warm": {
+    "zone_a": 9.91462148084145,
+    "zone_b": 9.527794708412308,
+    "land_a": 16.06562333304096,
+    "land_b": 3.9035136551714515,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 77
+   }
+  },
+  {
+   "photo_id": "DSC_5277_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 1.2074309665344019,
+    "in_b": 0.7682595261759696,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 899,
+    "n_dis": 1966
+   },
+   "green_hue+10": {
+    "in_a": 0.17704911317269256,
+    "in_b": 1.1173382995654941,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 207,
+    "n_dis": 1280
+   },
+   "split_highlights_warm": {
+    "zone_a": 12.675831748882468,
+    "zone_b": 23.518751338866117,
+    "land_a": 18.6333842398423,
+    "land_b": 2.615446207994694,
+    "cw_a": null,
+    "cw_b": null,
+    "n_zone": 4322
+   }
+  },
+  {
+   "photo_id": "DSC_5279_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 1.3850859276676573,
+    "in_b": 0.7974708486454526,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 281,
+    "n_dis": 2857
+   },
+   "green_hue+10": {
+    "in_a": 0.31736613275020154,
+    "in_b": 0.9421667477200877,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 3582,
+    "n_dis": 8963
+   },
+   "split_highlights_warm": {
+    "zone_a": 12.933367649735972,
+    "zone_b": 23.98200887971418,
+    "land_a": 35.019590846707956,
+    "land_b": 5.166509362461113,
+    "cw_a": 0.07337677824371401,
+    "cw_b": 0.03892214205323455,
+    "n_zone": 6092
+   }
+  },
+  {
+   "photo_id": "DSC_5288_raw",
+   "group": "full_scan",
+   "orange_sat+10": {
+    "in_a": 1.132969598781023,
+    "in_b": 0.6265823415149478,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 36,
+    "n_dis": 452
+   },
+   "green_hue+10": {
+    "in_a": 0.37305016291910015,
+    "in_b": 1.923925474973727,
+    "out_a": 0.0,
+    "out_b": 0.0,
+    "n_in": 565,
+    "n_dis": 1018
+   },
+   "split_highlights_warm": {
+    "zone_a": 18.527396609327056,
+    "zone_b": 18.344439921087073,
+    "land_a": 10.586686340919925,
+    "land_b": 5.168941860104951,
+    "cw_a": 0.07559713672956511,
+    "cw_b": 0.012044464948357593,
+    "n_zone": 5498
+   }
+  }
+ ],
+ "generated_at": "2026-09-04 08:59:57"
+}

@@ -1,0 +1,2121 @@
+{
+  "nodes": [
+    {
+      "id": "fe:main",
+      "type": "component",
+      "label": "main.tsx（应用入口）",
+      "path": "frontend/src/main.tsx",
+      "note": "MantineProvider forceColorScheme=dark；accent 暖金主题（t74 暗房主题）"
+    },
+    {
+      "id": "fe:app",
+      "type": "component",
+      "label": "App（壳/顶栏/三页路由/导出轮询）",
+      "path": "frontend/src/App.tsx",
+      "note": "page 状态切换 workspace/review/settings；导出 1s 轮询最多 60 次"
+    },
+    {
+      "id": "fe:theme:tokens",
+      "type": "module",
+      "label": "DESIGN_TOKENS 暗房主题令牌",
+      "path": "frontend/src/theme/tokens.ts",
+      "note": "UI 取色唯一来源；WARNING_COLOR 供复核页"
+    },
+    {
+      "id": "fe:styles.css",
+      "type": "module",
+      "label": "全局样式",
+      "path": "frontend/src/styles.css"
+    },
+    {
+      "id": "fe:types",
+      "type": "module",
+      "label": "前后端契约类型",
+      "path": "frontend/src/types.ts",
+      "note": "ParamPatch stage 键对齐 src/pixo/render/modules/* 的 param_schema；STATUS_FILTER_SETS 映射 src/pixo/state/machine.py 的 PhotoState"
+    },
+    {
+      "id": "fe:store",
+      "type": "store",
+      "label": "useAppStore（zustand 全局单 store）",
+      "path": "frontend/src/store/useAppStore.ts",
+      "note": "page/项目/照片/参数 patch/generation/会话 id/对话/建议/复核队列；patch 走 api 门面并回读 params+generation"
+    },
+    {
+      "id": "fe:api:index",
+      "type": "api",
+      "label": "api 门面（后端/mock 自动降级）",
+      "path": "frontend/src/api/index.ts",
+      "note": "backendAvailable 探测：fetchPhotos 试 GET /api/photos 定成败；失败后所有调用落 mock"
+    },
+    {
+      "id": "fe:api:client",
+      "type": "api",
+      "label": "REST 薄封装（pixo-service）",
+      "path": "frontend/src/api/client.ts",
+      "note": "API_BASE = VITE_PIXO_API_URL ?? http://localhost:8000；失败抛错，降级策略在 api/index"
+    },
+    {
+      "id": "fe:api:mock",
+      "type": "api",
+      "label": "本地 mock 数据",
+      "path": "frontend/src/api/mock.ts",
+      "note": "mock 照片 6 张/项目 2 个/风格卡 2 张（硬编码）"
+    },
+    {
+      "id": "fe:comp:ProjectList",
+      "type": "component",
+      "label": "ProjectList（项目列表/新建）",
+      "path": "frontend/src/components/ProjectList.tsx",
+      "note": "左侧栏；本地新建项目 addProject"
+    },
+    {
+      "id": "fe:comp:PreviewViewer",
+      "type": "component",
+      "label": "PreviewViewer（原图/对比/处理预览）",
+      "path": "frontend/src/components/PreviewViewer.tsx",
+      "note": "split clipPath 分割线拖动；原图 onError 回退 mock 占位；gen 徽标+渲染中/失败重试"
+    },
+    {
+      "id": "fe:comp:Filmstrip",
+      "type": "component",
+      "label": "Filmstrip（胶片条：过滤/排序/星级/色标）",
+      "path": "frontend/src/components/Filmstrip.tsx",
+      "note": "数据源 photosByProject；缩略图未建会话时 CSS 占位卡"
+    },
+    {
+      "id": "fe:comp:StyleAiPanel",
+      "type": "component",
+      "label": "StyleAiPanel（风格卡/AI 推荐/项目对话）",
+      "path": "frontend/src/components/StyleAiPanel.tsx",
+      "note": "风格卡按 family 分组（t86）；对话为本地 mock 应答"
+    },
+    {
+      "id": "fe:comp:AdjustmentsPanel",
+      "type": "component",
+      "label": "AdjustmentsPanel（调整参数面板）",
+      "path": "frontend/src/components/AdjustmentsPanel.tsx",
+      "note": "基本/曲线/HSL/校准/细节/分离色调六组；hsl.bands 整组数组 patch；skin 掩码能力徽标（t91）"
+    },
+    {
+      "id": "fe:comp:ReviewQueue",
+      "type": "component",
+      "label": "ReviewQueue（人工复核队列）",
+      "path": "frontend/src/components/ReviewQueue.tsx",
+      "note": "接受/拒绝/跳回工作区；ruleIds 徽标"
+    },
+    {
+      "id": "fe:comp:SettingsPanel",
+      "type": "component",
+      "label": "SettingsPanel（渲染/输出设置）",
+      "path": "frontend/src/components/SettingsPanel.tsx",
+      "note": "本地 useState，未接 store/后端"
+    },
+    {
+      "id": "fe:comp:SliderParam",
+      "type": "component",
+      "label": "SliderParam（通用滑杆+数值输入）",
+      "path": "frontend/src/components/SliderParam.tsx",
+      "note": "拖动防抖，onChangeEnd/onBlur 提交；支持 buildPatch 自定义整组 patch"
+    },
+    {
+      "id": "fe:comp:SectionLabel",
+      "type": "component",
+      "label": "SectionLabel（小节微标签）",
+      "path": "frontend/src/components/SectionLabel.tsx"
+    },
+    {
+      "id": "fe:page:workspace",
+      "type": "page",
+      "label": "工作区",
+      "note": "App 主布局：Navbar=项目列表 / Main=预览+胶片条 / Aside=风格AI|调整"
+    },
+    {
+      "id": "fe:page:review",
+      "type": "page",
+      "label": "审核队列",
+      "note": "顶栏 pill 导航进入"
+    },
+    {
+      "id": "fe:page:settings",
+      "type": "page",
+      "label": "设置",
+      "note": "顶栏齿轮进入，再点返回工作区"
+    },
+    {
+      "id": "ep:health",
+      "type": "endpoint",
+      "label": "GET /api/health",
+      "client_fn": "getHealth"
+    },
+    {
+      "id": "ep:photos_list",
+      "type": "endpoint",
+      "label": "GET /api/photos",
+      "client_fn": "listPhotos"
+    },
+    {
+      "id": "ep:photo_get",
+      "type": "endpoint",
+      "label": "GET /api/photos/{photo_id}",
+      "client_fn": "getPhoto",
+      "note": "client 已封装，UI 尚未接线（导出未用）"
+    },
+    {
+      "id": "ep:photo_create",
+      "type": "endpoint",
+      "label": "POST /api/photos",
+      "client_fn": "createPhoto",
+      "note": "client 已封装，UI 尚未接线（导出未用）"
+    },
+    {
+      "id": "ep:session_create",
+      "type": "endpoint",
+      "label": "POST /api/photos/{photo_id}/sessions",
+      "client_fn": "createSession"
+    },
+    {
+      "id": "ep:params_put",
+      "type": "endpoint",
+      "label": "PUT /api/sessions/{session_id}/params",
+      "client_fn": "updateParams"
+    },
+    {
+      "id": "ep:measurements",
+      "type": "endpoint",
+      "label": "GET /api/sessions/{session_id}/measurements",
+      "client_fn": "getMeasurements",
+      "note": "client 已封装，UI 尚未接线（导出未用）"
+    },
+    {
+      "id": "ep:export_submit",
+      "type": "endpoint",
+      "label": "POST /api/sessions/{session_id}/exports",
+      "client_fn": "submitExport"
+    },
+    {
+      "id": "ep:export_status",
+      "type": "endpoint",
+      "label": "GET /api/exports/{task_id}",
+      "client_fn": "getExportStatus"
+    },
+    {
+      "id": "ep:timeline",
+      "type": "endpoint",
+      "label": "GET /api/photos/{photo_id}/timeline",
+      "client_fn": "getTimeline",
+      "note": "client 已封装，UI 尚未接线（导出未用）"
+    },
+    {
+      "id": "ep:decide",
+      "type": "endpoint",
+      "label": "POST /api/photos/{photo_id}/decide",
+      "client_fn": "decidePhoto",
+      "note": "client 已封装，UI 尚未接线（导出未用）"
+    },
+    {
+      "id": "ep:image",
+      "type": "endpoint",
+      "label": "GET /api/sessions/{session_id}/image",
+      "client_fn": "previewUrl/originalUrl"
+    },
+    {
+      "id": "be:service:app",
+      "type": "backend",
+      "label": "pixo-service 路由（FastAPI）",
+      "path": "src/pixo/service/app.py"
+    },
+    {
+      "id": "asset:films_dir",
+      "type": "asset",
+      "label": "configs/styles/films/（胶片风格卡库）",
+      "path": "configs/styles/films",
+      "format": "json",
+      "card_count": 24,
+      "family_counts": {
+        "Agfa": 1,
+        "CineStill": 1,
+        "Kodak": 11,
+        "Fuji": 11
+      },
+      "pipeline_counts": {
+        "7 段": 1,
+        "8 段": 11,
+        "12 段": 12
+      },
+      "stage_frequency": {
+        "exposure": 24,
+        "whitebalance": 24,
+        "tone": 24,
+        "huesat": 24,
+        "colorcal": 24,
+        "stylize": 24,
+        "refine": 24,
+        "skin": 23,
+        "hsl": 12,
+        "dehaze": 12,
+        "clarity": 12,
+        "split_tone": 12
+      },
+      "cards": [
+        {
+          "file": "configs/styles/films/agfa_vista_200.json",
+          "style_id": "agfa_vista_200",
+          "family": "Agfa",
+          "label": "Agfa Vista 200",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/cinestill_50d.json",
+          "style_id": "cinestill_50d",
+          "family": "CineStill",
+          "label": "CineStill 50D",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/film_portra_400.json",
+          "style_id": "film_portra_400",
+          "family": "Kodak",
+          "label": "Portra 400",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/film_pro_400h.json",
+          "style_id": "film_pro_400h",
+          "family": "Fuji",
+          "label": "Pro 400H",
+          "stage_count": 7,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_acros_100.json",
+          "style_id": "fujifilm_acros_100",
+          "family": "Fuji",
+          "label": "Acros 100",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_astia.json",
+          "style_id": "fujifilm_astia",
+          "family": "Fuji",
+          "label": "Astia 100F",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_classic_chrome.json",
+          "style_id": "fujifilm_classic_chrome",
+          "family": "Fuji",
+          "label": "Classic Chrome",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_community_lab_scan.json",
+          "style_id": "fujifilm_community_lab_scan",
+          "family": "Fuji",
+          "label": "社区冲扫风 3515/3510（合卡）",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_pro_neg_hia.json",
+          "style_id": "fujifilm_pro_neg_hia",
+          "family": "Fuji",
+          "label": "Pro Neg Hi",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_pro_neg_std.json",
+          "style_id": "fujifilm_pro_neg_std",
+          "family": "Fuji",
+          "label": "Pro Neg Std",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_provia_100f.json",
+          "style_id": "fujifilm_provia_100f",
+          "family": "Fuji",
+          "label": "Provia 100F",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_provia_400x.json",
+          "style_id": "fujifilm_provia_400x",
+          "family": "Fuji",
+          "label": "Provia 400X",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_reala_100.json",
+          "style_id": "fujifilm_reala_100",
+          "family": "Fuji",
+          "label": "Reala 100",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/fujifilm_velvia_50.json",
+          "style_id": "fujifilm_velvia_50",
+          "family": "Fuji",
+          "label": "Velvia 50",
+          "stage_count": 8,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "huesat",
+            "colorcal",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_colorplus_200.json",
+          "style_id": "kodak_colorplus_200",
+          "family": "Kodak",
+          "label": "ColorPlus 200",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_e100.json",
+          "style_id": "kodak_e100",
+          "family": "Kodak",
+          "label": "Ektachrome E100",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_ektar_100.json",
+          "style_id": "kodak_ektar_100",
+          "family": "Kodak",
+          "label": "Ektar 100",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_gold_200.json",
+          "style_id": "kodak_gold_200",
+          "family": "Kodak",
+          "label": "Gold 200",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_portra_160.json",
+          "style_id": "kodak_portra_160",
+          "family": "Kodak",
+          "label": "Portra 160",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_portra_160nc.json",
+          "style_id": "kodak_portra_160nc",
+          "family": "Kodak",
+          "label": "Portra 160NC",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_portra_400.json",
+          "style_id": "kodak_portra_400",
+          "family": "Kodak",
+          "label": "Portra 400",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_portra_400nc.json",
+          "style_id": "kodak_portra_400nc",
+          "family": "Kodak",
+          "label": "Portra 400NC",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_portra_800.json",
+          "style_id": "kodak_portra_800",
+          "family": "Kodak",
+          "label": "Portra 800",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        },
+        {
+          "file": "configs/styles/films/kodak_ultramax_400.json",
+          "style_id": "kodak_ultramax_400",
+          "family": "Kodak",
+          "label": "Ultramax 400",
+          "stage_count": 12,
+          "stages": [
+            "exposure",
+            "whitebalance",
+            "tone",
+            "hsl",
+            "huesat",
+            "dehaze",
+            "clarity",
+            "colorcal",
+            "split_tone",
+            "skin",
+            "stylize",
+            "refine"
+          ]
+        }
+      ],
+      "note": "schema={stages,params,output}+metadata；加载器 pixo.know.cards.StyleCard.from_films_dir；坏 JSON/缺 stages 跳过告警"
+    },
+    {
+      "id": "be:mod:exposure",
+      "type": "backend",
+      "label": "render/modules/exposure.py（stage: exposure）",
+      "path": "src/pixo/render/modules/exposure.py",
+      "core": "core/curves.py + calibration_store"
+    },
+    {
+      "id": "be:mod:white_balance",
+      "type": "backend",
+      "label": "render/modules/white_balance.py（stage: whitebalance）",
+      "path": "src/pixo/render/modules/white_balance.py",
+      "core": "core/color.py + core/calibration.py"
+    },
+    {
+      "id": "be:mod:tone_map",
+      "type": "backend",
+      "label": "render/modules/tone_map.py（stage: tone）",
+      "path": "src/pixo/render/modules/tone_map.py",
+      "core": "core/curves.py（filmic LUT）"
+    },
+    {
+      "id": "be:mod:hsl",
+      "type": "backend",
+      "label": "render/modules/hsl.py（stage: hsl）",
+      "path": "src/pixo/render/modules/hsl.py",
+      "core": "core/hsl.py + core/hsl_oklch.py（OKLCh 8 带）"
+    },
+    {
+      "id": "be:mod:huesat",
+      "type": "backend",
+      "label": "render/modules/huesat.py（stage: huesat）",
+      "path": "src/pixo/render/modules/huesat.py",
+      "core": "core/huesat.py（DCP HueSatMap 移植）"
+    },
+    {
+      "id": "be:mod:dehaze",
+      "type": "backend",
+      "label": "render/modules/dehaze.py（stage: dehaze）",
+      "path": "src/pixo/render/modules/dehaze.py"
+    },
+    {
+      "id": "be:mod:clarity",
+      "type": "backend",
+      "label": "render/modules/clarity.py（stage: clarity）",
+      "path": "src/pixo/render/modules/clarity.py"
+    },
+    {
+      "id": "be:mod:color_cal",
+      "type": "backend",
+      "label": "render/modules/color_cal.py（stage: colorcal）",
+      "path": "src/pixo/render/modules/color_cal.py"
+    },
+    {
+      "id": "be:mod:split_tone",
+      "type": "backend",
+      "label": "render/modules/split_tone.py（stage: split_tone）",
+      "path": "src/pixo/render/modules/split_tone.py",
+      "core": "core/split_tone.py"
+    },
+    {
+      "id": "be:mod:skin",
+      "type": "backend",
+      "label": "render/modules/skin.py（stage: skin）",
+      "path": "src/pixo/render/modules/skin.py",
+      "core": "core/skin.py（掩码+磨皮）"
+    },
+    {
+      "id": "be:mod:style",
+      "type": "backend",
+      "label": "render/modules/style.py（stage: stylize）",
+      "path": "src/pixo/render/modules/style.py"
+    },
+    {
+      "id": "be:mod:refine",
+      "type": "backend",
+      "label": "render/modules/refine.py（stage: refine）",
+      "path": "src/pixo/render/modules/refine.py"
+    },
+    {
+      "id": "asset:styles:acr_standard",
+      "type": "asset",
+      "label": "configs/styles/acr_standard.json",
+      "path": "configs/styles/acr_standard.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "tone",
+        "huesat",
+        "colorcal",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:enhance",
+      "type": "asset",
+      "label": "configs/styles/enhance.json",
+      "path": "configs/styles/enhance.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "tone",
+        "huesat",
+        "dehaze",
+        "clarity",
+        "colorcal",
+        "skin",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:lr_adobe_standard_baseline",
+      "type": "asset",
+      "label": "configs/styles/lr_adobe_standard_baseline.json",
+      "path": "configs/styles/lr_adobe_standard_baseline.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone",
+        "clarity",
+        "colorcal",
+        "skin",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:lr_baseline",
+      "type": "asset",
+      "label": "configs/styles/lr_baseline.json",
+      "path": "configs/styles/lr_baseline.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone",
+        "clarity",
+        "colorcal",
+        "skin",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:lr_camera_standard_baseline",
+      "type": "asset",
+      "label": "configs/styles/lr_camera_standard_baseline.json",
+      "path": "configs/styles/lr_camera_standard_baseline.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone",
+        "clarity",
+        "colorcal",
+        "skin",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:neutral",
+      "type": "asset",
+      "label": "configs/styles/neutral.json",
+      "path": "configs/styles/neutral.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone",
+        "colorcal",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:preview_baseline",
+      "type": "asset",
+      "label": "configs/styles/preview_baseline.json",
+      "path": "configs/styles/preview_baseline.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone",
+        "clarity",
+        "colorcal",
+        "skin",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:preview_baseline_v2",
+      "type": "asset",
+      "label": "configs/styles/preview_baseline_v2.json",
+      "path": "configs/styles/preview_baseline_v2.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone",
+        "clarity",
+        "colorcal",
+        "skin",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:preview_baseline_v3",
+      "type": "asset",
+      "label": "configs/styles/preview_baseline_v3.json",
+      "path": "configs/styles/preview_baseline_v3.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone",
+        "clarity",
+        "colorcal",
+        "skin",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:preview_fast",
+      "type": "asset",
+      "label": "configs/styles/preview_fast.json",
+      "path": "configs/styles/preview_fast.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "huesat",
+        "tone"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:styles:scenes",
+      "type": "asset",
+      "label": "configs/styles/scenes.json（场景预设映射）",
+      "path": "configs/styles/scenes.json",
+      "format": "json",
+      "scene_keys": [
+        "food",
+        "landscape",
+        "mono",
+        "night",
+        "portrait",
+        "street"
+      ],
+      "note": "scene→{params,lut}；mono 用 saturation=-1 全去色"
+    },
+    {
+      "id": "asset:styles:vivid",
+      "type": "asset",
+      "label": "configs/styles/vivid.json",
+      "path": "configs/styles/vivid.json",
+      "format": "json",
+      "stage_keys": [
+        "exposure",
+        "whitebalance",
+        "tone",
+        "huesat",
+        "colorcal",
+        "stylize",
+        "refine"
+      ],
+      "note": "渲染预设：pipeline_from_config 消费 stages/params/output"
+    },
+    {
+      "id": "asset:knowledge:photography_capture_post",
+      "type": "asset",
+      "label": "configs/knowledge/photography_capture_post.json",
+      "path": "configs/knowledge/photography_capture_post.json",
+      "format": "json",
+      "theme": "拍摄×后期",
+      "node_count": 11,
+      "edge_count": 4,
+      "note": "前期手段与后期代价（capture/light/noise/action）"
+    },
+    {
+      "id": "asset:knowledge:photography_tone",
+      "type": "asset",
+      "label": "configs/knowledge/photography_tone.json",
+      "path": "configs/knowledge/photography_tone.json",
+      "format": "json",
+      "theme": "影调",
+      "node_count": 15,
+      "edge_count": 13,
+      "note": "曝光/影调策略与工序（tone/strategy/side_effect）"
+    },
+    {
+      "id": "asset:knowledge:photography_hue",
+      "type": "asset",
+      "label": "configs/knowledge/photography_hue.json",
+      "path": "configs/knowledge/photography_hue.json",
+      "format": "json",
+      "theme": "色相",
+      "node_count": 14,
+      "edge_count": 11,
+      "note": "色偏病因→调色动作→边界（color_issue/action/boundary）"
+    },
+    {
+      "id": "asset:knowledge:photography_post2",
+      "type": "asset",
+      "label": "configs/knowledge/photography_post2.json",
+      "path": "configs/knowledge/photography_post2.json",
+      "format": "json",
+      "theme": "后期方法论",
+      "node_count": 9,
+      "edge_count": 9,
+      "note": "流程方法/方案对照/场景风险（action/boundary/side_effect）"
+    },
+    {
+      "id": "asset:knowledge:photography_composition",
+      "type": "asset",
+      "label": "configs/knowledge/photography_composition.json",
+      "path": "configs/knowledge/photography_composition.json",
+      "format": "json",
+      "theme": "构图",
+      "node_count": 10,
+      "edge_count": 9,
+      "note": "场景→策略→禁忌链、二次构图边界（scene/strategy/boundary）"
+    },
+    {
+      "id": "asset:rules:color_rules",
+      "type": "asset",
+      "label": "configs/rules/color_rules.yaml",
+      "path": "configs/rules/color_rules.yaml",
+      "format": "yaml",
+      "rule_ids": [
+        "vibrance_low_rule",
+        "saturation_high_rule"
+      ],
+      "note": "色彩规则（阈值取 t41 实测分位 p25/p75）"
+    },
+    {
+      "id": "asset:rules:exposure_rule_001",
+      "type": "asset",
+      "label": "configs/rules/exposure_rule_001.yaml",
+      "path": "configs/rules/exposure_rule_001.yaml",
+      "format": "yaml",
+      "rule_ids": [
+        "exposure_rule_001"
+      ],
+      "note": "曝光规则"
+    },
+    {
+      "id": "asset:rules:highlight_protect_rule_002",
+      "type": "asset",
+      "label": "configs/rules/highlight_protect_rule_002.yaml",
+      "path": "configs/rules/highlight_protect_rule_002.yaml",
+      "format": "yaml",
+      "rule_ids": [
+        "highlight_protect_rule_002"
+      ],
+      "note": "高光保护规则"
+    },
+    {
+      "id": "asset:rules:crop_suggest_rule_003",
+      "type": "asset",
+      "label": "configs/rules/crop_suggest_rule_003.yaml",
+      "path": "configs/rules/crop_suggest_rule_003.yaml",
+      "format": "yaml",
+      "rule_ids": [
+        "crop_suggest_rule_003"
+      ],
+      "note": "裁剪建议规则"
+    },
+    {
+      "id": "asset:rules:tone_clarity_rules",
+      "type": "asset",
+      "label": "configs/rules/tone_clarity_rules.yaml",
+      "path": "configs/rules/tone_clarity_rules.yaml",
+      "format": "yaml",
+      "rule_ids": [
+        "dehaze_rule_030",
+        "clarity_flat_rule_031",
+        "shadow_open_rule_032",
+        "highlight_recover_rule_033"
+      ],
+      "note": "影调/清晰度规则组"
+    },
+    {
+      "id": "asset:calibration:warmth_curve",
+      "type": "asset",
+      "label": "configs/calibration/warmth_curve.json",
+      "path": "configs/calibration/warmth_curve.json",
+      "format": "json",
+      "note": "逐机暖度曲线 [[wb_B,r,g,b],...]；scripts/fit_warmth_curve.py --write 产物"
+    },
+    {
+      "id": "asset:color:rp_ccm_nikon_z5_2",
+      "type": "asset",
+      "label": "configs/color/rp_ccm_nikon_z5_2.json",
+      "path": "configs/color/rp_ccm_nikon_z5_2.json",
+      "format": "json",
+      "note": "RP CCM 系数（Nikon Z5² 语料弱监督拟合）；scripts/fit_rp_ccm.py 产物"
+    },
+    {
+      "id": "asset:manifest:vision_models",
+      "type": "asset",
+      "label": "src/pixo/manifests/vision_models.json",
+      "path": "src/pixo/manifests/vision_models.json",
+      "format": "json",
+      "note": "Pixo Vision 模型清单（登记不拷贝大文件；license/publishable/pixo_status 字段）"
+    },
+    {
+      "id": "asset:manifest:dcp",
+      "type": "asset",
+      "label": "resources/dcp/manifest.json",
+      "path": "resources/dcp/manifest.json",
+      "format": "json",
+      "note": "相机→DCP/预设映射注册表（camera/default_lr_preset/targets{preset,dcp,truth,camera_profile}）"
+    },
+    {
+      "id": "asset:manifest:goldens_render_bench",
+      "type": "asset",
+      "label": "data/golden/reference/render_bench/goldens/*/manifest.json",
+      "path": "data/golden/reference/render_bench/goldens",
+      "format": "json",
+      "note": "gate / gate_defaults / gate_smoke2 三套 golden 清单"
+    },
+    {
+      "id": "asset:manifest:goldens_tests",
+      "type": "asset",
+      "label": "tests/regression/goldens/gate/manifest.json",
+      "path": "tests/regression/goldens/gate/manifest.json",
+      "format": "json",
+      "note": "回归测试 golden 清单"
+    },
+    {
+      "id": "be:know:cards",
+      "type": "backend",
+      "label": "pixo.know.cards（胶片卡加载器）",
+      "path": "src/pixo/know/cards.py"
+    },
+    {
+      "id": "be:know:registry",
+      "type": "backend",
+      "label": "pixo.know.registry/graph/rag（知识包注册与检索）",
+      "path": "src/pixo/know/registry.py"
+    },
+    {
+      "id": "be:decide:rules",
+      "type": "backend",
+      "label": "pixo.decide.rules（规则引擎加载）",
+      "path": "src/pixo/decide/rules/__init__.py"
+    },
+    {
+      "id": "be:render:presets",
+      "type": "backend",
+      "label": "render/pipeline/presets（pipeline_from_config）",
+      "path": "src/pixo/render/pipeline/presets.py"
+    },
+    {
+      "id": "be:render:scene_apply",
+      "type": "backend",
+      "label": "render/pipeline/scene_apply（场景预设应用）",
+      "path": "src/pixo/render/pipeline/scene_apply.py"
+    },
+    {
+      "id": "be:core:calibration_store",
+      "type": "backend",
+      "label": "render/core/calibration_store（标定负缓存）",
+      "path": "src/pixo/render/core/calibration_store.py"
+    },
+    {
+      "id": "be:core:rp_ccm",
+      "type": "backend",
+      "label": "render/core/rp_ccm（RP CCM 系数）",
+      "path": "src/pixo/render/core/rp_ccm.py"
+    },
+    {
+      "id": "be:manifests",
+      "type": "backend",
+      "label": "pixo.manifests（模型清单加载/校验）",
+      "path": "src/pixo/manifests/__init__.py"
+    },
+    {
+      "id": "be:core:calibration",
+      "type": "backend",
+      "label": "render/core/calibration（DCP 解析/查找）",
+      "path": "src/pixo/render/core/calibration.py"
+    },
+    {
+      "id": "be:harness:goldens",
+      "type": "backend",
+      "label": "pixo.harness.goldens（golden 清单工具）",
+      "path": "src/pixo/harness/goldens/manifest.py"
+    }
+  ],
+  "edges": [
+    {
+      "id": "imp:main-app",
+      "from": "fe:main",
+      "to": "fe:app",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:main-tokens",
+      "from": "fe:main",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:main-css",
+      "from": "fe:main",
+      "to": "fe:styles.css",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-store",
+      "from": "fe:app",
+      "to": "fe:store",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-api",
+      "from": "fe:app",
+      "to": "fe:api:index",
+      "relation": "imports",
+      "symbols": [
+        "fetchPhotos",
+        "getMockSessionId",
+        "pollExport",
+        "submitExport",
+        "toPhotoView"
+      ]
+    },
+    {
+      "id": "imp:app-tokens",
+      "from": "fe:app",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-ProjectList",
+      "from": "fe:app",
+      "to": "fe:comp:ProjectList",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-PreviewViewer",
+      "from": "fe:app",
+      "to": "fe:comp:PreviewViewer",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-Filmstrip",
+      "from": "fe:app",
+      "to": "fe:comp:Filmstrip",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-StyleAiPanel",
+      "from": "fe:app",
+      "to": "fe:comp:StyleAiPanel",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-AdjustmentsPanel",
+      "from": "fe:app",
+      "to": "fe:comp:AdjustmentsPanel",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-ReviewQueue",
+      "from": "fe:app",
+      "to": "fe:comp:ReviewQueue",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:app-SettingsPanel",
+      "from": "fe:app",
+      "to": "fe:comp:SettingsPanel",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:projectlist-store",
+      "from": "fe:comp:ProjectList",
+      "to": "fe:store",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:projectlist-tokens",
+      "from": "fe:comp:ProjectList",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:preview-store",
+      "from": "fe:comp:PreviewViewer",
+      "to": "fe:store",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:preview-tokens",
+      "from": "fe:comp:PreviewViewer",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:preview-api",
+      "from": "fe:comp:PreviewViewer",
+      "to": "fe:api:index",
+      "relation": "imports",
+      "symbols": [
+        "getMockOriginalSource",
+        "getMockSessionId",
+        "getOriginalSource",
+        "getPreviewSource"
+      ]
+    },
+    {
+      "id": "imp:filmstrip-store",
+      "from": "fe:comp:Filmstrip",
+      "to": "fe:store",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:filmstrip-tokens",
+      "from": "fe:comp:Filmstrip",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:filmstrip-types",
+      "from": "fe:comp:Filmstrip",
+      "to": "fe:types",
+      "relation": "imports",
+      "symbols": [
+        "STATUS_FILTER_SETS"
+      ]
+    },
+    {
+      "id": "imp:styleai-store",
+      "from": "fe:comp:StyleAiPanel",
+      "to": "fe:store",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:styleai-tokens",
+      "from": "fe:comp:StyleAiPanel",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:adjust-store",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "fe:store",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:adjust-tokens",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:adjust-api",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "fe:api:index",
+      "relation": "imports",
+      "symbols": [
+        "health"
+      ]
+    },
+    {
+      "id": "imp:adjust-sectionlabel",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "fe:comp:SectionLabel",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:adjust-sliderparam",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "fe:comp:SliderParam",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:adjust-types",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "fe:types",
+      "relation": "imports",
+      "symbols": [
+        "HslBand",
+        "ParamPatch"
+      ]
+    },
+    {
+      "id": "imp:review-store",
+      "from": "fe:comp:ReviewQueue",
+      "to": "fe:store",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:review-tokens",
+      "from": "fe:comp:ReviewQueue",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:settings-tokens",
+      "from": "fe:comp:SettingsPanel",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:sliderparam-tokens",
+      "from": "fe:comp:SliderParam",
+      "to": "fe:theme:tokens",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:sliderparam-types",
+      "from": "fe:comp:SliderParam",
+      "to": "fe:types",
+      "relation": "imports",
+      "symbols": [
+        "ParamPatch",
+        "Source"
+      ]
+    },
+    {
+      "id": "render:workspace",
+      "from": "fe:app",
+      "to": "fe:page:workspace",
+      "relation": "renders",
+      "note": "page==='workspace'"
+    },
+    {
+      "id": "render:review",
+      "from": "fe:app",
+      "to": "fe:page:review",
+      "relation": "renders",
+      "note": "page==='review'"
+    },
+    {
+      "id": "render:settings",
+      "from": "fe:app",
+      "to": "fe:page:settings",
+      "relation": "renders",
+      "note": "其余值"
+    },
+    {
+      "id": "page:workspace-ProjectList",
+      "from": "fe:page:workspace",
+      "to": "fe:comp:ProjectList",
+      "relation": "contains",
+      "note": "StyleAiPanel/AdjustmentsPanel 由 rightTab 二选一"
+    },
+    {
+      "id": "page:workspace-PreviewViewer",
+      "from": "fe:page:workspace",
+      "to": "fe:comp:PreviewViewer",
+      "relation": "contains",
+      "note": "StyleAiPanel/AdjustmentsPanel 由 rightTab 二选一"
+    },
+    {
+      "id": "page:workspace-Filmstrip",
+      "from": "fe:page:workspace",
+      "to": "fe:comp:Filmstrip",
+      "relation": "contains",
+      "note": "StyleAiPanel/AdjustmentsPanel 由 rightTab 二选一"
+    },
+    {
+      "id": "page:workspace-StyleAiPanel",
+      "from": "fe:page:workspace",
+      "to": "fe:comp:StyleAiPanel",
+      "relation": "contains",
+      "note": "StyleAiPanel/AdjustmentsPanel 由 rightTab 二选一"
+    },
+    {
+      "id": "page:workspace-AdjustmentsPanel",
+      "from": "fe:page:workspace",
+      "to": "fe:comp:AdjustmentsPanel",
+      "relation": "contains",
+      "note": "StyleAiPanel/AdjustmentsPanel 由 rightTab 二选一"
+    },
+    {
+      "id": "page:review-queue",
+      "from": "fe:page:review",
+      "to": "fe:comp:ReviewQueue",
+      "relation": "contains"
+    },
+    {
+      "id": "page:settings-panel",
+      "from": "fe:page:settings",
+      "to": "fe:comp:SettingsPanel",
+      "relation": "contains"
+    },
+    {
+      "id": "imp:store-types",
+      "from": "fe:store",
+      "to": "fe:types",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:store-api",
+      "from": "fe:store",
+      "to": "fe:api:index",
+      "relation": "imports",
+      "symbols": [
+        "ensureSession",
+        "fetchProjects",
+        "fetchStyleCards",
+        "getMockPhotoList",
+        "getMockSessionId",
+        "patchParams"
+      ]
+    },
+    {
+      "id": "imp:api-client",
+      "from": "fe:api:index",
+      "to": "fe:api:client",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:api-mock",
+      "from": "fe:api:index",
+      "to": "fe:api:mock",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:api-types",
+      "from": "fe:api:index",
+      "to": "fe:types",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:client-types",
+      "from": "fe:api:client",
+      "to": "fe:types",
+      "relation": "imports"
+    },
+    {
+      "id": "imp:mock-types",
+      "from": "fe:api:mock",
+      "to": "fe:types",
+      "relation": "imports"
+    },
+    {
+      "id": "serves:health",
+      "from": "be:service:app",
+      "to": "ep:health",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:photos_list",
+      "from": "be:service:app",
+      "to": "ep:photos_list",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:photo_get",
+      "from": "be:service:app",
+      "to": "ep:photo_get",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:photo_create",
+      "from": "be:service:app",
+      "to": "ep:photo_create",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:session_create",
+      "from": "be:service:app",
+      "to": "ep:session_create",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:params_put",
+      "from": "be:service:app",
+      "to": "ep:params_put",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:measurements",
+      "from": "be:service:app",
+      "to": "ep:measurements",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:export_submit",
+      "from": "be:service:app",
+      "to": "ep:export_submit",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:export_status",
+      "from": "be:service:app",
+      "to": "ep:export_status",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:timeline",
+      "from": "be:service:app",
+      "to": "ep:timeline",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:decide",
+      "from": "be:service:app",
+      "to": "ep:decide",
+      "relation": "serves"
+    },
+    {
+      "id": "serves:image",
+      "from": "be:service:app",
+      "to": "ep:image",
+      "relation": "serves"
+    },
+    {
+      "id": "wraps:health",
+      "from": "fe:api:client",
+      "to": "ep:health",
+      "relation": "wraps",
+      "note": "client.getHealth()"
+    },
+    {
+      "id": "wraps:photos_list",
+      "from": "fe:api:client",
+      "to": "ep:photos_list",
+      "relation": "wraps",
+      "note": "client.listPhotos()"
+    },
+    {
+      "id": "wraps:photo_get",
+      "from": "fe:api:client",
+      "to": "ep:photo_get",
+      "relation": "wraps",
+      "note": "client.getPhoto()"
+    },
+    {
+      "id": "wraps:photo_create",
+      "from": "fe:api:client",
+      "to": "ep:photo_create",
+      "relation": "wraps",
+      "note": "client.createPhoto()"
+    },
+    {
+      "id": "wraps:session_create",
+      "from": "fe:api:client",
+      "to": "ep:session_create",
+      "relation": "wraps",
+      "note": "client.createSession()"
+    },
+    {
+      "id": "wraps:params_put",
+      "from": "fe:api:client",
+      "to": "ep:params_put",
+      "relation": "wraps",
+      "note": "client.updateParams()"
+    },
+    {
+      "id": "wraps:measurements",
+      "from": "fe:api:client",
+      "to": "ep:measurements",
+      "relation": "wraps",
+      "note": "client.getMeasurements()"
+    },
+    {
+      "id": "wraps:export_submit",
+      "from": "fe:api:client",
+      "to": "ep:export_submit",
+      "relation": "wraps",
+      "note": "client.submitExport()"
+    },
+    {
+      "id": "wraps:export_status",
+      "from": "fe:api:client",
+      "to": "ep:export_status",
+      "relation": "wraps",
+      "note": "client.getExportStatus()"
+    },
+    {
+      "id": "wraps:timeline",
+      "from": "fe:api:client",
+      "to": "ep:timeline",
+      "relation": "wraps",
+      "note": "client.getTimeline()"
+    },
+    {
+      "id": "wraps:decide",
+      "from": "fe:api:client",
+      "to": "ep:decide",
+      "relation": "wraps",
+      "note": "client.decidePhoto()"
+    },
+    {
+      "id": "wraps:image",
+      "from": "fe:api:client",
+      "to": "ep:image",
+      "relation": "wraps",
+      "note": "client.previewUrl/originalUrl()"
+    },
+    {
+      "id": "call:app-photos_list",
+      "from": "fe:app",
+      "to": "ep:photos_list",
+      "relation": "calls",
+      "note": "挂载时 fetchPhotos 探测后端；成功 setPhotos+backend=true，失败降级 mock"
+    },
+    {
+      "id": "call:app-export_submit",
+      "from": "fe:app",
+      "to": "ep:export_submit",
+      "relation": "calls",
+      "note": "顶栏下载按钮 submitExport(sessionId,'jpeg',88)"
+    },
+    {
+      "id": "call:app-export_status",
+      "from": "fe:app",
+      "to": "ep:export_status",
+      "relation": "calls",
+      "note": "1s 轮询至 completed/failed 或 60 次"
+    },
+    {
+      "id": "call:preview-image",
+      "from": "fe:comp:PreviewViewer",
+      "to": "ep:image",
+      "relation": "calls",
+      "note": "处理图 gen=N 预览 + 原图 original=1（契约端点，404 回退 mock 占位）"
+    },
+    {
+      "id": "call:thumb-image",
+      "from": "fe:api:index",
+      "to": "ep:image",
+      "relation": "builds_url",
+      "note": "toPhotoView：Filmstrip 缩略图 long_edge=512，gen 省略由服务端按会话当前代渲染"
+    },
+    {
+      "id": "call:adjust-health",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "ep:health",
+      "relation": "calls",
+      "note": "挂载探测 segmenter.part_prompts 是否含 skin → skinMaskReady"
+    },
+    {
+      "id": "call:store-params_put",
+      "from": "fe:store",
+      "to": "ep:params_put",
+      "relation": "calls",
+      "note": "patchParam/patchProjectParam → updateParams（深合并+generation+1），回读 params/canonical"
+    },
+    {
+      "id": "call:store-session_create",
+      "from": "fe:store",
+      "to": "ep:session_create",
+      "relation": "calls",
+      "note": "patchProjectParam 惰性 ensureSession（后端在线且 sessionId 为空时）"
+    },
+    {
+      "id": "load:films-cards",
+      "from": "be:know:cards",
+      "to": "asset:films_dir",
+      "relation": "loads",
+      "note": "StyleCard.from_films_dir()，pipeline_from_config 只读 stages/params/output，metadata 自然忽略"
+    },
+    {
+      "id": "stage:exposure",
+      "from": "asset:films_dir",
+      "to": "be:mod:exposure",
+      "relation": "stage_key",
+      "note": "24/24 张卡含 exposure 键"
+    },
+    {
+      "id": "stage:whitebalance",
+      "from": "asset:films_dir",
+      "to": "be:mod:white_balance",
+      "relation": "stage_key",
+      "note": "24/24 张卡含 whitebalance 键"
+    },
+    {
+      "id": "stage:tone",
+      "from": "asset:films_dir",
+      "to": "be:mod:tone_map",
+      "relation": "stage_key",
+      "note": "24/24 张卡含 tone 键"
+    },
+    {
+      "id": "stage:hsl",
+      "from": "asset:films_dir",
+      "to": "be:mod:hsl",
+      "relation": "stage_key",
+      "note": "12/24 张卡含 hsl 键"
+    },
+    {
+      "id": "stage:huesat",
+      "from": "asset:films_dir",
+      "to": "be:mod:huesat",
+      "relation": "stage_key",
+      "note": "24/24 张卡含 huesat 键"
+    },
+    {
+      "id": "stage:dehaze",
+      "from": "asset:films_dir",
+      "to": "be:mod:dehaze",
+      "relation": "stage_key",
+      "note": "12/24 张卡含 dehaze 键"
+    },
+    {
+      "id": "stage:clarity",
+      "from": "asset:films_dir",
+      "to": "be:mod:clarity",
+      "relation": "stage_key",
+      "note": "12/24 张卡含 clarity 键"
+    },
+    {
+      "id": "stage:colorcal",
+      "from": "asset:films_dir",
+      "to": "be:mod:color_cal",
+      "relation": "stage_key",
+      "note": "24/24 张卡含 colorcal 键"
+    },
+    {
+      "id": "stage:split_tone",
+      "from": "asset:films_dir",
+      "to": "be:mod:split_tone",
+      "relation": "stage_key",
+      "note": "12/24 张卡含 split_tone 键"
+    },
+    {
+      "id": "stage:skin",
+      "from": "asset:films_dir",
+      "to": "be:mod:skin",
+      "relation": "stage_key",
+      "note": "23/24 张卡含 skin 键"
+    },
+    {
+      "id": "stage:stylize",
+      "from": "asset:films_dir",
+      "to": "be:mod:style",
+      "relation": "stage_key",
+      "note": "24/24 张卡含 stylize 键"
+    },
+    {
+      "id": "stage:refine",
+      "from": "asset:films_dir",
+      "to": "be:mod:refine",
+      "relation": "stage_key",
+      "note": "24/24 张卡含 refine 键"
+    },
+    {
+      "id": "load:styles-acr_standard",
+      "from": "be:render:presets",
+      "to": "asset:styles:acr_standard",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-enhance",
+      "from": "be:render:presets",
+      "to": "asset:styles:enhance",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-lr_adobe_standard_baseline",
+      "from": "be:render:presets",
+      "to": "asset:styles:lr_adobe_standard_baseline",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-lr_baseline",
+      "from": "be:render:presets",
+      "to": "asset:styles:lr_baseline",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-lr_camera_standard_baseline",
+      "from": "be:render:presets",
+      "to": "asset:styles:lr_camera_standard_baseline",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-neutral",
+      "from": "be:render:presets",
+      "to": "asset:styles:neutral",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-preview_baseline",
+      "from": "be:render:presets",
+      "to": "asset:styles:preview_baseline",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-preview_baseline_v2",
+      "from": "be:render:presets",
+      "to": "asset:styles:preview_baseline_v2",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-preview_baseline_v3",
+      "from": "be:render:presets",
+      "to": "asset:styles:preview_baseline_v3",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-preview_fast",
+      "from": "be:render:presets",
+      "to": "asset:styles:preview_fast",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:styles-scenes",
+      "from": "be:render:scene_apply",
+      "to": "asset:styles:scenes",
+      "relation": "loads",
+      "note": "render/pipeline/scene_apply.py load_scene_presets（进程内缓存）"
+    },
+    {
+      "id": "load:styles-vivid",
+      "from": "be:render:presets",
+      "to": "asset:styles:vivid",
+      "relation": "loads",
+      "note": "render/pipeline/presets.py pipeline_from_config"
+    },
+    {
+      "id": "load:know-photography_capture_post",
+      "from": "be:know:registry",
+      "to": "asset:knowledge:photography_capture_post",
+      "relation": "loads",
+      "note": "pixo.know.registry 自动扫描 configs/knowledge/；graph.py/rag.py 供 agent 检索"
+    },
+    {
+      "id": "load:know-photography_tone",
+      "from": "be:know:registry",
+      "to": "asset:knowledge:photography_tone",
+      "relation": "loads",
+      "note": "pixo.know.registry 自动扫描 configs/knowledge/；graph.py/rag.py 供 agent 检索"
+    },
+    {
+      "id": "load:know-photography_hue",
+      "from": "be:know:registry",
+      "to": "asset:knowledge:photography_hue",
+      "relation": "loads",
+      "note": "pixo.know.registry 自动扫描 configs/knowledge/；graph.py/rag.py 供 agent 检索"
+    },
+    {
+      "id": "load:know-photography_post2",
+      "from": "be:know:registry",
+      "to": "asset:knowledge:photography_post2",
+      "relation": "loads",
+      "note": "pixo.know.registry 自动扫描 configs/knowledge/；graph.py/rag.py 供 agent 检索"
+    },
+    {
+      "id": "load:know-photography_composition",
+      "from": "be:know:registry",
+      "to": "asset:knowledge:photography_composition",
+      "relation": "loads",
+      "note": "pixo.know.registry 自动扫描 configs/knowledge/；graph.py/rag.py 供 agent 检索"
+    },
+    {
+      "id": "load:rules-color_rules",
+      "from": "be:decide:rules",
+      "to": "asset:rules:color_rules",
+      "relation": "loads",
+      "note": "src/pixo/decide/rules/ 与 configs/rules/ 双维护镜像；RULES_DIR 显式列 color_rules.yaml"
+    },
+    {
+      "id": "load:rules-exposure_rule_001",
+      "from": "be:decide:rules",
+      "to": "asset:rules:exposure_rule_001",
+      "relation": "loads",
+      "note": "src/pixo/decide/rules/ 与 configs/rules/ 双维护镜像；RULES_DIR 显式列 color_rules.yaml"
+    },
+    {
+      "id": "load:rules-highlight_protect_rule_002",
+      "from": "be:decide:rules",
+      "to": "asset:rules:highlight_protect_rule_002",
+      "relation": "loads",
+      "note": "src/pixo/decide/rules/ 与 configs/rules/ 双维护镜像；RULES_DIR 显式列 color_rules.yaml"
+    },
+    {
+      "id": "load:rules-crop_suggest_rule_003",
+      "from": "be:decide:rules",
+      "to": "asset:rules:crop_suggest_rule_003",
+      "relation": "loads",
+      "note": "src/pixo/decide/rules/ 与 configs/rules/ 双维护镜像；RULES_DIR 显式列 color_rules.yaml"
+    },
+    {
+      "id": "load:rules-tone_clarity_rules",
+      "from": "be:decide:rules",
+      "to": "asset:rules:tone_clarity_rules",
+      "relation": "loads",
+      "note": "src/pixo/decide/rules/ 与 configs/rules/ 双维护镜像；RULES_DIR 显式列 color_rules.yaml"
+    },
+    {
+      "id": "load:warmth-store",
+      "from": "be:core:calibration_store",
+      "to": "asset:calibration:warmth_curve",
+      "relation": "loads",
+      "note": "mtime+size 键负缓存统一治理；文件存在时其 knots 作为 warmth_curve 生效，显式参数优先"
+    },
+    {
+      "id": "load:warmth-wb",
+      "from": "be:mod:white_balance",
+      "to": "asset:calibration:warmth_curve",
+      "relation": "consumes",
+      "note": "whitebalance stage 经 calibration_store 读曲线"
+    },
+    {
+      "id": "load:rpccm",
+      "from": "be:core:rp_ccm",
+      "to": "asset:color:rp_ccm_nikon_z5_2",
+      "relation": "loads",
+      "note": "render/core/rp_ccm.py 约定 configs/color/rp_ccm_<camera>.json"
+    },
+    {
+      "id": "load:vision-models",
+      "from": "be:manifests",
+      "to": "asset:manifest:vision_models",
+      "relation": "loads",
+      "note": "pixo.manifests.load_vision_models / load_all_manifests，含字段完整性校验"
+    },
+    {
+      "id": "load:dcp",
+      "from": "be:core:calibration",
+      "to": "asset:manifest:dcp",
+      "relation": "loads",
+      "note": "注册表元数据；.dcp 本体由 render/core/calibration.py load_dcp/find_camera_dcp 消费"
+    },
+    {
+      "id": "load:goldens_render_bench",
+      "from": "be:harness:goldens",
+      "to": "asset:manifest:goldens_render_bench",
+      "relation": "loads",
+      "note": "harness/goldens/manifest.py 读写校验；gate_golden.py 产出"
+    },
+    {
+      "id": "load:goldens_tests",
+      "from": "be:harness:goldens",
+      "to": "asset:manifest:goldens_tests",
+      "relation": "loads",
+      "note": "harness/goldens/manifest.py 读写校验；gate_golden.py 产出"
+    },
+    {
+      "id": "mirror:mock-films",
+      "from": "fe:api:mock",
+      "to": "asset:films_dir",
+      "relation": "mirrors",
+      "note": "前端风格卡目前为 mock 硬编码 2 张（kodak_portra_400/fuji_pro_400h）；后端 24 张胶片卡尚未接线到前端（无 GET /api/styles 端点）"
+    },
+    {
+      "id": "align:types-modules",
+      "from": "fe:types",
+      "to": "be:mod:hsl",
+      "relation": "aligns",
+      "note": "ParamPatch.hsl（HslBand 五字段×8 段）与 render/modules/hsl.py DEFAULT_BANDS schema 对齐"
+    },
+    {
+      "id": "align:types-machine",
+      "from": "fe:types",
+      "to": "be:service:app",
+      "relation": "aligns",
+      "note": "PhotoState 枚举/各端点响应类型以 service/app.py + state/machine.py + runtime.py 为事实来源"
+    },
+    {
+      "id": "mirror:adjust-hsl",
+      "from": "fe:comp:AdjustmentsPanel",
+      "to": "be:mod:hsl",
+      "relation": "mirrors",
+      "note": "DEFAULT_HSL_BANDS 常量镜像 render/core/hsl.py DEFAULT_BANDS（8 段），避免悬空键 patch"
+    }
+  ]
+}

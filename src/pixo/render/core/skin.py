@@ -25,6 +25,8 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
+from .oklab import srgb_to_oklab
+
 # 肤色椭圆 (规格 §2.2)
 SKIN_LAB_A = 140.0
 SKIN_LAB_B = 150.0
@@ -166,4 +168,82 @@ def skin_smooth(rgb8, mask, strength: float = 0.5, half_res: bool = False) -> np
     out = f * (1.0 - w) + smoothed * w
     return (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
 
-__all__ = ["skin_mask", "skin_smooth", "guided_filter"]
+# ---------------------------------------------------------------------------
+# OKLab 椭圆 (M-O2, 设计 §3) —— 由 scripts/fit_skin_oklch.py 在厦门/春节语料
+# (2026-02-10 春节 + 02-14..04-24 厦门, 42 张有效照片, pixo.meta 拍摄日分组)
+# 上以 "旧 Lab 椭圆掩码 ∩ person 分割掩码 (RF-DETR)" 为皮肤样本, 取 C>=0.04
+# 色度核在 OKLab a-b 平面包围拟合 (coverage=0.96, 2026-09-04):
+#   对照 (configs/color/skin_oklab.json): 核内召回 0.955 / 全体 0.832,
+#   背景误报 0.258 (旧 0.271); 中性灰 d≈1.43 掩码归零。
+# 样本遴选与对照基准均为 cv2.COLOR_RGB2LAB 语义 (白点口径见脚本头 A3)。
+# 旧 SKIN_LAB_* 常数与 skin_mask 不动 (hsv 域回退保证, 设计 §1.2)。
+# ---------------------------------------------------------------------------
+
+# 椭圆中心 (OKLab a*, b*; 中性 0)
+SKIN_OKLAB_A = 0.01516
+SKIN_OKLAB_B = 0.06125
+# 半轴 (主轴沿 u, 副轴沿 v, 同旧椭圆的旋转变换约定)
+SKIN_OKLAB_MAJOR = 0.045692
+SKIN_OKLAB_MINOR = 0.045192
+# 倾角 (弧度, 同 _ellipse_mahalanobis 的 u/v 旋转约定)
+SKIN_OKLAB_ANGLE = 0.191122
+# 软过渡带 (马氏距离 d 从 1 到 1+band smoothstep 衰减; 口径同 SOFT_BAND)
+SKIN_OKLAB_SOFT_BAND = 0.25
+
+
+def _ellipse_mahalanobis_ab(a: np.ndarray, b: np.ndarray, cx: float, cy: float,
+                            major: float, minor: float,
+                            angle: float) -> np.ndarray:
+    """a/b 平面 → 椭圆马氏距离 d (float32 HxW)。
+
+    旋转变换约定与旧 Lab 椭圆 (_ellipse_mahalanobis) 完全一致:
+    u = da·cosθ + db·sinθ (沿主轴), v = -da·sinθ + db·cosθ (沿副轴)。
+    """
+    da = a - np.float32(cx)
+    db = b - np.float32(cy)
+    cos_a, sin_a = np.cos(angle), np.sin(angle)
+    u = da * cos_a + db * sin_a
+    v = -da * sin_a + db * cos_a
+    d2 = (u / major) ** 2 + (v / minor) ** 2
+    return np.sqrt(np.maximum(d2, 0.0)).astype(np.float32)
+
+
+def _soft_band_mask(d: np.ndarray, soft_band: float) -> np.ndarray:
+    """马氏距离 → 软掩码: d<=1 全量 1, 1..1+band smoothstep 衰减到 0 (与旧掩码同式)。"""
+    band = max(float(soft_band), 1e-6)
+    t = np.clip((d - 1.0) / band, 0.0, 1.0)
+    return (1.0 - t * t * (3.0 - 2.0 * t)).astype(np.float32)
+
+
+def skin_mask_oklab(rgb01, soft_band: float = SKIN_OKLAB_SOFT_BAND) -> np.ndarray:
+    """OKLab 椭圆肤色软掩码 (float32 HxW, 0..1) —— skin_mask 的 OKLab 域姊妹版。
+
+    输入契约 (设计 §1.3): gamma sRGB float [0,1] (H,W,3), 精度优先不走 uint8
+    量化; uint8 输入按 /255 归一 (与旧 skin_mask 的 float 钳位量化方向相反,
+    这里是升级而非降级)。内部经 core.oklab (float64) 求 OKLab, a-b 平面按
+    SKIN_OKLAB_* 椭圆算马氏距离, 软边界同 skin_mask (d<=1 全量 1, 外带 smoothstep)。
+
+    适用: color_domain="oklch" 时 SkinStage / colorcal 肤色区操作的同一掩码;
+    旧 skin_mask (cv2 Lab u8 域) 保持不动, hsv 域路径逐位不变。
+    """
+    arr = np.asarray(rgb01)
+    if arr.dtype == np.uint8:
+        arr = arr.astype(np.float64) / 255.0
+    elif arr.dtype == np.uint16:
+        arr = arr.astype(np.float64) / 65535.0
+    else:
+        arr = np.clip(np.asarray(arr, dtype=np.float64), 0.0, 1.0)
+    if arr.ndim == 2:
+        arr = np.repeat(arr[:, :, None], 3, axis=2)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(f"rgb01 需为 HxWx3 图, 实际 {arr.shape}")
+    lab = srgb_to_oklab(arr)
+    d = _ellipse_mahalanobis_ab(lab[:, :, 1], lab[:, :, 2],
+                                SKIN_OKLAB_A, SKIN_OKLAB_B,
+                                SKIN_OKLAB_MAJOR, SKIN_OKLAB_MINOR,
+                                SKIN_OKLAB_ANGLE)
+    return _soft_band_mask(d, soft_band)
+
+
+__all__ = ["skin_mask", "skin_smooth", "guided_filter",
+           "skin_mask_oklab"]

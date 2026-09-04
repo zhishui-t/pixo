@@ -4,8 +4,11 @@
 (colorcal 内已用同一椭圆掩码) 之后、风格化 LUT 之前做边缘保持磨皮。
 
 参数:
-  enabled   是否启用 (默认 True)
-  strength  磨皮强度 0..1 (默认 0.5)
+  enabled       是否启用 (默认 True)
+  strength      磨皮强度 0..1 (默认 0.5)
+  color_domain  肤色掩码域: "hsv"(缺省, 旧 cv2-Lab 椭圆, 行为逐位不变) |
+                "oklch" (core.skin 拟合 OKLab 椭圆, 设计 §3; colorcal 的
+                skin_trim/scene_skin_trim 同参数同掩码联动)
 
 启用条件 (wants):
   - enabled=False → 不执行;
@@ -18,16 +21,34 @@ config["stages"] 加入后接入, 无需改 Pipeline/core。
 """
 from __future__ import annotations
 
+import logging
+
 import cv2
 import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_GAMMA_RGB
-from ..core.skin import skin_mask, skin_smooth
+from ..core.skin import skin_mask, skin_mask_oklab, skin_smooth
+
+_LOGGER = logging.getLogger(__name__)
 
 # 掩码占比门限: 低于此值视为无肤色, 直通 (规格 §1 错误码: 无肤色 → 直通)
 _SKIN_RATIO_MIN = 0.005          # 场景已明确 portrait 时的宽松门限
 _SKIN_RATIO_NO_SCENE = 0.03      # 未分类 (无 scene 状态) 时的人像级门限
+
+
+def _mask_fn(color_domain: str):
+    """color_domain → 肤色掩码函数 (设计 §3 双轨分派)。
+
+    "hsv" (缺省) → 旧 Lab 椭圆 skin_mask (逐位不变回退);
+    "oklch"     → OKLab 椭圆 skin_mask_oklab (拟合常数, core.skin)。
+    """
+    domain = str(color_domain).strip().lower()
+    if domain == "hsv":
+        return skin_mask
+    if domain == "oklch":
+        return skin_mask_oklab
+    raise ValueError(f"skin color_domain 需为 'hsv'|'oklch' (实际 {color_domain!r})")
 
 
 @register_stage("skin", order=55,
@@ -38,10 +59,12 @@ class SkinStage(Stage):
     param_schema = {
         "enabled": {"type": "bool"},
         "strength": {"type": "float", "min": 0.0, "max": 1.0},
+        # 编辑域开关 (设计 §1.2/§3): "hsv"(缺省, 旧 Lab 椭圆, 逐位不变) | "oklch"
+        "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
     }
 
     def default_params(self):
-        return {"enabled": True, "strength": 0.5}
+        return {"enabled": True, "strength": 0.5, "color_domain": "hsv"}
 
     def wants(self, ctx: StageContext) -> bool:
         if not bool(self.p(ctx, "enabled", True)):
@@ -59,14 +82,21 @@ class SkinStage(Stage):
         # 场景已明确为 portrait → 宽松门限 0.5%;未分类 (无 scene 状态) →
         # 人像级门限 3% (与 scenes.SKIN_RATIO_MIN 一致), 避免误磨非人像图。
         ratio_min = _SKIN_RATIO_MIN if scene_id == "portrait" else _SKIN_RATIO_NO_SCENE
+        # 掩码函数按 color_domain 分派 (非法域在此 raise, 不吞进占比门控)
+        mask_fn = _mask_fn(self.p(ctx, "color_domain", "hsv"))
         try:
             import cv2
             img = np.asarray(ctx.image)
             h, w = img.shape[:2]
             small = cv2.resize(np.clip(img, 0, 1), (max(w // 4, 4), max(h // 4, 4)),
                                interpolation=cv2.INTER_AREA)
-            m = skin_mask(small)
-        except Exception:
+            m = mask_fn(small)
+        except Exception as exc:
+            # 门控直通语义不变 (无肤色/掩码失败均视为不需要磨皮), 仅留痕:
+            # oklch 域掩码/降采样在此抛异常时不再静默, 便于排查域分派问题
+            _LOGGER.warning(
+                "[skin] wants 掩码占比门控计算失败, 直通: %s: %s",
+                type(exc).__name__, exc)
             return False
         if float(np.asarray(m).mean()) < ratio_min:
             return False
@@ -78,6 +108,8 @@ class SkinStage(Stage):
         strength = float(self.p(ctx, "strength"))
         if strength <= 0.0:
             return
+        # 掩码按 color_domain 分派 (缺省 hsv → 旧 Lab 椭圆, 逐位不变)
+        mask_fn = _mask_fn(self.p(ctx, "color_domain", "hsv"))
 
         # M6: 优先读 ctx.mode ("preview"/"export", 三渲染入口显式传入);
         # config 键判断保留为向后兼容回退 (直接构造 ctx 的老调用方/测试)。
@@ -98,8 +130,12 @@ class SkinStage(Stage):
             m = ctx.state.get("skin_mask")
             if m is not None and m.shape[:2] == small.shape[:2]:
                 pass
+            elif mask_fn is skin_mask:
+                # 旧掩码契约是 uint8 Lab (u8), 保持原量化口径
+                m = mask_fn((small * 255.0 + 0.5).astype(np.uint8))
             else:
-                m = skin_mask(rgb8)
+                # OKLab 掩码走 float [0,1] 契约, 免去量化损失
+                m = mask_fn(small)
 
             out8 = skin_smooth(rgb8, m, strength, half_res=False)
             out = cv2.resize(out8.astype(np.float32) / 255.0, (w, h),
@@ -110,8 +146,10 @@ class SkinStage(Stage):
             m = ctx.state.get("skin_mask")
             if m is not None and m.shape[:2] == img.shape[:2]:
                 pass
+            elif mask_fn is skin_mask:
+                m = mask_fn(rgb8)
             else:
-                m = skin_mask(rgb8)
+                m = mask_fn(img)
             out8 = skin_smooth(rgb8, m, strength, half_res=False)
             out = out8.astype(np.float32) / 255.0
 

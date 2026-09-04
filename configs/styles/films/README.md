@@ -47,3 +47,14 @@ schema = 渲染卡 `{stages,params,output}` + 元数据节：
 
 约定：Kodak / CineStill / Agfa 卡走 12 段全管线（含 hsl 波段），
 Fuji 卡走精简 8 段管线（huesat）；grain_proxy 一律落 metadata（近零值=极细颗粒）。
+
+## t21 —— OKLCh 演示卡（band schema v2，审核盲点 A1 示例）
+
+| 卡 | 说明 |
+|---|---|
+| oklch_demo_warm_portrait | 暖调人像演示：`hsl.color_domain="oklch"` + 8 带中心取 `DEFAULT_BANDS_OKLCH` 感知角（红29/橙55/黄100/绿145/青195/蓝264/紫295/品327），每带带 `domain:"oklch"` 自描述戳；split_tone 同切 oklch（橙高光 55/蓝阴影 264） |
+| oklch_demo_cool_landscape | 清冷风光演示：绿带 145°→-10° 转黄绿、蓝带 264°→-8° 左移向青，饱和按色度 C 量纲，近白高光自然低 C |
+
+约定：demo 卡带中心为 OKLCh 感知角，与 hsv 卡数值**不可直接换算**（较 HSV
+同名带偏 +15°~+50°，色相平移量不可跨域套用）；band 级 `domain` 戳逐段覆盖
+Stage 级 `color_domain`，可混排；存量 24 卡无 domain 键按 hsv 旧语义逐位不变。

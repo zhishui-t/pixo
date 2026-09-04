@@ -22,6 +22,7 @@ add_library(pixo_render_native SHARED
     src/abi.cpp
     src/decode.cpp
     src/hsv.cpp
+    src/oklab.cpp
     src/warm_sat.cpp
     src/colorcal.cpp
     src/refine.cpp

@@ -239,7 +239,9 @@ def test_skin_stage_registered_order_and_domain():
     assert cls.order == 55
     assert cls.domain_in == DOMAIN_GAMMA_RGB
     assert cls.domain_out == DOMAIN_GAMMA_RGB
-    assert cls().default_params() == {"enabled": True, "strength": 0.5}
+    # M-O2: color_domain 域开关 (缺省 hsv = 旧 Lab 椭圆行为逐位不变)
+    assert cls().default_params() == {"enabled": True, "strength": 0.5,
+                                      "color_domain": "hsv"}
 
 
 def test_skin_stage_wants_disabled():

@@ -1,0 +1,101 @@
+{
+  "stages": [
+    "exposure",
+    "whitebalance",
+    "tone",
+    "hsl",
+    "huesat",
+    "dehaze",
+    "clarity",
+    "colorcal",
+    "split_tone",
+    "skin",
+    "stylize",
+    "refine"
+  ],
+  "params": {
+    "exposure": {
+      "mode": "auto"
+    },
+    "whitebalance": {
+      "mode": "as_shot",
+      "trim": [
+        1.008,
+        1.0,
+        0.992
+      ]
+    },
+    "tone": {
+      "use_filmic": true,
+      "contrast": 0.1,
+      "toe": 0.16,
+      "shoulder": 0.3,
+      "brightness": 0.3,
+      "highlights": -0.04,
+      "shadows": 0.05
+    },
+    "hsl": {
+      "enabled": true,
+      "smooth": 0.8,
+      "color_domain": "oklch",
+      "bands": "[{\"name\": \"red\", \"domain\": \"oklch\", \"hue_center\": 29, \"width\": 45, \"hue_shift\": 0.0, \"saturation\": 4, \"luminance\": 0.0}, {\"name\": \"orange\", \"domain\": \"oklch\", \"hue_center\": 55, \"width\": 45, \"hue_shift\": 0.0, \"saturation\": 6, \"luminance\": 3}, {\"name\": \"yellow\", \"domain\": \"oklch\", \"hue_center\": 100, \"width\": 45, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"green\", \"domain\": \"oklch\", \"hue_center\": 145, \"width\": 45, \"hue_shift\": 0.0, \"saturation\": -8, \"luminance\": 0.0}, {\"name\": \"aqua\", \"domain\": \"oklch\", \"hue_center\": 195, \"width\": 45, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"domain\": \"oklch\", \"hue_center\": 264, \"width\": 45, \"hue_shift\": -6, \"saturation\": -5, \"luminance\": 0.0}, {\"name\": \"purple\", \"domain\": \"oklch\", \"hue_center\": 295, \"width\": 45, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"domain\": \"oklch\", \"hue_center\": 327, \"width\": 45, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "dehaze": {
+      "enabled": false,
+      "strength": 0.3,
+      "radius": 15
+    },
+    "clarity": {
+      "enabled": true,
+      "strength": 0.25
+    },
+    "colorcal": {
+      "vibrance": 0.15,
+      "saturation": 0.03,
+      "skin_protect": 0.6
+    },
+    "split_tone": {
+      "enabled": true,
+      "highlights_hue": 55,
+      "highlights_sat": 6,
+      "shadows_hue": 264,
+      "shadows_sat": 5,
+      "balance": 0.55,
+      "strength": 0.5,
+      "color_domain": "oklch"
+    },
+    "skin": {
+      "enabled": true,
+      "strength": 0.35
+    },
+    "refine": {
+      "sharpen": 0.3,
+      "chroma_denoise": 1.0,
+      "highlight_desat": 0.55
+    }
+  },
+  "output": {
+    "quality": 95
+  },
+  "metadata": {
+    "family": "OKLCh",
+    "label": "OKLCh 演示·暖调人像",
+    "tags": [
+      "demo",
+      "oklch",
+      "portrait",
+      "warm_skin"
+    ],
+    "scenes": [
+      "portrait",
+      "wedding",
+      "indoor"
+    ],
+    "grain_proxy": 0.2,
+    "character": "band schema v2 示例卡：hsl.color_domain=oklch，8 带中心为 OKLCh 感知角（red29/orange55/yellow100/green145/aqua195/blue264/purple295/magenta327），每带带 domain:oklch 自描述戳；split_tone 同切 oklch 域（橙高光/蓝阴影）。语义与 hsv 卡不可直接换算：色心偏 +15°~+50°，饱和为色度 C。",
+    "year": 2026
+  }
+}

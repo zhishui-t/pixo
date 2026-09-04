@@ -44,6 +44,12 @@ interface AppState {
   sessionId: string | null;
   /** t91：skin 部位掩码路由是否就绪（null=未探测）。 */
   skinMaskReady: boolean | null;
+  /**
+   * t8：split_tone OKLCh 域能力（UI_OKLCH_SPEC §5.3 门控）——
+   * 首次参数往返后按 canonical.split_tone 是否含 color_domain 键判定，
+   * 结果一次性缓存（null=未探测，false 时分离色调面板退回 hsv 标注形态）。
+   */
+  splitToneDomainReady: boolean | null;
   params: ParamPatch;
   paramsByProject: Record<string, ParamPatch>;
   generation: number;
@@ -65,6 +71,7 @@ interface AppState {
   setPage: (page: Page) => void;
   setPhotos: (photos: PhotoView[], backend: boolean) => void;
   setSkinMaskReady: (v: boolean | null) => void;
+  setSplitToneDomainReady: (v: boolean | null) => void;
   setProjects: (projects: Project[]) => void;
   selectProject: (projectId: string) => void;
   addProject: (name: string) => void;
@@ -79,6 +86,7 @@ interface AppState {
   setSortBy: (sort: 'name' | 'rating' | 'date') => void;
   setSearch: (search: string) => void;
   patchParam: (patch: ParamPatch, source?: Source) => Promise<void>;
+  probeSplitToneDomain: (canonical: ParamPatch | undefined) => void;
   patchProjectParam: (projectId: string, patch: ParamPatch, source?: Source) => Promise<void>;
   setPhotoRating: (projectId: string, photoId: string, rating: number) => void;
   setPhotoColor: (projectId: string, photoId: string, color: ColorLabel | undefined) => void;
@@ -153,6 +161,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   backend: false,
   sessionId: null,
   skinMaskReady: null,
+  splitToneDomainReady: null,
   params: defaultParams(),
   paramsByProject: initialParamsByProject,
   generation: 12,
@@ -188,6 +197,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         : state.photosByProject,
     })),
   setSkinMaskReady: (v) => set({ skinMaskReady: v }),
+  setSplitToneDomainReady: (v) => set({ splitToneDomainReady: v }),
   setProjects: (projects) => set({ projects }),
   selectProject: (projectId) =>
     set((state) => {
@@ -239,9 +249,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSortBy: (sortBy) => set({ sortBy }),
   setSearch: (search) => set({ search }),
 
+  /**
+   * §5.3 门控探测：canonical.split_tone 含 color_domain 键 → 后端支持 oklch 域。
+   * 仅在未探测（null）时落值，一次性缓存；mock 模式 canonical 回读 patch，
+   * 探测自然为 true。
+   */
+  probeSplitToneDomain: (canonical: ParamPatch | undefined) => {
+    if (get().splitToneDomainReady !== null) return;
+    const bucket = canonical?.split_tone;
+    if (bucket !== undefined && typeof bucket === 'object' && bucket !== null) {
+      set({ splitToneDomainReady: 'color_domain' in bucket });
+    }
+  },
+
   patchParam: async (patch, source = 'user') => {
     const sessionId = get().sessionId ?? getMockSessionId();
     const result = await remotePatchParams(patch, source, sessionId);
+    get().probeSplitToneDomain(result.canonical);
     set({
       params: result.params,
       generation: result.generation,
@@ -261,6 +285,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       sessionId = sid;
     }
     const result = await remotePatchParams(patch, source, sessionId);
+    get().probeSplitToneDomain(result.canonical);
     set((state) => ({
       params: result.params,
       generation: result.generation,

@@ -79,6 +79,16 @@
       "dtype": "float32",
       "sha256": "80ec082da1316017b7c2738c389b4c1cd069d6d716d70a472804f5839290b187"
     },
+    "hsl_oklch": {
+      "file": "hsl_oklch.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "0d3e12d06c8530f93420eb3acf46b4bf7da4f30ac76e7424ee0bfe55064fa9a4"
+    },
     "split_tone": {
       "file": "split_tone.npy",
       "shape": [
@@ -89,8 +99,27 @@
       "dtype": "float32",
       "sha256": "3fb18d447bb66bcebc0224c626f89341a78cf4b2a2d586d108cd5d4e6bd390d8"
     },
+    "split_tone_oklab": {
+      "file": "split_tone_oklab.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "a43bf001826282852b0e4e4115f553d9820dfcda301fc6674e7ef655644be9dd"
+    },
     "skin": {
       "file": "skin.npy",
+      "shape": [
+        64,
+        64
+      ],
+      "dtype": "float32",
+      "sha256": "3899bdffe42461a6928e923bc331e293076c28a2cfb5ab343ea78c887730f1d9"
+    },
+    "skin_oklch": {
+      "file": "skin_oklch.npy",
       "shape": [
         64,
         64
@@ -120,5 +149,5 @@
     }
   },
   "generator": "tests/goldens/generate_gate_goldens.py",
-  "reviewer": "t37-reviewer (initial baseline approved by reviewer; update requires dual sign-off)"
+  "reviewer": "t22-QA+t22-G1-QA (2026-09-04 双批次签注: +hsl_oklch/+split_tone_oklab/+skin_oklch 三 case; hsl_oklch/split_tone_oklab 批次核验旧12case逐位不变, skin_oklch 批次核验旧14case逐位不变; --check 15features重算一致; 注: skin_oklch.npy 与 skin.npy sha256 相同——该输入上OKLab新椭圆与旧Lab椭圆判定一致[肤色块核内d≈0.85/灰底核外d≈1.43], 金样本锁定设计意图而非两域差异; 生成器重签注会覆盖前批次签注文本, 历史记录见 .artifacts/gate_report.md)"
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Badge, Group, NumberInput, Slider, Text } from '@mantine/core';
+import { Badge, Group, NumberInput, Slider, Text, Tooltip } from '@mantine/core';
 import { DESIGN_TOKENS } from '../theme/tokens';
 import type { ParamPatch, Source } from '../types';
 
@@ -23,6 +23,16 @@ interface SliderParamProps {
   buildPatch?: (value: number) => Record<string, Record<string, unknown>>;
   /** 通用滑杆：stage/param 是运行时字符串，patch 用宽松形状，由调用方收窄。 */
   onPatch: (patch: Record<string, Record<string, unknown>>) => void;
+  /** 刻度档（t8 oklch 色度滑杆五档用）；hsv 模式不传 → 渲染与现版一致。 */
+  marks?: Array<{ value: number; label?: React.ReactNode }>;
+  /** 滑杆下一行 xs 灰字说明（oklch 量纲 helper）；不传不渲染。 */
+  helper?: string;
+  /** label 右侧 ⓘ tooltip（oklch 语义说明）；不传不渲染。 */
+  info?: string;
+  /** 轨道背景（oklch 色谱条）；不传保持现版纯灰轨。 */
+  trackBackground?: string;
+  /** 测试钩子（e2e data-testid，挂根节点）。 */
+  testId?: string;
 }
 
 export function SliderParam({
@@ -39,6 +49,11 @@ export function SliderParam({
   defaultValue,
   buildPatch,
   onPatch,
+  marks,
+  helper,
+  info,
+  trackBackground,
+  testId,
 }: SliderParamProps) {
   const [dragging, setDragging] = useState(false);
   // 防抖：拖动/输入期间只更新本地 state，onChangeEnd / onBlur / Enter 才提交 patch。
@@ -85,12 +100,21 @@ export function SliderParam({
       onPointerDown={() => setDragging(true)}
       onPointerUp={() => setDragging(false)}
       onPointerLeave={() => setDragging(false)}
+      {...(testId ? { 'data-testid': testId } : {})}
     >
       <Group justify="space-between" mb={4}>
         <Group gap={6}>
           <Text size="xs" c={dragging ? undefined : 'dimmed'} fw={dragging ? 600 : 400}>
             {label}
           </Text>
+          {/* oklch 语义 ⓘ（§4.2）；hsv 模式不传 info 不渲染。 */}
+          {info && (
+            <Tooltip label={info} multiline w={240} withArrow position="top-start">
+              <Text size="xs" c="dimmed" span aria-label={`${label}说明`} style={{ cursor: 'help' }}>
+                ⓘ
+              </Text>
+            </Tooltip>
+          )}
           {source !== 'user' && (
             <Badge size="xs" variant="light" color="orange">
               {source}
@@ -110,8 +134,8 @@ export function SliderParam({
       </Group>
       <Group gap="xs" align="center">
         <Slider
-          className="slider-param-track"
-          style={{ flex: 1 }}
+          className={`slider-param-track${trackBackground ? ' slider-param-track--spectrum' : ''}`}
+          style={{ flex: 1, ...(trackBackground ? ({ '--slider-spectrum': trackBackground } as React.CSSProperties) : {}) }}
           value={shown}
           min={min}
           max={max}
@@ -121,12 +145,16 @@ export function SliderParam({
           onChangeEnd={(v) => commit(v)}
           size="sm"
           label={(v) => v.toFixed(2)}
+          marks={marks}
           styles={{
-            track: { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
-            bar: { backgroundColor: DESIGN_TOKENS.accent },
+            track: {
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              ...(trackBackground ? { backgroundImage: trackBackground } : {}),
+            },
+            bar: { backgroundColor: trackBackground ? 'transparent' : DESIGN_TOKENS.accent },
             thumb: {
               backgroundColor: DESIGN_TOKENS.panel,
-              borderColor: DESIGN_TOKENS.accent,
+              borderColor: trackBackground ? DESIGN_TOKENS.textPrimary : DESIGN_TOKENS.accent,
               borderWidth: 2,
             },
             label: {
@@ -160,6 +188,12 @@ export function SliderParam({
           }}
         />
       </Group>
+      {/* oklch 量纲 helper（§3.3/§4.2）；hsv 模式不传不渲染 → 双轨零变化。 */}
+      {helper && (
+        <Text size="xs" c="dimmed" mt={2}>
+          {helper}
+        </Text>
+      )}
     </div>
   );
 }

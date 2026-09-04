@@ -163,6 +163,32 @@
         "氛围"
       ],
       "content": "白平衡以中性灰为靶点到即收：过度求纯灰会抽干氛围暖意，画面发白发死，应保留少量色温叙事。"
+    },
+    {
+      "id": "hue_oklch_axis",
+      "type": "strategy",
+      "label": "OKLCh 域色相量纲",
+      "keywords": [
+        "OKLCh",
+        "色相角",
+        "感知均匀",
+        "色心",
+        "编辑域"
+      ],
+      "content": "OKLCh 色心：红29橙55黄100绿145青195蓝264紫295品327，较 HSV 同名带偏 +15°~+50°；色相平移量不可跨域套用。"
+    },
+    {
+      "id": "hue_oklch_metric",
+      "type": "strategy",
+      "label": "OKLCh 域饱和/明度量纲",
+      "keywords": [
+        "色度C",
+        "明度L",
+        "近白低C",
+        "软限幅",
+        "量纲"
+      ],
+      "content": "饱和改色度 C（0~0.33，UI 0-100 为百分比缩放），明度为感知 L；近白自然低 C，高光染色不再漂相。"
     }
   ],
   "edges": [
@@ -253,6 +279,30 @@
       "relation": "策略",
       "weight": 0.7,
       "content": "植被转黄绿既除数码感，也让绿退回邻近色环维持整体和谐。"
+    },
+    {
+      "id": "e_oklch_skin",
+      "from": "hue_oklch_axis",
+      "to": "act_skin_hsl",
+      "relation": "技术路线",
+      "weight": 0.7,
+      "content": "肤色微调切 OKLCh 域时橙心约 55°，±5°/±8° 安全区口径按感知角复核。"
+    },
+    {
+      "id": "e_oklch_sky",
+      "from": "hue_oklch_axis",
+      "to": "act_sky_shift",
+      "relation": "技术路线",
+      "weight": 0.7,
+      "content": "天空蓝左移在 OKLCh 域自蓝心 264° 负向平移，幅度与 HSV 口径需重标。"
+    },
+    {
+      "id": "e_oklch_veg",
+      "from": "act_veg_yellow",
+      "to": "hue_oklch_metric",
+      "relation": "技术路线",
+      "weight": 0.7,
+      "content": "绿转黄绿在 OKLCh 域即 145°→100° 平移，降饱和按色度 C 量纲执行。"
     }
   ]
 }

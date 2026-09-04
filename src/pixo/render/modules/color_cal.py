@@ -200,6 +200,10 @@ class ColorCalStage(Stage):
         "scene_skin_trim": {"type": "float_or_str"},  # [[wb_b_lo,wb_b_hi,da,db], ...]
         "scene_hue": {"type": "float_or_str"},        # [[wb_lo,wb_hi,deg], ...]
         "gamut_soft": {"type": "float", "min": 0.0},
+        # 编辑域开关 (设计 §1.2/§3): "hsv"(缺省, float Lab 椭圆, 逐位不变) | "oklch"
+        # (core.skin 拟合 OKLab 椭圆, 与 SkinStage 同掩码)。oklch 域旁路 native
+        # 内核 (其肤色椭圆为 Lab 常数, 域不匹配) 走纯 Python 路径。
+        "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
     }
 
     def default_params(self):
@@ -210,7 +214,28 @@ class ColorCalStage(Stage):
                 "neutral_damping": 0.85,          # adaptive 回消系数
                 "neutral_sigma": 14.0,
                 "skin_protect": 0.7, "skin_trim": None, "scene_trim": None,
-                "scene_skin_trim": None, "scene_hue": None, "gamut_soft": 0.5}
+                "scene_skin_trim": None, "scene_hue": None, "gamut_soft": 0.5,
+                "color_domain": "hsv"}
+
+    def _color_domain(self, ctx: StageContext) -> str:
+        domain = str(self.p(ctx, "color_domain", "hsv")).strip().lower()
+        if domain not in ("hsv", "oklch"):
+            raise ValueError(f"[colorcal] color_domain 需为 'hsv'|'oklch' (实际 {domain!r})")
+        return domain
+
+    def _skin_region_mask(self, ctx: StageContext, img: np.ndarray,
+                          lab: np.ndarray) -> np.ndarray:
+        """肤色区软掩码, 按 color_domain 分派 (设计 §3 联动)。
+
+        "hsv" (缺省): float Lab 椭圆 _skin_mask_lab_f (逐位不变回退);
+        "oklch": core.skin.skin_mask_oklab —— 与 SkinStage oklch 域同源掩码,
+        输入取**原始** gamma RGB (校正前, 与下面 Lab 掩码取原始 a/b 同口径)。
+        skin_protect / skin_trim / scene_skin_trim 共用本掩码 (同掩码纪律)。
+        """
+        if self._color_domain(ctx) == "oklch":
+            from ..core.skin import skin_mask_oklab
+            return skin_mask_oklab(img)
+        return _skin_mask_lab_f(lab[:, :, 1], lab[:, :, 2])
 
     def _neutral_curves(self, ctx: StageContext):
         """中性校正曲线: 参数显式给定 > 每机 CCT 标定 (engine.calibration) > None。
@@ -268,6 +293,7 @@ class ColorCalStage(Stage):
         sigma = float(self.p(ctx, "neutral_sigma"))
         skin = float(self.p(ctx, "skin_protect"))
         mode = str(self.p(ctx, "neutral_mode", "adaptive"))
+        domain = self._color_domain(ctx)
 
         # 管线输入域为 gamma RGB (0..1), 省去冗余 clip 拷贝 (M2 性能优化)。
         img = ctx.image
@@ -353,7 +379,9 @@ class ColorCalStage(Stage):
                                        colorcal_apply_lab_f32 as _native_cc_f32,
                                        gamut_soft as _native_gamut_soft,
                                        PixoRenderColorCalParams)
-                if _native_available():
+                # oklch 域旁路 native: 内核内嵌 float Lab 域肤色椭圆常数,
+                # 与 OKLab 椭圆不匹配 → 走下方纯 Python 路径 (同式对应)
+                if _native_available() and domain == "hsv":
                     curve_a = (np.asarray(a_curve, dtype=np.float32)
                                if a_curve is not None else None)
                     curve_b = (np.asarray(b_curve, dtype=np.float32)
@@ -407,13 +435,14 @@ class ColorCalStage(Stage):
                         a = a + na * w
                         b = b + nb * w
 
-                # 1b) 肤色区显式偏移 + 肤色保护共用同一个椭圆软掩码
-                #     (float Lab 域椭圆 _skin_mask_lab_f)。掩码取**原始** Lab
-                #     a/b (校正前, 与 native aOrig/bOrig 及旧链 skin_mask(u8)
-                #     同口径), 不随中性偏移移动。
+                # 1b) 肤色区显式偏移 + 肤色保护共用同一个肤色软掩码
+                #     (hsv → float Lab 椭圆 _skin_mask_lab_f; oklch → 拟合
+                #     OKLab 椭圆, 与 SkinStage 同掩码, 见 _skin_region_mask)。
+                #     掩码取**原始**像素 (校正前, 与 native aOrig/bOrig 及旧链
+                #     skin_mask(u8) 同口径), 不随中性偏移移动。
                 skin_mask2d = None
                 if skin_trim_active or skin > 0.0:
-                    skin_mask2d = _skin_mask_lab_f(lab[:, :, 1], lab[:, :, 2])
+                    skin_mask2d = self._skin_region_mask(ctx, img, lab)
                 if skin_trim_active:
                     a = a + skin_trim_da * skin_mask2d
                     b = b + skin_trim_db * skin_mask2d

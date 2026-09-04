@@ -200,7 +200,9 @@ export default function App() {
           <Filmstrip />
         </div>
       </AppShell.Main>
-      <AppShell.Aside p="lg" style={{ background: T.panel, borderLeft: `1px solid ${T.hairline}` }}>
+      {/* t8：Aside 补 overflowY 滚动——面板内容（HSL/split_tone 折叠线下）此前
+          overflow:visible+页面不滚动而不可达；scrollTop=0 时视口内零像素变化。 */}
+      <AppShell.Aside p="lg" style={{ background: T.panel, borderLeft: `1px solid ${T.hairline}`, overflowY: 'auto' }}>
         <Group gap={4} mb="md" style={{ background: T.overlay, borderRadius: 12, padding: 4 }}>
           <button
             className={`modern-pill ${rightTab === 'style' ? 'active' : ''}`}

@@ -107,6 +107,19 @@
         "阴影冷"
       ],
       "content": "分离色调塑造风格但须克制：经典的高光暖/阴影冷组合，饱和度宜在 10 以下，过量会污染中性灰并产生廉价滤镜感。"
+    },
+    {
+      "id": "post2_oklch_domain",
+      "type": "strategy",
+      "label": "编辑域双轨 HSV/OKLCh",
+      "keywords": [
+        "OKLCh",
+        "color_domain",
+        "量纲",
+        "兼容",
+        "色度"
+      ],
+      "content": "hsl/split_tone 可切 color_domain:oklch：蓝心 264 非 240，饱和改色度 C；缺省 hsv 语义与存量卡逐位不变。"
     }
   ],
   "edges": [
@@ -181,6 +194,22 @@
       "relation": "底层优先",
       "weight": 0.75,
       "content": "先用相机校准定色彩基底，再用 HSL/Vibrance 做分通道修饰。"
+    },
+    {
+      "id": "e_p2_oklch_cal",
+      "from": "post2_calibration_primary",
+      "to": "post2_oklch_domain",
+      "relation": "底层优先",
+      "weight": 0.7,
+      "content": "相机校准先定色彩基底，OKLCh 分通道感知域微调与 HSV 同序可用。"
+    },
+    {
+      "id": "e_p2_oklch_st",
+      "from": "post2_split_tone_restraint",
+      "to": "post2_oklch_domain",
+      "relation": "技术路线",
+      "weight": 0.7,
+      "content": "分离色调切 OKLCh 后近白自然低 C，克制度口径按色度量纲复核。"
     }
   ]
 }

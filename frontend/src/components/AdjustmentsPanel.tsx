@@ -1,58 +1,34 @@
+import { useEffect, useRef, useState } from 'react';
 import { Accordion, Paper, Text, Badge } from '@mantine/core';
 import { DESIGN_TOKENS } from '../theme/tokens';
 import { SectionLabel } from './SectionLabel';
 import { useAppStore } from '../store/useAppStore';
 import { health } from '../api';
-import { useEffect } from 'react';
 import { SliderParam } from './SliderParam';
-import type { HslBand, ParamPatch } from '../types';
+import { DomainToggle } from './DomainToggle';
+import { HslBandRow } from './HslBandRow';
+import { HueRing } from './HueRing';
+import { HueSpectrumBar } from './HueSpectrumBar';
+import type { ColorDomain, ParamPatch } from '../types';
+import { buildBandFieldPatch, readColorDomain, readHslBands } from './hslBands';
 
 const HISTOGRAM = [12, 28, 45, 62, 90, 120, 96, 70, 48, 32, 18, 10, 6];
 
-const HSL_BAND_LABELS = ['红', '橙', '黄', '绿', '青', '蓝', '紫', '品红'];
-
 /**
- * 后端 render/core/hsl.py DEFAULT_BANDS 的镜像：
- * hsl stage 只认 enabled/bands/smooth，bands 是 8 元素数组
- * （每段 {name,hue_center,width,hue_shift,saturation,luminance}，字段全部必填带界）。
- * 此常量作为 bands 未设置时的编辑起点，避免悬空键 patch。
+ * t8 色彩编辑域双轨（UI_OKLCH_SPEC）：hsl / split_tone 面板按
+ * params.hsl.color_domain（缺省 'hsv'）分派——hsv 模式 = 现版 UI（控件集合/
+ * 文案/量纲逐像素一致），oklch 专属控件（DomainToggle 之外的 HueRing、双刻度、
+ * 色度文案、band 展开行、谱轨）一律条件渲染。切域只提交 color_domain 键，
+ * bands 数值原样保留（往返无损）。
  */
-const DEFAULT_HSL_BANDS: HslBand[] = [
-  { name: 'red', hue_center: 0, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-  { name: 'orange', hue_center: 30, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-  { name: 'yellow', hue_center: 60, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-  { name: 'green', hue_center: 120, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-  { name: 'aqua', hue_center: 180, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-  { name: 'blue', hue_center: 240, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-  { name: 'purple', hue_center: 270, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-  { name: 'magenta', hue_center: 300, width: 45, hue_shift: 0, saturation: 0, luminance: 0 },
-];
-
-/** 读取当前 bands（后端回读优先；形状不完整时回退 DEFAULT_HSL_BANDS）。 */
-function readHslBands(params: ParamPatch): HslBand[] {
-  const bands = params.hsl?.bands;
-  const valid =
-    Array.isArray(bands) &&
-    bands.length === 8 &&
-    bands.every(
-      (b) =>
-        typeof b === 'object' &&
-        b !== null &&
-        typeof b.hue_shift === 'number' &&
-        typeof b.hue_center === 'number' &&
-        typeof b.width === 'number' &&
-        typeof b.saturation === 'number' &&
-        typeof b.luminance === 'number',
-    );
-  return valid ? (bands as HslBand[]) : DEFAULT_HSL_BANDS;
-}
-
 export function AdjustmentsPanel() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const params = useAppStore((s) => s.paramsByProject[s.activeProjectId] ?? {});
   // t91：skin 掩码路由能力信号（后端 /api/health 的 segmenter 节）。
   const skinMaskReady = useAppStore((s) => s.skinMaskReady);
   const setSkinMaskReady = useAppStore((s) => s.setSkinMaskReady);
+  // t8：split_tone OKLCh 域能力（§5.3 门控，null=未探测）。
+  const splitToneDomainReady = useAppStore((s) => s.splitToneDomainReady);
   useEffect(() => {
     let alive = true;
     health()
@@ -67,6 +43,10 @@ export function AdjustmentsPanel() {
   }, [setSkinMaskReady]);
   const patchProjectParam = useAppStore((s) => s.patchProjectParam);
 
+  // oklch 带展开手风琴（一次一个）；hsv 模式恒 null（无展开能力）。
+  const [expandedBand, setExpandedBand] = useState<string | null>(null);
+  const bandRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   const value = (stage: keyof ParamPatch, param: string, fallback = 0): number => {
     const bucket = params[stage];
     if (bucket === undefined || typeof bucket !== 'object') return fallback;
@@ -76,6 +56,22 @@ export function AdjustmentsPanel() {
 
   const patch = (patchObj: Record<string, Record<string, unknown>>) => {
     patchProjectParam(activeProjectId, patchObj as ParamPatch, 'user');
+  };
+
+  const domain: ColorDomain = readColorDomain(params);
+  const isOklch = domain === 'oklch';
+  // §5.3 门控：探测为 false 时分离色调面板退回 hsv 标注形态（HSL 面板不受影响）。
+  const splitEffective: ColorDomain =
+    domain === 'oklch' && splitToneDomainReady === false ? 'hsv' : domain;
+  const splitIsOklch = splitEffective === 'oklch';
+  const hslBands = readHslBands(params, domain);
+
+  const selectBandFromRing = (name: string) => {
+    setExpandedBand(name);
+    // 联动展开对应 band row 并滚动定位（§3.2 P1 交互）。
+    requestAnimationFrame(() => {
+      bandRowRefs.current[name]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   };
 
   return (
@@ -131,28 +127,43 @@ export function AdjustmentsPanel() {
         <Accordion.Item value="hsl">
           <Accordion.Control>HSL</Accordion.Control>
           <Accordion.Panel>
-            <SectionLabel>HSL · 八通道色相</SectionLabel>
-            {/* hsl.bands 是 8 元素数组：每个色段一个 hue_shift 滑杆，
-                提交时构造完整 bands 数组 patch（只改对应段的 hue_shift）。 */}
-            {readHslBands(params).map((band, idx) => (
-              <SliderParam
-                key={band.name}
-                label={`${HSL_BAND_LABELS[idx]} 色相`}
-                stage="hsl"
-                param="hue_shift"
-                value={band.hue_shift}
-                min={-30}
-                max={30}
-                step={1}
-                onPatch={patch}
-                buildPatch={(v) => ({
-                  hsl: {
-                    bands: readHslBands(params).map((b, i) =>
-                      i === idx ? { ...b, hue_shift: v } : b,
-                    ),
-                  },
-                })}
+            {/* 域开关与 SectionLabel 同行（§1.2）。开关绝对定位不占流高——
+                hsv 模式行高与现版一致（双轨零变化）；oklch 长标签让出右侧。 */}
+            <div style={{ position: 'relative' }}>
+              <div style={isOklch ? { paddingRight: 112 } : undefined}>
+                <SectionLabel>{isOklch ? 'HSL · 八通道色相（OKLCh 感知域）' : 'HSL · 八通道色相'}</SectionLabel>
+              </div>
+              <div style={{ position: 'absolute', top: -6, right: 0 }}>
+                <DomainToggle />
+              </div>
+            </div>
+            {/* hsl.bands 是 8 元素数组：hsv 模式每色段一个 hue_shift 滑杆（现版形态）；
+                oklch 模式经 HslBandRow 支持 ▸ 展开 5 滑杆量纲 + HueRing 双刻度选带。 */}
+            {isOklch && (
+              <HueRing
+                bands={hslBands}
+                domain={domain}
+                selected={expandedBand}
+                onSelect={selectBandFromRing}
+                onCenterCommit={(name, deg) => {
+                  patch(buildBandFieldPatch(hslBands, domain, name, 'hue_center', deg));
+                }}
               />
+            )}
+            {hslBands.map((band) => (
+              <div
+                key={band.name}
+                ref={(el) => {
+                  bandRowRefs.current[band.name] = el;
+                }}
+              >
+                <HslBandRow
+                  band={band}
+                  domain={domain}
+                  expanded={isOklch && expandedBand === band.name}
+                  onToggle={() => setExpandedBand((cur) => (cur === band.name ? null : band.name))}
+                />
+              </div>
             ))}
           </Accordion.Panel>
         </Accordion.Item>
@@ -181,11 +192,51 @@ export function AdjustmentsPanel() {
         <Accordion.Item value="split">
           <Accordion.Control>分离色调</Accordion.Control>
           <Accordion.Panel>
-            <SectionLabel>分离色调 · 高光 / 阴影</SectionLabel>
-            <SliderParam label="高光色相" stage="split_tone" param="highlights_hue" value={value('split_tone', 'highlights_hue', 0)} min={0} max={360} step={1} onPatch={patch} />
-            <SliderParam label="高光饱和度" stage="split_tone" param="highlights_sat" value={value('split_tone', 'highlights_sat', 0)} min={0} max={100} step={1} onPatch={patch} />
-            <SliderParam label="阴影色相" stage="split_tone" param="shadows_hue" value={value('split_tone', 'shadows_hue', 0)} min={0} max={360} step={1} onPatch={patch} />
-            <SliderParam label="阴影饱和度" stage="split_tone" param="shadows_sat" value={value('split_tone', 'shadows_sat', 0)} min={0} max={100} step={1} onPatch={patch} />
+            <div style={{ position: 'relative' }}>
+              <div style={splitIsOklch ? { paddingRight: 112 } : undefined}>
+                <SectionLabel>
+                  {splitIsOklch ? '分离色调 · 高光 / 阴影（OKLCh 感知域）' : '分离色调 · 高光 / 阴影'}
+                </SectionLabel>
+              </div>
+              <div style={{ position: 'absolute', top: -6, right: 0 }}>
+                <DomainToggle />
+              </div>
+            </div>
+            {/* §5.3 门控兜底：hsl/split_tone 双域后端均已就绪，正常链路探测为 true；
+                仅当回读异常（如后端校验收紧剥除未知键，canonical.split_tone 缺
+                color_domain 键）时，该面板退回 hsv 标注形态并挂灰 Badge；HSL 面板不受影响。 */}
+            {domain === 'oklch' && splitToneDomainReady === false && (
+              <Badge size="xs" variant="light" color="gray" mb={4} data-testid="split-domain-gate">
+                分离色调 OKLCh 域待后端支持，暂按 HSV 语义
+              </Badge>
+            )}
+            {splitIsOklch ? (
+              <>
+                <HueSpectrumBar
+                  zoneZh="高光"
+                  hueValue={value('split_tone', 'highlights_hue', 0)}
+                  onPatch={patch}
+                  buildPatch={(v) => ({ split_tone: { highlights_hue: v } })}
+                  testId="split-hue-highlights"
+                />
+                <SliderParam label="高光色度 C" stage="split_tone" param="highlights_sat" value={value('split_tone', 'highlights_sat', 0)} min={0} max={100} step={1} unit="%" onPatch={patch} />
+                <HueSpectrumBar
+                  zoneZh="阴影"
+                  hueValue={value('split_tone', 'shadows_hue', 0)}
+                  onPatch={patch}
+                  buildPatch={(v) => ({ split_tone: { shadows_hue: v } })}
+                  testId="split-hue-shadows"
+                />
+                <SliderParam label="阴影色度 C" stage="split_tone" param="shadows_sat" value={value('split_tone', 'shadows_sat', 0)} min={0} max={100} step={1} unit="%" onPatch={patch} />
+              </>
+            ) : (
+              <>
+                <SliderParam label="高光色相" stage="split_tone" param="highlights_hue" value={value('split_tone', 'highlights_hue', 0)} min={0} max={360} step={1} onPatch={patch} />
+                <SliderParam label="高光饱和度" stage="split_tone" param="highlights_sat" value={value('split_tone', 'highlights_sat', 0)} min={0} max={100} step={1} onPatch={patch} />
+                <SliderParam label="阴影色相" stage="split_tone" param="shadows_hue" value={value('split_tone', 'shadows_hue', 0)} min={0} max={360} step={1} onPatch={patch} />
+                <SliderParam label="阴影饱和度" stage="split_tone" param="shadows_sat" value={value('split_tone', 'shadows_sat', 0)} min={0} max={100} step={1} onPatch={patch} />
+              </>
+            )}
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>

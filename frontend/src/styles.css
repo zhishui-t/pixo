@@ -466,3 +466,14 @@ textarea:focus-visible {
   outline-offset: 2px;
   border-radius: 10px;
 }
+
+/* ---- t8：分离色调谱轨（oklch 域 HueSpectrumBar）----
+   Mantine 轨道可见面是 ::before（--track-bg 只收颜色），会盖住元素自身
+   background-image；谱条滑杆经 .slider-param-track--spectrum 透明化 ::before，
+   谱渐变经 --slider-spectrum 变量注入（oklch() 或 hex 兜底由组件决定）。 */
+.slider-param-track--spectrum .mantine-Slider-track::before {
+  background-color: transparent;
+}
+.slider-param-track--spectrum .mantine-Slider-track {
+  background-image: var(--slider-spectrum);
+}

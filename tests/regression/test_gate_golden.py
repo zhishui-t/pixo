@@ -32,7 +32,7 @@ def test_manifest_schema_and_files():
         f"实际为 {manifest.get('schema')!r}；若为 {generate_gate_goldens.RAW_SCHEMA} "
         f"则说明混入了 render/tools 的真实 RAW manifest，两套条目结构互不兼容")
     features = manifest.get("features", {})
-    assert len(features) == 12, f"golden feature 数量 {len(features)} != 12"
+    assert len(features) == 15, f"golden feature 数量 {len(features)} != 15"
     # reviewer 必须非空：golden 变更不得脱离复核静默合入。
     reviewer = str(manifest.get("reviewer") or "").strip()
     assert reviewer, "manifest.reviewer 为空：golden 基线必须由 reviewer 复核后合入"
