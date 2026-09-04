@@ -22,6 +22,11 @@
 - `xiamen_screen.py` —— 批次抽样渲染 camera-matched 预览并评分
 - `render_debug.py` / `vision_debug.py` / `batch_process.py` —— 单图调试与批量处理入口
 
+## 阶段三 光照估计评估原型（illumination_est/）
+- `illumination_est/wb_inverse.py` —— 估计光源色（相机原生线性域）→ pixo WB 参数域 (cct_k, tint) 逆链：wb = 1/e_cam 归一 G → `wb_to_temp_tint`（temp_tint_to_wb 现成逆函数）；与 as_shot 同域无跨域换算，`scene_xy_to_neutral_wb` 场景白点原语
+- `illumination_est/gray_world.py` / `gray_edge.py`（Minkowski p=1,2）/ `white_patch.py` —— 三件经典法纯 numpy 实现，est_cct(rgb_linear, dcp_profile) → (cct_k, tint)，确定性无权重（白斑法排除贴顶饱和像素；灰边缘平坦图回退灰世界）
+- `illumination_est/eval_illum.py` —— 语料评估（54 张，aligned_pair 口径）：A=as_shot WB / B=估计法 WB（warmth 曲线按估计 wb_B 预折入数值向量 mode，两轨唯一差异=neutral 源）/ 参照=相机 JPEG，逐照片 gain 对齐色度 ΔE2000（--selftest 先行）；wb_B 三带分带（日光<1.5/中间 1.5-2.0/低色温≥2.0）+ guard 域外降级轨；三证据转正初评（改善 <1 JND=2.3 ΔE00 → 明确"无转正价值"），报告落 `.artifacts/illumination_eval.md` + json（阶段三 t43，设计 §2；不接运行时/不建 learned/）
+
 ## 自动修图闭环
 - `auto_full_scan.py` / `auto_full_refine.py` / `auto_manual_fallback.py`
 - `assess_auto_results.py` / `build_final_summary.py`
