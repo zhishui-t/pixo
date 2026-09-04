@@ -140,8 +140,9 @@ def cal_ev_weights(xs: np.ndarray, ws: np.ndarray, med: float,
       2) wb 二次: |xs − med| ≤ near_tol 的邻域结点 ≥2 时, 邻域内按 wb_B 升序
          对 wb_b 线性插值**取代**基准 (wb 越界由 np.interp 端点钳位, 不外推)。
     xs/ws (med/wb 结点位置) 冻结, 权重是构建期常量 → ev 对 θ (ev 列) 线性可微。
-    邻域内 wb 结点重复时 t 取 0 (取左; np.interp 在重复键上的取侧未定义,
-    真实表 wb 为连续量, 该路径仅为防护)。
+    wb 排序后允许重复键 (新表实测存在), 权重逐场景对齐 np.interp 语义:
+      全局左钳 (wb_b < wl[0]) 取组首 / 右钳取组尾; 精确命中重复段取组尾;
+      开区间插值左端点取组尾、右端点取组首 (stable 序 = near 原顺序)。
     """
     xs = np.asarray(xs, dtype=np.float64)
     n = xs.size
@@ -159,26 +160,24 @@ def cal_ev_weights(xs: np.ndarray, ws: np.ndarray, med: float,
         near = np.flatnonzero(np.abs(xs - med) <= near_tol)
         if near.size >= 2:
             order = near[np.argsort(ws[near], kind="stable")]
-            wl = ws[order]
-            # np.interp 在重复 xp 段取段内最后一个 fp —— 折叠重复键 (每组留末位)
-            keep = np.empty(wl.size, dtype=bool)
-            keep[:-1] = np.diff(wl) > 0
-            keep[-1] = True
-            order, wl = order[keep], wl[keep]
+            wl = ws[order]  # stable 排序, 允许重复键
             w2 = np.zeros(n, dtype=np.float64)
-            if wl.size == 1:
+            if wb_b < wl[0]:
                 w2[order[0]] = 1.0
-            elif wb_b <= wl[0]:
-                w2[order[0]] = 1.0
-            elif wb_b >= wl[-1]:
+            elif wb_b > wl[-1]:
                 w2[order[-1]] = 1.0
             else:
-                j = min(int(np.searchsorted(wl, wb_b, side="right") - 1),
-                        wl.size - 2)
-                span = wl[j + 1] - wl[j]
-                t = (wb_b - wl[j]) / span if span > 0 else 0.0
-                w2[order[j]] += 1.0 - t
-                w2[order[j + 1]] += t
+                j = int(np.searchsorted(wl, wb_b, side="right")) - 1
+                if wl[j] == wb_b:
+                    # 精确命中 (可能重复段): np.interp 取段内最后一行
+                    e = int(np.searchsorted(wl, wb_b, side="right")) - 1
+                    w2[order[e]] = 1.0
+                else:
+                    # 开区间: 左端点 = 组尾 (order[j] 即其组末出现),
+                    # 右端点 = 组首 (order[j+1] 即其组首出现)
+                    t = (wb_b - wl[j]) / (wl[j + 1] - wl[j])
+                    w2[order[j]] += 1.0 - t
+                    w2[order[j + 1]] += t
             w = w2                      # 取代 (非混合), 与 _cal_ev 同语义
     return w
 

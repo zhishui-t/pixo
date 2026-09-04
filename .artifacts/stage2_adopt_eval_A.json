@@ -1,0 +1,99 @@
+{
+ "schema": "pixo.stage2_eval.v1",
+ "generated": "2026-09-04T20:01:30",
+ "seed": 20260904,
+ "corpus": "exports/auto/full_scan",
+ "n_photos": 54,
+ "groups": [
+  "2026-02-10",
+  "2026-02-14",
+  "2026-07-01",
+  "2026-07-05"
+ ],
+ "cameras": [
+  "NIKON Z5_2"
+ ],
+ "dcp": "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+ "long_edge": 512,
+ "stride": 3,
+ "cache": ".artifacts/calib_opt_samples.npz",
+ "ckpt_note": "calib_out == ckpt θ 逐位一致",
+ "e2e": {
+  "theta0": {
+   "median": 4.2507917446229335,
+   "p95": 15.020891644098922,
+   "mean": 5.792795118170281
+  },
+  "theta_star": {
+   "median": 4.2507917446229335,
+   "p95": 15.020891644098922,
+   "mean": 5.792795118170281
+  },
+  "median_improvement": 0.0
+ },
+ "chroma": {
+  "A0": {
+   "median": 5.958069181778807,
+   "p95": 15.411742952619404,
+   "mean": 7.341647167558859,
+   "n_px": 583608,
+   "n_photos": 54
+  },
+  "A": {
+   "median": 5.958069181778807,
+   "p95": 15.411742952619404,
+   "mean": 7.341647167558859,
+   "n_px": 583608,
+   "n_photos": 54
+  },
+  "B": {
+   "median": 4.792992094119756,
+   "p95": 15.309248527377381,
+   "mean": 6.242616326175187,
+   "n_px": 583608,
+   "n_photos": 54
+  },
+  "C": {
+   "median": 4.242881184659013,
+   "p95": 15.165227806918947,
+   "mean": 5.791835346407528,
+   "n_px": 583608,
+   "n_photos": 54
+  },
+  "D": {
+   "median": 6.927243020383061,
+   "p95": 16.35365136467138,
+   "mean": 7.916690009186055,
+   "n_px": 583608,
+   "n_photos": 54
+  }
+ },
+ "g5": {
+  "median_a": 5.958069181778807,
+  "median_b": 4.792992094119756,
+  "median_improvement": 0.19554608248291808,
+  "gate_improve15": true,
+  "worst_photo_regression": 0.8181804176146956,
+  "gate_no_regression": true,
+  "p95_a": 15.411742952619404,
+  "p95_b": 15.309248527377381,
+  "gate_p95": true,
+  "n_cameras": 1,
+  "cameras": [
+   "NIKON Z5_2"
+  ],
+  "gate_2cameras": false,
+  "n_photos_paired": 54
+ },
+ "t32_cross": {
+  "e2e_theta0": "6.658/16.788",
+  "e2e_theta_star": "4.244/15.037",
+  "e2e_verdict": "偏差 (本评 4.251/4.251) ❌",
+  "g5_a": "5.982",
+  "g5_b": "4.777",
+  "g5_c": "4.236",
+  "g5_verdict": "偏差 (本评 5.958/4.793) ❌"
+ },
+ "skipped": [],
+ "report": ".artifacts\\stage2_adopt_eval_A.md"
+}

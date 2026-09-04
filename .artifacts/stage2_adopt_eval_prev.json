@@ -1,0 +1,99 @@
+{
+ "schema": "pixo.stage2_eval.v1",
+ "generated": "2026-09-04T20:02:25",
+ "seed": 20260904,
+ "corpus": "exports/auto/full_scan",
+ "n_photos": 54,
+ "groups": [
+  "2026-02-10",
+  "2026-02-14",
+  "2026-07-01",
+  "2026-07-05"
+ ],
+ "cameras": [
+  "NIKON Z5_2"
+ ],
+ "dcp": "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp",
+ "long_edge": 512,
+ "stride": 3,
+ "cache": ".artifacts/calib_opt_samples.npz",
+ "ckpt_note": "calib_out vs ckpt 不一致: ['warmth_knots_gain', 'ev_table', 'neutral_a', 'neutral_b', 'rp_matrix']",
+ "e2e": {
+  "theta0": {
+   "median": 4.2507917446229335,
+   "p95": 15.020891644098922,
+   "mean": 5.792795118170281
+  },
+  "theta_star": {
+   "median": 6.649430684980584,
+   "p95": 16.767619137066664,
+   "mean": 7.875974361249965
+  },
+  "median_improvement": -0.564280511599239
+ },
+ "chroma": {
+  "A0": {
+   "median": 5.958069181778807,
+   "p95": 15.411742952619404,
+   "mean": 7.341647167558859,
+   "n_px": 583608,
+   "n_photos": 54
+  },
+  "A": {
+   "median": 6.195342098084302,
+   "p95": 16.56278059046199,
+   "mean": 7.561002366434507,
+   "n_px": 575540,
+   "n_photos": 54
+  },
+  "B": {
+   "median": 7.662718855940993,
+   "p95": 21.703735698710126,
+   "mean": 9.333827063767542,
+   "n_px": 575540,
+   "n_photos": 54
+  },
+  "C": {
+   "median": 7.561685277310807,
+   "p95": 21.185954544265336,
+   "mean": 9.101511167644896,
+   "n_px": 575540,
+   "n_photos": 54
+  },
+  "D": {
+   "median": 8.686710788610288,
+   "p95": 23.805427560723007,
+   "mean": 10.34204433221826,
+   "n_px": 575540,
+   "n_photos": 54
+  }
+ },
+ "g5": {
+  "median_a": 6.195342098084302,
+  "median_b": 7.662718855940993,
+  "median_improvement": -0.23685161119842393,
+  "gate_improve15": false,
+  "worst_photo_regression": 5.110737390241057,
+  "gate_no_regression": false,
+  "p95_a": 16.56278059046199,
+  "p95_b": 21.703735698710126,
+  "gate_p95": false,
+  "n_cameras": 1,
+  "cameras": [
+   "NIKON Z5_2"
+  ],
+  "gate_2cameras": false,
+  "n_photos_paired": 54
+ },
+ "t32_cross": {
+  "e2e_theta0": "6.658/16.788",
+  "e2e_theta_star": "4.244/15.037",
+  "e2e_verdict": "偏差 (本评 4.251/6.649) ❌",
+  "g5_a": "5.982",
+  "g5_b": "4.777",
+  "g5_c": "4.236",
+  "g5_verdict": "偏差 (本评 6.195/7.663) ❌"
+ },
+ "skipped": [],
+ "report": ".artifacts\\stage2_adopt_eval_prev.md"
+}

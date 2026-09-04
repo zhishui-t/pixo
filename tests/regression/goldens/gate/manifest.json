@@ -149,5 +149,5 @@
     }
   },
   "generator": "tests/goldens/generate_gate_goldens.py",
-  "reviewer": "t22-QA+t22-G1-QA (2026-09-04 双批次签注: +hsl_oklch/+split_tone_oklab/+skin_oklch 三 case; hsl_oklch/split_tone_oklab 批次核验旧12case逐位不变, skin_oklch 批次核验旧14case逐位不变; --check 15features重算一致; 注: skin_oklch.npy 与 skin.npy sha256 相同——该输入上OKLab新椭圆与旧Lab椭圆判定一致[肤色块核内d≈0.85/灰底核外d≈1.43], 金样本锁定设计意图而非两域差异; 生成器重签注会覆盖前批次签注文本, 历史记录见 .artifacts/gate_report.md)"
+  "reviewer": "stage2-adopt tester-1 (2026-09-04 阶段二新表入库批次: calib_out 四件替换正式位置[warmth_curve/target_offset/z5ii_neutral_trim/rp_ccm, sha256+load 双逐位校验], 替换前后 --check 各一次: 前者基线自洽、后者 15 features 零漂移——gate 合成用例为纯函数+显式参数构造, 不触达 warmth/neutral/exposure表/rp_ccm 的 auto 标定路径, 故重生成 .npy 全部字节不变, 仅本签注字段更新; 标定路径无 gate case 的门禁覆盖缺口上报见 .artifacts/stage2_adopt_report.md; 回退: configs/color/calib_prev/)"
 }
