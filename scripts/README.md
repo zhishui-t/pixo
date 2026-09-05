@@ -27,6 +27,9 @@
 - `illumination_est/gray_world.py` / `gray_edge.py`（Minkowski p=1,2）/ `white_patch.py` —— 三件经典法纯 numpy 实现，est_cct(rgb_linear, dcp_profile) → (cct_k, tint)，确定性无权重（白斑法排除贴顶饱和像素；灰边缘平坦图回退灰世界）
 - `illumination_est/eval_illum.py` —— 语料评估（54 张，aligned_pair 口径）：A=as_shot WB / B=估计法 WB（warmth 曲线按估计 wb_B 预折入数值向量 mode，两轨唯一差异=neutral 源）/ 参照=相机 JPEG，逐照片 gain 对齐色度 ΔE2000（--selftest 先行）；wb_B 三带分带（日光<1.5/中间 1.5-2.0/低色温≥2.0）+ guard 域外降级轨；三证据转正初评（改善 <1 JND=2.3 ΔE00 → 明确"无转正价值"），报告落 `.artifacts/illumination_eval.md` + json（阶段三 t43，设计 §2；不接运行时/不建 learned/）
 
+## 阶段三 HSM→OKLCh 运行时接线
+- `hsm_oklch_eval.py` —— HSM→OKLCh 接线语料对照（54 张，aligned_pair 口径，--selftest 先行）：A=color_domain=hsv（DCP LookTable 的 HSV 三线性，现行为）/ B=color_domain=oklch（t17 点云 2765 点 → IDW...连续高斯核栅格化 72×24×24 + OKLCh 三线性形变）/ 参照=相机 JPEG；固定窗（基座 vs 参照定窗，A/B 同掩码）+ 逐照片 gain 对齐，读数 A↔B（接线保真度）/A↔R/B↔R + wb_B 三带分带；报告落 `.artifacts/hsm_oklch_eval.md` + json（core/huesat_oklch.py + HueSatStage color_domain 分派缺省 hsv 不变；点云按 DCP 名 token 子序列自动匹配，缺失回退 hsv 链）
+
 ## 自动修图闭环
 - `loop_replay.py` —— 迭代轨迹回放调试工具（评审建议落地）：按 photo_id 查 `SQLiteStateTraceStore.trace_events` 全序列，逐事件解析渲染时间线 markdown（每步一行：iter#、事件类型、param delta 摘要、score/metrics 含 `{name}_area_ratio` 掩码面积、LLM 建议参数、qc_rollback）；`--export-dir` 可选——RAW 可达（--raw → photo_id 分组键即 file_path → meta_extracted.file_path）时逐参数快照重渲染预览（复用 `render_preview_full`，快照=各轮 decide.params）+ side-by-side 对照图序列；CLI `--photo-id X --db path [--export-dir Y]`（只读 db，不接运行时）
 - `auto_full_scan.py` / `auto_full_refine.py` / `auto_manual_fallback.py`
