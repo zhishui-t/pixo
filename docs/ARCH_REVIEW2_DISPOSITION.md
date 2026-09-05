@@ -132,3 +132,9 @@
 本表核对期间工作区有**多个并行批次在途**（均未提交，落盘时间 2026-09-04 23:31-23:35 前后）：t46（test_llm_shadow.py + loop.py 影子事件）、t47（perceptual.py + loop.py JND 接线 + test_perceptual_convergence.py + eval_rp_ccm_ab.py 改引共享实现）、t48（loop_replay.py + test_loop_replay.py）、前端滑杆与 huesat_oklch 批次（SliderParam/oklchScale/HslBandRow + core/huesat_oklch.py + UI_OKLCH_SPEC 更新——即首轮处置表 ③ backlog 的实施）、tech-debt 断言批次（test_tech_debt_invariants.py）。处置表对⑧⑨⑬⑭③ 的"在途"标注均引用上述工作区证据；**各批次提交 + 全量回归绿之前，在途项不计为已交付**。已提交核对基准：`3bcccd3`。
 
 （过程注记：本审计两个并行搜证任务对"src 是否存在 JND"给出相反结论，经查为**时间差**——早查时 perceptual.py 尚未落盘、晚查时已存在。并行开发期的处置表必须以文件系统实时状态复核关键否定性结论。）
+
+### 心跳 @ 2026-09-05 08:11:01
+
+### 心跳v2 @ 2026-09-05 08:33:49
+
+> 核验注记（t45 承接轮 @ 2026-09-05 08:38:36）：14 条处置正文已于 t45 本轮完整交付（汇总表 + 五维度逐条 + 时效注记），本次承接任务核验文件结构完整（138 行 / ①-⑭ 全在位），无缺补；心跳两行系 API 探针追加，非正文内容。

@@ -94,7 +94,7 @@ async function thumbFraction() {
 }
 
 async function typeChromaValue(v) {
-  const input = chroma.locator('input');
+  const input = chroma.locator('.slider-param-value input');
   await input.fill(String(v));
   await input.press('Enter');
   await page.waitForTimeout(500); // mock patch 回读
@@ -142,11 +142,11 @@ await check('End 键到右端 → 提交 +100（两端极端能力保留）', as
   await chroma.locator('[class*="Slider-thumb"]').focus();
   await page.keyboard.press('End');
   await page.waitForTimeout(500);
-  const shown = await chroma.locator('input').inputValue();
+  const shown = await chroma.locator('.slider-param-value input').inputValue();
   if (Number(shown) !== 100) throw new Error(`提交值 ${shown} ≠ 100`);
 });
 
-await check('轨道 75% 处点击 → 提交值落常用增强区（55–70）', async () => {
+await check('轨道 75% 处点击 → 提交 +33（§4.4 锚点：行程 3/4 = 位置域 +50 → 幂映射 33）', async () => {
   await typeChromaValue(0);
   const box = await page.evaluate(() => {
     const t = document.querySelector('[data-testid="band-yellow-chroma"] [class*="Slider-track"]');
@@ -155,22 +155,37 @@ await check('轨道 75% 处点击 → 提交值落常用增强区（55–70）',
   });
   await page.mouse.click(box.x + box.w * 0.75, box.y + box.h / 2);
   await page.waitForTimeout(500);
-  const shown = Number(await chroma.locator('input').inputValue());
-  // 点击物理 75%（拇指宽修正后位置域 72–78）→ 幂映射参数值 ~55–70（线性会提交 +50）
-  if (!(shown >= 55 && shown <= 70)) throw new Error(`提交值 ${shown} 不在 [55,70]`);
+  const shown = Number(await chroma.locator('.slider-param-value input').inputValue());
+  // 物理行程 75% → 位置域 s=+50（[-100,100]）→ 100·0.5^1.6=32.99 → 量化 +33；线性直传会提交 +50
+  if (Math.abs(shown - 33) > 1) throw new Error(`提交值 ${shown} ≠ 33±1`);
 });
 
 // ---- 往返无损：切回 hsv（oklch_check 已覆盖结构，此处确认参数保留）----
+// §6.3：bands 非默认时切域弹确认窗 → 统一走「保留数值切换」（主按钮）。
+async function switchDomain(target) {
+  await page.locator('[data-testid="domain-toggle"]').first().locator(`text=${target}`).click();
+  const keep = page.locator('button', { hasText: '保留数值切换' });
+  try {
+    await keep.waitFor({ timeout: 2500 });
+    await keep.click();
+  } catch {
+    // bands 全默认时无弹窗（§6.3 免弹窗），直接继续
+  }
+  await page.waitForTimeout(800);
+}
+
 await check('切回 HSV：色度参数保留（往返无损）', async () => {
   await typeChromaValue(40);
-  await page.locator('[data-testid="domain-toggle"]').first().locator('text=HSV').click();
-  await page.waitForTimeout(800);
-  await panel.locator('text=黄 色相').first().waitFor({ timeout: 3000 });
-  await page.locator('[data-testid="domain-toggle"]').first().locator('text=OKLCh').click();
-  await page.waitForTimeout(800);
-  await page.locator('[data-testid="band-row-yellow-expand"]').click();
+  await switchDomain('HSV');
+  await panel.locator('text=高光饱和度').first().waitFor({ timeout: 3000 });
+  await switchDomain('OKLCh');
+  await panel.locator('text=HSL · 八通道色相（OKLCh 感知域）').first().waitFor({ timeout: 3000 });
+  // expandedBand 手风琴状态跨域保留：色度滑杆可能已展开，仅在折叠时点展开钮
+  if (!(await chroma.count())) {
+    await page.locator('[data-testid="band-row-yellow-expand"]').click();
+  }
   await chroma.waitFor({ timeout: 3000 });
-  const shown = Number(await chroma.locator('input').inputValue());
+  const shown = Number(await chroma.locator('.slider-param-value input').inputValue());
   if (shown !== 40) throw new Error(`往返后色度 ${shown} ≠ 40`);
   await typeChromaValue(0); // 还原默认，避免污染后续基线
 });

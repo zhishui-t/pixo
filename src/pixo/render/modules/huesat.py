@@ -42,28 +42,62 @@ from ..pipeline.graph import DOMAIN_LINEAR_RGB
 from ..core.huesat import (apply_hue_sat_map, apply_look_table,
                      apply_hue_sat_map_prophoto, apply_look_table_prophoto,
                      apply_local_warm_sat, get_hue_sat_table, get_look_table)
-from ..core.huesat_oklch import OklchDeform, apply_oklch_deform,     is_identity_deform, load_oklch_deform
+from ..core.huesat_oklch import (OklchDeform, apply_oklch_deform,
+                                 is_identity_deform, load_oklch_deform)
 
 # oklch 点云 spec 缓存 (路径 → OklchDeform; 栅格化按内容哈希进程内复用)
 _OKLCH_SPEC_CACHE: dict = {}
 _OKLCH_MISSING_WARNED: set = set()
 
 
-def _resolve_oklch_spec(prof, file_param: str | None) -> OklchDeform | None:
-    """color_domain=oklch 的点云解析: 显式路径 → 按 DCP 名推导缺省路径;
-    文件缺失/非法 → None (回退 hsv 链, 每路径只告警一次)。"""
+def _slug_tokens(s: str) -> list:
     import re as _re
-    candidates: list[str] = []
+    return [t for t in _re.split(r"[^a-z0-9]+", s.lower()) if t]
+
+
+def _is_subseq(small: list, big: list) -> bool:
+    """token 子序列判定 (prof.name 的 slug tokens ⊆ 文件名 tokens; t17 点云
+    文件名来自 DCP 文件名, 比 prof.name 多厂商标记词, 如 LR Baseline vs
+    LR Adobe Standard Baseline)。"""
+    it = iter(big)
+    return all(tok in it for tok in small)
+
+
+def _default_oklch_points(prof) -> list:
+    """按 DCP 名推导点云候选: configs/color/hsm_oklch_*.json 中文件名 token
+    包含 prof.name token 子序列者 (多候选取 token 数最多 —— 名字最长者
+    最特异)。"""
+    slug = "_".join(_slug_tokens(str(getattr(prof, "name", "") or "")))
+    if not slug:
+        return []
+    root = pathlib.Path(__file__).resolve().parents[4] / "configs" / "color"
+    prof_toks = _slug_tokens(str(getattr(prof, "name", "")))
+    matches = []
+    for f in sorted(root.glob("hsm_oklch_*.json")):
+        file_toks = _slug_tokens(f.stem.replace("hsm_oklch_", ""))
+        if _is_subseq(prof_toks, file_toks):
+            matches.append((len(file_toks), f))
+    matches.sort(key=lambda t: (-t[0], t[1].name))
+    return [str(f) for _, f in matches]
+
+
+def _resolve_oklch_spec(prof, file_param: str | None) -> OklchDeform | None:
+    """color_domain=oklch 的点云解析: 显式路径 → 按 DCP 名 token 子序列
+    匹配缺省路径; 无匹配 → None (回退 hsv 链, 每解析失败只告警一次)。"""
+    candidates: list = []
     if file_param:
         candidates.append(str(file_param))
-    name = str(getattr(prof, "name", "") or "")
-    if name:
-        stem = _re.sub(r"\.[a-z]+$", "", name, flags=_re.I)
-        slug = _re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")
-        candidates.append(str(
-            pathlib.Path(__file__).resolve().parents[3] / "configs" / "color"
-            / f"hsm_oklch_{slug}.json"))
-    from ..core.calibration_store import load_json
+    else:
+        candidates.extend(_default_oklch_points(prof))
+    if not candidates:
+        prof_key = str(getattr(prof, "name", "") or "<noname>")
+        if prof_key not in _OKLCH_MISSING_WARNED:
+            _OKLCH_MISSING_WARNED.add(prof_key)
+            import logging
+            logging.getLogger(__name__).warning(
+                "[huesat] color_domain=oklch 但未找到匹配的 HSM→OKLCh 点云"
+                " (prof=%r; 回退 hsv 链)", prof_key)
+        return None
     for cand in candidates:
         p = pathlib.Path(cand)
         if not p.is_file():
@@ -73,8 +107,8 @@ def _resolve_oklch_spec(prof, file_param: str | None) -> OklchDeform | None:
             spec = load_oklch_deform(p)
             _OKLCH_SPEC_CACHE[cand] = spec
         return spec
-    if candidates and candidates[0] not in _OKLCH_MISSING_WARNED:
-        _OKLCH_MISSING_WARNED.add(candidates[0])
+    if tuple(candidates) not in _OKLCH_MISSING_WARNED:
+        _OKLCH_MISSING_WARNED.add(tuple(candidates))
         import logging
         logging.getLogger(__name__).warning(
             "[huesat] color_domain=oklch 但点云文件不存在: %s (回退 hsv 链)",
@@ -115,7 +149,10 @@ class HueSatStage(Stage):
         if self._oklch_domain(ctx, prof):
             spec = _resolve_oklch_spec(prof, self.p(ctx, "oklch_points_file",
                                                     None))
-            return spec is not None and not is_identity_deform(spec)
+            if spec is not None:
+                return not is_identity_deform(spec)
+            # 点云缺失: 回退 hsv 链 (与 process 回退一致) —— 不能在此返回
+            # False, 否则整个 stage 被跳过连 hsv 都不应用。
         hs_table, _, _ = get_hue_sat_table(prof)
         lt_table, _, _ = get_look_table(prof)
         return hs_table is not None or lt_table is not None
@@ -141,6 +178,7 @@ class HueSatStage(Stage):
                         and ctx.prof is not None)
         oklch_spec = (_resolve_oklch_spec(ctx.prof, self.p(
             ctx, "oklch_points_file", None)) if oklch_branch else None)
+        oklch_applied = False
         if oklch_branch and oklch_spec is None:
             oklch_branch = False      # 点云缺失已告警, 回退 hsv 链
         if (use_dng_path and cam_raw is not None and ctx.prof is not None
@@ -170,6 +208,7 @@ class HueSatStage(Stage):
             gamma = srgb_encode(np.clip(np.asarray(img, np.float64), 0.0, None))
             deformed = apply_oklch_deform(gamma, oklch_spec, strength=strength)
             img = srgb_decode(deformed)
+            oklch_applied = True
         elif bool(self.p(ctx, "enabled")) and ctx.prof is not None:
             img = apply_hue_sat_map(img, ctx.prof, strength=strength)
             img = apply_look_table(img, ctx.prof, strength=strength)
@@ -188,8 +227,9 @@ class HueSatStage(Stage):
             hs_table, dims, _ = get_hue_sat_table(ctx.prof)
             lt_table, ldims, _ = get_look_table(ctx.prof)
         ctx.results[-1].metrics = {
-            "hue_sat": bool(hs_table is not None),
+            "hue_sat": bool(hs_table is not None and not oklch_applied),
             "hue_sat_dims": list(dims) if dims else None,
-            "look_table": bool(lt_table is not None),
+            "look_table": bool(lt_table is not None and not oklch_applied),
             "local_warm_sat": warm_scale,
+            "color_domain": "oklch" if oklch_applied else "hsv",
         }

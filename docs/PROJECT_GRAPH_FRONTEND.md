@@ -120,6 +120,7 @@ flowchart TD
 | ReviewQueue | `components/ReviewQueue.tsx` | reviewItems | `markReview` `setPage`（本地） |
 | SettingsPanel | `components/SettingsPanel.tsx` | —（本地 useState） | 无（未接 store/后端） |
 | SliderParam | `components/SliderParam.tsx` | — | `onPatch` 回调；拖动防抖、onChangeEnd 提交、双击重置 |
+| HslBandRow | `components/HslBandRow.tsx` | paramsByProject（hsl.bands） | oklch 带 row：折叠=hue_shift、展开 5 滑杆（手风琴）；色度滑杆接 §4.4 非线性传递（`toSlider/fromSlider`） |
 | SectionLabel | `components/SectionLabel.tsx` | — | 纯展示 |
 
 ### 2.2 关键数据流
@@ -131,6 +132,12 @@ flowchart TD
   → store.`patchProjectParam`（sessionId 为空时先 `ensureSession`）→ `PUT /params`
   （深合并 + `generation+1`）→ store 回读 `params/canonical/generation` → `PreviewViewer`
   以 `gen=N` URL 重载处理图。`hsl.bands` 走整组数组替换（`buildPatch`）。
+- **色度滑杆非线性传递（UI_OKLCH_SPEC §4.4）**：oklch 域色度滑杆的拇指位置按幂曲线 γ=1.6 放置
+  （`oklchScale.ts` `sliderToC/cToSlider` C∈[0,0.33] + `chromaValueToSliderPos/chromaSliderPosToValue`，
+  负向恒等=调低精确线性），SliderParam 经可选 `toSlider/fromSlider` 在边界换算，**提交值仍为原始
+  saturation 参数**；变换缺省=现版线性路径逐位不变（hsv 双轨零变化，e2e canvas 逐像素 diff 证）。
+  单测 `frontend/tests/oklchScale.test.mjs`（`npm run test:unit`，node --test 原生跑 TS）+
+  `e2e/chroma_warp_check.mjs`（10 项，含 hsv 基线像素 diff）。
 - **原图契约**：`GET /api/sessions/{id}/image?original=1` 是 decode-only 契约端点；
   端点未落地/未建会话时 404，由 `PreviewViewer` 的 img onError 同帧回退本地占位，不闪断。
 

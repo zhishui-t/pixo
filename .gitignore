@@ -27,6 +27,7 @@ apply.spec.ts
 *.mjs
 !src/pixo/dsh/*.mjs
 !frontend/e2e/*.mjs
+!frontend/tests/*.test.mjs
 
 # ---- C++ native build artifacts ----
 src/pixo/render/native/build/

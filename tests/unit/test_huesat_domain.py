@@ -240,7 +240,9 @@ def test_stage_order_domain():
     assert hs.order < ToneStage().order == 30          # tone 之前
     assert hs.domain_in == DOMAIN_LINEAR_RGB
     assert hs.domain_out == DOMAIN_LINEAR_RGB
-    assert hs.default_params() == {"enabled": False, "strength": 1.0}
+    # color_domain 双轨批次为 default_params 补 color_domain/oklch_points_file
+    assert hs.default_params() == {"enabled": False, "strength": 1.0,
+                                   "color_domain": "hsv", "oklch_points_file": ""}
 
 
 # ---------------------------------------------------------------------------
