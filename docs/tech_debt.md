@@ -2,6 +2,30 @@
 
 > 详细许可与发布阻断项见 [`PIXO_LICENSE_REVIEW.md`](PIXO_LICENSE_REVIEW.md)。
 
+## 运行时断言映射（tech-debt 批次）
+
+以下条目已固化为 `tests/unit/test_tech_debt_invariants.py` 收集期断言，复发即告警：
+
+- **条目 1 关联约束**（受限后端默认不进 multi 路由，`PIXO_ALLOW_RESTRICTED=1` 显式放行）
+  → `test_restricted_model_backends_gated_out_of_router_by_default`（含台账登记在位 + 放行机制正向验证）；
+- **条目 1 + 6 + 8/10b 防复活**（YOLOE 适配器与代码级引用清零、`src/render` shim 不回归、
+  VibranceStage 废弃占位显式调用抛 NotImplementedError）
+  → `test_cleared_items_stay_cleared`；
+- **条目 3**（model_licenses.json 登记路径与当前路径同步，无悬空）
+  → `test_model_license_registry_paths_resolve`。
+
+判定为**不可机器断言**的条目及理由（维持人工跟踪）：
+
+- 条目 2（DNG clean-room 复审）：法律判断，非代码不变量；
+- 条目 4/7（可选依赖声明、门禁口径扩展）：清偿动作本身是写文档/扩 gate，断言其"缺失"恒红无意义；
+- 条目 5（历史路径残留）：条目自身声明"仅作迁移记录"，无需防复发；
+- 条目 9（高光 cap）：运行时哨兵（highlight_budget）已内建，无需重复断言；
+- 条目 11（评分器分布标定）：t98 已清偿且结论是"不可作合成图质检硬结论"——语义约定属代码评审层；
+- 条目 12（公式守卫日落）：触发前置（原生 AND/between 落地）未到；
+- 条目 13.1（UI 滑杆）：前端域 + spec 修订流程约束，pytest 不可达；
+- 条目 13.2（RP-CCM 罚项）：条件触发且当前无病态，"无病态"断言需数值阈值属新决策；
+- 条目 13.3/13.4（±1EV 压力实验、低频加权）：实验行动项，非断言。
+
 ## 关键技术债
 
 1. **YOLOE AGPL-3.0 发布阻断**（已清偿，t110 移除 YOLOE，AGPL 依赖清零）：
@@ -89,12 +113,17 @@
 13. **外部评审处置 backlog**（2026-09-04 登记，出处
     docs/OWN_PIPELINE_REVIEW_DISPOSITION.md ③④⑤⑧；①cbrt 已驳回、
     ②⑥⑦⑨⑩⑫已达成、⑪由 t40 承接，不在此列）：
-    1. **UI 滑杆感知均匀传递函数（P3）**：现状线性直传
-       （frontend/src/components/SliderParam.tsx:139-145），感知均匀性靠
-       OKLCh 域本身 + 内核 tanh 软限幅承担；双刻度/锚点表仅显示层
-       （oklchScale.ts，"不参与提交数学"）。**前置条件**：与
-       docs/UI_OKLCH_SPEC.md:61 既有决策（提交值永不做换算）相抵，
-       采纳前须先修订该 spec 并重走 UI 批次。
+    1. **UI 滑杆感知均匀传递函数（P3）**：✅ **2026-09-04 已交付收口**
+       （前置条件已履行：docs/UI_OKLCH_SPEC.md 增 §4.4 v1.1，修订 §2.1
+       「不换算」决策适用范围——色相跨域参考读数禁换算不变，色度滑杆
+       同域位置⇄参数值几何变换放行，提交值仍为原始 saturation）。
+       实现：oklchScale.ts `sliderToC/cToSlider`（幂 γ=1.6，C∈[0,0.33]，
+       中段→C≈0.109 落常用区）+ `chromaValueToSliderPos/chromaSliderPosToValue`
+       （增强半程位置变换，负向恒等=调低精确线性）；SliderParam 可选
+       toSlider/fromSlider（缺省=现版线性路径逐位不变，双轨零变化）；
+       HslBandRow oklch 色度滑杆接入。单测 frontend/tests/oklchScale.test.mjs
+       （node --test）+ e2e/chroma_warp_check.mjs（含 hsv 域 canvas 逐像素
+       diff 基线）。分离色调面板「色度 C」未接入，如需同曲线另开批次。
     2. **RP-CCM 拟合 Tikhonov/Frobenius 罚 + 线性回退罚（条件触发）**：
        现有防护 = 99% 分位残差裁剪（scripts/fit_rp_ccm.py:164-186，实测
        更激进裁剪反而病态）+ 逐照片 EV 对齐（:227-228）+ lstsq 最小范数解

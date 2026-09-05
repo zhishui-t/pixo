@@ -12,7 +12,7 @@ cp configs/color/calib_prev/rp_ccm_nikon_z5_2.json  configs/color/rp_ccm_nikon_z
 ```
 
 回退后必须重生成金样本（金样本是按表快照的）：
-`PYTHONPATH=src python tests/regression/goldens/generate_gate_goldens.py --out tests/regression/goldens/gate`
+`python tests/regression/goldens/generate_gate_goldens.py`
 并更新 manifest.reviewer 签注 + 全量 pytest。
 
 skin_oklab.json 新旧相同，未入库不在本备份范围。详见 .artifacts/stage2_adopt_report.md。

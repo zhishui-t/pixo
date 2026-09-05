@@ -1,11 +1,10 @@
 """Gate L2 golden 生成器（FUNCTION_GATE_SPEC §6）。
 
-用法:
-  python tests/goldens/generate_gate_goldens.py \
-      --out tests/goldens/gate
+用法 (仓库根, 无需 PYTHONPATH —— src 路径内部自举):
+  python tests/regression/goldens/generate_gate_goldens.py
 
   # 只校验漂移，不写盘（退出码非 0 表示与现有 manifest 有漂移）
-  python tests/goldens/generate_gate_goldens.py --check --out tests/goldens/gate
+  python tests/regression/goldens/generate_gate_goldens.py --check
 
 生成后必须由 reviewer 复核 diff 并更新 manifest.reviewer，不得与实现改动
 在同一次提交中静默合入。
@@ -20,6 +19,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
+
+# src-layout 自举 (G-4 修复): 仓库根/src 注入 sys.path, 免 PYTHONPATH=src。
+_REPO_SRC = Path(__file__).resolve().parents[3] / "src"
+if _REPO_SRC.is_dir() and str(_REPO_SRC) not in sys.path:
+    sys.path.insert(0, str(_REPO_SRC))
 
 import gate_cases
 
@@ -54,7 +58,7 @@ def build_manifest(out_dir: Path, *, write: bool = True) -> dict:
     manifest = {
         "schema": SCHEMA,
         "features": {},
-        "generator": "tests/goldens/generate_gate_goldens.py",
+        "generator": "tests/regression/goldens/generate_gate_goldens.py",
         "reviewer": "pending",
     }
     for feature in gate_cases.FEATURES:
@@ -129,7 +133,9 @@ def run_check(out_dir: Path) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--out", default="tests/goldens/gate")
+    ap.add_argument(
+        "--out", default="tests/regression/goldens/gate",
+        help="golden 输出目录 (相对 cwd, 默认即仓库根下的实际金样本目录)")
     ap.add_argument("--check", action="store_true",
                     help="不写盘，仅对比现有 manifest；漂移时退出码非 0")
     args = ap.parse_args(argv)

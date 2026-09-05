@@ -53,7 +53,7 @@ exposure case 输出逐像素差 max ≈ 0.0097（u8 量化约 2.5 级）——�
 ## 3. 基线入库与签注 ✅
 
 - `--check`（生成前）：检出恰好 2 处「新增 feature」，**前置 15 case 重算零漂移**（新代码对既有 case 零干扰的证明）；
-- 正式生成：`PYTHONPATH=src python tests/regression/goldens/generate_gate_goldens.py --out tests/regression/goldens/gate`（G-4 坑规避：`--out` 显式传实际路径），17 features 写盘，.npy sha256 与 manifest 逐文件核验一致；
+- 正式生成：`python tests/regression/goldens/generate_gate_goldens.py --out tests/regression/goldens/gate`（当时 G-4 未修复，需显式传参 + PYTHONPATH；修复后两者均可省略），17 features 写盘，.npy sha256 与 manifest 逐文件核验一致；
 - reviewer 签注：已注入 manifest.reviewer（批次说明 + 敏感性实证结论 + rp_ccm 未接线注记），`--check` 复验 OK；
 - 数量守卫同步：`tests/regression/test_gate_golden.py` 断言 15 → **17**（附批次注释）。
 

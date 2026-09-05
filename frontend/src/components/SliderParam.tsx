@@ -31,6 +31,14 @@ interface SliderParamProps {
   info?: string;
   /** 轨道背景（oklch 色谱条）；不传保持现版纯灰轨。 */
   trackBackground?: string;
+  /**
+   * 非线性滑杆传递（oklch 色度滑杆 §4.4）：参数值⇄滑杆位置的纯函数对。
+   * Mantine Slider 恒在线性「位置域」上运行，本组件在边界做换算；
+   * 数字输入框/提交值始终是参数域原值（后端契约不做任何换算）。
+   * **不传（缺省）走现版线性路径，渲染与提交逐位不变**（双轨零变化）。
+   */
+  toSlider?: (value: number) => number;
+  fromSlider?: (pos: number) => number;
   /** 测试钩子（e2e data-testid，挂根节点）。 */
   testId?: string;
 }
@@ -53,6 +61,8 @@ export function SliderParam({
   helper,
   info,
   trackBackground,
+  toSlider,
+  fromSlider,
   testId,
 }: SliderParamProps) {
   const [dragging, setDragging] = useState(false);
@@ -73,6 +83,19 @@ export function SliderParam({
     const clamped = Math.max(min, Math.min(max, next));
     onPatch(buildPatch ? buildPatch(clamped) : { [stage]: { [param]: clamped } });
   };
+
+  // 非线性传递（§4.4）：滑杆跑在位置域，边界换算到参数域；
+  // toVal 为空 = 现版线性路径，posToValue 恒等（渲染/提交逐位不变）。
+  const posValue = toSlider ? toSlider(shown) : shown;
+  const posToValue = (p: number): number => {
+    if (!fromSlider) return p;
+    const v = fromSlider(p);
+    return Math.round(v / step) * step;
+  };
+  // 拖动 label：线性路径维持现版 toFixed(2)；非线性路径显示换算后的参数值。
+  const dragLabel = fromSlider
+    ? (p: number) => Number(posToValue(p).toFixed(2)).toString()
+    : (v: number) => v.toFixed(2);
 
   const reset = () => {
     if (locked) return;
@@ -136,16 +159,16 @@ export function SliderParam({
         <Slider
           className={`slider-param-track${trackBackground ? ' slider-param-track--spectrum' : ''}`}
           style={{ flex: 1, ...(trackBackground ? ({ '--slider-spectrum': trackBackground } as React.CSSProperties) : {}) }}
-          value={shown}
+          value={posValue}
           min={min}
           max={max}
           step={step}
           disabled={locked}
-          onChange={(v) => setPending(v)}
-          onChangeEnd={(v) => commit(v)}
+          onChange={(p) => setPending(posToValue(p))}
+          onChangeEnd={(p) => commit(posToValue(p))}
           size="sm"
-          label={(v) => v.toFixed(2)}
-          marks={marks}
+          label={dragLabel}
+          marks={marks?.map((m) => ({ ...m, value: toSlider ? toSlider(m.value) : m.value }))}
           styles={{
             track: {
               backgroundColor: 'rgba(255, 255, 255, 0.08)',

@@ -28,6 +28,7 @@
 - `illumination_est/eval_illum.py` —— 语料评估（54 张，aligned_pair 口径）：A=as_shot WB / B=估计法 WB（warmth 曲线按估计 wb_B 预折入数值向量 mode，两轨唯一差异=neutral 源）/ 参照=相机 JPEG，逐照片 gain 对齐色度 ΔE2000（--selftest 先行）；wb_B 三带分带（日光<1.5/中间 1.5-2.0/低色温≥2.0）+ guard 域外降级轨；三证据转正初评（改善 <1 JND=2.3 ΔE00 → 明确"无转正价值"），报告落 `.artifacts/illumination_eval.md` + json（阶段三 t43，设计 §2；不接运行时/不建 learned/）
 
 ## 自动修图闭环
+- `loop_replay.py` —— 迭代轨迹回放调试工具（评审建议落地）：按 photo_id 查 `SQLiteStateTraceStore.trace_events` 全序列，逐事件解析渲染时间线 markdown（每步一行：iter#、事件类型、param delta 摘要、score/metrics 含 `{name}_area_ratio` 掩码面积、LLM 建议参数、qc_rollback）；`--export-dir` 可选——RAW 可达（--raw → photo_id 分组键即 file_path → meta_extracted.file_path）时逐参数快照重渲染预览（复用 `render_preview_full`，快照=各轮 decide.params）+ side-by-side 对照图序列；CLI `--photo-id X --db path [--export-dir Y]`（只读 db，不接运行时）
 - `auto_full_scan.py` / `auto_full_refine.py` / `auto_manual_fallback.py`
 - `assess_auto_results.py` / `build_final_summary.py`
 

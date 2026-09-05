@@ -35,9 +35,10 @@
 严格按 t34 §3.3 SOP 执行（G-4 坑规避：`--out` 显式传 `tests/regression/goldens/gate`）：
 
 ```
-PYTHONPATH=src python tests/regression/goldens/generate_gate_goldens.py --check --out tests/regression/goldens/gate
-PYTHONPATH=src python tests/regression/goldens/generate_gate_goldens.py --out tests/regression/goldens/gate
+python tests/regression/goldens/generate_gate_goldens.py --check --out tests/regression/goldens/gate
+python tests/regression/goldens/generate_gate_goldens.py --out tests/regression/goldens/gate
 ```
+（以上为当时执行记录；G-4 修复后 `--out` 与 `PYTHONPATH=src` 均可省略）
 
 | 步骤 | 结果 |
 |---|---|
@@ -87,7 +88,7 @@ cp configs/color/calib_prev/target_offset.json      src/pixo/render/target_offse
 cp configs/color/calib_prev/z5ii_neutral_trim.json  resources/camera_profiles/z5ii_neutral_trim.json
 cp configs/color/calib_prev/rp_ccm_nikon_z5_2.json  configs/color/rp_ccm_nikon_z5_2.json
 # 2) 金样本按回退后的表重生成 + 更新 manifest.reviewer 签注
-PYTHONPATH=src python tests/regression/goldens/generate_gate_goldens.py --out tests/regression/goldens/gate
+python tests/regression/goldens/generate_gate_goldens.py --out tests/regression/goldens/gate
 # 3) 全量回归确认
 python -m pytest tests/unit tests/regression tests/integration
 ```

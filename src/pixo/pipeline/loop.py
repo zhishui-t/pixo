@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -28,6 +29,7 @@ import numpy as np
 
 from pixo.decide import decide, qc_rollback
 from pixo.decide.engine import _locked_params
+from pixo.pipeline.perceptual import JndConvergenceTracker, delta_e_median
 from pixo.state import PhotoStateMachine, TraceEvent
 from pixo.render.geometry.smart_crop import suggest_crop
 from pixo.vision import MockSegmenter, Segmenter, SegmenterUnavailable, VisionMeasure
@@ -75,6 +77,22 @@ _LOGGER = logging.getLogger(__name__)
 # rejected 项内 raw_text 双份全文，超长回复会原样翻倍进 trace/state 存储。
 _TRACE_REPLY_TEXT_MAX = 4096   # reply_text 单字段上限（4KB）
 _TRACE_RAW_TEXT_MAX = 2048     # 每个 rejected 项内 raw_text 上限（2KB）
+
+# ---------------------------------------------------------------------------
+# LLM 建议影子验证（原型，设计：建议先试渲染评分、显著改善才晋升候选）
+# ---------------------------------------------------------------------------
+# 开关 PIXO_LLM_SHADOW：**缺省开**（GOVERNANCE §1 的特例——父开关
+# agent_suggest 缺省关，影子只是其内的二级门，双层组合下默认路径仍不触达）；
+# 显式关态值（strip().lower() 后比对）= {"0","false","off","no"}。
+_LLM_SHADOW_ENV = "PIXO_LLM_SHADOW"
+_LLM_SHADOW_OFF_VALUES = frozenset({"0", "false", "off", "no"})
+
+
+def llm_shadow_enabled(env: Mapping[str, str] | None = None) -> bool:
+    """读 PIXO_LLM_SHADOW 影子验证开关（缺省开；关态值见模块注释）。"""
+    source = os.environ if env is None else env
+    return str(source.get(_LLM_SHADOW_ENV, "")).strip().lower() \
+        not in _LLM_SHADOW_OFF_VALUES
 
 
 def _truncate_text(text: Any, limit: int) -> tuple[str | None, bool]:
@@ -606,6 +624,12 @@ class SinglePhotoLoop:
       last_iteration 而非 stop，本轮参数照常计算应用，loop 据
       last_iteration 标记在应用后退出。低改善停滞（low_improvement）
       优先于轮数上限判定。
+    JND 感知收敛早停（perceptual_convergence）：连续 jnd_window 轮预览间
+      median ΔE2000 < jnd_threshold（默认 0.5，低于 1.0 JND 保守值）即使
+      美学分未达上限也强制终止（防过度修图）。优先级：美学达标/停滞/
+      manual_review（decide 判停）> 感知收敛 > 轮数上限；触发轮的 decide
+      参数不落地——其效果未经 preview 验证，导出图保持与最后一张已评分
+      预览一致（保守侧）。jnd_threshold=None 关闭。
     构图建议契约（crop_suggest=True）：
       用户意图的显式通道是 locked_params；未锁定的显式 compose.* 设置
       可能在采纳建议时被覆盖（当前已知行为）：采纳为合并语义——保留
@@ -635,9 +659,14 @@ class SinglePhotoLoop:
         aesthetic_scorer: Callable[..., Any] | None = None,
         aesthetic_accept_threshold: float | None = None,
         aesthetic_stagnation_eps: float | None = None,
+        jnd_threshold: float | None = 0.5,
+        jnd_window: int = 2,
         crop_suggest: bool = False,
         box_provider: Callable[..., Any] | None = None,
         agent_suggest: bool = False,
+        llm_shadow: bool | None = None,
+        llm_shadow_rel_gain: float = 0.05,
+        llm_shadow_min_gain: float = 0.0,
     ) -> None:
         self.render_backend = render_backend or renderer
         self.segmenter = segmenter
@@ -666,6 +695,13 @@ class SinglePhotoLoop:
             if aesthetic_stagnation_eps is not None
             else None
         )
+        # JND 感知收敛早停（防过度修图）：连续 jnd_window 轮预览间 median
+        # ΔE2000 < jnd_threshold（默认 0.5，低于 1.0 JND 保守值）强制终止；
+        # jnd_threshold=None 关闭。度量底座见 pipeline/perceptual.py。
+        self.jnd_threshold = (
+            float(jnd_threshold) if jnd_threshold is not None else None
+        )
+        self.jnd_window = max(1, int(jnd_window))
         # t31 构图建议：默认关；box_provider 为原生框通道(未来 vision 升级)。
         self.crop_suggest = bool(crop_suggest)
         self.box_provider = box_provider
@@ -675,6 +711,16 @@ class SinglePhotoLoop:
         # t47 LLM 建议编排：默认关；开且 dsh.chat 环境齐备才整链运行，
         # accepted 仅注入 decide_context 建议态，rejected/跳过进 trace。
         self.agent_suggest = bool(agent_suggest)
+        # LLM 建议影子验证（原型）：开时 accepted 补丁先经试渲染评分，
+        # 显著高于当前分才晋升 decide_context 建议态；否则丢弃留痕。
+        # llm_shadow=None 时读 PIXO_LLM_SHADOW（缺省开）；显式传入以 DI 优先。
+        self.llm_shadow = (
+            llm_shadow_enabled() if llm_shadow is None else bool(llm_shadow)
+        )
+        # 晋升阈值：gain ≥ max(min_gain, rel_gain·|当前分|)。rel_gain 缺省
+        # 0.05（相对 5%）；已知评分 σ 时可设 min_gain=0.05σ 作绝对下限。
+        self.llm_shadow_rel_gain = float(llm_shadow_rel_gain)
+        self.llm_shadow_min_gain = float(llm_shadow_min_gain)
 
     def _build_backend(
         self,
@@ -920,6 +966,91 @@ class SinglePhotoLoop:
             if guard > 10:
                 raise LoopError("状态机推进异常")
 
+    def _llm_shadow_verify(
+        self,
+        sm: PhotoStateMachine,
+        backend: Any,
+        *,
+        params: dict[str, Any],
+        masks: dict[str, np.ndarray] | None,
+        current_score: float | None,
+        accepted: list,
+        iteration: int,
+    ) -> bool | None:
+        """LLM 建议影子验证：试渲染"若采纳"图，评分显著高于当前才晋升。
+
+        流程：apply_patches 合成试渲染参数（纯函数，不动现行 params）→
+        当前预览分辨率重渲 → 同一评分器计分（mask 复用本轮缓存，仅按
+        试渲染尺寸重对齐）→ 与当前分比较。
+
+        返回 True=晋升候选通道 / False=拒绝；None=无法验证（未配置评分
+        器、当前轮无分、试渲染或评分失败）——影子是不可加害的附加门，
+        验证基础设施不可用时降级为影子关的现行行为并留 trace 说明。
+        确定性纪律：试渲染与评分与主链路同一确定性函数，同输入同分；
+        LLM 生成侧的不确定性不经本钩子引入。
+        """
+        if self.aesthetic_scorer is None:
+            self._add_trace(
+                sm, event_type="llm_shadow_skipped",
+                reason="影子验证跳过：未配置美学评分器",
+                metadata={"iteration": iteration})
+            return None
+        if current_score is None:
+            self._add_trace(
+                sm, event_type="llm_shadow_skipped",
+                reason="影子验证跳过：当前轮无美学分",
+                metadata={"iteration": iteration})
+            return None
+        try:
+            from ..agent.patch_protocol import PatchReview, apply_patches
+            trial_params = apply_patches(
+                params, PatchReview(accepted=[dict(p) for p in accepted]))
+            trial_img = backend.render_preview(
+                trial_params, long_edge=self.preview_long_edge)
+        except Exception as exc:  # noqa: BLE001 —— 基础设施失败降级不阻断
+            self._add_trace(
+                sm, event_type="llm_shadow_skipped",
+                reason=f"影子验证跳过：试渲染失败降级现行行为: {exc}",
+                metadata={"iteration": iteration})
+            return None
+        trial_masks = _resize_masks(masks or {}, trial_img.shape[:2])
+        trial = self._score_aesthetic(trial_img, trial_masks)
+        if trial is None:
+            self._add_trace(
+                sm, event_type="llm_shadow_skipped",
+                reason="影子验证跳过：试渲染图评分失败",
+                metadata={"iteration": iteration})
+            return None
+
+        cur = float(current_score)
+        trial_score = float(trial["overall"])
+        gain = trial_score - cur
+        threshold = max(self.llm_shadow_min_gain,
+                        self.llm_shadow_rel_gain * abs(cur))
+        promoted = gain >= threshold
+        scores = {"current": round(cur, 6), "trial": round(trial_score, 6),
+                  "gain": round(gain, 6), "threshold": round(threshold, 6)}
+        self._add_trace(
+            sm,
+            event_type="llm_shadow_promote" if promoted
+            else "llm_shadow_reject",
+            reason=(
+                f"影子验证通过：试渲染 {trial_score:.4f} vs 当前 {cur:.4f} "
+                f"(gain {gain:+.4f} ≥ 阈值 {threshold:.4f})，建议晋升候选"
+                if promoted else
+                f"影子验证未达标：试渲染 {trial_score:.4f} vs 当前 {cur:.4f} "
+                f"(gain {gain:+.4f} < 阈值 {threshold:.4f})，建议丢弃"),
+            metadata={
+                "iteration": iteration,
+                "scores": scores,
+                "patches": [p.get("param") for p in accepted
+                            if isinstance(p, dict)],
+                "rel_gain": self.llm_shadow_rel_gain,
+                "min_gain": self.llm_shadow_min_gain,
+            },
+        )
+        return promoted
+
     def _run_preview_iterations(
         self,
         sm: PhotoStateMachine,
@@ -938,6 +1069,14 @@ class SinglePhotoLoop:
         stop_reason: str | None = None
         aesthetic_scores: list[float] = []
         aesthetic_improvements: list[float] = []
+        # JND 感知收敛早停状态（jnd_threshold=None 时整链关闭）
+        jnd_tracker = (
+            JndConvergenceTracker(self.jnd_threshold, self.jnd_window)
+            if self.jnd_threshold is not None else None
+        )
+        prev_preview: np.ndarray | None = None
+        perceptual_delta: float | None = None
+        perceptual_converged = False
 
         for iteration in range(1, max_iterations + 1):
             # 状态推进：每次迭代对应一个可前进的 State 阶段。
@@ -972,6 +1111,18 @@ class SinglePhotoLoop:
             preview_img = backend.render_preview(
                 params, long_edge=self.preview_long_edge
             )
+            # JND 感知差异：当前预览 vs 上一轮预览的 median ΔE2000。
+            # 形状不一致（如 compose 裁切改画幅）视为不可比——计数清零，
+            # 不把画幅变化误判为"无感知差异"。
+            perceptual_delta = None
+            if jnd_tracker is not None and prev_preview is not None:
+                if prev_preview.shape == preview_img.shape:
+                    perceptual_delta = delta_e_median(prev_preview, preview_img)
+                    perceptual_converged = jnd_tracker.update(perceptual_delta)
+                else:
+                    jnd_tracker.count = 0
+                    perceptual_converged = False
+            prev_preview = preview_img
             if masks_cache is None:
                 try:
                     masks_cache = self.segmenter.segment(preview_img, list(self.prompts))
@@ -990,6 +1141,11 @@ class SinglePhotoLoop:
             proxies = compute_proxy_metrics(preview_img)
             if proxies:
                 measurement.update(proxies)
+            if perceptual_delta is not None:
+                measurement["perceptual"] = {
+                    "delta_median_prev": perceptual_delta,
+                    "consecutive_below_jnd": jnd_tracker.count,
+                }
             measurements.append(measurement)
 
             crop_suggestion = None
@@ -1121,24 +1277,49 @@ class SinglePhotoLoop:
                         )
                         if sugg.get("status") == "ok":
                             accepted_list = list(sugg["accepted"])
-                            decide_context["llm_suggestions"] = accepted_list
-                            # t65 观测指标：仅暴露数量与参数键名（不含数值），
-                            # 供未来规则 condition / 报表消费；非自动应用路径。
-                            accepted_params = [
-                                str(p.get("param"))
-                                for p in accepted_list
-                                if isinstance(p, dict)
-                            ]
-                            metrics["llm_suggest_count"] = len(accepted_list)
-                            metrics["llm_suggest_params"] = list(
-                                accepted_params)
-                            measurement["llm_suggest_count"] = len(
-                                accepted_list)
-                            measurement["llm_suggest_params"] = list(
-                                accepted_params)
+                            # 影子验证（PIXO_LLM_SHADOW，缺省开）：accepted
+                            # 补丁先试渲染评分，显著改善才晋升候选通道；
+                            # 拒绝/跳过留 trace（llm_shadow_* 事件）。
+                            promote = True
+                            if accepted_list and self.llm_shadow:
+                                verdict = self._llm_shadow_verify(
+                                    sm, backend,
+                                    params=params,
+                                    masks=masks,
+                                    current_score=(
+                                        aesthetic_scores[-1]
+                                        if aesthetic_scores else None),
+                                    accepted=accepted_list,
+                                    iteration=iteration,
+                                )
+                                if verdict is False:
+                                    promote = False
+                                metrics["llm_shadow"] = (
+                                    "promote" if verdict is True
+                                    else "reject" if verdict is False
+                                    else "skipped")
+                            if promote:
+                                decide_context["llm_suggestions"] = accepted_list
+                                # t65 观测指标：仅暴露数量与参数键名（不含数值），
+                                # 供未来规则 condition / 报表消费；非自动应用路径。
+                                accepted_params = [
+                                    str(p.get("param"))
+                                    for p in accepted_list
+                                    if isinstance(p, dict)
+                                ]
+                                metrics["llm_suggest_count"] = len(accepted_list)
+                                metrics["llm_suggest_params"] = list(
+                                    accepted_params)
+                                measurement["llm_suggest_count"] = len(
+                                    accepted_list)
+                                measurement["llm_suggest_params"] = list(
+                                    accepted_params)
                             self._add_trace(
                                 sm, event_type="agent_suggest_accepted",
-                                reason=f"{len(sugg['accepted'])} 个补丁入建议态",
+                                reason=(f"{len(sugg['accepted'])} 个补丁入建议态"
+                                        if promote else
+                                        f"{len(sugg['accepted'])} 个补丁过协议校验"
+                                        "（影子验证未晋升，未入候选通道）"),
                                 metadata={"params": [
                                     p.get("param") for p in sugg["accepted"]
                                     if isinstance(p, dict)],
@@ -1206,6 +1387,31 @@ class SinglePhotoLoop:
 
             if decision.get("decision") == "stopped":
                 stop_reason = decision.get("reason") or "Decide 终止"
+                break
+
+            # JND 感知收敛早停：优先级低于美学达标/停滞/manual_review（上方
+            # decide 判停分支先行），高于轮数上限。触发轮的 decide 参数不
+            # 落地——其效果未经 preview 验证，导出图保持与最后一张已评分
+            # 预览一致（防过度修图的保守侧）。
+            if perceptual_converged:
+                self._add_trace(
+                    sm,
+                    event_type="perceptual_convergence",
+                    reason=(
+                        f"连续 {self.jnd_window} 轮预览差异低于 JND 阈值 "
+                        f"(median ΔE2000 < {self.jnd_threshold})，"
+                        "强制终止防过度修图"
+                    ),
+                    value={
+                        "iteration": iteration,
+                        "jnd_threshold": self.jnd_threshold,
+                        "jnd_window": self.jnd_window,
+                        "delta_history": list(jnd_tracker.history),
+                        "last_delta_median": perceptual_delta,
+                    },
+                    metadata={"iteration": iteration},
+                )
+                stop_reason = "perceptual_convergence"
                 break
 
             decided_params = dict(decision.get("params") or {})
@@ -1587,4 +1793,5 @@ __all__ = [
     "RawRenderBackend",
     "LoopResult",
     "LoopError",
+    "llm_shadow_enabled",
 ]

@@ -200,3 +200,52 @@ export function ringGradient(oklchCss: boolean): string {
 export function tintSwatchColor(domain: ColorDomain, hueDeg: number): string {
   return domain === 'oklch' ? oklchStopColor(0.7, 0.15, hueDeg, supportsOklchCss()) : `hsl(${hueDeg} 100% 50%)`;
 }
+
+// ---------------------------------------------------------------------------
+// 色度滑杆非线性传递（UI_OKLCH_SPEC §4.4；评审 backlog ③ 收口）
+//
+// 评审缺口：滑杆→参数值线性直传，感知均匀性只靠 OKLCh 域本身承担——
+// 常用调整区（照片内容 C≈0.06–0.18）在行程里的分辨率与极端区（趋近色域峰
+// 0.33，内核 tanh 软限幅收敛）没有区分。幂映射把行程中段落在常用区，
+// 两端保留极端能力。负向（调低色度）保持精确线性（§4.2 既有文案），不受影响。
+// ---------------------------------------------------------------------------
+
+/** C 域上限锚点：sRGB 色域包络峰 ≈0.33（§4.1 内核实测，探针脚本 F 节）。 */
+export const C_SLIDER_MAX = 0.33;
+
+/** 传递指数：γ=1.6 时滑杆中段 t=0.5 → C=0.1089，落常用区 [0.06,0.18] 近中心（锚点 0.12）。 */
+export const C_SLIDER_GAMMA = 1.6;
+
+/**
+ * 色度滑杆位置 t∈[0,1] → 绝对色度 C∈[0, C_SLIDER_MAX]（幂映射 C = 0.33·t^1.6）。
+ * 锚点：t=0 → C=0（中性灰）；t=0.5 → C≈0.1089（常用区）；t=1 → C=0.33（色域峰）。
+ * 常用区 [0.06,0.18] 占行程 [34.5%, 68.5%]，骑跨中段；极端区 [0.18,0.33] 压缩到
+ * 末端 31.5%。越界输入钳制到 [0,1]。
+ */
+export function sliderToC(t: number): number {
+  const u = Math.max(0, Math.min(1, t));
+  return C_SLIDER_MAX * Math.pow(u, C_SLIDER_GAMMA);
+}
+
+/** 逆映射：绝对色度 C∈[0, 0.33] → 滑杆位置 t∈[0,1]；与 sliderToC 精确互逆。越界钳制。 */
+export function cToSlider(c: number): number {
+  const v = Math.max(0, Math.min(C_SLIDER_MAX, c));
+  return Math.pow(v / C_SLIDER_MAX, 1 / C_SLIDER_GAMMA);
+}
+
+/**
+ * saturation 参数值 v∈[-100,100] → 滑杆位置 s∈[-100,100]（SliderParam 位置变换用）。
+ * 正向（增强）：s = 100·(v/100)^(1/γ)——低值分辨率展开（+1..+10 占增强半程前 24%，
+ * 线性时仅 10%），行程 3/4 处 ≈ +33（常用增强），右端 +100 极限保留；
+ * 负向（调低）：恒等映射（§4.2 调低精确线性）。0 处两侧连续。
+ */
+export function chromaValueToSliderPos(v: number): number {
+  if (v <= 0) return v;
+  return 100 * cToSlider((v / 100) * C_SLIDER_MAX);
+}
+
+/** 滑杆位置 s∈[-100,100] → saturation 参数值；正向幂压缩极端区，负向恒等；与上互逆。 */
+export function chromaSliderPosToValue(s: number): number {
+  if (s <= 0) return s;
+  return (100 * sliderToC(s / 100)) / C_SLIDER_MAX;
+}

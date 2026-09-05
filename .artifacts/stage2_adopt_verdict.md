@@ -122,7 +122,7 @@ sha256sum configs/color/calib_out/*.json            # vs 正式位四件
 git hash-object configs/color/calib_prev/*.json     # vs git rev-parse HEAD:<正式位>
 
 # 金样本守卫
-PYTHONPATH=src python tests/regression/goldens/generate_gate_goldens.py --check --out tests/regression/goldens/gate
+python tests/regression/goldens/generate_gate_goldens.py --check --out tests/regression/goldens/gate
 git status --porcelain -- 'tests/regression/goldens/gate/*.npy'   # 空 = 与 HEAD 字节一致
 
 # 运行时零变化

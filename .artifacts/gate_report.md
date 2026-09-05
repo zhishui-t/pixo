@@ -97,7 +97,7 @@ sha256 逐位不变已核验(git diff 仅+2条目), --check 重算一致, review
 
 - RAW gate（`render/tools/gate_golden.py` 真实 RAW 12 case）与 raw 基线未在本任务范围；
   RAW_PATH 环境就绪后建议补跑 `test_gate_e2e_ab/perf` 收口 L3 层。
-- `generate_gate_goldens.py --out` 默认值仍是历史路径 `tests/goldens/gate`（实际在
+- `generate_gate_goldens.py --out` 默认值仍是历史路径 `tests/goldens/gate`（实际在（✅ 已修复，见 stage1_qa_verdict.md G-4 t39 注记）
   `tests/regression/goldens/gate`），本次按显式参数运行；后续可顺手修正默认值。
 
 ---

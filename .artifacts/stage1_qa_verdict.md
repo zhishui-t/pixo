@@ -57,7 +57,7 @@
 | G-1 | **P1**（GO 条件项） | skin oklch 双域金样本缺失（§6 表行 3）：gate 无 `skin_mask_oklab` case，且 `SKIN_OKLAB_*` 常数无精确锁定。建议补法（二选一或都做）：① gate 增 `skin_oklch` feature = `skin_mask_oklab(_skin_patch()/255)` 走 reviewer 流程入库；② 增 core/skin.py ↔ configs/color/skin_oklab.json 常数逐位一致性测试。完成前 skin oklch 域保持非缺省（现即如此） | 测试线（t22 后续小批次），阶段二首批前关闭 |
 | G-2 | P2 | t24 三条 minor 未修复（本轮核实仍原样）：①`modules/split_tone.py`/`modules/hsl.py` 的 `color_domain` schema 缺 `choices`（行为等价、风格不一）；②`modules/skin.py wants()` except 静默吞 oklch 掩码异常无留痕；③前端 3 处过时批次号注释（types.ts:240 / DomainToggle.tsx:7 / AdjustmentsPanel.tsx:205，"t18 合入前"实为 t17 已合入）。择机清理，不阻塞 | t17/t18/t20 对应成员 |
 | G-3 | P2 | 项目图谱重生成（§8.5 已记录）：`--check` 守卫实测报漂移（图谱生成于 f48d453，其后阶段一改动未入图）；需重跑 `build_project_graph.py --merge docs/project_graph_frontend.json`；前端图谱生成脚本 `gen_project_graph_frontend.py` 从 `.artifacts/` 归位 `scripts/`。t24 已抽样 11 边验证图谱真实性（11/11 命中），漂移仅为时效性 | 维护批次 |
-| G-4 | P3 | golden 生成器 `--out` 默认值仍是历史路径 `tests/goldens/gate`（实际 `tests/regression/goldens/gate`），需显式传参 + `PYTHONPATH=src` 运行（t22 报告遗留）；RAW_PATH 就绪后补跑 4 个豁免的 gate_e2e L3 项 | 维护批次 |
+| G-4 | P3 | ~~golden 生成器 `--out` 默认值仍是历史路径 `tests/goldens/gate`（实际 `tests/regression/goldens/gate`），需显式传参 + `PYTHONPATH=src` 运行（t22 报告遗留）~~ **✅ 已修复（t39）：默认路径改正确 + src 路径自举，仓库根无参可跑**；RAW_PATH 就绪后补跑 4 个豁免的 gate_e2e L3 项（仍未闭环） | 维护批次 |
 | G-5 | P3 | RP-CCM 维持不切默认（见 §3 建议）；阶段二先立量化门槛、做分组拟合/分簇门控后再评估 | 队长决策 + 阶段二 |
 | G-6 | P3 | 阶段二规则侧提醒：激活 split_tone 规则模板或新增 hue/sat 语义键时须过 color_domain 语义审查（A4 排查结论的边界条件） | 阶段二规则线 |
 

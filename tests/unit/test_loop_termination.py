@@ -126,9 +126,11 @@ def test_oscillation_with_target_yields_zero_improvement_and_stops():
 
 def test_oscillation_without_target_counts_as_big_improvement():
     """无 target 时保持旧差分行为：|Δ|=40 视为大改善，末轮走
-    last_iteration（对照，证明度量差异来自目标距）。"""
+    last_iteration（对照，证明度量差异来自目标距）。
+    jnd_threshold=None：本测针对轮数上限语义，关掉感知收敛早停
+    （静态预览在第 3 轮会被 perceptual_convergence 抢先终止）。"""
     measurer = _SequenceMeasurer([90.0, 130.0, 90.0])
-    result = _make_loop(measurer=measurer).run(
+    result = _make_loop(measurer=measurer, jnd_threshold=None).run(
         "osc_notarget", image_rgb=_dark_image())
 
     last = _decide_events(result)[-1]

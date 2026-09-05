@@ -13,6 +13,13 @@
 参数:
   enabled   启用 (默认 False, 见下; 无数据时自动直通)
   strength  强度 0..1 (0=不套, 1=完整效果; 线性混合到恒等)
+  color_domain  "hsv"(缺省, DCP HSM 的 HSV 三线性链, 行为不变) | "oklch"
+                (OKLCh 域连续形变, core.huesat_oklch; t17 点云接线)。
+                use_dng_huesat_path (DNG SDK 基准复刻) 优先级更高, 不受本参数
+                影响 —— oklch 分派只替代常规 gamma 分支。
+  oklch_points_file  点云 JSON 路径; 空 (缺省) = 按 DCP 名自动推导
+                configs/color/hsm_oklch_<slug>.json (slug = 名字非字母数字
+                转下划线), 文件不存在 → 回退 hsv 链并告警一次。
   warm_highlight_sat  局部暖色高光饱和 (sat_scale, 1.0=关; >1 增强, 默认 1.0)
                       —— 问题清单 A1: 烟花/暖灯橙黄局部补饱和, 不写死全局
                       HueSatMap (5236 高光锚点安全)。
@@ -26,6 +33,8 @@
 """
 from __future__ import annotations
 
+import pathlib
+
 import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
@@ -33,6 +42,44 @@ from ..pipeline.graph import DOMAIN_LINEAR_RGB
 from ..core.huesat import (apply_hue_sat_map, apply_look_table,
                      apply_hue_sat_map_prophoto, apply_look_table_prophoto,
                      apply_local_warm_sat, get_hue_sat_table, get_look_table)
+from ..core.huesat_oklch import OklchDeform, apply_oklch_deform,     is_identity_deform, load_oklch_deform
+
+# oklch 点云 spec 缓存 (路径 → OklchDeform; 栅格化按内容哈希进程内复用)
+_OKLCH_SPEC_CACHE: dict = {}
+_OKLCH_MISSING_WARNED: set = set()
+
+
+def _resolve_oklch_spec(prof, file_param: str | None) -> OklchDeform | None:
+    """color_domain=oklch 的点云解析: 显式路径 → 按 DCP 名推导缺省路径;
+    文件缺失/非法 → None (回退 hsv 链, 每路径只告警一次)。"""
+    import re as _re
+    candidates: list[str] = []
+    if file_param:
+        candidates.append(str(file_param))
+    name = str(getattr(prof, "name", "") or "")
+    if name:
+        stem = _re.sub(r"\.[a-z]+$", "", name, flags=_re.I)
+        slug = _re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")
+        candidates.append(str(
+            pathlib.Path(__file__).resolve().parents[3] / "configs" / "color"
+            / f"hsm_oklch_{slug}.json"))
+    from ..core.calibration_store import load_json
+    for cand in candidates:
+        p = pathlib.Path(cand)
+        if not p.is_file():
+            continue
+        spec = _OKLCH_SPEC_CACHE.get(cand)
+        if spec is None:
+            spec = load_oklch_deform(p)
+            _OKLCH_SPEC_CACHE[cand] = spec
+        return spec
+    if candidates and candidates[0] not in _OKLCH_MISSING_WARNED:
+        _OKLCH_MISSING_WARNED.add(candidates[0])
+        import logging
+        logging.getLogger(__name__).warning(
+            "[huesat] color_domain=oklch 但点云文件不存在: %s (回退 hsv 链)",
+            candidates[0])
+    return None
 
 
 @register_stage("huesat", order=25,
@@ -49,10 +96,13 @@ class HueSatStage(Stage):
         "warm_sat_hue_halfwidth": {"type": "float", "min": 1.0, "max": 90.0},
         "warm_sat_val_min": {"type": "float", "min": 0.0, "max": 1.0},
         "warm_sat_coverage_max": {"type": "float", "min": 0.0, "max": 1.0},
+        "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
+        "oklch_points_file": {"type": "str"},
     }
 
     def default_params(self):
-        return {"enabled": False, "strength": 1.0}
+        return {"enabled": False, "strength": 1.0, "color_domain": "hsv",
+                "oklch_points_file": ""}
 
     def wants(self, ctx: StageContext) -> bool:
         prof = ctx.prof
@@ -62,9 +112,23 @@ class HueSatStage(Stage):
             return False
         if prof is None:
             return False
+        if self._oklch_domain(ctx, prof):
+            spec = _resolve_oklch_spec(prof, self.p(ctx, "oklch_points_file",
+                                                    None))
+            return spec is not None and not is_identity_deform(spec)
         hs_table, _, _ = get_hue_sat_table(prof)
         lt_table, _, _ = get_look_table(prof)
         return hs_table is not None or lt_table is not None
+
+    def _oklch_domain(self, ctx: StageContext, prof) -> bool:
+        """color_domain=oklch 且非 DNG 基准路径 (该路径为相机基准复刻,
+        不受 color_domain 影响)。非法值 raise (与 hsl Stage 同口径)。"""
+        domain = str(self.p(ctx, "color_domain", "hsv")).strip().lower()
+        if domain not in ("hsv", "oklch"):
+            raise ValueError(
+                f"huesat color_domain 需为 'hsv'|'oklch' (实际 {domain!r})")
+        return domain == "oklch" and not bool(
+            ctx.state.get("use_dng_huesat_path", False))
 
     def process(self, ctx: StageContext) -> None:
         strength = float(self.p(ctx, "strength"))
@@ -73,6 +137,12 @@ class HueSatStage(Stage):
         cam_raw = ctx.state.get("cam_raw", ctx.state.get("cam_wb"))
         has_fm = bool(getattr(ctx.prof, "forward_matrix1", None))
         use_dng_path = bool(ctx.state.get("use_dng_huesat_path", False))
+        oklch_branch = (self._oklch_domain(ctx, ctx.prof)
+                        and ctx.prof is not None)
+        oklch_spec = (_resolve_oklch_spec(ctx.prof, self.p(
+            ctx, "oklch_points_file", None)) if oklch_branch else None)
+        if oklch_branch and oklch_spec is None:
+            oklch_branch = False      # 点云缺失已告警, 回退 hsv 链
         if (use_dng_path and cam_raw is not None and ctx.prof is not None
                 and has_fm):
             # DNG SDK 同源应用域: 未乘 WB 的相机 RGB → ForwardMatrix ProPhoto。
@@ -93,6 +163,13 @@ class HueSatStage(Stage):
             if bool(ctx.state.get("dng_apply_tone")) and tone_table is not None:
                 pp = apply_rgb_tone(pp, tone_table)
             img = linear_prophoto_to_srgb(pp)
+        elif (oklch_branch and bool(self.p(ctx, "enabled"))):
+            # OKLCh 域连续形变 (t17 点云): 输入线性 sRGB → gamma 域 →
+            # OKLCh 形变 → gamma → 解码回线性 (stage 域接口不变)。
+            from ..core.tone import srgb_decode, srgb_encode
+            gamma = srgb_encode(np.clip(np.asarray(img, np.float64), 0.0, None))
+            deformed = apply_oklch_deform(gamma, oklch_spec, strength=strength)
+            img = srgb_decode(deformed)
         elif bool(self.p(ctx, "enabled")) and ctx.prof is not None:
             img = apply_hue_sat_map(img, ctx.prof, strength=strength)
             img = apply_look_table(img, ctx.prof, strength=strength)

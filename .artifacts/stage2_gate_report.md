@@ -65,10 +65,12 @@
 新表入库（替换正式 configs）当日，tester 须执行：
 
 ```bash
-# G-4 已知坑（stage1_qa_verdict.md #G-4）：--out 默认值是历史路径
-# tests/goldens/gate，必须显式传 tests/regression/goldens/gate + PYTHONPATH=src
-PYTHONPATH=src python -m pixo.render.tools.gate_golden \
-    --out tests/regression/goldens/gate
+# 合成金样本入口是 tests/regression/goldens/generate_gate_goldens.py（注意:
+# render/tools/gate_golden.py 是另一套 RAW golden 生成器, 条目结构互不兼容,
+# 勿混用——本报告初版此处误写为 tools 入口）。G-4 已修复（默认路径改正确 +
+# src 路径自举）, 现行命令无需 PYTHONPATH 与显式 --out:
+python tests/regression/goldens/generate_gate_goldens.py --check
+python tests/regression/goldens/generate_gate_goldens.py
 # 之后走 reviewer 人工审查入库（阶段一 §112 行流程），再跑全量 pytest
 python -m pytest tests/unit tests/regression tests/integration
 ```

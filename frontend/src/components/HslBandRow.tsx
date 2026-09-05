@@ -9,6 +9,8 @@
  * （手风琴，展开态由父面板持有）。5 滑杆全复用 SliderParam，量纲/文案照抄 §3.3/§8：
  * hue_shift UI 区间维持 ±30（用户肌肉记忆/防误触大偏移）；后端硬界 ±180
  * （core/hsl.py _HS_MIN/_HS_MAX）不放开 UI，仅此注释存档。
+ * 色度滑杆接 §4.4 非线性传递（增强方向幂 γ=1.6，提交值仍是原始 saturation）；
+ * 提交契约不变：buildBandFieldPatch 整体数组替换 + 当前域盖戳。
  */
 
 import { Group, Text } from '@mantine/core';
@@ -16,7 +18,7 @@ import { SliderParam } from './SliderParam';
 import { useAppStore } from '../store/useAppStore';
 import type { ColorDomain, HslBand, ParamPatch } from '../types';
 import { buildBandFieldPatch, readHslBands } from './hslBands';
-import { BAND_META_BY_NAME, hsvRefText, type BandMeta } from '../theme/oklchScale';
+import { BAND_META_BY_NAME, chromaSliderPosToValue, chromaValueToSliderPos, hsvRefText, type BandMeta } from '../theme/oklchScale';
 
 interface HslBandRowProps {
   band: HslBand;
@@ -158,6 +160,10 @@ export function HslBandRow({ band, domain, expanded, onToggle }: HslBandRowProps
             unit="%"
             onPatch={patch}
             buildPatch={(v) => bandField('saturation', v)}
+            /* 非线性传递（§4.4）：增强方向幂映射——行程 3/4 处 ≈ +33（常用增强区）
+               低值细调展开，右端 +100 极限保留；调低方向精确线性。参数域提交原值。 */
+            toSlider={chromaValueToSliderPos}
+            fromSlider={chromaSliderPosToValue}
             marks={[
               { value: -100 },
               { value: -50 },
@@ -165,8 +171,8 @@ export function HslBandRow({ band, domain, expanded, onToggle }: HslBandRowProps
               { value: 50 },
               { value: 100 },
             ]}
-            helper="C=染色强度。增强趋近色域边界时平滑收敛（软限幅），无 HSV 模式的断层/平台"
-            info="照片常见色 C≈0.06–0.18；C<0.02 视为中性灰，自动保护不动。软限幅仅在增强方向生效，调低色度精确线性"
+            helper="C=染色强度。增强方向幂传递：行程中段≈+33 落常用区，细调区加宽；调低精确线性，趋近边界软限幅平滑收敛"
+            info="照片常见色 C≈0.06–0.18；C<0.02 视为中性灰，自动保护不动。增强方向按 C 域幂曲线（γ=1.6）传递：行程中段≈+33（常用增强），右端保留 +100 极端；软限幅仅在增强方向生效，调低色度精确线性"
             testId={`band-${band.name}-chroma`}
           />
           <SliderParam

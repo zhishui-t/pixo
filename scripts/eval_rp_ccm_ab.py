@@ -30,84 +30,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fit_rp_ccm import (DCP, SAMPLE_LIN_HI, SAMPLE_LIN_LO, aligned_pair,
                         camera_slug, iter_corpus, sample_linear_pairs)
+from pixo.pipeline.perceptual import delta_e_2000, linear_srgb_to_lab
 from pixo.render.api import Renderer
-from pixo.render.core.calibration import SRGB_TO_XYZ_D65
 from pixo.render.core.rp_ccm import apply_rp_ccm, load_rp_ccm
-
-# sRGB(D65) 线性 → XYZ(D65) (行向量语义) 与 Lab 参考 白
-_M_SRGB_TO_XYZ = np.asarray(SRGB_TO_XYZ_D65, dtype=np.float64)
-_D65 = np.array([0.95047, 1.00000, 1.08883], dtype=np.float64)
-_EPS_K = 216.0 / 24389.0    # CIE Lab 常数 (6/29)³
-_KAPPA = 24389.0 / 27.0     # CIE Lab 常数
-
-
-# ---------------------------------------------------------------------------
-# 线性 sRGB → Lab(D65) 与 CIEDE2000 (纯 numpy)
-# ---------------------------------------------------------------------------
-
-def linear_srgb_to_lab(lin: np.ndarray) -> np.ndarray:
-    """线性 sRGB (...,3) → CIELAB (D65 参考白)。出口 float64。"""
-    xyz = np.asarray(lin, dtype=np.float64) @ _M_SRGB_TO_XYZ.T / _D65
-    f = np.where(xyz > _EPS_K, np.cbrt(xyz), (_KAPPA * xyz + 16.0) / 116.0)
-    fx, fy, fz = f[..., 0], f[..., 1], f[..., 2]
-    return np.stack([116.0 * fy - 16.0,
-                     500.0 * (fx - fy),
-                     200.0 * (fy - fz)], axis=-1)
-
-
-def delta_e_2000(lab1: np.ndarray, lab2: np.ndarray) -> np.ndarray:
-    """CIEDE2000 色差 (Sharma, Wu & Dalal 2005, DST 权重沿用公式原论文)。
-
-    lab1/lab2: (...,3) 同形; 返回 (...,) ΔE00。实现逐项对齐 Sharma 2005
-    式 (1)-(15) (含 G/apa/T/RT 项), 角度量全部以度计算后转弧度进三角函数。
-    """
-    l1, a1, b1 = np.asarray(lab1, np.float64)[..., 0], \
-                 np.asarray(lab1, np.float64)[..., 1], \
-                 np.asarray(lab1, np.float64)[..., 2]
-    l2, a2, b2 = np.asarray(lab2, np.float64)[..., 0], \
-                 np.asarray(lab2, np.float64)[..., 1], \
-                 np.asarray(lab2, np.float64)[..., 2]
-    c1 = np.hypot(a1, b1)
-    c2 = np.hypot(a2, b2)
-    cbar = 0.5 * (c1 + c2)
-    cbar7 = cbar ** 7
-    g = 0.5 * (1.0 - np.sqrt(cbar7 / (cbar7 + 25.0 ** 7)))
-    a1p, a2p = (1.0 + g) * a1, (1.0 + g) * a2
-    c1p = np.hypot(a1p, b1)
-    c2p = np.hypot(a2p, b2)
-    h1p = np.degrees(np.arctan2(b1, a1p)) % 360.0
-    h2p = np.degrees(np.arctan2(b2, a2p)) % 360.0
-    h1p = np.where((a1p == 0.0) & (b1 == 0.0), 0.0, h1p)
-    h2p = np.where((a2p == 0.0) & (b2 == 0.0), 0.0, h2p)
-
-    dlp = l2 - l1
-    dcp = c2p - c1p
-    dh = h2p - h1p
-    dh = np.where(c1p * c2p == 0.0, 0.0,
-                  np.where(np.abs(dh) <= 180.0, dh,
-                           np.where(dh > 180.0, dh - 360.0, dh + 360.0)))
-    dhp = 2.0 * np.sqrt(c1p * c2p) * np.sin(np.radians(dh) / 2.0)
-
-    lbarp = 0.5 * (l1 + l2)
-    cbarp = 0.5 * (c1p + c2p)
-    hsum = h1p + h2p
-    hbarp = np.where(c1p * c2p == 0.0, hsum,
-                     np.where(np.abs(h1p - h2p) <= 180.0, 0.5 * hsum,
-                              np.where(hsum < 360.0, 0.5 * (hsum + 360.0),
-                                       0.5 * (hsum - 360.0))))
-    t = (1.0 - 0.17 * np.cos(np.radians(hbarp - 30.0))
-         + 0.24 * np.cos(np.radians(2.0 * hbarp))
-         + 0.32 * np.cos(np.radians(3.0 * hbarp + 6.0))
-         - 0.20 * np.cos(np.radians(4.0 * hbarp - 63.0)))
-    dtheta = 30.0 * np.exp(-(((hbarp - 275.0) / 25.0) ** 2))
-    cbarp7 = cbarp ** 7
-    rc = 2.0 * np.sqrt(cbarp7 / (cbarp7 + 25.0 ** 7))
-    sl = 1.0 + 0.015 * (lbarp - 50.0) ** 2 / np.sqrt(20.0 + (lbarp - 50.0) ** 2)
-    sc = 1.0 + 0.045 * cbarp
-    sh = 1.0 + 0.015 * cbarp * t
-    rt = -np.sin(np.radians(2.0 * dtheta)) * rc
-    return np.sqrt((dlp / sl) ** 2 + (dcp / sc) ** 2 + (dhp / sh) ** 2
-                   + rt * (dcp / sc) * (dhp / sh))
 
 
 # Sharma, Wu & Dalal 2005 补充数据集公开校验对 (Lab1, Lab2, 期望 ΔE00)

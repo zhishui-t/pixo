@@ -168,6 +168,6 @@
       "sha256": "5a95845cf64cca536cb6d2591d48b6e0e21144d557abcdb82fa0086c07bf4039"
     }
   },
-  "generator": "tests/goldens/generate_gate_goldens.py",
+  "generator": "tests/regression/goldens/generate_gate_goldens.py",
   "reviewer": "t38 tester-1 (2026-09-04 标定敏感 case 批次: +exposure_cal_auto/+warmth_cal_auto, 关闭 t36 §5 门禁缺口——gate 金样本对四个标定表零敏感; 两 case 分别触达正式曝光表 [ExposureStage._auto_ev 完整链: med 探针→med 主键+wb_B 邻域二次插值] 与正式 warmth 分桶曲线 [_load_warm_cal→apply_warmth 曲线分支], 换表敏感性实证: calib_prev 旧表 vs 现行新表输出 hash 均不同 [exposure 同进程须清 _cached_table 后再验, 生成器独立进程无此问题]; 前置 15 case 重算零漂移 [旧 .npy 字节不变]; manifest 数量守卫 15→17 同步; rp_ccm 运行时未接线 [src 零调用点], 无从触达, 接线后补 case —— 见 .artifacts/gate_calibration_coverage.md)"
 }
