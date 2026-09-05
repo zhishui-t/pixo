@@ -73,6 +73,7 @@ interface AppState {
   setSkinMaskReady: (v: boolean | null) => void;
   setSplitToneDomainReady: (v: boolean | null) => void;
   setProjects: (projects: Project[]) => void;
+  setStyleCards: (cards: StyleCardData[]) => void;
   selectProject: (projectId: string) => void;
   addProject: (name: string) => void;
   selectPhoto: (photoId: string) => void;
@@ -156,7 +157,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   photosByProject: initialPhotoMap,
   activeProjectId: initialProjects[0]?.id ?? '',
   activePhotoId: initialPhotoMap[initialProjects[0]?.id ?? '']?.[0]?.photo_id ?? null,
-  styleCards: fetchStyleCards(),
+  styleCards: [],
   photos: initialPhotoList,
   backend: false,
   sessionId: null,
@@ -199,6 +200,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSkinMaskReady: (v) => set({ skinMaskReady: v }),
   setSplitToneDomainReady: (v) => set({ splitToneDomainReady: v }),
   setProjects: (projects) => set({ projects }),
+  setStyleCards: (cards) => set({ styleCards: cards }),
   selectProject: (projectId) =>
     set((state) => {
       const photos = state.photosByProject[projectId] ?? [];
@@ -383,3 +385,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     })),
 }));
+
+// 风格卡异步接线（t60）：后端 GET /api/styles 优先、离线回退 mock；
+// store 创建即拉取一次（fire-and-forget），成功与否都落到 styleCards。
+void fetchStyleCards().then((cards) => useAppStore.getState().setStyleCards(cards));

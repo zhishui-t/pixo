@@ -13,6 +13,8 @@ import type {
   Photo,
   SessionInfo,
   Source,
+  StyleCardDetail,
+  StyleSummary,
   TimelineInfo,
 } from '../types';
 
@@ -41,21 +43,6 @@ export async function listPhotos(): Promise<Photo[]> {
   return data.photos;
 }
 
-/** GET /api/photos/{photo_id} */
-export async function getPhoto(photoId: string): Promise<Photo> {
-  const data = await request<{ photo: Photo }>(`/api/photos/${photoId}`);
-  return data.photo;
-}
-
-/** POST /api/photos（201） */
-export async function createPhoto(path: string): Promise<Photo> {
-  const data = await request<{ photo: Photo }>('/api/photos', {
-    method: 'POST',
-    body: JSON.stringify({ path }),
-  });
-  return data.photo;
-}
-
 /** POST /api/photos/{photo_id}/sessions（201） */
 export async function createSession(photoId: string): Promise<SessionInfo> {
   const data = await request<{ session: SessionInfo }>(
@@ -77,7 +64,13 @@ export function updateParams(
   });
 }
 
-/** GET /api/sessions/{session_id}/measurements */
+/**
+ * GET /api/sessions/{session_id}/measurements
+ *
+ * 未接线（t61 清理判定：保留）——后端端点在，是"调参反馈环"UI
+ * （参数改动 → 测量指标变化）的既有数据入口；契约稳定，保留封装
+ * 避免届时重写类型。
+ */
 export function getMeasurements(
   sessionId: string,
   gen?: number,
@@ -106,12 +99,36 @@ export async function getExportStatus(taskId: string): Promise<ExportTask> {
   return data.task;
 }
 
-/** GET /api/photos/{photo_id}/timeline */
+/**
+ * GET /api/photos/{photo_id}/timeline
+ *
+ * 未接线（t61 清理判定：保留）——t48 轨迹回放已交付后端数据层
+ * （trace_events + timeline 端点），前端时间线/回放 UI 是明确的
+ * 下一步接线对象。
+ */
 export function getTimeline(photoId: string): Promise<TimelineInfo> {
   return request<TimelineInfo>(`/api/photos/${photoId}/timeline`);
 }
 
-/** GET|POST /api/photos/{photo_id}/decide */
+/** GET /api/styles —— 风格卡列表（降载：style_id + metadata）。 */
+export async function listStyles(): Promise<StyleSummary[]> {
+  const data = await request<{ styles: StyleSummary[] }>('/api/styles');
+  return data.styles;
+}
+
+/** GET /api/styles/{style_id} —— 完整风格卡。 */
+export async function getStyle(styleId: string): Promise<StyleCardDetail> {
+  const data = await request<{ style: StyleCardDetail }>(
+    `/api/styles/${encodeURIComponent(styleId)}`);
+  return data.style;
+}
+
+/**
+ * GET|POST /api/photos/{photo_id}/decide
+ *
+ * 未接线（t61 清理判定：保留）——决策闭环的 HTTP 入口（POST 触发 /
+ * GET 读缓存），t46 影子模式落地后前端触发面更依赖它。
+ */
 export function decidePhoto(photoId: string): Promise<DecideResult> {
   return request<DecideResult>(`/api/photos/${photoId}/decide`, {
     method: 'POST',

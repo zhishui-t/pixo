@@ -50,9 +50,7 @@ _GRID_H = 72
 _GRID_C = 24
 _GRID_L = 24
 _C_HI = 0.37                 # c 轴上界 (点云 max 0.357 + 余量; 像素超界钳边)
-_IDW_K = 8                   # Shepard 近邻数
-_IDW_POWER = 2.0
-_EPS_D2 = 1e-12              # IDW 距离平方正则 (格中心恰在点上 → 直接取值)
+_EPS_D2 = 1e-12              # 距离平方正则 (格中心恰在控制点上 → 直接取值)
 
 
 @dataclass(frozen=True)
@@ -80,11 +78,16 @@ def is_identity_deform(spec: OklchDeform) -> bool:
 
 def rasterize_points(points: np.ndarray, grid: tuple[int, int, int] = (
         _GRID_H, _GRID_C, _GRID_L), c_hi: float = _C_HI,
-        idw_k: int = _IDW_K, idw_power: float = _IDW_POWER) -> np.ndarray:
-    """散点 (n,6) [h,c,l,dh,c_gain,l_gain] → 规则表 (Hb,Cb,Lb,3) (Shepard IDW)。
+        sigma: float | None = None) -> np.ndarray:
+    """散点 (n,6) [h,c,l,dh,c_gain,l_gain] → 规则表 (Hb,Cb,Lb,3)。
 
-    对每个格中心取环距 h + 量纲归一 c/l 的 K 近邻反距离加权 (p=idw_power);
-    格中心恰在控制点上 (d²<eps) 时直接取该点值。纯 numpy 分块, 无 scipy。
+    连续高斯核全点加权 (w = exp(−d²/2σ²), 归一): 插值函数连续可微 ——
+    K 近邻 IDW 的近邻集切换会使插值函数分段跳变, 被运行时三线性重采样
+    放大 (实测粗/细栅格同坐标表值差 ~9.5°, 故弃用)。带宽 σ 缺省按点密度
+    自动标定 (归一距离域体积/n 的立方根 ≈ 平均点间距); 距离的 h 轴用环距
+    (弧度), c/l 轴按跨度归一量纲。格中心恰在控制点上 (d²<eps) 直接取该
+    点值; ≥10σ 处核权重浮点下溢为 0, 恒等区保持严格恒等。纯 numpy 分块,
+    无 scipy。
     """
     hb, cb, lb = grid
     pts = np.asarray(points, dtype=np.float64)
@@ -99,6 +102,10 @@ def rasterize_points(points: np.ndarray, grid: tuple[int, int, int] = (
     pc = pts[:, 1] * wc
     pl = pts[:, 2]
     pv = pts[:, 3:6]               # (n,3) dh/c_gain/l_gain
+    if sigma is None:
+        domain_vol = 2.0 * np.pi * 1.0 * 1.0          # h(弧度)×c(归一)×l
+        sigma = float((domain_vol / max(pts.shape[0], 1)) ** (1.0 / 3.0))
+    inv_2s2 = 1.0 / (2.0 * sigma * sigma)
 
     out = np.empty((centers.shape[0], 3), dtype=np.float64)
     block = 4096
@@ -111,23 +118,21 @@ def rasterize_points(points: np.ndarray, grid: tuple[int, int, int] = (
         dc = (ctr[:, 1][:, None] - pc[None, :])
         dl = (ctr[:, 2][:, None] - pl[None, :])
         d2 = dh_ring * dh_ring + dc * dc + dl * dl
-        k = min(idw_k, pts.shape[0])
-        idx = np.argpartition(d2, k - 1, axis=1)[:, :k]
-        dk2 = np.take_along_axis(d2, idx, axis=1)
-        vv = pv[idx]                                   # (b,k,3)
-        exact = dk2[:, 0] < _EPS_D2
-        w = 1.0 / np.maximum(dk2, _EPS_D2) ** (idw_power / 2.0)
-        num = (vv * w[..., None]).sum(axis=1)
+        w = np.exp(-d2 * inv_2s2)
         den = w.sum(axis=1)
-        out[lo:lo + block] = np.where(exact[:, None], vv[:, 0, :],
+        num = (pv[None, :, :] * w[..., None]).sum(axis=1)
+        exact = d2.min(axis=1) < _EPS_D2
+        nearest = np.argmin(d2, axis=1)
+        out[lo:lo + block] = np.where(exact[:, None], pv[nearest],
                                       num / den[:, None])
     return out.reshape(hb, cb, lb, 3)
 
 
 def load_oklch_deform(path: str | Path,
-                      grid: tuple[int, int, int] = (_GRID_H, _GRID_C, _GRID_L)
-                      ) -> OklchDeform:
-    """点云 JSON → OklchDeform (栅格化按点云内容哈希缓存, 进程内复用)。"""
+                      grid: tuple[int, int, int] = (_GRID_H, _GRID_C, _GRID_L),
+                      sigma: float | None = None) -> OklchDeform:
+    """点云 JSON → OklchDeform (栅格化按点云内容哈希缓存, 进程内复用;
+    sigma 为核带宽, None=按点密度自动)。"""
     path = Path(path)
     raw = path.read_text(encoding="utf-8")
     doc = json.loads(raw)
@@ -139,10 +144,10 @@ def load_oklch_deform(path: str | Path,
     arr = np.asarray([[p["h"], p["c"], p["l"], p["dh"], p["c_gain"],
                        p["l_gain"]] for p in pts], dtype=np.float64)
     key = hashlib.sha1(
-        (raw + json.dumps(list(grid))).encode("utf-8")).hexdigest()
+        (raw + json.dumps([list(grid), sigma])).encode("utf-8")).hexdigest()
     cached = _RASTER_CACHE.get(key)
     if cached is None:
-        cached = rasterize_points(arr, grid)
+        cached = rasterize_points(arr, grid, sigma=sigma)
         _RASTER_CACHE[key] = cached
     eps = doc.get("identity_eps") or {}
     return OklchDeform(table=cached,

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Badge, Button, Card, Divider, Group, ScrollArea, Stack, Text, TextInput } from '@mantine/core';
-import { Check, MessageCircle, Send, Sparkles, Wand2, X } from 'lucide-react';
+import { Check, ChevronDown, MessageCircle, Send, Sparkles, Wand2, X } from 'lucide-react';
+import { fetchStyleDetail } from '../api';
+import type { StyleCardDetail } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { DESIGN_TOKENS as T } from '../theme/tokens';
 
@@ -14,6 +16,27 @@ const accentA = (alpha: number): string => hexToRgba(T.accent, alpha);
 export function StyleAiPanel() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const styleCards = useAppStore((s) => s.styleCards);
+
+  // t60 接线：点击卡选中 → 拉完整卡（GET /api/styles/{id}）展开详情；
+  // 离线（后端不可达）时详情显示占位说明。
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<StyleCardDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const toggleCard = (styleId: string) => {
+    if (selectedId === styleId) {
+      setSelectedId(null);
+      setDetail(null);
+      return;
+    }
+    setSelectedId(styleId);
+    setDetail(null);
+    setDetailLoading(true);
+    void fetchStyleDetail(styleId).then((card) => {
+      setDetail(card);
+      setDetailLoading(false);
+    });
+  };
 
   // t86：按胶片 family 分组浏览（缺 family 归入"其他"）。
   const families = Array.from(
@@ -58,22 +81,62 @@ export function StyleAiPanel() {
               <Text size="xs" fw={700} c="dark.2" style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 {family}
               </Text>
-              {cards.map((card) => (
-                <Card key={card.styleId} radius="md" padding="sm" style={{ background: `linear-gradient(135deg, ${accentA(0.10)}, ${T.overlay})`, border: `1px solid ${accentA(0.18)}` }}>
-                  <Group justify="space-between">
-                    <Text fw={600}>{card.name}</Text>
-                    <Badge variant="light" color="accent">风格</Badge>
-                  </Group>
-                  <Text size="xs" c="dark.2" mt={4}>{card.description}</Text>
-                  <Group gap={4} mt={6}>
-                    {Object.entries(card.tags).map(([group, tags]) => (
-                      <Badge key={group} variant="outline" size="xs" color="gray">{group}: {tags.join('/')}</Badge>
-                    ))}
-                  </Group>
-                </Card>
-              ))}
+              {cards.map((card) => {
+                const selected = card.styleId === selectedId;
+                return (
+                  <Card
+                    key={card.styleId}
+                    radius="md"
+                    padding="sm"
+                    onClick={() => toggleCard(card.styleId)}
+                    style={{
+                      cursor: 'pointer',
+                      background: `linear-gradient(135deg, ${accentA(selected ? 0.22 : 0.10)}, ${T.overlay})`,
+                      border: `1px solid ${accentA(selected ? 0.45 : 0.18)}`,
+                    }}
+                  >
+                    <Group justify="space-between" wrap="nowrap">
+                      <Text fw={600}>{card.name}</Text>
+                      <Group gap={4} wrap="nowrap">
+                        {card.year != null && (
+                          <Badge variant="light" color="gray" size="xs">{card.year}</Badge>
+                        )}
+                        <Badge variant="light" color="accent">风格</Badge>
+                        <ChevronDown
+                          size={14}
+                          color={T.accent}
+                          style={{ transform: selected ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
+                        />
+                      </Group>
+                    </Group>
+                    <Text size="xs" c="dark.2" mt={4}>{card.description}</Text>
+                    <Group gap={4} mt={6}>
+                      {card.tags.map((tag) => (
+                        <Badge key={tag} variant="outline" size="xs" color="gray">{tag}</Badge>
+                      ))}
+                    </Group>
+                    {selected && (
+                      <Stack gap={4} mt="sm">
+                        {detailLoading && <Text size="xs" c="dark.3">加载完整卡…</Text>}
+                        {!detailLoading && !detail && (
+                          <Text size="xs" c="dark.3">离线模式：启动后端查看完整卡（stages/params）。</Text>
+                        )}
+                        {detail && (
+                          <>
+                            {(detail.scenes?.length ?? 0) > 0 && (
+                              <Text size="xs" c="dark.2">适用场景：{detail.scenes?.join(' / ')}</Text>
+                            )}
+                            <Text size="xs" c="dark.2">渲染链（{detail.stages.length} 段）：{detail.stages.join(' → ')}</Text>
+                          </>
+                        )}
+                      </Stack>
+                    )}
+                  </Card>
+                );
+              })}
             </Stack>
           ))}
+          {styleCards.length === 0 && <div className="empty-note">风格卡加载中…（后端不可达时显示离线占位）</div>}
         </Stack>
       </Card>
 

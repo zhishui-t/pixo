@@ -265,6 +265,30 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
             "cached": True,
         }
 
+    @app.get("/api/styles")
+    def api_list_styles() -> dict[str, Any]:
+        """风格卡列表（降载）：style_id + metadata，不含 stages/params 大头。
+
+        卡库为静态配置（configs/styles/films），from_films_dir 逐文件解析
+        耗时可忽略，不做缓存；metadata 缺省已由加载器补齐（family 必有落点）。
+        """
+        from pixo.know.cards import StyleCard
+
+        return {"styles": [
+            {"style_id": c["style_id"], "metadata": c["metadata"]}
+            for c in StyleCard.from_films_dir()
+        ]}
+
+    @app.get("/api/styles/{style_id}")
+    def api_get_style(style_id: str) -> dict[str, Any]:
+        """完整风格卡（stages/params/output + metadata）。"""
+        from pixo.know.cards import StyleCard
+
+        for card in StyleCard.from_films_dir():
+            if card["style_id"] == style_id:
+                return {"style": card}
+        raise _not_found(f"风格卡不存在: {style_id}")
+
     @app.get("/api/health")
     def api_health() -> dict[str, Any]:
         """服务健康检查。"""

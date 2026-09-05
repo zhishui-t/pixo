@@ -6,8 +6,9 @@
   - 带中心与 core.hsl_oklch.DEFAULT_BANDS_OKLCH 一致（设计 §2.2 单一来源）;
   - HslStage / SplitToneStage 以卡参数实际应用：oklch 域出图有效、且与
     同数值 hsv 域出图不同（分派语义可见）;
-  - 存量 24 卡零迁移不变量：无 color_domain 键、hsl bands 无 domain 键
-    （盲点 A1 的"逐位不变"承诺在卡库层面的守卫）。
+  - 存量 23 卡零迁移不变量：无 color_domain 键、hsl bands 无 domain 键
+    （盲点 A1 的"逐位不变"承诺在卡库层面的守卫；t61 清理历史双卡
+    film_portra_400 后 24→23）。
 """
 from __future__ import annotations
 
@@ -92,8 +93,9 @@ def test_demo_band_centers_match_default_bands_oklch():
 def test_legacy_cards_untouched_no_domain_keys():
     """存量卡零迁移（A1）：无 color_domain 键、bands 无 domain 键。
 
-    film_portra_400 为历史遗留双卡（见 docs/PROJECT_GRAPH_FRONTEND.md），
-    本任务不触碰；此断言同时守护它不被误改。
+    历史遗留双卡 film_portra_400 已于 t61 清理（被 kodak_portra_400
+    取代，见 docs/PROJECT_GRAPH_FRONTEND.md）；本断言守护剩余存量卡
+    不被误改。
     """
     for card in StyleCard.from_films_dir(FILMS):
         if card["style_id"] in DEMO_IDS:

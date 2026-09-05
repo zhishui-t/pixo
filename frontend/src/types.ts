@@ -263,10 +263,37 @@ export interface StyleCardData {
   description: string;
   /** 胶片卡分组键（品牌/系列，t86）；缺省归入"其他"。 */
   family?: string;
-  tags: Record<string, string[]>;
+  /** 自由标签（扁平数组——后端 films 卡 metadata.tags 无分组语义，t60 接线对齐）。 */
+  tags: string[];
+  /** 适用场景（metadata.scenes）。 */
+  scenes?: string[];
+  year?: number | null;
   colorFingerprint?: Record<string, unknown>;
   toneFingerprint?: Record<string, unknown>;
   recommendedAdjustments?: Record<string, unknown>;
+}
+
+/** 后端 films 卡 metadata 节（from_films_dir 已补齐缺省，family 必有落点）。 */
+export interface FilmCardMetadata {
+  family: string;
+  label: string;
+  tags: string[];
+  scenes: string[];
+  character: string;
+  year?: number | null;
+}
+
+/** GET /api/styles 列表项（降载：style_id + metadata，不含 stages/params）。 */
+export interface StyleSummary {
+  style_id: string;
+  metadata: FilmCardMetadata;
+}
+
+/** GET /api/styles/{id} 完整卡（渲染卡三键 + metadata）。 */
+export interface StyleCardDetail extends StyleCardData {
+  stages: string[];
+  params: Record<string, Record<string, unknown>>;
+  output: Record<string, unknown>;
 }
 
 export interface AgentSuggestion {

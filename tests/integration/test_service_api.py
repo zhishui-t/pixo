@@ -289,3 +289,41 @@ def test_export_flow(client: TestClient, raw_file: Path, monkeypatch):
 
     assert task["status"] == "completed"
     assert Path(task["output_path"]).exists()
+
+
+# ---------------------------------------------------------------------------
+# 风格卡端点（t60 接线）
+# ---------------------------------------------------------------------------
+
+def test_list_styles_downloaded_payload(client: TestClient):
+    """GET /api/styles：降载列表（style_id + metadata，不含 stages/params）。"""
+    resp = client.get("/api/styles")
+    assert resp.status_code == 200
+    styles = resp.json()["styles"]
+    assert styles, "卡库为空"
+    ids = {s["style_id"] for s in styles}
+    assert "kodak_portra_400" in ids
+    assert "film_portra_400" not in ids  # t61 清理历史双卡
+    for item in styles:
+        # 降载契约：列表项只有两键，且 metadata 缺省字段由加载器补齐
+        assert set(item.keys()) == {"style_id", "metadata"}
+        meta = item["metadata"]
+        assert meta["family"] and meta["label"]
+        assert isinstance(meta["tags"], list) and isinstance(meta["scenes"], list)
+
+
+def test_get_style_detail_full_card(client: TestClient):
+    """GET /api/styles/{id}：完整卡（渲染三键 + metadata）。"""
+    resp = client.get("/api/styles/kodak_portra_400")
+    assert resp.status_code == 200
+    card = resp.json()["style"]
+    assert card["style_id"] == "kodak_portra_400"
+    assert card["stages"], "完整卡必须带渲染链"
+    assert isinstance(card["params"], dict) and card["params"]
+    assert "metadata" in card
+
+
+def test_get_style_not_found(client: TestClient):
+    """GET /api/styles/{id}：未知卡 404。"""
+    resp = client.get("/api/styles/no_such_card")
+    assert resp.status_code == 404

@@ -165,13 +165,13 @@ character/year/grain_proxy）。`pipeline_from_config` 只读前三键，metadat
 | — | — | clarity | 12 |
 | — | — | split_tone | 12 |
 
-**管线形态**（按 stages 数）：12 段全管线 ×12（Agfa 1 / CineStill 1 / Kodak 10），
-8 段精简管线 ×11（Fuji 系 10 + film_portra_400），7 段 ×1（film_pro_400h，唯一**无
-skin** 的卡）。
+**管线形态**（按 stages 数，t61 清理历史双卡 film_portra_400 后）：12 段全管线
+×12（Agfa 1 / CineStill 1 / Kodak 10），8 段精简管线 ×10（Fuji 系），7 段 ×1
+（film_pro_400h，唯一**无 skin** 的卡）。
 
-⚠️ 例外备注：films/README 约定"Kodak 走 12 段、Fuji 走 8 段"，但早期卡
-`film_portra_400.json`（family=Kodak）实为 8 段无 hsl——它是初批卡，后被 12 段的
-`kodak_portra_400.json` 取代但未删除，属历史遗留双卡并存。
+~~⚠️ 例外备注~~（已清理，t61）：早期卡 `film_portra_400.json`（family=Kodak，
+8 段无 hsl）系初批卡，被 12 段的 `kodak_portra_400.json` 取代后曾长期双卡并存，
+t61 已删除（守卫测试 test_film_cards_oklch 存量卡计数 24→23 同步）。
 
 **全卡明细**：
 
@@ -179,7 +179,6 @@ skin** 的卡）。
 |---|---|---|---|---|
 | agfa_vista_200 | Agfa | Vista 200 | 12 | 全 |
 | cinestill_50d | CineStill | 50D | 12 | 全 |
-| film_portra_400 | Kodak | Portra 400（早期） | 8 | 精简 |
 | film_pro_400h | Fuji | Pro 400H（早期） | 7 | 精简·无 skin |
 | fujifilm_acros_100 | Fuji | Acros 100 | 8 | 精简（黑白近似：saturation=-1） |
 | fujifilm_astia | Fuji | Astia 100F | 8 | 精简 |

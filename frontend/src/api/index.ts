@@ -6,20 +6,21 @@ import type {
   Project,
   Source,
   StyleCardData,
+  StyleCardDetail,
 } from '../types';
 import {
-  createPhoto as createPhotoRemote,
   createSession as createSessionRemote,
   getExportStatus as getExportStatusRemote,
   getHealth as getHealthRemote,
+  getStyle as getStyleRemote,
   listPhotos as listPhotosRemote,
+  listStyles as listStylesRemote,
   originalUrl as remoteOriginalUrl,
   updateParams as updateParamsRemote,
   previewUrl as remotePreviewUrl,
   submitExport as submitExportRemote,
 } from './client';
 import {
-  mockCreatePhoto,
   mockGetPhotos,
   mockGetProjects,
   mockGetStyleCards,
@@ -82,17 +83,6 @@ export async function health(): Promise<HealthInfo & { backend: boolean }> {
       backend: false,
     };
   }
-}
-
-export async function createPhotoRaw(path: string): Promise<Photo> {
-  if (backendAvailable !== false) {
-    try {
-      return await createPhotoRemote(path);
-    } catch {
-      backendAvailable = false;
-    }
-  }
-  return mockCreatePhoto(path);
 }
 
 /** 为照片创建真实会话（后端可用时）；返回 session_id。 */
@@ -195,6 +185,31 @@ export function fetchProjects(): Project[] {
   return mockGetProjects();
 }
 
-export function fetchStyleCards(): StyleCardData[] {
-  return mockGetStyleCards();
+/** 风格卡列表（t60 接线）：后端 GET /api/styles 优先，离线回退 mock。 */
+export async function fetchStyleCards(): Promise<StyleCardData[]> {
+  try {
+    const styles = await listStylesRemote();
+    backendAvailable = true;
+    return styles.map((s) => ({
+      styleId: s.style_id,
+      name: s.metadata.label,
+      description: s.metadata.character,
+      family: s.metadata.family,
+      tags: s.metadata.tags,
+      scenes: s.metadata.scenes,
+      year: s.metadata.year ?? null,
+    }));
+  } catch {
+    backendAvailable = false;
+    return mockGetStyleCards();
+  }
+}
+
+/** 完整风格卡（t60 接线）：后端在线时返回详情；离线（无后端）返回 null。 */
+export async function fetchStyleDetail(styleId: string): Promise<StyleCardDetail | null> {
+  try {
+    return await getStyleRemote(styleId);
+  } catch {
+    return null;
+  }
 }

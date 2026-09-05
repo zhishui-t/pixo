@@ -101,41 +101,30 @@ const mockProjects: Project[] = [
   { id: 'prj2', name: '城市夜景', createdAt: '2026-08-20', photoIds: ['p4', 'p5', 'p6'] },
 ];
 
+/** 离线占位风格卡（tags 扁平，与后端 films 卡 metadata 口径一致，t60）。 */
 const mockStyleCards: StyleCardData[] = [
   {
     styleId: 'kodak_portra_400',
     name: 'Kodak Portra 400',
     family: 'Kodak',
-    description: '柔和低反差、肤色暖粉、高光软滚降的经典胶片感。',
-    tags: { scene: ['portrait', 'wedding'], light: ['golden_hour'] },
-    colorFingerprint: { skin_lab_target: { a: 18, b: 20 } },
-    toneFingerprint: { contrast_tendency: 'low', highlight_rolloff: 'soft' },
-    recommendedAdjustments: { exposure: -0.1, tone_contrast: 0.05 },
+    description: '柔和低反差、肤色暖粉、高光软滚降的经典胶片感。（离线占位，启动后端查看全部卡库）',
+    tags: ['portrait', 'wedding', 'golden_hour'],
+    scenes: ['outdoor'],
+    year: 1998,
   },
   {
     styleId: 'fuji_pro_400h',
     name: 'Fuji Pro 400H',
     family: 'Fuji',
-    description: '柔和通透、空气感强，适合阴天与户外人像。',
-    tags: { scene: ['landscape', 'portrait'], light: ['overcast'] },
-    colorFingerprint: { skin_lab_target: { a: 14, b: 16 } },
-    toneFingerprint: { contrast_tendency: 'medium', shadow_depth: 'airy' },
-    recommendedAdjustments: { contrast: 0.05, clarity: 0.08 },
+    description: '柔和通透、空气感强，适合阴天与户外人像。（离线占位）',
+    tags: ['landscape', 'portrait', 'overcast'],
+    scenes: ['outdoor'],
+    year: null,
   },
 ];
 
 export function mockGetPhotos(): PhotoView[] {
   return mockPhotos;
-}
-
-export function mockCreatePhoto(path: string): PhotoView {
-  const id = `p${Date.now()}`;
-  const name = path.split(/[\\/]/).pop() ?? path;
-  const photo: PhotoView = mockPhoto(id, name, 'RAW_PENDING', 0, {
-    takenAt: new Date().toISOString(),
-  });
-  mockPhotos.unshift(photo);
-  return photo;
 }
 
 export function mockScanDirectory(): Array<{ path: string; name: string; size: number }> {

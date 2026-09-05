@@ -22,7 +22,8 @@ def test_empty_dir_returns_empty(tmp_path: Path) -> None:
 def test_repo_sample_cards_load() -> None:
     cards = StyleCard.from_films_dir(FILMS)
     ids = {c["style_id"] for c in cards}
-    assert {"film_portra_400", "film_pro_400h"} <= ids
+    # t61 清理历史双卡 film_portra_400（被 kodak_portra_400 取代）后改锚新卡
+    assert {"kodak_portra_400", "film_pro_400h"} <= ids
     for c in cards:
         assert c["stages"], c["style_id"]
         assert isinstance(c["params"], dict)
@@ -59,7 +60,7 @@ def test_render_pipeline_ignores_metadata() -> None:
     """metadata 为未知键：pipeline_from_config 只读三键，不阻塞。"""
     from pixo.render.pipeline import pipeline_from_config
 
-    cfg = json.loads((FILMS / "film_portra_400.json").read_text(encoding="utf-8"))
+    cfg = json.loads((FILMS / "kodak_portra_400.json").read_text(encoding="utf-8"))
     pipe = pipeline_from_config(cfg)
     assert pipe.output.get("quality") == 95
     assert "metadata" in cfg  # 键在文件里，但管线不消费
