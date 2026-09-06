@@ -71,11 +71,11 @@ def test_route_table():
     assert route_of("subject") == "rfdetr"
     for p in ("sky", "plant", "mountain", "tree", "grass"):
         assert route_of(p) == "segformer", p
-    assert route_of("anything_else") == "gsam"
+    assert route_of("anything_else") is None  # 未知 prompt 无路由后端
 
 
 def test_routing_and_mask_contract():
-    router, backs = _router({"gsam": FakeBackend("gsam")})
+    router, backs = _router()
     out = router.segment(_img(), ["face", "person", "sky", "unknown_word"])
     assert set(out) == {"face", "person", "sky", "unknown_word"}
     for key, mask in out.items():
@@ -85,26 +85,28 @@ def test_routing_and_mask_contract():
     assert backs["uniface"].seen == ["face"]
     assert backs["rfdetr"].seen == ["person"]
     assert backs["segformer"].seen == ["sky"]
-    assert backs["gsam"].seen == ["unknown_word"]
+    # 未知 prompt 不投递到任何后端（零掩码兜底见下一用例）
+    assert all("unknown_word" not in b.seen for b in backs.values())
+    assert not out["unknown_word"].any()
 
 
-def test_unknown_prompt_degrades_to_zero_mask(monkeypatch, caplog):
-    """gsam 不可用时其 prompt 组零掩码降级（部分降级），告警一次（warn-once）。"""
-    monkeypatch.setenv("PIXO_GSAM_ENABLED", "0")  # 禁用可选后端，秒级失败
+def test_unknown_prompt_degrades_to_zero_mask(caplog):
+    """未知 prompt（无路由后端）零掩码降级，告警一次（warn-once）。"""
     router, _ = _router()
     img = _img()
     with caplog.at_level(logging.WARNING):
         out1 = router.segment(img, ["sky", "weird_prompt"])
-    # 部分失败：可用组正常、失败组零掩码，整体契约形状保持
+    # 已知组正常；未知 prompt 零掩码，契约形状保持
     assert out1["sky"].all()
     assert out1["weird_prompt"].shape == (32, 48)
     assert not out1["weird_prompt"].any()
-    assert "gsam" in caplog.text and "零掩码降级" in caplog.text
-    assert router.last_degraded == ["gsam"]
+    assert "weird_prompt" in caplog.text and "零掩码降级" in caplog.text
+    # 路由未命中≠模型错误：不记 last_degraded、不上抛
+    assert router.last_degraded == []
     with caplog.at_level(logging.WARNING):
         router.segment(img, ["sky", "weird_prompt"])  # 第二次不再重复告警
     assert caplog.text.count("零掩码降级") == 1
-    assert "backend:gsam" in str(router._warned_backends) or True
+    assert "missing:weird_prompt" in router._warned_backends
 
 
 def test_all_groups_unavailable_raises():
@@ -122,10 +124,25 @@ def test_all_groups_unavailable_raises():
 
 
 def test_single_group_unavailable_raises():
-    """仅一个 prompt 组且其后端不可用 → 同样上抛（gsam 默认关闭场景）。"""
-    router, _ = _router()  # 未注入 gsam 且默认禁用
+    """仅一个 prompt 组且其后端不可用 → 同样上抛（契约）。"""
+
+    class _Down(FakeBackend):
+        def segment(self, image_rgb, prompts):
+            raise SegmenterUnavailable("simulated-down")
+
+    router = MultiModelSegmenter(backends={"uniface": _Down("uniface")})
     with pytest.raises(SegmenterUnavailable):
-        router.segment(_img(), ["weird_prompt"])
+        router.segment(_img(), ["face"])
+    assert router.last_degraded == ["uniface"]
+
+
+def test_all_unknown_prompts_zero_mask_no_raise():
+    """纯未知 prompt 请求：路由未命中≠模型错误 → 全零掩码，不上抛。"""
+    router, _ = _router()
+    out = router.segment(_img(), ["weird_prompt", "another_unknown"])
+    assert not out["weird_prompt"].any()
+    assert not out["another_unknown"].any()
+    assert router.last_degraded == []
 
 
 def test_backend_unavailable_degrades_others_untouched():
@@ -163,17 +180,17 @@ def test_binary_helper():
 
 def test_warmup_gate(monkeypatch):
     monkeypatch.setenv("PIXO_SEGMENTER_WARMUP", "0")
-    router, _ = _router({"gsam": FakeBackend("gsam")})
+    router, _ = _router()
     report = router.warmup(_img())
     assert isinstance(report, dict) and report.get("skipped") is True
 
 
 def test_warmup_iterates_all_routed_backends():
     """warmup 遍历路由表全量后端并逐个实例化（假件断言被调）。"""
-    router, backs = _router({"gsam": FakeBackend("gsam")})
+    router, backs = _router()
     router.warmup(_img())
     assert set(router.backends) >= {
-        "uniface", "rfdetr", "segformer", "sapiens", "gsam"}
+        "uniface", "rfdetr", "segformer", "sapiens"}
     for name, fake in backs.items():
         assert fake.warmup_calls == 1, name
 

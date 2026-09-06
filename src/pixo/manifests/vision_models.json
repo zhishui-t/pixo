@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "updated": "2026-08-26",
+  "updated": "2026-09-07",
   "description": "Pixo Vision 相关模型清单，仅登记不拷贝大文件。",
   "models": [
     {
@@ -26,18 +26,6 @@
       "publishable": true,
       "pixo_status": "external_backbone_reference",
       "notes": "backbone 随 HuggingFace 下载，不随 Pixo 仓库拷贝。"
-    },
-    {
-      "id": "fairface-onnx",
-      "name": "fairface.onnx",
-      "purpose": "年龄/性别/种族分类（9 组年龄桶）",
-      "path_or_source": "$GUANLAN_ROOT/models/fairface.onnx",
-      "size": "82 MB",
-      "size_bytes": 85160429,
-      "license": "CC BY 4.0",
-      "publishable": true,
-      "pixo_status": "adapter_in_pixo_vision_person",
-      "notes": "已在 pixo/vision/person.py 接入；可商用但需署名。"
     }
   ]
 }

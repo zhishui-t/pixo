@@ -3,7 +3,7 @@
 覆盖：
   - pixo.vision 新算法 API 可导入；
   - 水平线检测纯算法；
-  - Aesthetic/FairFace 无模型时的懒加载与降级；
+  - Aesthetic 无模型时的懒加载与降级；
   - vision_health 包含新增模型健康信息；
   - Aesthetic 七维评分（mock 推理）维度映射。
 """
@@ -13,7 +13,6 @@ import numpy as np
 import pytest
 
 from pixo.vision import (
-    FairFaceAge,
     HorizonDetector,
     PixoAestheticScorer,
     detect_horizon_angle,
@@ -26,7 +25,6 @@ def test_new_vision_apis_importable():
     """新增算法类与函数均从 pixo.vision 导入。"""
     assert PixoAestheticScorer is not None
     assert HorizonDetector is not None
-    assert FairFaceAge is not None
     assert callable(detect_horizon_angle)
     assert set(PIXO_DIMENSIONS) == {
         "overall", "quality", "composition", "lighting", "color",
@@ -55,20 +53,11 @@ def test_aesthetic_missing_model_degrades():
     assert info["loaded"] is False
 
 
-def test_fairface_missing_model_degrades():
-    """FairFace 模型缺失时 predict 返回 None，对象为 falsy。"""
-    age = FairFaceAge(model_path="missing_fairface.onnx")
-    img = np.zeros((64, 64, 3), dtype=np.uint8)
-    assert bool(age) is False
-    assert age.predict_face(img) is None
-    assert age.health_info()["ready"] is False
-
-
 def test_vision_health_includes_new_models():
-    """vision_health 包含 aesthetic/horizon/fairface 信息。"""
+    """vision_health 包含 aesthetic/horizon 信息。"""
     health = vision_health()
     models = health["models"]
-    for key in ("aesthetic", "horizon", "fairface"):
+    for key in ("aesthetic", "horizon"):
         assert key in models
         assert "ready" in models[key]
     assert models["horizon"]["ready"] is True

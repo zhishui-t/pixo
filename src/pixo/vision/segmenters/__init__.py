@@ -3,7 +3,7 @@
 隔离纪律（与 model_licenses.json / docs/tech_debt.md 口径一致）：
   - ultralytics 依赖已随 YOLOE 移除清零（t110 AGPL 清偿）；
   - torch/transformers/rfdetr 等重依赖限各适配器文件内懒 import
-    （uniface_face / rfdetr_person / segformer_scenes / grounded_sam /
+    （uniface_face / rfdetr_person / segformer_scenes /
     sapiens_body），本包顶层不引入。
 
 本包不主动导入任何适配器，避免未使用真实模型时加载重依赖。
@@ -20,7 +20,6 @@ __all__ = [
     "UniFaceSegmenter",
     "RFDetrPersonSegmenter",
     "SegFormerSceneSegmenter",
-    "GroundedSAMSegmenter",
     "SapiensBodySegmenter",
 ]
 
@@ -33,7 +32,6 @@ def __getattr__(name: str) -> Any:
         "RFDetrPersonSegmenter": ("rfdetr_person", "RFDetrPersonSegmenter"),
         "SegFormerSceneSegmenter": ("segformer_scenes",
                                     "SegFormerSceneSegmenter"),
-        "GroundedSAMSegmenter": ("grounded_sam", "GroundedSAMSegmenter"),
         "SapiensBodySegmenter": ("sapiens_body", "SapiensBodySegmenter"),
     }
     if name in mapping:

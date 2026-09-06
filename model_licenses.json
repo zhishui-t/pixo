@@ -54,16 +54,6 @@
       "status": "redistribution_allowed_with_license_notice"
     },
     {
-      "name": "grounding-dino-tiny + sam-vit-base",
-      "provider": "IDEA-Research / Meta (Hugging Face)",
-      "license": "Apache-2.0",
-      "publishable": true,
-      "files": [],
-      "usage": "redistribution_allowed_with_license_notice",
-      "notes": "t90 开放词汇可选后端（GroundedSAM 两段式）；默认关闭（opt-in），PIXO_GSAM_ENABLED=1 显式开启——启用后首用经 transformers 自动下载 DINO+SAM 全套权重（合计数 GB）。torch/transformers 限 src/pixo/vision/segmenters/grounded_sam.py 内懒 import。",
-      "status": "redistribution_allowed_with_license_notice"
-    },
-    {
       "name": "facebook/sapiens-seg-0.3b",
       "provider": "Meta (Hugging Face)",
       "license": "CC-BY-NC-4.0 (Sapiens2 License 口径)",

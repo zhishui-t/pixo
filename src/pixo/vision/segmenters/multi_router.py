@@ -3,12 +3,14 @@
 契约不变：segment(image_rgb, prompts) -> dict[str, 0/255 uint8 mask]。
 路由：face->uniface | person/subject->rfdetr |
 sky/plant/mountain/tree/grass->segformer | hair/skin/clothes/body->sapiens |
-其余->grounded_sam(可选，默认关闭)。
+其余（未知 prompt）->无后端，零掩码降级 + warn-once（开放词汇后端
+已移除；路由未命中≠模型错误，不升级 manual_review）。
 降级语义（exceptions.py 契约）：
   - 后端抛 SegmenterUnavailable 时：部分 prompt 组失败→该组零掩码 +
     每 backend 一次 warning + last_degraded 记录（健康可查）；
   - 请求的**全部** prompt 组后端均不可用→重新抛 SegmenterUnavailable，
-    让 loop 升级 manual_review（禁止把模型错误当作"未检出"零掩码）。
+    让 loop 升级 manual_review（禁止把模型错误当作"未检出"零掩码）；
+    纯未知 prompt 请求不属此列（无后端可失败，按未知 prompt 零掩码）。
   - 非可用性异常仍按 best-effort 零掩码降级（契约形状保持）。
 合规门控：构造时读仓库根 model_licenses.json，usage=internal_development_only
 的后端仅在 PIXO_ALLOW_RESTRICTED=1 时注册进路由表，否则跳过并告警
@@ -39,8 +41,8 @@ ROUTE_TABLE: dict[str, str] = {
     "hair": "sapiens", "skin": "sapiens",
     "clothes": "sapiens", "body": "sapiens",
 }
-# 未命中显式路由的开放词汇后端（默认关闭，PIXO_GSAM_ENABLED=1 开启）。
-DEFAULT_ROUTE = "gsam"
+# 未命中路由表的未知 prompt 无默认后端（开放词汇后端已移除）：
+# segment() 末尾统一零掩码降级 + warn-once（路由未命中≠模型错误）。
 
 # 路由后端名 -> model_licenses.json 条目名（合规门控依据）。
 _LICENSE_BACKENDS: dict[str, str] = {
@@ -88,9 +90,9 @@ def restricted_backend_names(path: Path | None = None) -> set[str]:
         return set()
 
 
-def route_of(prompt_lower: str) -> str:
-    """canonical 路由（未门控全量表）；实例路由见 _route_of。"""
-    return ROUTE_TABLE.get(prompt_lower, DEFAULT_ROUTE)
+def route_of(prompt_lower: str) -> str | None:
+    """canonical 路由（未门控全量表）；未知 prompt 返回 None。"""
+    return ROUTE_TABLE.get(prompt_lower)
 
 
 class MultiModelSegmenter(BaseSegmenter):
@@ -119,12 +121,12 @@ class MultiModelSegmenter(BaseSegmenter):
 
     # ---- 路由 ----
 
-    def _route_of(self, prompt_lower: str) -> str:
-        return self.route_table.get(prompt_lower, DEFAULT_ROUTE)
+    def _route_of(self, prompt_lower: str) -> str | None:
+        return self.route_table.get(prompt_lower)
 
     def routed_backend_names(self) -> set[str]:
-        """当前路由表可达的全量后端名（含默认路由 gsam）。"""
-        return set(self.route_table.values()) | {DEFAULT_ROUTE}
+        """当前路由表可达的全量后端名。"""
+        return set(self.route_table.values())
 
     def _get(self, name: str):
         if name in self.backends:
@@ -138,9 +140,6 @@ class MultiModelSegmenter(BaseSegmenter):
         elif name == "segformer":
             from .segformer_scenes import SegFormerSceneSegmenter
             self.backends[name] = SegFormerSceneSegmenter()
-        elif name == "gsam":
-            from .grounded_sam import GroundedSAMSegmenter
-            self.backends[name] = GroundedSAMSegmenter()
         elif name == "sapiens":
             from .sapiens_body import SapiensBodySegmenter
             self.backends[name] = SapiensBodySegmenter()
@@ -169,7 +168,10 @@ class MultiModelSegmenter(BaseSegmenter):
 
         groups: dict[str, list[str]] = {}
         for p in norm:
-            groups.setdefault(self._route_of(p.lower()), []).append(p)
+            route = self._route_of(p.lower())
+            if route is None:
+                continue  # 未知 prompt：无路由后端，末尾统一零掩码 + warn-once
+            groups.setdefault(route, []).append(p)
 
         out: dict = {}
         unavailable: dict[str, Exception] = {}
@@ -246,7 +248,7 @@ class MultiModelSegmenter(BaseSegmenter):
         """预热路由表**全量**后端（逐个实例化后 warmup）。
 
         各后端自身受 PIXO_SEGMENTER_WARMUP 门控与懒加载保护；
-        显式 enabled()=False 的后端（如默认关闭的 gsam）跳过预热。
+        显式 enabled()=False 的后端跳过预热（不触发重权重加载）。
         """
         if not warmup_enabled():
             return {"skipped": True}

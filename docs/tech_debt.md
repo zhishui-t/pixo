@@ -138,3 +138,29 @@
        [0.01,0.90] 滤裁剪区/深阴影（fit_rp_ccm.py:44-46,149-157）；无频域
        加权。若未来拟合残余集中在低频结构（ISP 风格差），补高斯低通加权
        采样或分频段残差分析。
+
+14. **FairFace 年龄/性别模型移除**（已清偿，2026-09-07 第九轮清债 F03）：
+    - `pixo/vision/person.py`（FairFaceAge/PIXO_FAIRFACE_MODEL/
+      get_fairface_age/fairface_health_info）整文件删除；vision_health 的
+      `fairface`/`fairface_age` 健康键、`pixo.vision` 导出面、
+      `vision_models.json` fairface-onnx 条目、治理文档 env 示例同步清零，
+      grep src/tests/configs 无残留（防复活断言：
+      `test_vision_models_no_unused_entries`）。
+    - 历史评审文档（PIXO_LICENSE_REVIEW.md 等）按惯例不改写历史，以本条
+      为移除事实记录；fairface.onnx（CC BY 4.0）不再随任何发布物分发。
+
+15. **GroundedSAM（开放词汇分割）移除**（已清偿，2026-09-07 第九轮清债 F04）：
+    - `pixo/vision/segmenters/grounded_sam.py`（GroundedSAMSegmenter/
+      PIXO_GSAM_ENABLED/PIXO_GSAM_DINO/PIXO_GSAM_SAM）整文件删除；
+      multi_router 兜底语义重设计：`DEFAULT_ROUTE="gsam"` 与 `_get()` gsam
+      分支删除，**未知/未命中 prompt → 零掩码降级 + warn-once**（守
+      exceptions.py 降级契约：路由未命中≠模型错误，不升级 manual_review；
+      仅真实后端全败仍上抛 SegmenterUnavailable）；model_licenses.json 的
+      grounding-dino-tiny+sam-vit-base 条目、models_reference.json 描述、
+      segmenters 包导出面、治理文档 env 示例同步清零（防复活断言：
+      `test_grounded_sam_removed` + 路由缺席断言）。
+    - `pyproject.toml` 的 `pixo-vision-models` extras（torch/transformers）
+      **保留**——非 gsam 专用：segformer_scenes/uniface_face/sapiens_body
+      的 `_load()` 与 aesthetic.py（CLIP 评分器）均直接懒 import；
+      rfdetr 走 rfdetr pip 包自带 torch 链。
+    - grep src/tests 无 gsam/grounded_sam 活引用（仅防复活断言命中）。

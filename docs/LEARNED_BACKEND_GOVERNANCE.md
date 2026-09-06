@@ -21,10 +21,10 @@
 
 | 类别 | 模式 | 既有实例 | 缺省语义 |
 |---|---|---|---|
-| 开关（opt-in） | `PIXO_<组件>_ENABLED` | `PIXO_GSAM_ENABLED` | **缺省关**（"0"）；真值集 `{"1","true","on","yes"}`（`strip().lower()` 后比对） |
+| 开关（opt-in） | `PIXO_<组件>_ENABLED` | （暂无在用实例——gsam 移除后清零；新 opt-in 开关必须归入本类） | **缺省关**（"0"）；真值集 `{"1","true","on","yes"}`（`strip().lower()` 后比对） |
 | 开关（缺省开特例） | `PIXO_LLM_SHADOW` | 同名 | **缺省开**（见 §1.4）；关态值 `{"0","false","off","no"}`——仅限"父开关缺省关、本开关只是其内二级门"的场景，须逐案评审 |
 | 许可门 | `PIXO_ALLOW_RESTRICTED` | 同名 | 仅 `== "1"` 放行 restricted 许可后端注册进路由 |
-| 选择/覆写 | `PIXO_<组件>_MODEL` / `PIXO_<维度>` | `PIXO_SEGMENTER`（缺省 `"mock"`）、`PIXO_SAPIENS_MODEL`、`PIXO_AESTHETIC_MODEL`、`PIXO_FAIRFACE_MODEL`、`PIXO_GSAM_SAM` | 缺省取**安全值**（mock/默认权重），覆写仅换实现不改变默认关纪律 |
+| 选择/覆写 | `PIXO_<组件>_MODEL` / `PIXO_<维度>` | `PIXO_SEGMENTER`（缺省 `"mock"`）、`PIXO_SAPIENS_MODEL`、`PIXO_AESTHETIC_MODEL` | 缺省取**安全值**（mock/默认权重），覆写仅换实现不改变默认关纪律 |
 | 路径/资源覆写 | `PIXO_<对象>_DIR` / `PIXO_<对象>_ROOT` | `PIXO_MODEL_LICENSES`、`PIXO_CONFIG_ROOT`、`PIXO_DATA_ROOT`、`PIXO_RENDER_LUT_DIR`、`PIXO_DECODE_CACHE_MB`、`PIXO_SCORER_WARMUP` | 缺省仓库内约定位置；主要供测试隔离与多环境部署 |
 
 ### 1.2 缺省关语义（三连带）
@@ -32,7 +32,7 @@
 `PIXO_<X>_ENABLED` 未设置时必须同时满足：
 
 1. **不加载**——组件不注册/不实例化（如 multi_router 仅 `PIXO_ALLOW_RESTRICTED=1`
-   时注册 restricted 后端；gsam `enabled()` 缺省 False 直接短路）；
+   时注册 restricted 后端）；
 2. **不下载**——不触发权重自动下载（GB 级权重只允许在显式 opt-in 后首用下载）；
 3. **不 import**——重依赖（torch/transformers）保持在 adapter 层懒 import，
    关态下零 import（import 隔离门禁的检验对象）。

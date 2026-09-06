@@ -12,7 +12,6 @@ from typing import Any, Callable
 
 from .aesthetic import aesthetic_health_info
 from .geometry import horizon_health_info
-from .person import fairface_health_info
 
 VISION_PACKAGE_VERSION = "0.1.0"
 MOCK_SEGMENTER_VERSION = "0.1.0"
@@ -165,7 +164,6 @@ def vision_health(
     )
     aesthetic_info = _safe_health(aesthetic_health_info)
     horizon_info = _safe_health(horizon_health_info)
-    fairface_info = _safe_health(fairface_health_info)
     multi_router_info = _safe_health(_multi_router_health_info)
     overall_ready = bool(real_info.get("ready", False))
 
@@ -184,15 +182,12 @@ def vision_health(
             "aesthetic_scorer": dict(aesthetic_info),
             "horizon": dict(horizon_info),
             "horizon_detector": dict(horizon_info),
-            "fairface": dict(fairface_info),
-            "fairface_age": dict(fairface_info),
         },
         "mock_segmenter": dict(mock_info),
         "mock": dict(mock_info),
         "multi_router": dict(multi_router_info),
         "aesthetic": dict(aesthetic_info),
         "horizon": dict(horizon_info),
-        "fairface": dict(fairface_info),
     }
 
 

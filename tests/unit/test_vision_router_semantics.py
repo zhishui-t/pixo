@@ -5,22 +5,22 @@
     last_degraded 可查 / 非可用性异常保持 best-effort 零掩码；
   - 健康可见性：health() 遍历路由表全量后端（未实例化 available=None）、
     vision_health() multi_router 聚合条目、available() 轻量探测不触发加载；
-  - warmup 遍历路由表全量后端（假件断言被实例化）；
-  - FairFace 懒加载：构造不触发 _load、失败缓存不重试、健康单例复用；
+  - warmup 遍历路由表全量后端（假件断言被实例化）+ 显式禁用后端跳过；
   - 合规门控：model_licenses.json usage 过滤（假 JSON + env monkeypatch）；
-  - gsam 默认关闭（opt-in）。
+  - 开放词汇后端已移除（防复活见 test_grounded_sam_removed）：
+    未知 prompt 零掩码 + warn-once（语义见 test_multimodel_segmenter.py）。
 """
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 
 import numpy as np
 import pytest
 
-import pixo.vision.person as person_mod
+import pixo.vision.segmenters
 from pixo.vision.exceptions import SegmenterUnavailable
-from pixo.vision.segmenters.grounded_sam import GroundedSAMSegmenter
 from pixo.vision.segmenters.multi_router import (
     MultiModelSegmenter,
     restricted_backend_names,
@@ -225,9 +225,8 @@ def test_warmup_instantiates_all_routed_backends(monkeypatch):
         assert report[name] == {"warmed": True}, name
 
 
-def test_warmup_skips_disabled_gsam(monkeypatch):
-    """默认关闭的 gsam 实例被 warmup 跳过（不触发 DINO+SAM 数 GB 加载）。"""
-    monkeypatch.delenv("PIXO_GSAM_ENABLED", raising=False)
+def test_warmup_skips_disabled_backend(monkeypatch):
+    """显式 enabled()=False 的后端被 warmup 跳过（不触发重权重加载）。"""
     router = MultiModelSegmenter()
 
     class _Stub:
@@ -240,63 +239,26 @@ def test_warmup_skips_disabled_gsam(monkeypatch):
         def warmup(self, image=None):
             return {"warmed": True}
 
+    class _Disabled(_Stub):
+        def enabled(self):
+            return False
+
     names = router.routed_backend_names()
     for name in names:
         router.backends[name] = _Stub(name)
-    router.backends["gsam"] = GroundedSAMSegmenter()  # 真实例但默认禁用
+    router.backends["segformer"] = _Disabled("segformer")
     report = router.warmup(IMG)
-    assert report["gsam"].get("skipped") is True
-    assert report["gsam"].get("warmed") is not True
+    assert report["segformer"].get("skipped") is True
+    assert report["segformer"].get("warmed") is not True
 
 
-# ---------- 5. FairFace 懒加载 ----------
+# ---------- 2/9. 开放词汇后端移除防复活 + 合规门控 ----------
 
-def test_fairface_construction_does_not_load(monkeypatch):
-    """构造只存配置：__init__ 删除 _load 调用。"""
-    def _boom(self):
-        raise AssertionError("构造不得触发 _load")
-
-    monkeypatch.setattr(person_mod.FairFaceAge, "_load", _boom)
-    person_mod.FairFaceAge(model_path="whatever.onnx")  # 不抛即通过
-
-
-def test_fairface_lazy_load_and_failure_cache(monkeypatch):
-    """首次 predict 才加载；失败缓存（_load_failed）避免反复重试。"""
-    calls = {"n": 0}
-
-    def _fake_load(self):
-        calls["n"] += 1  # 模拟加载失败：session 保持 None
-
-    monkeypatch.setattr(person_mod.FairFaceAge, "_load", _fake_load)
-    age = person_mod.FairFaceAge(model_path="whatever.onnx")
-    assert calls["n"] == 0
-    assert age.predict_face(np.zeros((64, 64, 3), np.uint8)) is None
-    assert calls["n"] == 1
-    assert age._load_failed is True
-    age.predict_face(np.zeros((64, 64, 3), np.uint8))
-    assert calls["n"] == 1  # 缓存失败，不再重试
-
-
-def test_fairface_health_info_reuses_singleton(monkeypatch):
-    """fairface_health_info 复用模块级单例，不再每次新建 FairFaceAge。"""
-    monkeypatch.setattr(person_mod, "_fairface", None)
-    person_mod.fairface_health_info()
-    first = person_mod._fairface
-    assert first is not None
-    person_mod.fairface_health_info()
-    assert person_mod._fairface is first
-
-
-# ---------- 2/9. gsam 默认关 + 合规门控 ----------
-
-def test_gsam_disabled_by_default(monkeypatch):
-    monkeypatch.delenv("PIXO_GSAM_ENABLED", raising=False)
-    ad = GroundedSAMSegmenter()
-    assert ad.enabled() is False
-    monkeypatch.setenv("PIXO_GSAM_ENABLED", "1")
-    assert ad.enabled() is True
-    monkeypatch.setenv("PIXO_GSAM_ENABLED", "0")
-    assert ad.enabled() is False
+def test_grounded_sam_removed():
+    """gsam 已移除（防复活）：适配器不再可导入/不可按需属性访问。"""
+    assert not hasattr(pixo.vision.segmenters, "GroundedSAMSegmenter")
+    with pytest.raises(ImportError):
+        importlib.import_module("pixo.vision.segmenters.grounded_sam")
 
 
 def _write_fake_licenses(tmp_path, uniface_usage, sapiens_usage="redistribution_allowed_with_license_notice"):
@@ -328,7 +290,7 @@ def test_gate_restricted_backends_by_default(tmp_path, monkeypatch, caplog):
     names = router.routed_backend_names()
     assert "uniface" not in names and "sapiens" not in names
     assert "rfdetr" in names and "segformer" in names
-    assert router._route_of("face") == "gsam"      # 被门控条目跳过→默认路由
+    assert router._route_of("face") is None      # 被门控条目跳过→无路由
     assert any("internal_development_only" in m for m in caplog.messages)
 
 
@@ -349,7 +311,8 @@ def test_gate_real_registry_restricts_uniface_and_sapiens(monkeypatch):
     router = MultiModelSegmenter()
     assert "uniface" not in router.routed_backend_names()
     assert "sapiens" not in router.routed_backend_names()
-    assert {"rfdetr", "segformer", "gsam"} <= router.routed_backend_names()
+    assert {"rfdetr", "segformer"} <= router.routed_backend_names()
+    assert "gsam" not in router.routed_backend_names()  # 已移除（防复活）
 
 
 def test_gate_invalid_json_registers_all_with_warning(

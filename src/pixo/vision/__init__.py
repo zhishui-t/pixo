@@ -44,7 +44,6 @@ from .measure import (
     measure_zone_exposure,
 )
 from .mock import MockSegmenter
-from .person import FairFaceAge, fairface_health_info, get_fairface_age
 
 __all__ = [
     "Segmenter",
@@ -63,9 +62,6 @@ __all__ = [
     "HorizonDetector",
     "detect_horizon_angle",
     "horizon_health_info",
-    "FairFaceAge",
-    "get_fairface_age",
-    "fairface_health_info",
     "vision_health",
     "VISION_PACKAGE_VERSION",
     "SegmenterError",

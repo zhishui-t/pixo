@@ -77,9 +77,8 @@ def test_skin_and_face_keys_no_conflict():
     assert np.unique(out["face"]) == [128] and np.unique(out["skin"]) == [1]
 
 
-def test_unknown_prompt_zero_mask_degrade(monkeypatch):
-    """未知 prompt 落 gsam；禁用 gsam 后零掩码降级不崩。"""
-    monkeypatch.setenv("PIXO_GSAM_ENABLED", "0")
+def test_unknown_prompt_zero_mask_degrade():
+    """未知 prompt 无路由后端：零掩码降级不崩（warn-once，路由未命中≠模型错误）。"""
 
     class _FakeSapiens:
         def segment(self, image_rgb, prompts):

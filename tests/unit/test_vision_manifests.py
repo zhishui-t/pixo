@@ -16,7 +16,6 @@ def test_vision_models_manifest_loads():
     ids = {item["id"] for item in data["models"]}
     assert "aesthetic-scorer" in ids
     assert "openai-clip-vit-base-patch32" in ids
-    assert "fairface-onnx" in ids
 
 
 def test_vision_models_fields_complete():
@@ -32,9 +31,11 @@ def test_vision_models_fields_complete():
 
 
 def test_vision_models_no_unused_entries():
-    """模型清单只保留实际接入的模型（t110 已移除 YOLOE 及随链条目）。"""
+    """模型清单只保留实际接入的模型（t110 已移除 YOLOE 及随链条目；
+    年龄/性别模型条目已随 person 适配器删除）。"""
     data = load_vision_models()
     ids = {item["id"] for item in data["models"]}
+    assert "fairface-onnx" not in ids
     assert "yoloe-26l-seg" not in ids
     assert "mobileclip2-b" not in ids
     assert "yunet-face-detector" not in ids

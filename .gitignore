@@ -83,3 +83,7 @@ src/pixo/.graphify/
 # stage2: ±ê¶¨¶ş½øÖÆ²úÎï£¨¿ÉÓÉ seed ÖØ·Å¸´ÏÖ£¬²»Èë¿â£©
 .artifacts/*.pt
 .artifacts/_*
+
+# Agent team æœ¬åœ°åä½œçŠ¶æ€ï¼ˆé»‘æ¿ï¼‰
+.agent-team/
+.zcode/
