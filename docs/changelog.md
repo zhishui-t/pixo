@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-09-07 — 第九轮战役：收口清债 × oklch 切默认 × M1 掩码驱动渲染
+
+- 模型栈清债（651f5d1，F03/F04）：FairFace 彻底移除（person.py 整删、manifest/路由/
+  health 同步、防复活断言）；GroundedSAM 移除（gsam 全链零残留，multi 路由未知 prompt
+  兜底改零掩码降级+warning，torch extras 收缩）；tech_debt 条目 14/15 清偿在案。
+- RAW 金样本重验与基线重生成（b187d27，F06）：qa 首验 24/24 FAIL（基线 stale）→
+  gate_defaults 团队重生成对齐已验收渲染链 → 复跑 24/24 PASS。
+- oklch 切默认三道前置修补：存量 23 卡显式钉 hsv（ef4473d，F07——69 条
+  `color_domain:"hsv"` 纯插入：hsl 12/split_tone 12/skin 22/colorcal 23，A1 逐位保证
+  不再依赖 stage 缺省）；gate 缺省分派 case + 存量卡全管线 golden（17→19 features）+
+  patch_protocol band 归属与 stage 缺省同源化 + canonical 透出确认（ce92c73，F08/F09）。
+- oklch 第一批切换（3d2db90，F10）：hsl/split_tone `default_params` 缺省翻转
+  "hsv"→"oklch"，落点纯度两文件零行为改动；缺省断言修订 7 项零删除无净弱化；A1 存量卡
+  23/23 sha256 三方字节级全等（tester 独立复跑 vs 钉域前基线 vs dev 存证）；RAW 金样本
+  24/24 u8/u16 逐位零漂移；gate 基线 v2 治理（仅 default_dispatch 条目变更）。
+- F11 skin+colorcal 意图级 A/B（只出证据不切换，缺省未动）：skin 伤害类不劣于+强度
+  不劣于（B/A 0.935）；colorcal 质量不劣于、**性能劣于 ≈15×**——双结论如实入档，
+  第二批切换待观察期后由用户决策。
+- M1 掩码驱动渲染全链：region_adjust stage（512bd0d，F12——掩码区域化曝光/饱和度调整，
+  order 56-59，DOMAIN_GAMMA_RGB，默认 enabled=False）；掩码通道 preview/export 双线
+  注入（35af288，F13——堵 RawRenderBackend 无 state_extras 缺口）；decide region.*
+  点分键接线（b812061，F14——`_DOTTED_PARAM_REGISTRY`+enabled 联动+指标键注册+
+  region_rules.yaml 首版规则，默认零变化）；M1 验收资产 gate case（F15，20 features）。
+  独立评审（reviews/m1-review.md）阻断 0/重要 4/建议 8；修复批（fc2bfa8）修
+  I-1/I-3/I-4/S-1/S-2/S-3/S-5 七项（NaN 守卫/掩码生命周期/顺序合成钉死），
+  I-2 px-rect 跨分辨率失配记债 tech_debt #17。
+- 合规与治理：THIRD_PARTY_NOTICES.md 编制（d25f70c，F16——238 行，tech_debt #3 处置，
+  huesat GPL/DCP 未核验/NC 门控三项发布警示置顶）；PyYAML 升必装 + scipy 挂 calib
+  extras（0d5372a，F17——tech_debt #4 处置，同笔含 F05 lr_baseline 记债/条目 16）；
+  F18 DNG SDK 复审发现 huesat RawTherapee GPL-3.0 血缘（高危未决，发布前必决）；
+  F19 感知质量门禁评估+提案（tech_debt #7，只出评估不实施）。
+- 验收：全量 1474 passed / 5 skipped / 1 xfailed，0 failed（test-report.md @ fc2bfa8，
+  189s；基线 1396 不降、+78 全部为本轮新增测试逐项对账）；RAW 金样本 24/24 逐位零漂移；
+  gate --check 20 features OK；A1 存量卡 23/23 三方字节级全等；qa 总审 PASS（.qa_ok，
+  F01~F19 逐条达成，阻断性缺陷 0、战役累计 qa 修复 10 处均留档）。
+
 ## 2026-09-05 — 路线图收官批：HSM→OKLCh 运行时接线 · 风格卡全链接线（t64/t66）
 
 - HSM→OKLCh 接线（t64，自研管线路线图最终承诺）：新增 `core/huesat_oklch.py`
