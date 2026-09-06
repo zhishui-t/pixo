@@ -6,9 +6,11 @@
   - 带中心与 core.hsl_oklch.DEFAULT_BANDS_OKLCH 一致（设计 §2.2 单一来源）;
   - HslStage / SplitToneStage 以卡参数实际应用：oklch 域出图有效、且与
     同数值 hsv 域出图不同（分派语义可见）;
-  - 存量 23 卡零迁移不变量：无 color_domain 键、hsl bands 无 domain 键
-    （盲点 A1 的"逐位不变"承诺在卡库层面的守卫；t61 清理历史双卡
-    film_portra_400 后 24→23）。
+  - 存量 23 卡 A1 不变量（F07 钉域）：凡带涉域 stage（hsl/split_tone/skin/
+    colorcal）键的卡一律显式钉 `color_domain:"hsv"`（qa 修订口径 =「凡带键
+    即钉」，不区分 enabled）；hsl bands 无 band 级 domain 键。oklch 切默认
+    （F10 只翻 hsl+split_tone 的 Stage 缺省）后存量卡语义由卡级锚定保护，
+    不再依赖 Stage 缺省（t61 清理历史双卡 film_portra_400 后 24→23）。
 """
 from __future__ import annotations
 
@@ -20,13 +22,16 @@ import pytest
 
 from pixo.know.cards import StyleCard
 from pixo.render.core.hsl_oklch import DEFAULT_BANDS_OKLCH
-from pixo.render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB
+from pixo.render.pipeline.graph import (StageContext, DOMAIN_GAMMA_RGB,
+                                        STAGE_REGISTRY)
 from pixo.render.modules.hsl import HslStage
 from pixo.render.modules.split_tone import SplitToneStage
 
 ROOT = Path(__file__).resolve().parents[2]
 FILMS = ROOT / "configs" / "styles" / "films"
 DEMO_IDS = ("oklch_demo_warm_portrait", "oklch_demo_cool_landscape")
+# 涉域 stage（color_domain 参数面四枚举, t52 §2）：卡级钉域的作用面
+DOMAIN_STAGES = ("hsl", "split_tone", "skin", "colorcal")
 
 
 def _demo_cards() -> dict[str, dict]:
@@ -90,25 +95,72 @@ def test_demo_band_centers_match_default_bands_oklch():
                 f"DEFAULT_BANDS_OKLCH {ref[band['name']]}")
 
 
-def test_legacy_cards_untouched_no_domain_keys():
-    """存量卡零迁移（A1）：无 color_domain 键、bands 无 domain 键。
+def test_legacy_cards_pin_hsv_domain_explicitly():
+    """存量卡 A1 不变量（F07）：凡带涉域 stage 键即显式钉 color_domain:"hsv"。
 
-    历史遗留双卡 film_portra_400 已于 t61 清理（被 kodak_portra_400
-    取代，见 docs/PROJECT_GRAPH_FRONTEND.md）；本断言守护剩余存量卡
-    不被误改。
+    qa 修订口径 =「凡带键即钉」——不区分 enabled（未启用的 stage 未来启用
+    时已被保护，不变量无特例）。四 stage 的 Stage 级缺省 color_domain 均为
+    "hsv"（hsl.py:34 / split_tone.py:43 / color_cal.py:218 / skin.py:67），
+    卡级显式钉 hsv 后，切默认（F10 翻 hsl+split_tone 缺省）不再改变存量卡
+    语义 —— A1「存量卡零迁移、逐位不变」由卡级锚定兑现，不再依赖 Stage 缺省。
+    计数为 qa 2026-09-07 实测：hsl 12 / split_tone 12 / skin 22（enabled=true
+    17）/ colorcal 23（新增卡应自觉带钉并同步此处计数）。
     """
+    counts = {s: 0 for s in DOMAIN_STAGES}
     for card in StyleCard.from_films_dir(FILMS):
         if card["style_id"] in DEMO_IDS:
             continue
+        for stage_name in DOMAIN_STAGES:
+            params = card["params"].get(stage_name)
+            if params is None:
+                continue
+            assert params.get("color_domain") == "hsv", (
+                f"存量卡 {card['style_id']}.{stage_name} 未显式钉 "
+                f'color_domain:"hsv" (实际 {params.get("color_domain")!r})')
+            counts[stage_name] += 1
+        # 涉域四枚举之外禁止出现 color_domain（旧「零迁移」不变量的全覆盖
+        # 守卫保留——如 huesat 也有 color_domain 参数面（t64 接线），存量卡
+        # 在其上钉域属新的语义变更，须显式扩枚举而非静默漂移）
         for stage_name, params in card["params"].items():
-            assert "color_domain" not in params, (
-                f"存量卡 {card['style_id']}.{stage_name} 出现 color_domain")
+            if stage_name not in DOMAIN_STAGES and isinstance(params, dict):
+                assert "color_domain" not in params, (
+                    f"存量卡 {card['style_id']}.{stage_name} 出现 "
+                    f"color_domain（涉域枚举外，钉域须显式扩 DOMAIN_STAGES）")
+        # band 级 domain 键仍禁止（schema v2 是 oklch_demo 专用形态；
+        # 存量卡域语义单点在 Stage 级 color_domain，禁止双源）
         hsl = card["params"].get("hsl")
         if hsl and hsl.get("bands"):
             bands = json.loads(hsl["bands"]) if isinstance(hsl["bands"], str) \
                 else hsl["bands"]
             assert all("domain" not in b for b in bands), (
                 f"存量卡 {card['style_id']} hsl bands 出现 domain 键")
+    assert counts == {"hsl": 12, "split_tone": 12, "skin": 22, "colorcal": 23}
+
+
+def test_legacy_domain_pin_merge_equivalent_to_defaults():
+    """graph.py 参数合并层证明钉域当前为语义 no-op（设计 F07 完成标准）。
+
+    Stage.__init__ 以 {**default_params(), **卡参数} 合并（graph.py:46-48）；
+    现 Stage 缺省 color_domain 均为 "hsv" → 显式钉 hsv 后合并结果与钉前
+    逐键相等（参数面无任何变化）。F10 翻转 Stage 缺省后，本测试的合并
+    结果将随缺省改变（预期），但卡参数中的显式 "hsv" 恒覆盖新缺省 ——
+    运行时 `p(ctx, "color_domain", ...)` 取值由卡锚定为 hsv。
+    """
+    for card in StyleCard.from_films_dir(FILMS):
+        if card["style_id"] in DEMO_IDS:
+            continue
+        for stage_name in DOMAIN_STAGES:
+            params = card["params"].get(stage_name)
+            if params is None:
+                continue
+            cls = STAGE_REGISTRY[stage_name]
+            merged_pinned = dict(cls(dict(params)).params.values)
+            unpinned = {k: v for k, v in params.items()
+                        if k != "color_domain"}
+            merged_baseline = dict(cls(unpinned).params.values)
+            assert merged_pinned == merged_baseline, (
+                f"{card['style_id']}.{stage_name} 钉域改变参数合并结果")
+            assert merged_pinned["color_domain"] == "hsv"
 
 
 # ---------------------------------------------------------------------------

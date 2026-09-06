@@ -36,6 +36,7 @@
     "hsl": {
       "enabled": true,
       "smooth": 0.75,
+      "color_domain": "hsv",
       "bands": "[{\"name\": \"red\", \"hue_center\": 0, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"orange\", \"hue_center\": 30, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 7, \"luminance\": 0.0}, {\"name\": \"yellow\", \"hue_center\": 60, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 9, \"luminance\": 2}, {\"name\": \"green\", \"hue_center\": 120, \"width\": 45.0, \"hue_shift\": 4, \"saturation\": -4, \"luminance\": 0.0}, {\"name\": \"aqua\", \"hue_center\": 180, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"blue\", \"hue_center\": 240, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"purple\", \"hue_center\": 270, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}, {\"name\": \"magenta\", \"hue_center\": 300, \"width\": 45.0, \"hue_shift\": 0.0, \"saturation\": 0.0, \"luminance\": 0.0}]"
     },
     "huesat": {
@@ -53,7 +54,8 @@
     "colorcal": {
       "vibrance": 0.15,
       "saturation": 0.12,
-      "hue": -2
+      "hue": -2,
+      "color_domain": "hsv"
     },
     "split_tone": {
       "enabled": true,
@@ -62,11 +64,13 @@
       "shadows_hue": 40,
       "shadows_sat": 8,
       "balance": 0.6,
-      "strength": 0.7
+      "strength": 0.7,
+      "color_domain": "hsv"
     },
     "skin": {
       "enabled": true,
-      "strength": 0.2
+      "strength": 0.2,
+      "color_domain": "hsv"
     },
     "refine": {
       "sharpen": 0.32,

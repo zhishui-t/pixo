@@ -29,11 +29,13 @@
     },
     "colorcal": {
       "vibrance": -0.05,
-      "saturation": -0.18
+      "saturation": -0.18,
+      "color_domain": "hsv"
     },
     "skin": {
       "enabled": true,
-      "strength": 0.3
+      "strength": 0.3,
+      "color_domain": "hsv"
     },
     "stylize": {},
     "refine": {

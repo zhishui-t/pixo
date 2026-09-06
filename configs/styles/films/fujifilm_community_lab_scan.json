@@ -38,11 +38,13 @@
         -4,
         -6,
         -8
-      ]
+      ],
+      "color_domain": "hsv"
     },
     "skin": {
       "enabled": true,
-      "strength": 0.5
+      "strength": 0.5,
+      "color_domain": "hsv"
     },
     "stylize": {},
     "refine": {
