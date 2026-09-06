@@ -32,9 +32,14 @@ def test_manifest_schema_and_files():
         f"实际为 {manifest.get('schema')!r}；若为 {generate_gate_goldens.RAW_SCHEMA} "
         f"则说明混入了 render/tools 的真实 RAW manifest，两套条目结构互不兼容")
     features = manifest.get("features", {})
-    assert len(features) == 17, f"golden feature 数量 {len(features)} != 17"
-    # 17 = 前置 15 (纯函数+显式参数) + exposure_cal_auto/warmth_cal_auto
+    assert len(features) == 20, f"golden feature 数量 {len(features)} != 20"
+    # 20 = 前置 15 (纯函数+显式参数) + exposure_cal_auto/warmth_cal_auto
     # (t36 §5 门禁缺口关闭: 触达正式曝光表与 warmth 曲线的标定数据敏感 case)
+    # + default_dispatch/card_portra_400 (F08, oklch 前置修补 b: 缺省分派
+    # 观测点 + 存量卡 A1 金样本, 堵 t52 §3.1「翻转 default_params 后 gate
+    # 零敏感性」盲区; 前置 17 case 均不经 Stage 分派)
+    # + region_adjust (F15, M1 验收: enabled=True + 合成软掩码经真实
+    # DEFAULT_STAGES 链序快照, M1 stage 像素语义在金样本层可观测)
     # reviewer 必须非空：golden 变更不得脱离复核静默合入。
     reviewer = str(manifest.get("reviewer") or "").strip()
     assert reviewer, "manifest.reviewer 为空：golden 基线必须由 reviewer 复核后合入"

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import cv2
@@ -28,6 +29,16 @@ FEATURES = (
     # 标定数据敏感 case (t36 §5 门禁缺口关闭): 触达正式标定表的 auto 路径,
     # 换表即漂移 (前置 15 case 均为纯函数+显式参数, 对表替换零敏感)。
     "exposure_cal_auto", "warmth_cal_auto",
+    # 缺省分派 + 存量卡全管线 case (F08, oklch 前置修补 b): 堵 t52 §3.1
+    # 点名的盲区 —— 前置 17 case 全部直调内核/显式参数, 不经 Stage 分派,
+    # 翻转 default_params 的 color_domain 后金样本零敏感性 (t52 翻转实验
+    # 全绿即证)。两 case 经 build_default_pipeline 全管线 (DEFAULT_STAGES
+    # 真实链序), 分派语义在金样本层可观测。
+    "default_dispatch", "card_portra_400",
+    # region_adjust 全管线 case (F15, M1 验收): enabled=True + 合成软掩码
+    # (F13 契约) 经真实 DEFAULT_STAGES 链序快照 —— M1 stage 的像素语义
+    # (gamma 域增益曝光 + HSV S 缩放饱和 + 羽化软混合) 在金样本层可观测。
+    "region_adjust",
 )
 
 _DCP_PATH = (Path(__file__).resolve().parents[3] / "resources" / "dcp"
@@ -67,6 +78,83 @@ def _skin_patch():
 
 def _random_small():
     return np.random.default_rng(20260820).random((64, 64, 3), dtype=np.float32)
+
+
+class _FullPipeRaw:
+    """全管线 case 的最小 raw 桩: whitebalance as_shot 经
+    camera_neutral_wb 仅消费 camera_whitebalance (G=1 归一)。"""
+
+    camera_whitebalance = [1.05, 1.0, 0.96, 1.0]
+
+
+def _fullpipe_input():
+    """全管线 case 共用合成输入 (64×64): 种子随机图 (沿 _random_small 模式,
+    独立种子 20260907 与其他 case 输入解耦) + 大块经典肤色补丁 (gate skin
+    case 同款 (210,155,130) 的 float 归一 + 微纹理) —— skin wants 的掩码
+    占比门限需肤色过阈 (portrait 门限 0.5%), 否则磨皮段直通、缺省分派在
+    skin 内核上不可观测。"""
+    rng = np.random.default_rng(20260907)
+    img = rng.random((64, 64, 3), dtype=np.float32) * 0.30 + 0.30
+    patch = np.full((32, 48, 3), (0.82, 0.61, 0.51), dtype=np.float32)
+    patch += (rng.random((32, 48, 1)).astype(np.float32) - 0.5) * 0.05
+    img[8:40, 8:56] = np.clip(patch, 0.0, 1.0)
+    return img
+
+
+def _run_full_pipeline(params: dict,
+                       region_masks: dict | None = None) -> np.ndarray:
+    """params 注入 DEFAULT_STAGES 全链 (api.py:103 卡集成真实路径),
+    linear_cam 域喂入 (run_file 解码后同域), 返回最终 gamma 图。
+    ctx.state["scene"]="portrait" 显式钉死 (skin wants 的场景门控入参,
+    不依赖 analyze 步骤, 保证纯函数式确定)。
+    region_masks 非空时注入 ctx.state["region_masks"] (F12/F13 消费契约,
+    prompt → float32 0..1 软掩码; region_adjust case 专用, 缺省 None 时
+    既有 case 行为逐位不变)。"""
+    from pixo.render.core.calibration import load_dcp
+    from pixo.render.pipeline.context import DOMAIN_LINEAR_CAM, StageContext
+    from pixo.render.pipeline.presets import build_default_pipeline
+    prof = load_dcp(_DCP_PATH)
+    pipe = build_default_pipeline(params=params, prof=prof)
+    ctx = StageContext("gate_fullpipe.nef", raw=_FullPipeRaw(), prof=prof,
+                       config={"stages": params})
+    ctx.set_image(_fullpipe_input(), DOMAIN_LINEAR_CAM)
+    ctx.state["scene"] = "portrait"
+    if region_masks is not None:
+        ctx.state["region_masks"] = region_masks
+    return np.clip(pipe.run(ctx), 0.0, 1.0).astype(np.float32)
+
+
+def _region_soft_mask(h: int = 64, w: int = 64) -> np.ndarray:
+    """region_adjust case 的合成软掩码 (F13 契约同款 float32 0..1):
+    顶部 50% 高度全 1 → 12.5% 高度 smoothstep 过渡到 0 (禁硬边纪律,
+    F12 羽化前的掩码本身即软)。确定性纯函数, 无随机。"""
+    y = np.linspace(0.0, 1.0, h, dtype=np.float32).reshape(h, 1)
+    t = np.clip((y - 0.5) / 0.125, 0.0, 1.0)
+    smooth = t * t * (3.0 - 2.0 * t)            # smoothstep (C1 连续)
+    return np.repeat(1.0 - smooth, w, axis=1).astype(np.float32)
+
+
+# default_dispatch case 的 hsl bands: HSV 色相中心 + 典型偏移量, 8 带,
+# **无 band 级 domain 键** —— 分组归属完全落在 Stage 级缺省 color_domain
+# (hsl.py:73 band.get("domain", default_domain)), 这正是本 case 的观测点。
+_DISPATCH_BANDS = [
+    {"name": "red", "hue_center": 0, "width": 45.0, "hue_shift": 5.0,
+     "saturation": 10.0, "luminance": 0.0},
+    {"name": "orange", "hue_center": 30, "width": 45.0, "hue_shift": 0.0,
+     "saturation": 6.0, "luminance": 3.0},
+    {"name": "yellow", "hue_center": 60, "width": 45.0, "hue_shift": 0.0,
+     "saturation": 0.0, "luminance": 0.0},
+    {"name": "green", "hue_center": 120, "width": 45.0, "hue_shift": -4.0,
+     "saturation": 8.0, "luminance": 0.0},
+    {"name": "aqua", "hue_center": 180, "width": 45.0, "hue_shift": 0.0,
+     "saturation": 0.0, "luminance": 0.0},
+    {"name": "blue", "hue_center": 240, "width": 45.0, "hue_shift": 6.0,
+     "saturation": 5.0, "luminance": -3.0},
+    {"name": "purple", "hue_center": 270, "width": 45.0, "hue_shift": 0.0,
+     "saturation": 0.0, "luminance": 0.0},
+    {"name": "magenta", "hue_center": 300, "width": 45.0, "hue_shift": 0.0,
+     "saturation": 4.0, "luminance": 0.0},
+]
 
 
 def compute(feature: str) -> np.ndarray:
@@ -182,6 +270,65 @@ def compute(feature: str) -> np.ndarray:
         gain = apply_warmth(wb, None, warmth=1.0,
                             cal={"curve": cal["curve"]})
         return _random_small() * gain
+    if feature == "default_dispatch":
+        # 缺省分派 case (F08, 前置修补 b) —— 双重用途之「观测点」:
+        # hsl/split_tone/skin/colorcal 四 stage 带非零典型参数但 **全部不传
+        # color_domain** (Stage 级无、band 级亦无), 域分派完全由
+        # default_params() 决定 (现 hsv, F10 切 hsl+split_tone 后 oklch)。
+        # 契约: **F10 落地后本 case 输出必须变化** (hsl bands 经
+        # hsl.py:73 改道 oklch 内核 + split_tone 拨盘改道 split_tone_oklab_rgb
+        # —— 这是切默认在金样本层的可观测证据, 也是「缺省分派零敏感性」
+        # 盲区 (t52 §3.1/§3.2) 的关闭点); 届时基线 v2 由队长单点重生成,
+        # 留 v1→v2 对比证据。若 F10 后本 case 不变 = 分派切换未生效, 阻断。
+        # skin 缺省 enabled=True (skin.py:67) 且本 case 不传 enabled ——
+        # 未来 skin 缺省翻转同样被本 case 观测。
+        params = {
+            "hsl": {"enabled": True, "smooth": 0.8,
+                    "bands": json.dumps(_DISPATCH_BANDS)},
+            # split_tone 拨盘与 split_tone/split_tone_oklab case 同参
+            # (30/30/210/40), 供 reviewer 三方对照。
+            "split_tone": {"enabled": True, "highlights_hue": 30,
+                           "highlights_sat": 30, "shadows_hue": 210,
+                           "shadows_sat": 40, "balance": 0.3, "strength": 0.6},
+            "skin": {"strength": 0.5},
+            "colorcal": {"vibrance": 0.2, "saturation": 0.1,
+                         "skin_protect": 0.5},
+        }
+        return _run_full_pipeline(params)
+    if feature == "card_portra_400":
+        # 存量卡全管线 golden (F08, 前置修补 b) —— 双重用途之「A1 证明」:
+        # kodak_portra_400 (F07 已显式钉四 stage color_domain:"hsv") 经
+        # build_default_pipeline 全管线快照。参数单一直接来源 = 卡 JSON
+        # (configs/styles/films/kodak_portra_400.json, 不复制参数) ——
+        # 卡参数被误改同样在金样本层可观测。契约: **F10 切换前后本 case
+        # 必须逐位不变** (卡级锚定使存量卡语义不依赖 Stage 缺省, A1
+        # 「存量卡零迁移、逐位不变」在金样本层的可观测证明, 补 t52 §3.2
+        # 「没有任何存量卡渲染快照级金样本」缺口)。F10 后本 case 漂移 =
+        # 存量卡 A1 被破坏, 阻断切换。
+        card_path = (Path(__file__).resolve().parents[3] / "configs"
+                     / "styles" / "films" / "kodak_portra_400.json")
+        card = json.loads(card_path.read_text(encoding="utf-8"))
+        return _run_full_pipeline(card.get("params") or {})
+    if feature == "region_adjust":
+        # region_adjust 全管线 golden (F15, M1 验收) —— enabled=True +
+        # 合成软掩码 (F13 契约: prompt → float32 0..1) 经 _run_full_pipeline
+        # 真实 DEFAULT_STAGES 链序 (skin 后 stylize 前) 快照。双内核同图
+        # 触达: sky 区域 exposure=-0.6 (gamma 域增益 2^(-0.6/2.2)) +
+        # saturation=-0.15 (HSV S 缩放)。负向选型避开两处 clip 分量
+        # (V≤1 与 S≤1 的饱和段会让"参数→像素"映射变平, 削弱对内核常数
+        # 的敏感度)。羽化 (sigma=clip(长边/512,1,8)) 与软混合
+        # out = out*(1-m) + adjusted*m 在快照内可观测。
+        # 契约: region_adjust 内核常数/羽化宽度/enabled 耦合任一漂移,
+        # 本 case 即翻红; ctx.state["region_masks"] 是该 stage 的唯一注入面
+        # (wants 门控: 掩码缺失即静默直通)。
+        params = {
+            "region_adjust": {"enabled": True,
+                              "regions": {"sky": {"exposure": -0.6,
+                                                  "saturation": -0.15}}},
+        }
+        return _run_full_pipeline(params, region_masks={
+            "sky": _region_soft_mask(),
+        })
     raise KeyError(f"未知 golden feature: {feature}")
 
 

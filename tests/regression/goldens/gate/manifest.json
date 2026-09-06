@@ -166,6 +166,36 @@
       ],
       "dtype": "float32",
       "sha256": "5a95845cf64cca536cb6d2591d48b6e0e21144d557abcdb82fa0086c07bf4039"
+    },
+    "default_dispatch": {
+      "file": "default_dispatch.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "fb7332458295ed356f1654ef939a0d507e81ff3eba85954da0125056abbb3a71"
+    },
+    "card_portra_400": {
+      "file": "card_portra_400.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "53ac4d51fb0262a6c31ce6cc0e6df7c6ac7c620de49e45b8ab0a87b259cd7922"
+    },
+    "region_adjust": {
+      "file": "region_adjust.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "afbd7ebebf01fc3116a469a734e0a29b5f558f30a9ececcb80fc171ecbef73c8"
     }
   },
   "generator": "tests/regression/goldens/generate_gate_goldens.py",

@@ -226,3 +226,89 @@ def test_oklch_dimension_doc_embedded_in_protocol_text():
     assert OKLCH_DIMENSION_DOC in PATCH_SCHEMA_DOC
     assert OKLCH_SAT_HINT_LIMIT == 100.0
 
+
+
+# ---------------------------------------------------------------------------
+# F09 band 归属同源化（oklch 前置修补 d）：
+# patch 校验归属 == 运行时分派归属（hsl.py:_split_bands_by_domain）
+# ---------------------------------------------------------------------------
+
+def _flip_hsl_default_domain(monkeypatch, target: str) -> None:
+    """进程内翻转 HslStage 缺省 color_domain（模拟 F10 切默认, 零代码改动）。
+
+    真实原始 default_params 挂在函数属性上暂存（只捕获一次, monkeypatch
+    撤销后类属性已还原, 多次翻转/多测试复用均安全）。
+    """
+    from pixo.render.modules.hsl import HslStage
+    real = getattr(_flip_hsl_default_domain, "_real", None)
+    if real is None:
+        real = HslStage.default_params
+        _flip_hsl_default_domain._real = real
+
+    def flipped(self, _real=real):
+        d = dict(_real(self))
+        if d.get("color_domain") == "hsv":
+            d["color_domain"] = target
+        return d
+
+    monkeypatch.setattr(HslStage, "default_params", flipped)
+
+
+def test_stage_default_color_domain_source():
+    """归属域单一直接来源 = Stage.default_params()（F09 禁字面量复制的读点）。"""
+    from pixo.agent.patch_protocol import _stage_default_color_domain
+    assert _stage_default_color_domain("hsl") == "hsv"
+    assert _stage_default_color_domain("split_tone") == "hsv"
+    assert _stage_default_color_domain("no_such_stage") == ""
+
+
+def test_no_domain_band_attribution_follows_stage_default(monkeypatch):
+    """同源翻转自证：无 domain 键 band 的校验归属随 Stage 缺省自动跟随。
+
+    进程内把 HslStage.default_params 的 color_domain 翻成 oklch（等价
+    F10 切默认、不改任何代码）：同一 hue_center=9999 的无 domain 键 band,
+    翻转前（缺省 hsv）不属 oklch 量纲不检, 翻转后归属 oklch 内核 →
+    越界硬拒命名。若 patch_protocol 残留字面量 "hsv" 归属, 翻转后仍不检
+    本测试红 —— t52 §3.3「校验假设与运行时分派静默分叉」由此关闭。
+    """
+    band = {"name": "red", "hue_center": 9999, "saturation": 900}
+    reason = review_patches([_bands_patch([dict(band)])]).rejected[0]["reason"]
+    assert "只收数值" in reason
+    assert "hue_center" not in reason            # 缺省 hsv: 不做 oklch 量纲检查
+    _flip_hsl_default_domain(monkeypatch, "oklch")
+    reason = review_patches([_bands_patch([dict(band)])]).rejected[0]["reason"]
+    assert "hue_center" in reason and "硬拒" in reason   # 自动跟随: oklch 检查
+
+
+def test_patch_attribution_equals_runtime_dispatch(monkeypatch):
+    """钉死「patch 校验归属 == 运行时分派归属」（F09 完成标准）。
+
+    三种 band 形态（无 domain 键/显式 hsv/显式 oklch）× 两种 Stage 缺省
+    （hsv/翻转 oklch）下, patch 侧被做 oklch 量纲检查的 band 集合必须与
+    运行时 _split_bands_by_domain 的 oklch 分组逐 band 一致 —— 期望值读
+    同源（default_params）, F10 切换后本测试自动成立, 无需修订。
+    """
+    from pixo.agent.patch_protocol import (
+        _oklch_band_issues,
+        _stage_default_color_domain,
+    )
+    from pixo.render.modules.hsl import _split_bands_by_domain
+    bands = [
+        {"name": "nodomain", "hue_center": 380},
+        {"name": "explicit_hsv", "domain": "hsv", "hue_center": 380},
+        {"name": "explicit_oklch", "domain": "oklch", "hue_center": 380},
+    ]
+    for target in ("hsv", "oklch"):
+        _flip_hsl_default_domain(monkeypatch, target)
+        default_domain = _stage_default_color_domain("hsl")
+        _, oklch_group = _split_bands_by_domain(
+            [dict(b) for b in bands], default_domain)
+        runtime_oklch = sorted(b["name"] for b in oklch_group)
+        hard, _hints = _oklch_band_issues(
+            [dict(b) for b in bands], default_domain)
+        patch_checked = sorted(
+            b["name"] for b in bands
+            if any(f"band {b['name']} " in h for h in hard))
+        assert patch_checked == runtime_oklch, (
+            f"缺省 {target}: patch 校验归属 {patch_checked} != "
+            f"运行时分派 {runtime_oklch}")

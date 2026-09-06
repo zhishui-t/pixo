@@ -11,7 +11,9 @@
      json.loads 默认接受这三类字面量，且 NaN 与任何比较均为 False，
      会静默绕过第 4 段越界预检）；结构值（如 hsl.bands JSON 字符串）
      额外经 oklch 域量纲预检——色相角 ∉[0,360) 硬拒并命名，C/饱和度
-     超常规幅度为语义提示（不改变拒绝结论，通道保持只收数值）；
+     超常规幅度为语义提示（不改变拒绝结论，通道保持只收数值）。
+     无 domain 键 band 的归属域与运行时 Stage 分派同源（读对应 Stage
+     ``default_params()`` 的 color_domain，F09 同源化，禁字面量复制）。
   2. ParamRef：拆解出的 stage 存在于 STAGE_REGISTRY，且 param 在该
      Stage 的 param_schema 中；decide 层扁平方言（如 exposure_ev）
      不接受；
@@ -101,11 +103,37 @@ OKLCH_DIMENSION_DOC = (
 )
 
 
-def _oklch_band_issues(bands) -> tuple[list[str], list[str]]:
+def _stage_default_color_domain(stage: str) -> str:
+    """Stage 级缺省 ``color_domain``（band 无 domain 键时的归属域）。
+
+    与运行时分派**同源**（F09, oklch 前置修补 d）：运行时链 = Stage
+    ``__init__`` 把 ``default_params()`` 合入实例参数（graph.py:46-48）→
+    process 里 ``p(ctx, "color_domain", ...)`` 取值（hsl.py:51 的缺省
+    字面量因 default_params 恒含该键而不可达）。此处读同一
+    ``default_params()``，禁复制字面量——切默认（F10 翻 hsl/split_tone
+    缺省）后校验归属**自动跟随**，不再与运行时分派静默分叉（t52 §3.3
+    「agent 补丁校验背离」缺口关闭）。
+
+    返回空串表示无法确定（stage 未注册/实例化失败——防御路径，正常
+    不可达）：band 视为不属 oklch 量纲，仅走通用拒绝。
+    """
+    cls = STAGE_REGISTRY.get(stage)
+    if cls is None:
+        return ""
+    try:
+        defaults = cls().default_params()
+    except Exception:                          # noqa: BLE001 — 防御: 缺省读取失败
+        return ""
+    return str((defaults or {}).get("color_domain") or "").strip().lower()
+
+
+def _oklch_band_issues(bands, default_domain: str) -> tuple[list[str], list[str]]:
     """逐 band 域感知检查 → (硬拒项, 语义提示项)。
 
     仅检显式 ``domain=="oklch"`` 的 band——无 domain 键的 band 按 Stage
-    缺省 (color_domain="hsv") 归属 HSV 内核, 不在 oklch 量纲内:
+    缺省 color_domain 归属（F09 起经 :func:`_stage_default_color_domain`
+    与运行时分派同源，hsl.py:73 ``_split_bands_by_domain`` 同一缺省语义），
+    当前缺省 hsv → 归属 HSV 内核、不在 oklch 量纲内:
       - hue_center ∉ [0,360)（含非数值/±Inf/360 本身）→ 硬拒：运行时
         内核虽有 %360 求模兜底, 语义上 380°/720° 是无效建议, 闸门拒绝
         而非静默求模；
@@ -117,7 +145,7 @@ def _oklch_band_issues(bands) -> tuple[list[str], list[str]]:
     for i, band in enumerate(bands):
         if not isinstance(band, dict):
             continue
-        if str(band.get("domain", "hsv")).strip().lower() != "oklch":
+        if str(band.get("domain", default_domain)).strip().lower() != "oklch":
             continue
         label = band.get("name") or f"#{i}"
         hc = band.get("hue_center")
@@ -134,12 +162,13 @@ def _oklch_band_issues(bands) -> tuple[list[str], list[str]]:
     return hard, hints
 
 
-def _bands_reject_reason(raw: str) -> str:
+def _bands_reject_reason(raw: str, stage: str) -> str:
     """hsl.bands 结构字符串的域感知拒绝理由。
 
     通道保持关闭（补丁协议当前只收数值, apply 无结构值落地路径）, 但拒绝
     理由按 oklch 域量纲给出可行动反馈: 色相角越界硬拒命名, C/饱和超幅为
     语义提示——LLM/运维能看到"为什么不行、改到哪", 而非笼统的类型错误。
+    band 归属域与运行时分派同源（``_stage_default_color_domain``）。
     """
     base = ("hsl.bands 为结构值（8 band dict 列表），补丁通道当前只收数值，"
             "结构参数不经此通道提交")
@@ -149,7 +178,8 @@ def _bands_reject_reason(raw: str) -> str:
         return f"{base}；JSON 解析失败: {exc}"
     if not isinstance(bands, (list, tuple)):
         return f"{base}；需为 JSON 数组，实际 {type(bands).__name__}"
-    hard, hints = _oklch_band_issues(bands)
+    hard, hints = _oklch_band_issues(
+        bands, _stage_default_color_domain(stage))
     parts = [base]
     if hard:
         parts.append("oklch 域量纲越界（硬拒）: " + "；".join(hard))
@@ -179,8 +209,10 @@ def _validate_one(
         return f"param {param!r} 不符合 'stage.param' 形态"
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         if isinstance(value, str) and param == "hsl.bands":
-            # 结构值域感知预检（通道保持关闭, 见 _bands_reject_reason）
-            return _bands_reject_reason(value)
+            # 结构值域感知预检（通道保持关闭, 见 _bands_reject_reason）；
+            # band 归属域与运行时分派同源（F09）。stage 拆分在此处就地
+            # 派生（下方 ParamRef 段才做统一拆分）
+            return _bands_reject_reason(value, stage=param.split(".", 1)[0])
         return f"value 必须是数值，实际 {value!r}"
     if not math.isfinite(value):
         # NaN/Infinity：json.loads 默认接受字面量，且 NaN 与任何比较均

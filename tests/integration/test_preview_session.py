@@ -416,3 +416,33 @@ def test_stage_cache_key_includes_all_stage_params(monkeypatch):
     expected2 = 0.5 * (1.0 + 5200.0 / 100000.0)
     assert abs(v2 - (expected2 * 255.0 + 0.5)) < 1.0, (
         f"第二次渲染未反映新 WB 参数: got {v2}, want ~{expected2 * 255.0}")
+
+
+# ---------------------------------------------------------------------------
+# F09 canonical 参数面 color_domain 透出确认
+# ---------------------------------------------------------------------------
+
+def test_canonical_params_expose_color_domain():
+    """canonical 参数面透出 color_domain（F09 确认项：现状已透出，补钉死）。
+
+    canonical_params = 各 stage default_params() 深拷贝 + 用户覆盖合并
+    （session.py）—— 四涉域 stage（hsl/split_tone/skin/colorcal）的
+    color_domain 天然进 canonical，export 全质量线经
+    build_default_pipeline(params=canonical) 复用（export.py）。期望值读
+    同源（default_params），F10 翻缺省后本测试自动跟随，无需修订。
+    前端不消费 canonical 面（无端点回传；UI ParamsState 的
+    color_domain 类型仅 hsl/split_tone，DomainToggle 域开关用）。
+    """
+    from pixo.render.pipeline.graph import STAGE_REGISTRY
+    sess = RawPreviewSession("x.nef", prof=object(),
+                             params={"hsl": {"enabled": True}})
+    canonical = sess.canonical_params()
+    for stage in ("hsl", "split_tone", "skin", "colorcal"):
+        expected = STAGE_REGISTRY[stage]().default_params()["color_domain"]
+        assert canonical[stage]["color_domain"] == expected, (
+            f"canonical.{stage}.color_domain 未透出或缺省不同源")
+    assert canonical["hsl"]["enabled"] is True        # 用户覆盖正常合并
+    # 用户覆盖 color_domain 优先于 Stage 缺省
+    sess2 = RawPreviewSession("x.nef", prof=object(),
+                              params={"hsl": {"color_domain": "oklch"}})
+    assert sess2.canonical_params()["hsl"]["color_domain"] == "oklch"

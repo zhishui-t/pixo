@@ -25,10 +25,11 @@ src/pixo/render/
     lut.py / lut3d.py  # 3D LUT
     huesat.py / hsl.py / usercal.py / split_tone.py / enhance.py / skin.py
     resample.py        # Stage3 双程立方重采样
-  modules/             # 可调渲染 Stage（16 个）
+  modules/             # 可调渲染 Stage（18 个文件, 含 dehaze/clarity/denoise/
+                       # sharpen 占位等; stage 名 18 个, region_adjust 默认关）
     exposure.py / white_balance.py / tone_map.py / huesat.py
     reshape.py / color_cal.py / calibration.py / hsl.py / split_tone.py
-    skin.py / style.py / refine.py
+    skin.py / region_adjust.py / style.py / refine.py
   pipeline/
     context.py         # StageContext / StageParams / StageResult
     graph.py           # Stage / Pipeline / register_stage / STAGE_REGISTRY

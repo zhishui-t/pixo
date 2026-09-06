@@ -169,6 +169,13 @@ def compute_expected_metrics(
         region = regions.get(name) or {}
         expected[f"regions.{name}.mean_luminance"] = region.get("mean_luminance")
         expected[f"regions.{name}.area_ratio"] = region.get("area_ratio")
+        # F15 (M1): 区域高光裁剪比入基线面 —— 与 decide 键宇宙的
+        # <name>_highlight_clip_ratio (loop._metrics_for_decide flatten 键,
+        # region.* 规则族引用面) 对齐。既有 manifest 缺该键不受影响
+        # (compare 只遍历 manifest 声明的期望键, 向后兼容)。
+        expected[f"regions.{name}.highlight_clip_ratio"] = region.get(
+            "highlight_clip_ratio"
+        )
     return expected
 
 
