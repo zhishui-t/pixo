@@ -1,0 +1,40 @@
+# region.* 分区调整首版规则 (F14, M1) —— 掩码驱动的分区曝光补偿。
+#
+# 链路: 掩码通道 (F13, region_masks) + region_adjust stage (F12) 提供
+# 执行位; loop._metrics_for_decide 产出 <prompt>_luminance 等 flatten
+# 指标键, SinglePhotoLoop 构造时注册进 decide 键宇宙 (公式 lint 放行)。
+#
+# 语义: mode=set + 公式按当前区域亮度比例给负/正补偿, clamp 钉死方向
+# (天空压暗只允许 ≤0; 暗部提亮只允许 ≥0), 多轮迭代确定性收敛不累积。
+# 两键均写 region.<prompt>.<param>, 由 loop._apply_decide_params 映射进
+# region_adjust.regions[prompt][param] 并联动 enabled=True (dehaze 模式)。
+#
+# 注意: 本文件未加入 decide.rules.DEFAULT_RULES (保持基座渲染默认行为
+# 不变); 需要分区补偿的调用方显式加载 (或由后续门禁批准后再入默认包)。
+- rule_id: region_sky_exposure_001
+  priority: 20
+  condition:
+    metric: sky_luminance
+    op: gt
+    value: 150
+  action:
+    param: region.sky.exposure
+    mode: set
+    # current = 命中条件时的 sky_luminance; 超阈越多负补偿越强
+    formula: "-0.5 * (current / 150.0)"
+    clamp: [-2.0, 0.0]
+    conflict_policy: high_priority_wins
+
+- rule_id: region_plant_exposure_002
+  priority: 20
+  condition:
+    metric: plant_luminance
+    op: lt
+    value: 70
+  action:
+    param: region.plant.exposure
+    mode: set
+    # 越暗提亮越多的比例补偿 (植被暗部), 方向钳制为只升不降
+    formula: "0.4 * ((70.0 - current) / 70.0)"
+    clamp: [0.0, 2.0]
+    conflict_policy: high_priority_wins

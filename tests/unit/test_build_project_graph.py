@@ -371,7 +371,7 @@ def test_real_repo_graph_invariants():
     assert pl["default_stages"]["names"] == [
         "exposure", "whitebalance", "compose", "huesat", "tone", "dehaze",
         "clarity", "colorcal", "calibration", "hsl", "split_tone", "skin",
-        "stylize", "refine"]
+        "region_adjust", "stylize", "refine"]
     by_name = {s["name"]: s for s in pl["stages"]}
     assert by_name["whitebalance"]["domain_in"] == "linear_cam"
     assert by_name["whitebalance"]["domain_out"] == "linear_rgb"

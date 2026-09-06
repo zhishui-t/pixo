@@ -27,7 +27,7 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 import cv2
 import numpy as np
 
-from pixo.decide import decide, qc_rollback
+from pixo.decide import decide, qc_rollback, register_metric_keys
 from pixo.decide.engine import _locked_params
 from pixo.pipeline.perceptual import JndConvergenceTracker, delta_e_median
 from pixo.state import PhotoStateMachine, TraceEvent
@@ -70,6 +70,18 @@ _DOTTED_PARAM_REGISTRY: dict[str, tuple[str, str]] = {
     "clarity.strength": ("clarity", "strength"),
     "dehaze.strength": ("dehaze", "strength"),
 }
+
+# F14: region.* 点分键 → region_adjust 嵌套执行位（映射特例，注册表装不下）。
+# regions 是嵌套结构 (region_adjust.regions[prompt][param])，_DOTTED_PARAM_
+# REGISTRY 的 ("stage", "param") 二元组形态表达不了两级嵌套 → 在
+# _apply_decide_params 里按 "region.<prompt>.<param>" 前缀特例解析。
+# 写键时 enabled=True 联动沿 dehaze 模式（region_adjust 默认 enabled=False，
+# wants 门控静默；掩码缺失亦静默直通，F12/F13 契约）。decide 写出的越界值
+# 在映射侧钳制到 stage param_schema 同款域 —— 渲染链不能因规则输出越界而炸
+# (stage._regions 对越界 raise ValueError)。
+_REGION_KEY_PREFIX = "region."
+_REGION_PARAM_NAMES = ("exposure", "saturation")
+_REGION_PARAM_LIMITS = {"exposure": 2.0, "saturation": 1.0}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -570,6 +582,27 @@ def _apply_decide_params(
                     bucket["enabled"] = True
             else:
                 out[key] = copy.deepcopy(value)
+        elif (low.startswith(_REGION_KEY_PREFIX) and low.count(".") == 2
+                and low.split(".")[1]
+                and low.split(".")[2] in _REGION_PARAM_NAMES):
+            # F14: region.<prompt>.<param> → region_adjust.regions[prompt][param]
+            # 嵌套写入 + enabled=True 联动（dehaze 模式）；越界值钳制到
+            # stage schema 域（防规则输出炸渲染链）。桶链被占成非 dict 时
+            # 退回顶层扁平键（沿 t51 色彩桥同款不吞键语义）。
+            _, prompt, sparam = low.split(".")
+            bucket = out.setdefault("region_adjust", {})
+            if isinstance(bucket, dict):
+                regions = bucket.setdefault("regions", {})
+                entry = regions.setdefault(prompt, {}) \
+                    if isinstance(regions, dict) else None
+                if entry is not None and isinstance(entry, dict):
+                    limit = _REGION_PARAM_LIMITS[sparam]
+                    entry[sparam] = max(-limit, min(limit, float(value)))
+                    bucket["enabled"] = True
+                else:
+                    out[key] = copy.deepcopy(value)
+            else:
+                out[key] = copy.deepcopy(value)
         else:
             if "." in low:
                 # 未知点分键: 无执行位, 保留为顶层 informational 键
@@ -693,6 +726,31 @@ class SinglePhotoLoop:
         self.max_iterations = int(max_iterations)
         self.prompts = list(prompts or ["face", "sky", "plant"])
         self.confidences = dict(confidences or {})
+        # F14: 指标键宇宙注册（decide 公式/条件 lint 补缺，t59/t40 守卫）。
+        # 键宇宙一旦非空，load_rules 对公式标识符与 condition.all 指标走
+        # 严格校验 —— 因此必须注册 **完整生产 flatten 宇宙**（_metrics_for_
+        # decide 全部产出键 + loop 上下文指标），不能只注册 region 键，
+        # 否则默认规则包（tone_clarity 的 condition.all 引 haze_proxy 等）
+        # 会在加载期 DecideError。
+        register_metric_keys({
+            # measurement["global"] / 顶层测量键 (_metrics_for_decide 固定键)
+            "mean_luminance", "highlight_clip_ratio", "shadow_clip_ratio",
+            "contrast", "preview_highlight_clip_estimate",
+            "preview_overflow_ratio",
+            # 顶层代理指标 (measurement 直出)
+            "haze_proxy", "colorfulness_proxy", "tonal_range",
+            # loop 上下文指标 (crop 建议链)
+            "crop_suggestion_applicable",
+        })
+        # 区域 flatten 键 (<prompt>_{luminance,area_ratio,highlight_clip_ratio,
+        # reliable})，region.* 规则的引用面 —— 按本 loop 的 prompts 注册
+        # （幂等 set-add，无渲染行为副作用）。
+        register_metric_keys(
+            f"{prompt}_{suffix}"
+            for prompt in self.prompts
+            for suffix in ("luminance", "area_ratio",
+                           "highlight_clip_ratio", "reliable")
+        )
         self.targets = dict(targets or {})
         self.locked_params = list(locked_params or [])
         self.manual_on_unreliable = bool(manual_on_unreliable)
