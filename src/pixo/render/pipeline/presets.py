@@ -10,10 +10,11 @@ from .graph import Pipeline
 # 线性域、tone 前) → 影调 → 去雾(默认 enabled=False, wants 门控保证不改像素;
 # 进链供 dehaze.strength 等点分参数有执行位) → 清晰度(质感, 基座开)
 # → 色彩校准(肤色保护) → 用户校准 → HSL → 分离色调 → 磨皮(仅人像, wants 门控)
+# → 分区调整(region_adjust, 默认 enabled=False, M1 掩码驱动; skin 后 stylize 前)
 # → 风格化(LUT) → 精修
 DEFAULT_STAGES = ["exposure", "whitebalance", "compose", "huesat", "tone",
                   "dehaze", "clarity", "colorcal", "calibration", "hsl",
-                  "split_tone", "skin", "stylize", "refine"]
+                  "split_tone", "skin", "region_adjust", "stylize", "refine"]
 
 
 def build_default_pipeline(prof=None, style_lut=None,

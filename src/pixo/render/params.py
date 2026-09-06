@@ -11,6 +11,7 @@ from .modules.exposure import ExposureStage
 from .modules.hsl import HslStage
 from .modules.huesat import HueSatStage
 from .modules.refine import RefineStage
+from .modules.region_adjust import RegionAdjustStage
 from .modules.sharpen import SharpenStage
 from .modules.skin import SkinStage
 from .modules.split_tone import SplitToneStage
@@ -41,6 +42,7 @@ STAGE_CLASSES = {
     "hsl": HslStage,
     "split_tone": SplitToneStage,
     "skin": SkinStage,
+    "region_adjust": RegionAdjustStage,
     "stylize": StylizeStage,
     "refine": RefineStage,
 }

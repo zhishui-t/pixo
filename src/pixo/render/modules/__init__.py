@@ -25,6 +25,7 @@ from . import refine            # noqa: F401
 from . import calibration      # noqa: F401
 from . import hsl              # noqa: F401
 from . import split_tone        # noqa: F401
+from . import region_adjust     # noqa: F401
 
 from .exposure import ExposureStage
 from .white_balance import WhiteBalanceStage
@@ -43,6 +44,7 @@ from .refine import RefineStage
 from .calibration import CalibrationStage
 from .hsl import HslStage
 from .split_tone import SplitToneStage
+from .region_adjust import RegionAdjustStage
 
 __all__ = [
     "ExposureStage", "WhiteBalanceStage", "ComposeStage", "HueSatStage", "ToneStage",
