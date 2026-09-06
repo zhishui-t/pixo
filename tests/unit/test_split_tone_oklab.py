@@ -4,8 +4,9 @@
 带逐位直通、balance 端点只染对应域 (balance=0 纯高光域 / balance=1 纯阴影域)、
 纯白/纯黑任何满饱和逐位不变 (C_ref 端点趋 0)、染色构造精确性 (L 保持/h 落位/
 C=sat/100·C_ref(L))、近白染色自然低 C (高光色相漂移根治点)、dtype f32/[0,1]
-/批量与单像素逐位一致、SplitToneStage color_domain 分派 (缺省 hsv 与旧内核
-逐位一致 = 存量预设零迁移)、非法 domain 报错、默认参数表零改动。
+/批量与单像素逐位一致、SplitToneStage color_domain 分派 (F10 起缺省 oklch 与 oklch 内核逐位
+一致; hsv 路径由存量卡 F07 卡级钉域继续锁定)、非法 domain 报错、
+默认参数表零改动 (F10 起 color_domain=oklch)。
 """
 from __future__ import annotations
 
@@ -15,7 +16,6 @@ import pytest
 from pixo.render.pipeline.graph import StageContext, DOMAIN_GAMMA_RGB
 from pixo.render.core.hsl_oklch import _cmax_of_l
 from pixo.render.core.oklab import oklab_to_oklch, srgb_to_oklab
-from pixo.render.core.split_tone import split_tone_rgb
 from pixo.render.core.split_tone_oklab import split_tone_oklab_rgb
 from pixo.render.modules.split_tone import SplitToneStage
 
@@ -190,22 +190,32 @@ _P = {"shadows_hue": 30.0, "shadows_sat": 70.0,
 
 
 def test_stage_default_hsv_bitwise_identical_to_old_kernel():
-    """缺省 color_domain=hsv: Stage 输出与旧 split_tone_rgb 逐位一致 (A1 硬约束)。"""
+    """缺省 color_domain 分派与内核逐位一致（F10 后缺省 oklch，期望翻转）。
+
+    F10 前：缺省 hsv → 与旧 split_tone_rgb 逐位一致（当时的 A1 硬约束）。
+    F10 起：缺省翻为 oklch（第一批切换）→ Stage 缺省输出与
+    split_tone_oklab_rgb 逐位一致；hsv 内核路径由显式 color_domain="hsv"
+    （存量卡 F07 卡级钉域）继续锁定，不删断言只翻期望。
+    """
     rng = np.random.default_rng(0)
     img = rng.random((16, 16, 3), dtype=np.float32)
     out = _run_stage(dict(_P), img)
-    ref = split_tone_rgb(img.astype(np.float64), _P["shadows_hue"], _P["shadows_sat"],
-                         _P["highlights_hue"], _P["highlights_sat"],
-                         balance=_P["balance"], strength=_P["strength"])
+    ref = split_tone_oklab_rgb(img.astype(np.float64), _P["shadows_hue"], _P["shadows_sat"],
+                               _P["highlights_hue"], _P["highlights_sat"],
+                               balance=_P["balance"], strength=_P["strength"])
     assert np.array_equal(out, ref)
 
 
 def test_stage_color_domain_oklch_dispatch():
-    """color_domain=oklch: 分派到 split_tone_oklab_rgb (逐位一致), 且与 hsv 可区分。"""
+    """color_domain=oklch: 分派到 split_tone_oklab_rgb (逐位一致)，且与 hsv 可区分。
+
+    F10 起缺省即 oklch，故 hsv 对照组显式传 color_domain="hsv"（F10 前
+    该组依赖缺省 hsv，现随缺省翻转改为显式——语义不变，指针显式化）。
+    """
     rng = np.random.default_rng(0)
     img = rng.random((16, 16, 3), dtype=np.float32)
-    out_hsv = _run_stage(dict(_P), img)
-    out_oklch = _run_stage({**_P, "color_domain": "oklch"}, img)
+    out_hsv = _run_stage({**_P, "color_domain": "hsv"}, img)
+    out_oklch = _run_stage(dict(_P), img)   # 缺省 = oklch (F10)
     ref = split_tone_oklab_rgb(img.astype(np.float64), _P["shadows_hue"], _P["shadows_sat"],
                                _P["highlights_hue"], _P["highlights_sat"],
                                balance=_P["balance"], strength=_P["strength"])
@@ -214,13 +224,13 @@ def test_stage_color_domain_oklch_dispatch():
 
 
 def test_stage_default_params_preserved():
-    """默认参数表: 原有键值零改动 (UI/胶片卡契约), 仅新增 color_domain=hsv。"""
+    """默认参数表: 原有键值零改动 (UI/胶片卡契约), color_domain 缺省 oklch (F10)。"""
     dp = SplitToneStage().default_params()
     assert dp == {"enabled": False,
                   "shadows_hue": 45.0, "shadows_sat": 0.0,
                   "highlights_hue": 210.0, "highlights_sat": 0.0,
                   "balance": 0.5, "strength": 1.0,
-                  "color_domain": "hsv"}
+                  "color_domain": "oklch"}
     assert "color_domain" in SplitToneStage.param_schema
 
 

@@ -175,7 +175,7 @@
         3
       ],
       "dtype": "float32",
-      "sha256": "fb7332458295ed356f1654ef939a0d507e81ff3eba85954da0125056abbb3a71"
+      "sha256": "b3352650fc0a4d541063cae5f75717fe9c2922ffddf5cecb2defc4577179e09a"
     },
     "card_portra_400": {
       "file": "card_portra_400.npy",
@@ -199,5 +199,5 @@
     }
   },
   "generator": "tests/regression/goldens/generate_gate_goldens.py",
-  "reviewer": "t38 tester-1 (2026-09-04 标定敏感 case 批次: +exposure_cal_auto/+warmth_cal_auto, 关闭 t36 §5 门禁缺口——gate 金样本对四个标定表零敏感; 两 case 分别触达正式曝光表 [ExposureStage._auto_ev 完整链: med 探针→med 主键+wb_B 邻域二次插值] 与正式 warmth 分桶曲线 [_load_warm_cal→apply_warmth 曲线分支], 换表敏感性实证: calib_prev 旧表 vs 现行新表输出 hash 均不同 [exposure 同进程须清 _cached_table 后再验, 生成器独立进程无此问题]; 前置 15 case 重算零漂移 [旧 .npy 字节不变]; manifest 数量守卫 15→17 同步; rp_ccm 运行时未接线 [src 零调用点], 无从触达, 接线后补 case —— 见 .artifacts/gate_calibration_coverage.md)"
+  "reviewer": "t38 tester-1 (2026-09-04 标定敏感 case 批次: +exposure_cal_auto/+warmth_cal_auto, 关闭 t36 §5 门禁缺口——gate 金样本对四个标定表零敏感; 两 case 分别触达正式曝光表 [ExposureStage._auto_ev 完整链: med 探针→med 主键+wb_B 邻域二次插值] 与正式 warmth 分桶曲线 [_load_warm_cal→apply_warmth 曲线分支], 换表敏感性实证: calib_prev 旧表 vs 现行新表输出 hash 均不同 [exposure 同进程须清 _cached_table 后再验, 生成器独立进程无此问题]; 前置 15 case 重算零漂移 [旧 .npy 字节不变]; manifest 数量守卫 15→17 同步; rp_ccm 运行时未接线 [src 零调用点], 无从触达, 接线后补 case —— 见 .artifacts/gate_calibration_coverage.md) | F10 批次(2026-09-07): default_dispatch v1(fb733245)->v2 oklch 缺省快照, 队长单点重生成, card_portra_400/region_adjust 及其余 18 条零漂移(F07 卡级钉域 A1 兑现)"
 }

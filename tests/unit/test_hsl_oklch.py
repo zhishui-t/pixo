@@ -3,7 +3,8 @@
 验证: 全 0/空 bands/全掩码零 no-op 逐位、掩码外像素逐位不变 (touch 直通)、
 中性灰任何参数不变、单 band 只动目标色相扇区、h 环绕 348°+20° 无跳变、
 饱和软限幅严格单调无平台 (C_max(L) tanh 渐近)、luminance 只动 L、
-HslStage color_domain 分派 (缺省 hsv 与旧内核逐位一致 = 存量卡零迁移 A1)、
+HslStage color_domain 分派 (F10 起缺省 oklch 与 oklch 内核逐位一致;
+hsv 路径由存量卡 F07 卡级钉域继续锁定)、
 band 级 domain 键混用、非法 domain/色域报错。
 """
 from __future__ import annotations
@@ -180,20 +181,30 @@ _B2 = [{"name": "red", "hue_center": 0, "width": 45,
 
 
 def test_stage_default_hsv_bitwise_identical_to_old_kernel():
-    """缺省 color_domain=hsv: Stage 输出与旧 hsl_adjust_rgb 逐位一致 (A1 硬约束)。"""
+    """缺省 color_domain 分派与内核逐位一致（F10 后缺省 oklch，期望翻转）。
+
+    F10 前：缺省 hsv → 与旧 hsl_adjust_rgb 逐位一致（当时的 A1 硬约束）。
+    F10 起：缺省翻为 oklch（第一批切换）→ Stage 缺省输出与
+    oklch_adjust_rgb 逐位一致；hsv 内核路径由显式 color_domain="hsv"
+    （存量卡 F07 卡级钉域）继续锁定，不删断言只翻期望。
+    """
     rng = np.random.default_rng(0)
     img = rng.random((16, 16, 3), dtype=np.float32)
     out = _run_stage({"bands": json.dumps(_B2)}, img)
-    ref = hsl_adjust_rgb(img.astype(np.float64), _B2, smooth=1.0)
+    ref = oklch_adjust_rgb(img.astype(np.float64), _B2, smooth=1.0)
     assert np.array_equal(out, ref)
 
 
 def test_stage_color_domain_oklch_dispatch():
-    """color_domain=oklch: 分派到 oklch_adjust_rgb (逐位一致), 且与 hsv 结果不同。"""
+    """color_domain=oklch: 分派到 oklch_adjust_rgb (逐位一致)，且与 hsv 可区分。
+
+    F10 起缺省即 oklch，故 hsv 对照组显式传 color_domain="hsv"（F10 前
+    该组依赖缺省 hsv，现随缺省翻转改为显式——语义不变，指针显式化）。
+    """
     rng = np.random.default_rng(0)
     img = rng.random((16, 16, 3), dtype=np.float32)
-    out_hsv = _run_stage({"bands": json.dumps(_B2)}, img)
-    out_oklch = _run_stage({"bands": json.dumps(_B2), "color_domain": "oklch"}, img)
+    out_hsv = _run_stage({"bands": json.dumps(_B2), "color_domain": "hsv"}, img)
+    out_oklch = _run_stage({"bands": json.dumps(_B2)}, img)   # 缺省 = oklch (F10)
     ref = oklch_adjust_rgb(img.astype(np.float64), _B2, smooth=1.0)
     assert np.array_equal(out_oklch, ref)
     assert not np.array_equal(out_oklch, out_hsv), "两域结果应可区分"

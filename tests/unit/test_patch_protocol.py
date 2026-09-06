@@ -197,12 +197,24 @@ def test_bands_string_chroma_hint_not_hard():
     assert "硬拒" not in reason
 
 
-def test_bands_string_hsv_domain_not_checked():
-    """无 domain 键的 band 按 Stage 缺省 hsv 归属，不做 oklch 量纲检查。"""
-    hsv_band = {"name": "red", "hue_center": 9999, "saturation": 900}
-    reason = review_patches([_bands_patch([hsv_band])]).rejected[0]["reason"]
+def test_bands_no_domain_checked_as_oklch_by_default():
+    """无 domain 键 band 按 Stage 缺省归属做量纲检查（F10 后缺省 oklch）。
+
+    F10 前本测试钉「缺省 hsv → 不做 oklch 检查」；F10 缺省翻 oklch 后
+    期望翻转：无 domain 键 band 归属 oklch 内核 → hue_center=9999 硬拒
+    命名（运行时同按 oklch 内核执行，校验必须同语义）。「缺省=hsv 时不
+    检」的旧语义由 F09 parity 测试（两缺省翻转对照）继续覆盖。
+    显式 domain 戳不受缺省影响：hsv 戳 band 仍不检（第二组断言）。
+    """
+    no_domain = {"name": "red", "hue_center": 9999, "saturation": 900}
+    reason = review_patches([_bands_patch([no_domain])]).rejected[0]["reason"]
     assert "只收数值" in reason
-    assert "hue_center" not in reason and "提示" not in reason
+    assert "hue_center" in reason and "硬拒" in reason
+    # 显式 hsv 戳：恒不属 oklch 量纲（与缺省翻转无关）
+    stamped_hsv = {"name": "blue", "domain": "hsv",
+                   "hue_center": 9999, "saturation": 900}
+    reason = review_patches([_bands_patch([stamped_hsv])]).rejected[0]["reason"]
+    assert "hue_center" not in reason
 
 
 def test_bands_string_unparseable_json():
@@ -234,10 +246,11 @@ def test_oklch_dimension_doc_embedded_in_protocol_text():
 # ---------------------------------------------------------------------------
 
 def _flip_hsl_default_domain(monkeypatch, target: str) -> None:
-    """进程内翻转 HslStage 缺省 color_domain（模拟 F10 切默认, 零代码改动）。
+    """进程内把 HslStage 缺省 color_domain 覆盖为 target（零源码改动）。
 
     真实原始 default_params 挂在函数属性上暂存（只捕获一次, monkeypatch
-    撤销后类属性已还原, 多次翻转/多测试复用均安全）。
+    撤销后类属性已还原, 多次翻转/多测试复用均安全）。无条件覆盖（不判断
+    现值）——F10 后真实缺省已是 oklch, 仍需能翻回 hsv 做双向对照。
     """
     from pixo.render.modules.hsl import HslStage
     real = getattr(_flip_hsl_default_domain, "_real", None)
@@ -247,37 +260,52 @@ def _flip_hsl_default_domain(monkeypatch, target: str) -> None:
 
     def flipped(self, _real=real):
         d = dict(_real(self))
-        if d.get("color_domain") == "hsv":
-            d["color_domain"] = target
+        d["color_domain"] = target
         return d
 
     monkeypatch.setattr(HslStage, "default_params", flipped)
 
 
 def test_stage_default_color_domain_source():
-    """归属域单一直接来源 = Stage.default_params()（F09 禁字面量复制的读点）。"""
+    """归属域单一直接来源 = Stage.default_params()（F09 禁字面量复制的读点）。
+
+    期望值与 default_params 读同源比较（翻转无关）——F10 翻缺省后本测试
+    自动成立，无需修订；具体缺省值由 test_stage_default_params_preserved
+    （split_tone）等缺省断言钉死。
+    """
     from pixo.agent.patch_protocol import _stage_default_color_domain
-    assert _stage_default_color_domain("hsl") == "hsv"
-    assert _stage_default_color_domain("split_tone") == "hsv"
+    from pixo.render.modules.hsl import HslStage
+    from pixo.render.modules.split_tone import SplitToneStage
+    assert (_stage_default_color_domain("hsl")
+            == HslStage().default_params()["color_domain"])
+    assert (_stage_default_color_domain("split_tone")
+            == SplitToneStage().default_params()["color_domain"])
     assert _stage_default_color_domain("no_such_stage") == ""
 
 
 def test_no_domain_band_attribution_follows_stage_default(monkeypatch):
     """同源翻转自证：无 domain 键 band 的校验归属随 Stage 缺省自动跟随。
 
-    进程内把 HslStage.default_params 的 color_domain 翻成 oklch（等价
-    F10 切默认、不改任何代码）：同一 hue_center=9999 的无 domain 键 band,
-    翻转前（缺省 hsv）不属 oklch 量纲不检, 翻转后归属 oklch 内核 →
-    越界硬拒命名。若 patch_protocol 残留字面量 "hsv" 归属, 翻转后仍不检
-    本测试红 —— t52 §3.3「校验假设与运行时分派静默分叉」由此关闭。
+    读当前真实缺省 D（不钉具体值），进程内翻转到另一域 D'：同一
+    hue_center=9999 的无 domain 键 band 的量纲检查结论必须随翻转改变
+    （D 量纲下的结论 ≠ D' 量纲下的结论）。若 patch_protocol 残留字面量
+    归属，翻转后结论不变 → 本测试红 —— t52 §3.3「校验假设与运行时分派
+    静默分叉」由此关闭，且形态翻转无关（F10 落地后自动成立）。
     """
+    from pixo.agent.patch_protocol import _stage_default_color_domain
     band = {"name": "red", "hue_center": 9999, "saturation": 900}
-    reason = review_patches([_bands_patch([dict(band)])]).rejected[0]["reason"]
-    assert "只收数值" in reason
-    assert "hue_center" not in reason            # 缺省 hsv: 不做 oklch 量纲检查
-    _flip_hsl_default_domain(monkeypatch, "oklch")
-    reason = review_patches([_bands_patch([dict(band)])]).rejected[0]["reason"]
-    assert "hue_center" in reason and "硬拒" in reason   # 自动跟随: oklch 检查
+    current = _stage_default_color_domain("hsl")
+    flipped = "oklch" if current != "oklch" else "hsv"
+
+    def checked_as_oklch():
+        reason = review_patches(
+            [_bands_patch([dict(band)])]).rejected[0]["reason"]
+        return "hue_center" in reason
+
+    assert checked_as_oklch() == (current == "oklch")
+    _flip_hsl_default_domain(monkeypatch, flipped)
+    assert _stage_default_color_domain("hsl") == flipped
+    assert checked_as_oklch() == (flipped == "oklch")
 
 
 def test_patch_attribution_equals_runtime_dispatch(monkeypatch):

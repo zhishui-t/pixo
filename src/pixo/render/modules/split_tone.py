@@ -4,9 +4,10 @@
 预设显式开启。纯数学位于 engine/split_tone.py (split_tone_rgb) 与
 engine/split_tone_oklab.py (split_tone_oklab_rgb, 设计 §2.3)。
 
-编辑域开关 (设计 §1.2, 与 HslStage 同枚举): color_domain = "hsv"(缺省, 旧
-内核, 存量预设/卡片逐位不变) | "oklch" (OKLab 域染色, 近白自然低 C)。参数名
-不变, UI/胶片卡零改动。
+编辑域开关 (设计 §1.2, 与 HslStage 同枚举): color_domain = "hsv"(旧内核) |
+"oklch" (OKLab 域染色, 近白自然低 C)。F10 起缺省 oklch (第一批切换,
+ab_intent_report 全过背书); 存量预设/卡片逐位不变由 F07 卡级显式钉 "hsv"
+兑现, 不再依赖 Stage 缺省。参数名不变, UI/胶片卡零改动。
 """
 from __future__ import annotations
 
@@ -31,7 +32,8 @@ class SplitToneStage(Stage):
         "highlights_sat": {"type": "float", "min": 0.0, "max": 100.0},
         "balance": {"type": "float", "min": 0.0, "max": 1.0},
         "strength": {"type": "float", "min": 0.0, "max": 1.0},
-        # 编辑域 (设计 §1.2/§2.3): "hsv"(缺省, 旧内核) | "oklch"
+        # 编辑域 (设计 §1.2/§2.3): "hsv"(旧内核) | "oklch"。F10 起缺省 oklch
+        # (第一批切换); 存量卡 A1 由 F07 卡级显式钉 "hsv" 兑现。
         "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
     }
 
@@ -40,7 +42,7 @@ class SplitToneStage(Stage):
                 "shadows_hue": 45.0, "shadows_sat": 0.0,
                 "highlights_hue": 210.0, "highlights_sat": 0.0,
                 "balance": 0.5, "strength": 1.0,
-                "color_domain": "hsv"}
+                "color_domain": "oklch"}
 
     def wants(self, ctx: StageContext) -> bool:
         # 仅 enabled=True 时进入 (全 0 饱和时 process 恒等, 无副作用)

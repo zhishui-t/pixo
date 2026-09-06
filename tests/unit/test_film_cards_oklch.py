@@ -138,13 +138,14 @@ def test_legacy_cards_pin_hsv_domain_explicitly():
 
 
 def test_legacy_domain_pin_merge_equivalent_to_defaults():
-    """graph.py 参数合并层证明钉域当前为语义 no-op（设计 F07 完成标准）。
+    """graph.py 参数合并层证明卡级钉域覆盖缺省（F07 锚定 × F10 翻缺省）。
 
-    Stage.__init__ 以 {**default_params(), **卡参数} 合并（graph.py:46-48）；
-    现 Stage 缺省 color_domain 均为 "hsv" → 显式钉 hsv 后合并结果与钉前
-    逐键相等（参数面无任何变化）。F10 翻转 Stage 缺省后，本测试的合并
-    结果将随缺省改变（预期），但卡参数中的显式 "hsv" 恒覆盖新缺省 ——
-    运行时 `p(ctx, "color_domain", ...)` 取值由卡锚定为 hsv。
+    Stage.__init__ 以 {**default_params(), **卡参数} 合并（graph.py:46-48）。
+    F10 前（缺省 hsv）：钉域为语义 no-op（合并结果与钉前逐键相等）。
+    F10 起（hsl/split_tone 缺省 oklch）：钉域转为**实义覆盖**——本测试
+    翻转为该语义：卡参数显式 "hsv" 恒覆盖新缺省（运行时
+    `p(ctx, "color_domain", ...)` 取值由卡锚定为 hsv），除 color_domain
+    外其余键合并结果逐键相等（钉域不引入任何其他参数面变化）。
     """
     for card in StyleCard.from_films_dir(FILMS):
         if card["style_id"] in DEMO_IDS:
@@ -158,9 +159,17 @@ def test_legacy_domain_pin_merge_equivalent_to_defaults():
             unpinned = {k: v for k, v in params.items()
                         if k != "color_domain"}
             merged_baseline = dict(cls(unpinned).params.values)
-            assert merged_pinned == merged_baseline, (
-                f"{card['style_id']}.{stage_name} 钉域改变参数合并结果")
+            # 钉域是唯一差异点：其余键合并逐键相等
+            diff_keys = {k for k in set(merged_pinned) | set(merged_baseline)
+                         if merged_pinned.get(k) != merged_baseline.get(k)}
+            assert diff_keys <= {"color_domain"}, (
+                f"{card['style_id']}.{stage_name} 钉域引入意外参数差异: "
+                f"{diff_keys}")
+            # 卡级锚定：显式 "hsv" 恒覆盖 Stage 缺省（F10 翻缺省后即实义）
             assert merged_pinned["color_domain"] == "hsv"
+            # 基线（无钉）随缺省同源变化（读同源, 不钉字面量）
+            assert (merged_baseline["color_domain"]
+                    == cls().default_params()["color_domain"])
 
 
 # ---------------------------------------------------------------------------

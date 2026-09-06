@@ -25,13 +25,15 @@ class HslStage(Stage):
         "enabled": {"type": "bool"},
         "bands": {"type": "float_or_str"},     # 8 band dict 列表 (或 JSON 字符串), None→默认全 0
         "smooth": {"type": "float", "min": 0.0, "max": 1.0},
-        # 编辑域 (设计 §1.2/§2.2): "hsv"(缺省, 旧内核) | "oklch"。决定**无 domain 键**
-        # band 的归属; band 级 "domain" 键逐段覆盖。缺省值保证存量卡逐位不变 (A1)。
+        # 编辑域 (设计 §1.2/§2.2): "hsv"(旧内核) | "oklch"。决定**无 domain 键**
+        # band 的归属; band 级 "domain" 键逐段覆盖。F10 起缺省 oklch (第一批
+        # 切换, ab_intent_report 全过背书); 存量卡逐位不变 (A1) 由 F07 卡级
+        # 显式钉 "hsv" 兑现 (configs/styles/films/ 23 卡), 不再依赖 Stage 缺省。
         "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
     }
 
     def default_params(self):
-        return {"enabled": False, "bands": None, "smooth": 1.0, "color_domain": "hsv"}
+        return {"enabled": False, "bands": None, "smooth": 1.0, "color_domain": "oklch"}
 
     def wants(self, ctx: StageContext) -> bool:
         # 仅 enabled=True 时进入 (bands 缺省/全 0 时 process 恒等, 无副作用)
