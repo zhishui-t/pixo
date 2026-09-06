@@ -332,9 +332,15 @@ class SyntheticRenderBackend:
         pipe = Pipeline(stages=self.stages, params=params)
         ctx = StageContext("synthetic", prof=None, config={"stages": dict(params)})
         # t92：loop 侧原生/mask 框经 state_extras 注入，exposure 测光
-        # (subject_mode=box) 与后续 stage 可消费 face_boxes/subject_boxes。
+        # (subject_mode=box) 与后续 stage 可消费 face_boxes/subject_boxes；
+        # F13：region_masks 键适配到本渲染消费帧（float 0-1 软掩码，
+        # compose 后坐标；synthetic 线不走 session 适配，在此适配）。
         extras = getattr(self, "state_extras", None)
         if isinstance(extras, dict) and extras:
+            from pixo.render.pipeline.region_masks import adapt_state_extras
+            compose = (params.get("compose")
+                       if "compose" in self.stages else None)
+            extras = adapt_state_extras(extras, img.shape[:2], compose)
             ctx.state.update(extras)
         ctx.set_image(img, DOMAIN_LINEAR_RGB)
         pipe.run(ctx)
@@ -401,10 +407,18 @@ class RawRenderBackend:
             session.close()
 
     def render_full(self, params: dict[str, Any]) -> np.ndarray:
-        """渲染全分辨率（8-bit）。"""
+        """渲染全分辨率（8-bit）。
+
+        F13：与 render_preview 对称地透传 state_extras（含 region_masks 软
+        掩码，归一化框分辨率无关可直用；掩码由 export 入口适配到全分辨率
+        消费帧）——修复 export 线无 state_extras 导致 preview 有区域效果、
+        导出没有的缺口。
+        """
         from pixo.render.web.export import _render_full_quality
 
-        return _render_full_quality(self.raw_path, self.prof, params, output_bps=8)
+        return _render_full_quality(
+            self.raw_path, self.prof, params, output_bps=8,
+            state_extras=getattr(self, "state_extras", None))
 
 
 # ---------------------------------------------------------------------------
@@ -708,6 +722,10 @@ class SinglePhotoLoop:
         # t92：最近一次归一化框（face_boxes/subject_boxes），粘性注入
         # 后端 state_extras 供 exposure 测光消费。
         self._last_norm_boxes: dict[str, list] = {}
+        # F13：分割掩码的 float 0-1 软掩码形态（首轮 preview 分辨率，随
+        # masks_cache 一次转换），注入 state_extras["region_masks"] 供
+        # region_adjust 消费（preview/export 双线同源）。
+        self._region_masks_soft: dict[str, np.ndarray] | None = None
         # t47 LLM 建议编排：默认关；开且 dsh.chat 环境齐备才整链运行，
         # accepted 仅注入 decide_context 建议态，rejected/跳过进 trace。
         self.agent_suggest = bool(agent_suggest)
@@ -852,7 +870,11 @@ class SinglePhotoLoop:
                 self._last_norm_boxes = norm_boxes
                 if backend is not None:   # 即时同步，供同轮后续渲染消费
                     try:
-                        backend.state_extras = dict(norm_boxes)
+                        extras = dict(norm_boxes)
+                        if self._region_masks_soft:
+                            # F13：同轮分割已就绪时掩码一并粘性注入
+                            extras["region_masks"] = self._region_masks_soft
+                        backend.state_extras = extras
                     except Exception:  # noqa: BLE001
                         pass
             # t29 契约：suggest_crop 输入输出均为归一化 rect，直接透传。
@@ -1103,9 +1125,14 @@ class SinglePhotoLoop:
                 )
 
             # t92：粘性归一化框注入后端（exposure 测光 box 模式消费）；
-            # 首轮无框时为空 dict，不注入。
+            # 首轮无框时为空 dict，不注入。F13：region_masks 软掩码随框
+            # 一并粘性注入（首轮分割完成后从第二轮起生效；同一批数组对象
+            # 反复注入，保 session stage 缓存指纹稳定）。
             try:
-                backend.state_extras = dict(self._last_norm_boxes or {})
+                extras = dict(self._last_norm_boxes or {})
+                if self._region_masks_soft:
+                    extras["region_masks"] = self._region_masks_soft
+                backend.state_extras = extras
             except Exception:  # noqa: BLE001 - 注入失败不阻断渲染
                 pass
             preview_img = backend.render_preview(
@@ -1129,6 +1156,16 @@ class SinglePhotoLoop:
                 except SegmenterUnavailable as exc:
                     sm.escalate(f"分割模型不可用：{exc}")
                     return params, measurements, None, "segmenter_unavailable"
+                else:
+                    # F13：二值 0/255 掩码一次性转 float 0-1 软掩码（首轮
+                    # preview 分辨率；后续逐渲染由各入口适配到消费帧）。
+                    try:
+                        from pixo.render.pipeline.region_masks import (
+                            adapt_region_masks,
+                        )
+                        self._region_masks_soft = adapt_region_masks(masks_cache)
+                    except Exception:  # noqa: BLE001 - 掩码通道降级不阻断
+                        self._region_masks_soft = None
             masks = _resize_masks(masks_cache, preview_img.shape[:2])
             measurement = self.measurer.measure(
                 preview_img,
@@ -1488,6 +1525,16 @@ class SinglePhotoLoop:
         masks_cache: dict[str, np.ndarray] | None,
     ) -> tuple[np.ndarray, dict[str, Any], dict[str, Any]]:
         """执行 FINAL_QC：全分辨率渲染 + mask 上采样测量。"""
+        # F13：FINAL_QC 前刷新 state_extras（含 region_masks）——单轮闭环
+        # （max_iterations=1）时首轮注入发生在分割之前，导出线在此补齐；
+        # 多轮时为幂等重放（同一批数组对象，缓存指纹不变）。
+        try:
+            extras = dict(self._last_norm_boxes or {})
+            if self._region_masks_soft:
+                extras["region_masks"] = self._region_masks_soft
+            backend.state_extras = extras
+        except Exception:  # noqa: BLE001 - 注入失败不阻断渲染
+            pass
         full_img = backend.render_full(params)
         full_masks = _resize_masks(masks_cache or {}, full_img.shape[:2])
         full_measurement = self.measurer.measure(

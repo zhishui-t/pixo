@@ -42,7 +42,7 @@ def manager(tmp_path):
 def test_export_tiff16_completed(manager, tmp_path, monkeypatch):
     captured = {}
 
-    def fake_render(raw_path, prof, params, output_bps=8):
+    def fake_render(raw_path, prof, params, output_bps=8, **kwargs):
         captured["output_bps"] = output_bps
         arr = np.zeros((8, 8, 3), dtype=np.uint16)
         arr[..., 0] = 1000
@@ -63,7 +63,7 @@ def test_export_tiff16_completed(manager, tmp_path, monkeypatch):
 def test_export_jpeg_uses_8bit(manager, monkeypatch):
     captured = {}
 
-    def fake_render(raw_path, prof, params, output_bps=8):
+    def fake_render(raw_path, prof, params, output_bps=8, **kwargs):
         captured["output_bps"] = output_bps
         return (np.zeros((4, 4, 3), dtype=np.float32) + 0.5)
 

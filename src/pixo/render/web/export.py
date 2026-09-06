@@ -27,14 +27,22 @@ _EXT = {
 }
 
 
-def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8):
+def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8,
+                         state_extras: Optional[dict] = None):
     """Full-quality 4s 主线：full-res decode + 完整 12 stage。
 
     返回 uint8 (output_bps=8) 或 uint16 (output_bps=16)。
     样板 (ctx 构建/注入/终检/量化) 收敛在 pipeline.runner (三入口共用)。
+
+    state_extras (F13)：与 RawPreviewSession.render 的同名参数同语义——
+    额外 state 注入（归一化框分辨率无关直用；region_masks 软掩码在入口
+    适配到全分辨率消费帧，与 preview 线共用 pixo.render.pipeline.
+    region_masks 适配器 → 两线同掩码同语义）；None/空不注入，行为与
+    旧版一致。修复 preview 有区域效果、导出没有的缺口。
     """
     from pixo.render.core.io import camera_neutral_wb_cached, decode_raw
     from pixo.render.pipeline.presets import build_default_pipeline
+    from pixo.render.pipeline.region_masks import adapt_state_extras
     from pixo.render.pipeline.runner import run_full_pipeline
 
     if output_bps not in (8, 16):
@@ -48,6 +56,12 @@ def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8):
             state_inject["camera_wb"] = camera_neutral_wb_cached(raw, raw_path)
         except Exception:
             pass
+        if isinstance(state_extras, dict) and state_extras:
+            compose = (params.get("compose")
+                       if any(getattr(s, "name", "") == "compose"
+                              for s in pipe.stages) else None)
+            state_inject.update(
+                adapt_state_extras(state_extras, img.shape[:2], compose))
         # 显式补 decode_mode/long_edge 键（falsy 值）：clarity/skin 的
         # is_preview 判定式为
         #   ctx.mode == "preview" or bool(config.get("preview"))
@@ -87,7 +101,9 @@ class ExportManager:
                output_dir: Optional[Path] = None) -> str:
         """提交导出任务，返回 task_id。
 
-        session 需提供 raw_path / prof / canonical_params()。
+        session 需提供 raw_path / prof / canonical_params()；可选提供
+        region_masks 属性（F13 掩码通道，prompt → 软掩码 ndarray）——
+        存在时转发给全质量渲染（region_adjust 消费），缺省不注入。
         """
         fmt_l = fmt.lower()
         if fmt_l not in _EXT:
@@ -146,9 +162,22 @@ class ExportManager:
                 render_bps = 16
             else:
                 render_bps = 8
-            img = _render_full_quality(
-                session.raw_path, self.prof, session.canonical_params(),
-                output_bps=render_bps)
+            # F13 Route B：session 携带的 region_masks（RawPreviewSession
+            # 属性，服务层闭环后设置）转发全质量线；掩码不进 canonical_params
+            # （ndarray 会污染参数指纹且不可 JSON 序列化），走独立通道。
+            # 无掩码时不传该参（与旧调用面完全一致）。
+            extras = None
+            session_masks = getattr(session, "region_masks", None)
+            if isinstance(session_masks, dict) and session_masks:
+                extras = {"region_masks": session_masks}
+            if extras is not None:
+                img = _render_full_quality(
+                    session.raw_path, self.prof, session.canonical_params(),
+                    output_bps=render_bps, state_extras=extras)
+            else:
+                img = _render_full_quality(
+                    session.raw_path, self.prof, session.canonical_params(),
+                    output_bps=render_bps)
             data = encode_image(img, fmt, quality=quality)
             path = out_dir / f"{session.session_id}_{task_id}{_EXT[fmt]}"
             path.write_bytes(data)

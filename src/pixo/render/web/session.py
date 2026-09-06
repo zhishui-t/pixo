@@ -25,6 +25,7 @@ import rawpy
 
 from pixo.render.core.io import decode_cfa_half
 from pixo.render.pipeline.presets import build_default_pipeline
+from pixo.render.pipeline.region_masks import adapt_state_extras
 from pixo.render.pipeline.runner import (finalize_gamma_output,
                                          prepare_render_ctx)
 
@@ -132,6 +133,11 @@ class RawPreviewSession:
         self.params = dict(params or {})
         self.generation = 0
         self.session_id = session_id or uuid.uuid4().hex
+        # F13 Route B：session 携带的区域软掩码（prompt → float 0-1 ndarray，
+        # 任意分辨率，渲染时适配到消费帧）。由服务层在闭环拿到掩码后设置；
+        # None/空不注入。与 render(state_extras=...) 参数同键时以参数为准
+        # （ExportManager 导出时经 getattr 读取同批数组转发全质量线）。
+        self.region_masks: Optional[dict] = None
         self.max_stage_entries = max_stage_entries
         self.max_encoding_entries = max_encoding_entries
         self.max_stage_bytes = max_stage_bytes
@@ -281,9 +287,10 @@ class RawPreviewSession:
                state_extras: Optional[dict] = None) -> np.ndarray:
         """渲染当前参数快照；返回 uint8 或 uint16 RGB。
 
-        state_extras: 额外 state 注入（如归一化 face_boxes/subject_boxes），
-        供 exposure 测光 subject_mode=box 消费（t92 原生框链路的 raw 侧缺口）。
-        与原 state 键同名时以本参数为准；None/空 dict 不注入，行为与旧版一致。
+        state_extras: 额外 state 注入（如归一化 face_boxes/subject_boxes、
+        region_masks 软掩码——F13 掩码通道；掩码在本入口适配到本渲染消费帧，
+        见 _render_with_params）。与原 state 键同名时以本参数为准；None/空
+        dict 不注入（session.region_masks 属性仍可单独生效），行为与旧版一致。
         """
         with self._params_lock:
             params = copy.deepcopy(self.params)
@@ -318,9 +325,21 @@ class RawPreviewSession:
         wb = self._decode_wb.get((decode_mode, version))
         if wb is not None:
             state_inject["camera_wb"] = wb
-        if isinstance(state_extras, dict) and state_extras:
-            state_inject.update(state_extras)
         pipe = build_default_pipeline(prof=self.prof, params=params)
+        # F13：state_extras 中的 region_masks 适配到本渲染消费帧
+        # （float 0-1 软掩码，compose 后坐标，region_adjust order=57 消费）；
+        # session.region_masks 属性（Route B）在参数未显式带键时并入。
+        # 掩码 shape 命中时原对象透传 → _ndarray_digest 的 data_ptr 稳定，
+        # 同掩码跨渲染仍命中 stage 缓存；掩码变化/shape 失配自然失效。
+        extras = dict(state_extras) if isinstance(state_extras, dict) else {}
+        if self.region_masks and "region_masks" not in extras:
+            extras["region_masks"] = self.region_masks
+        if extras:
+            compose = (params.get("compose")
+                       if any(getattr(s, "name", "") == "compose"
+                              for s in pipe.stages) else None)
+            extras = adapt_state_extras(extras, img.shape[:2], compose)
+            state_inject.update(extras)
         ctx = prepare_render_ctx(
             pipe, img, self.raw_path, self.prof,
             config={"stages": dict(params), "half_size": True,
