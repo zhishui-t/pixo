@@ -45,9 +45,15 @@
 2. **DNG SDK clean-room 复审**：
    - 部分实现注释仍引用 Adobe DNG SDK；发布前需确认 clean-room 或重写。
 
-3. **第三方许可登记**：
-   - `model_licenses.json` 仍需同步更新为当前路径；
-   - 缺少统一 `THIRD_PARTY_NOTICES.md`。
+3. **第三方许可登记**（NOTICES 已建，2026-09-07 F16；仓库根 `THIRD_PARTY_NOTICES.md`）：
+   - ~~缺少统一 `THIRD_PARTY_NOTICES.md`~~ 已建成文：素材源
+     `.agent-team/research/license-inventory.md`（researcher 盘点）+ F18
+     `dng-sdk-review.md`（代码血缘节）；三项发布警示（huesat RawTherapee GPL-3.0
+     衍生 / DCP×6 再分发未核验 / NC 模型门控）置顶。
+   - `model_licenses.json` 与 `vision_models.json` 的过期冲突（aesthetic「需核验」
+     + 旧 `$GUANLAN_ROOT` 路径 vs MIT 定论）**仍待处置**（NOTICES §3 冲突 A 已
+     如实记录，台账更新不在 F16 范围）；segformer 条目 publishable/status 自相
+     矛盾同挂待核验。
 
 4. **未声明可选依赖**（已处置，2026-09-07 F17）：
    - PyYAML 实为硬依赖，已升必装：decide/engine.py 与 know/graph.py 加载 YAML
