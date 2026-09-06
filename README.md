@@ -27,6 +27,7 @@ Pixo 是一套自研 RAW 照片渲染与 AI 修图系统：
 
 ```bash
 pip install -e ".[dev]"          # 或 pip install -r requirements.txt
+pip install -e ".[calib]"        # 可选：scipy 标定拟合加速（不装时 temp_tint_to_wb 走 numpy 网格回退，较慢）
 python -m pytest -q              # 全量回归（当前 862 passed 基线）
 uvicorn pixo.service.app:create_app --factory   # 服务（如已接）
 cd frontend && npm install && npm run dev       # 暗房主题工作台

@@ -4,5 +4,8 @@ rawpy>=0.23
 numpy>=1.26
 opencv-python>=4.8
 exifread>=3.5
+pyyaml>=6.0
 fastapi>=0.115
 uvicorn>=0.30
+# 可选: scipy（标定/拟合工作流）—— pip install -e ".[calib]"
+# 不装时 temp_tint_to_wb 拟合自动回退 numpy 粗网格（较慢，结果域一致）

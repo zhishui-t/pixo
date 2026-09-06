@@ -49,8 +49,15 @@
    - `model_licenses.json` 仍需同步更新为当前路径；
    - 缺少统一 `THIRD_PARTY_NOTICES.md`。
 
-4. **未声明可选依赖**：
-   - `scipy`、`PyYAML` 等为可选/间接依赖，应在安装说明中明确。
+4. **未声明可选依赖**（已处置，2026-09-07 F17）：
+   - PyYAML 实为硬依赖，已升必装：decide/engine.py 与 know/graph.py 加载 YAML
+     规则/图谱时 ImportError 直接报错、无回退路径，decide/rules/ 下 5 个规则
+     YAML 属核心链路（代码仅用 yaml.safe_load）；requirements.txt 与
+     pyproject dependencies 均加 `pyyaml>=6.0`。
+   - scipy 保持真可选：render/core/color.py 懒 import least_squares，缺失回退
+     纯 numpy 粗网格；挂新 extras `calib`（`scipy>=1.11`），README 安装节注明
+     不装时标定拟合走 numpy 网格回退较慢。THIRD_PARTY_NOTICES.md 缺失归条目 3，
+     由 F16 另批处理，不在本条范围。
 
 5. **目录/路径历史残留**：
    - 历史文档中保留旧 `render/`、`rawlab`、`RawFlow` 路径说明，仅作迁移记录。
@@ -164,3 +171,27 @@
       的 `_load()` 与 aesthetic.py（CLIP 评分器）均直接懒 import；
       rfdetr 走 rfdetr pip 包自带 torch 链。
     - grep src/tests 无 gsam/grounded_sam 活引用（仅防复活断言命中）。
+
+16. **refine warm_sat HSV u8 往返精度**（记债，2026-09-07 第九轮 F05
+    调查结论：生产启用面为零，暂不动代码）：
+    - 现状：`modules/refine.py::apply_warm_sat_gamma`（:111-163）入口
+      float→u8→HSV u8 量化往返；native `warm_sat_gamma_u8` 内核**已存在**
+      （refine.py:140-142，与 Python LUT 回退共享同一 u8 域）——W4 实测
+      该往返在 lr_baseline 预设启用且门控命中时 0.57~0.90 ΔE76
+      （docs/metrics/u8_midpoint_precision.md，复跑
+      `scripts/measure_u8_precision.py` PRESET_C）。
+    - 启用面（F05 逐链核实）：**生产渲染零命中**——lr_baseline.json 在
+      src/ 无任何代码引用；`resources/dcp/manifest.json`（登记它为
+      lr_camera_standard_v2 目标）本身亦无 src/ 读者（仅文档图生成脚本
+      gen_project_graph_frontend.py 提及）；23 张胶片卡（唯一进生产链的
+      风格卡体系，know/cards._default_films_dir）零启用 warm_sat 曲线；
+      默认链 refine default_params warm_*=None 直接短路
+      （refine.py:102-103）；gate 金样本/预览/导出默认路径均不触发。
+      当前唯一消费者 = `scripts/measure_u8_precision.py` PRESET_C（测量）。
+    - 清偿条件与路径：若未来 lr_baseline 类 LR 基线预设接入生产风格卡
+      体系、或 16bit 导出精度战役重启，按 t109 colorcal float 先例
+      （3925b69：native F32 内核 + Python float 镜像 + golden 重生成）
+      处置；**注意**「再 native 化」不构成清偿——u8 native 内核已存在，
+      量化误差源于入口 u8 化而非算子实现，唯一有效路径是 float 化
+      （super-dev warm_sat spike 结论落盘后可复核本条，预计同向）。
+    - 防复发：无机器断言（潜在代价非现状缺陷，启动条件为产品决策）。
