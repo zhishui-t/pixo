@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -78,10 +79,11 @@ _DOTTED_PARAM_REGISTRY: dict[str, tuple[str, str]] = {
 # 写键时 enabled=True 联动沿 dehaze 模式（region_adjust 默认 enabled=False，
 # wants 门控静默；掩码缺失亦静默直通，F12/F13 契约）。decide 写出的越界值
 # 在映射侧钳制到 stage param_schema 同款域 —— 渲染链不能因规则输出越界而炸
-# (stage._regions 对越界 raise ValueError)。
+# (stage._regions 对越界 raise ValueError)。限幅常量单源 = stage 公开常量
+# REGION_PARAM_LIMITS（S-3, M1 评审: 防双份定义漂移），函数内懒 import
+# （loop 对 render 子模块沿用惰性导入惯例，不拖重启动链）。
 _REGION_KEY_PREFIX = "region."
 _REGION_PARAM_NAMES = ("exposure", "saturation")
-_REGION_PARAM_LIMITS = {"exposure": 2.0, "saturation": 1.0}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -473,6 +475,23 @@ def _resize_masks(
     return out
 
 
+def _compose_fingerprint(params: Mapping[str, Any]) -> str:
+    """compose stage 参数的规范指纹（I-1, M1 评审: region 掩码缓存失效键）。
+
+    - 空/缺失 compose → ""（与任何显式参数可区分，首轮同步不误清）；
+    - dict 规范 JSON（sort_keys，键序无关）；不可序列化字段退 repr（防御，
+      compose 参数面为标量/字符串，正常不触达）。
+    """
+    compose = params.get("compose") if isinstance(params, Mapping) else None
+    if not isinstance(compose, dict) or not compose:
+        return ""
+    try:
+        return json.dumps(compose, sort_keys=True, ensure_ascii=False,
+                          default=repr)
+    except Exception:  # noqa: BLE001 - 指纹失败退 repr, 不阻断渲染
+        return repr(compose)
+
+
 def _metrics_for_decide(measurement: dict[str, Any]) -> dict[str, Any]:
     """把完整测量报告展平为规则引擎可引用的指标 dict。"""
     if not isinstance(measurement, dict):
@@ -590,13 +609,14 @@ def _apply_decide_params(
             # stage schema 域（防规则输出炸渲染链）。桶链被占成非 dict 时
             # 退回顶层扁平键（沿 t51 色彩桥同款不吞键语义）。
             _, prompt, sparam = low.split(".")
+            from pixo.render.modules.region_adjust import REGION_PARAM_LIMITS
             bucket = out.setdefault("region_adjust", {})
             if isinstance(bucket, dict):
                 regions = bucket.setdefault("regions", {})
                 entry = regions.setdefault(prompt, {}) \
                     if isinstance(regions, dict) else None
                 if entry is not None and isinstance(entry, dict):
-                    limit = _REGION_PARAM_LIMITS[sparam]
+                    limit = REGION_PARAM_LIMITS[sparam]
                     entry[sparam] = max(-limit, min(limit, float(value)))
                     bucket["enabled"] = True
                 else:
@@ -784,6 +804,10 @@ class SinglePhotoLoop:
         # masks_cache 一次转换），注入 state_extras["region_masks"] 供
         # region_adjust 消费（preview/export 双线同源）。
         self._region_masks_soft: dict[str, np.ndarray] | None = None
+        # I-1 (M1 评审): compose 参数指纹 = region 掩码缓存失效键;
+        # 变化 (含 adopt_crop 采纳) 即清空软掩码 + warn-once。
+        self._compose_fp: str | None = None
+        self._compose_change_warned = False
         # t47 LLM 建议编排：默认关；开且 dsh.chat 环境齐备才整链运行，
         # accepted 仅注入 decide_context 建议态，rejected/跳过进 trace。
         self.agent_suggest = bool(agent_suggest)
@@ -882,8 +906,13 @@ class SinglePhotoLoop:
                 subjects.append(rect)
         return {"faces": faces, "subjects": subjects}
 
-    def _build_crop_suggestion(self, preview_img, masks, backend=None):
-        """生成构图建议；任何异常降级为 None，不阻断闭环。"""
+    def _build_crop_suggestion(self, preview_img, masks, backend=None,
+                               params=None):
+        """生成构图建议；任何异常降级为 None，不阻断闭环。
+
+        params: 当前渲染参数（I-1 compose 指纹同步用；None 时掩码注入点
+        跳过同步——仅旧调用方兼容路径）。
+        """
         try:
             boxes = None
             source = "mask_bbox"
@@ -929,9 +958,13 @@ class SinglePhotoLoop:
                 if backend is not None:   # 即时同步，供同轮后续渲染消费
                     try:
                         extras = dict(norm_boxes)
-                        if self._region_masks_soft:
+                        masks_soft = (self._sync_region_masks(params)
+                                      if params is not None
+                                      else self._region_masks_soft)
+                        if masks_soft:
                             # F13：同轮分割已就绪时掩码一并粘性注入
-                            extras["region_masks"] = self._region_masks_soft
+                            # (I-1: 注入前经 compose 指纹同步, 变化即失效)
+                            extras["region_masks"] = masks_soft
                         backend.state_extras = extras
                     except Exception:  # noqa: BLE001
                         pass
@@ -959,6 +992,35 @@ class SinglePhotoLoop:
         except Exception as exc:  # noqa: BLE001 —— 建议失败不阻断闭环
             logger.warning("smart_crop 建议生成失败，本轮跳过：%s", exc)
             return None
+
+    def _sync_region_masks(
+        self, params: Mapping[str, Any]
+    ) -> dict[str, np.ndarray] | None:
+        """I-1 (M1 评审): compose 参数指纹同步 → 返回当前有效软掩码。
+
+        掩码来自旧构图帧的分割，compose 变化（含 adopt_crop 采纳）后几何
+        不再可信（适配器只做 shape 对齐、不做坐标重映射），继续注入会让
+        region_adjust 作用到错误区域 —— 保守处置（"不作为"优于"错作为"）：
+        清空缓存，region_adjust wants 因掩码缺失静默直通。坐标重映射/
+        触发重分割留 v2。warn-once（每 loop 实例至多一次）。
+
+        三个注入点（迭代渲染 / box 即时同步 / FINAL_QC 刷新）统一经此，
+        未变化时原对象返回（保 session stage 缓存指纹稳定，F13 纪律）。
+        """
+        fp = _compose_fingerprint(params)
+        if fp == self._compose_fp:
+            return self._region_masks_soft
+        changed = self._compose_fp is not None
+        self._compose_fp = fp
+        if changed and self._region_masks_soft:
+            self._region_masks_soft = None
+            if not self._compose_change_warned:
+                self._compose_change_warned = True
+                _LOGGER.warning(
+                    "[pixo.loop] compose 参数变化, region 掩码缓存已失效 "
+                    "(旧构图几何不再可信, region_adjust 静默直通; "
+                    "重分割/坐标重映射留 v2)")
+        return self._region_masks_soft
 
     def _full_canvas_size(self, backend, fallback_w, fallback_h):
         """查询后端全分辨率画布尺寸；未知时退回预览尺寸。"""
@@ -1186,10 +1248,13 @@ class SinglePhotoLoop:
             # 首轮无框时为空 dict，不注入。F13：region_masks 软掩码随框
             # 一并粘性注入（首轮分割完成后从第二轮起生效；同一批数组对象
             # 反复注入，保 session stage 缓存指纹稳定）。
+            # I-1：注入前经 compose 指纹同步 —— adopt_crop 等构图变化即
+            # 清空软掩码，region_adjust 静默直通（不作为优于错作为）。
             try:
                 extras = dict(self._last_norm_boxes or {})
-                if self._region_masks_soft:
-                    extras["region_masks"] = self._region_masks_soft
+                masks_soft = self._sync_region_masks(params)
+                if masks_soft:
+                    extras["region_masks"] = masks_soft
                 backend.state_extras = extras
             except Exception:  # noqa: BLE001 - 注入失败不阻断渲染
                 pass
@@ -1246,7 +1311,7 @@ class SinglePhotoLoop:
             crop_suggestion = None
             if self.crop_suggest:
                 crop_suggestion = self._build_crop_suggestion(
-                    preview_img, masks, backend=backend
+                    preview_img, masks, backend=backend, params=params
                 )
                 if crop_suggestion is not None:
                     self._add_trace(
@@ -1586,10 +1651,13 @@ class SinglePhotoLoop:
         # F13：FINAL_QC 前刷新 state_extras（含 region_masks）——单轮闭环
         # （max_iterations=1）时首轮注入发生在分割之前，导出线在此补齐；
         # 多轮时为幂等重放（同一批数组对象，缓存指纹不变）。
+        # I-1：刷新同样经 compose 指纹同步 —— 末轮 adopt_crop 后导出线
+        # 不得携带旧构图掩码（错区域作用在导出图上不可撤销）。
         try:
             extras = dict(self._last_norm_boxes or {})
-            if self._region_masks_soft:
-                extras["region_masks"] = self._region_masks_soft
+            masks_soft = self._sync_region_masks(params)
+            if masks_soft:
+                extras["region_masks"] = masks_soft
             backend.state_extras = extras
         except Exception:  # noqa: BLE001 - 注入失败不阻断渲染
             pass

@@ -22,7 +22,8 @@
   - 同区域先曝光后饱和; 多区域按 regions 声明序顺序软合成:
     out = out*(1-m) + adjusted*m (与 skin_smooth 同一线性混合纪律)。
   - 掩码羽化沿 skin stage 软掩码纪律 (禁硬边): 应用前做尺度相对的高斯羽化
-    (sigma 随长边缩放, 预览/导出相对过渡带一致) —— F13 的 masks_cache 为二值
+    (sigma 随长边缩放; 相对过渡带仅在长边 512..4096 区间近似分辨率无关,
+    clamp 边界见 _FEATHER_REF 注释) —— F13 的 masks_cache 为二值
     0/255 转浮点, 羽化保证二值掩码也不产生硬边。
 
 启用条件 (wants):
@@ -46,8 +47,12 @@ _LOGGER = logging.getLogger(__name__)
 # gamma 域增益近似的幂常数 (见模块 docstring: gain^2.2 ≈ 线性域 2^ev)
 _GAMMA = 2.2
 
-# 掩码羽化: sigma = clip(长边/512, 1, 8) —— 相对过渡带宽度与分辨率无关
-# (预览/导出同语义; 教训锚点: 设计 §2 F13 "tier 口径差历史教训")
+# 掩码羽化: sigma = clip(长边/512, 1, 8)。注意 (S-1, M1 评审): "相对过渡带
+# 宽度与分辨率无关"仅在长边 512..4096 区间近似成立 —— 区间内 sigma 随长边
+# 线性缩放, 相对宽度恒 ≈1/512; <512 被 clamp 到下限 1px (核再小羽化退化为
+# 亚像素噪声, 无几何意义), >4096 被 clamp 到上限 8px (核成本与过渡带平衡),
+# 两端相对宽度随分辨率反向变化 (48px 图相对宽 1.562% vs 6000px 0.133%)。
+# 预览/导出典型工作区 (1024/2048 预览, 3000-6000 导出) 处于或近该区间。
 _FEATHER_REF = 512.0
 _FEATHER_SIGMA_MIN = 1.0
 _FEATHER_SIGMA_MAX = 8.0
@@ -55,6 +60,20 @@ _FEATHER_SIGMA_MAX = 8.0
 _ALLOWED_REGION_KEYS = ("exposure", "saturation")
 _EXPOSURE_LIMIT = 2.0     # EV ∈ [-2, 2]
 _SATURATION_LIMIT = 1.0   # saturation ∈ [-1, 1]
+
+# 区域参数域单源 (S-3, M1 评审): loop._apply_decide_params 对 decide 写出的
+# region.* 值做映射侧钳制时复用本表, 防双份常量漂移。
+REGION_PARAM_LIMITS = {"exposure": _EXPOSURE_LIMIT,
+                       "saturation": _SATURATION_LIMIT}
+
+
+class MaskContentError(ValueError):
+    """掩码内容违约 (含 NaN/Inf 等非有限值)。
+
+    与形态违约 (非 HxW, 直接 ValueError 显式失败便于排查) 区分: 内容坏
+    由 process 捕获走 warn+跳过降级 —— 与 "掩码内容坏→跳过不炸链" 的
+    声明意图一致 (I-3, M1 评审: NaN 会经 clip/GaussianBlur 污染整帧)。
+    """
 
 
 def _gamma_gain(ev: float) -> float:
@@ -158,7 +177,9 @@ class RegionAdjustStage(Stage):
     def _prepare_mask(mask, h: int, w: int) -> np.ndarray:
         """掩码 → float32 HxW 0..1 + 高斯羽化 (禁硬边, 见模块 docstring)。
 
-        - 接受 HxW / HxWx1; 分辨率与图不同 → 双线性缩放到 (h, w);
+        - 接受 HxW / HxWx1; 分辨率与图不同 → 缩放到 (h, w) (下采样
+          INTER_AREA / 上采样 INTER_LINEAR, 与 F13 适配器同语义, S-2);
+        - 非有限值 (NaN/Inf) 抛 MaskContentError (I-3, 由 process 降级跳过);
         - 羽化 sigma = clip(长边/512, 1, 8): 二值掩码也被平滑为软掩码,
           已软的掩码近似不变 (低频成分经高斯核几乎无衰减)。
         """
@@ -168,8 +189,17 @@ class RegionAdjustStage(Stage):
         if m.ndim != 2 or m.size == 0:
             raise ValueError(
                 f"[region_adjust] 掩码需为非空 HxW/HxWx1, 实际 shape {m.shape}")
+        # I-3 (M1 评审): NaN/Inf 经 clip 不清除、GaussianBlur 空间扩散、
+        # 且 NaN 比较恒 False 绕过 max<=0 守卫 → 单点 NaN 污染整帧。
+        # 非有限值在此拦截, 由 process 走 warn+跳过降级 (MaskContentError)。
+        if not np.isfinite(m).all():
+            raise MaskContentError(
+                "[region_adjust] 掩码含非有限值 (NaN/Inf), 按坏掩码降级")
         if m.shape != (h, w):
-            m = cv2.resize(m, (w, h), interpolation=cv2.INTER_LINEAR)
+            # S-2 (M1 评审): 兜底 resize 核与 F13 适配器同语义 —— 下采样
+            # INTER_AREA (面积平均, 保覆盖比例), 上采样 INTER_LINEAR。
+            interp = (cv2.INTER_AREA if m.shape[0] > h else cv2.INTER_LINEAR)
+            m = cv2.resize(m, (w, h), interpolation=interp)
         m = np.clip(m, 0.0, 1.0)
         long_edge = float(max(h, w))
         sigma = min(_FEATHER_SIGMA_MAX,
@@ -196,9 +226,16 @@ class RegionAdjustStage(Stage):
                 continue          # 该区域无掩码: 静默跳过
             try:
                 m = self._prepare_mask(raw_mask, h, w)
+            except MaskContentError as exc:
+                # I-3 (M1 评审): 掩码内容坏 (NaN/Inf) → warn+跳过该区域,
+                # 不炸整链 (NaN 若穿透会污染整帧输出)
+                _LOGGER.warning(
+                    "[region_adjust] 区域 %r 掩码内容非法, 跳过: %s",
+                    prompt, exc)
+                continue
             except ValueError:
                 raise             # 掩码形态违约 (非 HxW): 显式失败便于排查
-            except Exception as exc:   # 掩码内容坏 → 该区域跳过, 不炸整链
+            except Exception as exc:   # 其余掩码坏 → 该区域跳过, 不炸整链
                 _LOGGER.warning(
                     "[region_adjust] 区域 %r 掩码不可用, 跳过: %s: %s",
                     prompt, type(exc).__name__, exc)

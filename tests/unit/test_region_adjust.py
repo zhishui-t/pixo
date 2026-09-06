@@ -8,7 +8,7 @@ wants 门控 + 注册全链冒烟):
     (t108 dehaze 先例口径)
   - wants 门控: enabled/regions 缺失/掩码 state 缺失/prompt 无掩码/零效果参数
   - 曝光内核 (gamma 域增益近似): 常数掩码下逐像素精确断言 gain=2^(ev/2.2);
-    线性域等效增益 ≈ 2^ev (sRGB EOTF 往返, 中间调相对误差 <6%); 正向单调;
+    线性域等效增益 ≈ 2^ev (sRGB EOTF 往返, 中间调相对误差 <4%); 正向单调;
     高光 clip
   - 饱和度内核 (HSV S 缩放): 中性像素不变; 方向性 (增/减); clip 上限
   - 软掩码合成: 半透明掩码线性混合; 掩码外像素逐位不变; 分辨率不一致自动缩放;
@@ -337,6 +337,73 @@ def test_mask_zero_region_bit_identical():
     assert float(ctx.image[:, :4].mean()) > float(img[:, :4].mean())
 
 
+def test_exposure_then_saturation_combined_path():
+    """组合路径单测 (M1 评审数值探针): exposure 先、saturation 后、区域末尾
+    一次 clip —— 增益不经中间 clip 直入饱和度核 (色相比/v 比保持, 限幅只
+    在区域边界一次), 公式级钉死。"""
+    from pixo.render.modules.region_adjust import _apply_saturation
+
+    rng = np.random.default_rng(9)
+    img = (rng.random((12, 12, 3)).astype(np.float32) * 0.7 + 0.15)
+    p = {"enabled": True,
+         "regions": {"sky": {"exposure": 0.8, "saturation": 0.35}}}
+    masks = {"sky": np.ones((12, 12), dtype=np.float32)}
+    ctx = _ctx(img, masks, p)
+    RegionAdjustStage(params=p).process(ctx)
+    gain = np.float32(2.0 ** (0.8 / 2.2))
+    expected = np.clip(
+        _apply_saturation(np.clip(img * gain, 0.0, None).astype(np.float32),
+                          0.35).astype(np.float32), 0.0, 1.0)
+    assert np.allclose(ctx.image, expected, atol=1e-6)
+
+
+def test_nan_mask_degrades_to_skip_without_pollution():
+    """I-3 (M1 评审): 单点 NaN 掩码 → 该区域 warn+跳过, 输出无 NaN
+    (修复前 NaN 经 clip/GaussianBlur/max<=0 三重穿透污染整帧)。"""
+    import logging
+
+    img = _uniform(16, 16, 0.5)
+    bad = np.zeros((16, 16), dtype=np.float32)
+    bad[4:12, 4:12] = 1.0
+    bad[8, 8] = np.nan                       # 单点 NaN
+    good = np.full((16, 16), 1.0, dtype=np.float32)
+    p = {"enabled": True, "regions": {
+        "bad_region": {"exposure": 1.0}, "ok_region": {"exposure": 1.0}}}
+    stage = RegionAdjustStage(params=p)
+    ctx = _ctx(img, {"bad_region": bad, "ok_region": good}, p)
+    writes_before = ctx.image_writes
+    with caplog_at_warning():
+        stage.process(ctx)
+    assert ctx.image_writes == writes_before + 1   # ok_region 仍施加
+    assert np.isfinite(ctx.image).all(), "NaN 穿透到输出"
+    # ok 区域增益生效; bad 区域无任何作用
+    gain = 2.0 ** (1.0 / 2.2)
+    assert float(ctx.image[0, 0, 0]) == pytest.approx(min(0.5 * gain, 1.0),
+                                                      abs=1e-6)
+
+
+def caplog_at_warning():
+    """小助手: 返回捕获 region_adjust warning 的 contextmanager。"""
+    import contextlib
+    import logging
+
+    @contextlib.contextmanager
+    def _cm():
+        records = []
+        handler = logging.Handler()
+        handler.emit = records.append
+        logger = logging.getLogger("pixo.render.modules.region_adjust")
+        logger.addHandler(handler)
+        old = logger.level
+        logger.setLevel(logging.WARNING)
+        try:
+            yield records
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(old)
+    return _cm()
+
+
 def test_mask_resolution_mismatch_resized():
     """掩码分辨率与图不同 (预览/导出双线口径) → 自动缩放后施加, 形状保持。"""
     img = _uniform(32, 32, 0.5)
@@ -365,8 +432,18 @@ def test_feather_no_hard_edge_on_binary_mask():
         f"边界存在硬跳变: max|Δcol|={max_adj:.4f} ≥ 0.5*step={0.5 * step:.4f}")
 
 
-def test_overlapping_regions_deterministic():
-    """多区域按 regions 声明序顺序软合成: 结果确定且可复现 (两次运行逐位一致)。"""
+def test_overlapping_regions_sequential_semantics():
+    """I-4 (M1 评审) 顺序合成语义钉死: 多区域按 regions 声明序软合成。
+
+    三重断言:
+      a) 两次运行逐位一致 (确定性);
+      b) 声明序反转 (ground 先、sky 后) → 结果不同 —— 合成顺序真实生效
+         (B 的调整施加在 A 的输出上, 含 A 的 clip 后值, 不可交换);
+      c) 公式级: 仅 A 区 (mB=0) = clip(img*gA); 重叠内区 (mA=mB=1) =
+         clip(sat(clip(img*gA), -0.6)) —— B 明确作用于 A 的输出而非原图。
+    """
+    import cv2
+
     rng = np.random.default_rng(5)
     img = rng.random((32, 32, 3)).astype(np.float32) * 0.8 + 0.1
     m_a = np.zeros((32, 32), dtype=np.float32)
@@ -381,8 +458,29 @@ def test_overlapping_regions_deterministic():
     stage = RegionAdjustStage(params=p)
     stage.process(ctx1)
     stage.process(ctx2)
-    assert np.array_equal(ctx1.image, ctx2.image)
-    # 重叠区 (左下) 效果既不同于仅 A 也不同于仅 B (顺序合成生效)
+    assert np.array_equal(ctx1.image, ctx2.image)          # (a) 确定性
+
+    p_rev = {"enabled": True, "regions": {
+        "ground": {"saturation": -0.6}, "sky": {"exposure": 0.7}}}
+    ctx_rev = _ctx(img.copy(), masks, p_rev)
+    RegionAdjustStage(params=p_rev).process(ctx_rev)
+    assert not np.array_equal(ctx1.image, ctx_rev.image)   # (b) 顺序敏感
+
+    # (c) 公式级钉死 (取远离掩码羽化带的内区: 羽化半径 ~3px, 边界 col 20 /
+    # row 10 的安全内区)
+    gain = 2.0 ** (0.7 / 2.2)
+    blend_a = np.clip(img * np.float32(gain), 0.0, 1.0).astype(np.float32)
+    # 仅 A 区 (rows 2:6, cols 2:14: mA=1, mB=0; 避开 m_b 羽化带 row>=7)
+    assert np.allclose(ctx1.image[2:6, 2:14],
+                       np.clip(img[2:6, 2:14] * np.float32(gain), 0, 1),
+                       atol=1e-6)
+    # 重叠内区 (rows 15:30, cols 2:14: mA=1, mB=1) = sat(A 输出, -0.6)
+    hsv = cv2.cvtColor(blend_a[15:30, 2:14], cv2.COLOR_RGB2HSV)
+    h_, s_, v_ = cv2.split(hsv)
+    s2 = np.clip(s_ * 0.4, 0.0, 1.0)
+    expected = cv2.cvtColor(cv2.merge([h_, s2, v_]), cv2.COLOR_HSV2RGB)
+    assert np.allclose(ctx1.image[15:30, 2:14], expected, atol=1e-5)
+    # 合成整体有效
     assert float(np.abs(ctx1.image - img).mean()) > 0.0
 
 

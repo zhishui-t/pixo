@@ -1,4 +1,4 @@
-# region.* 分区调整首版规则 (F14, M1) —— 掩码驱动的分区曝光补偿。
+# region.* 分区调整首版规则 (F14, M1) —— 掩码驱动的分区曝光/饱和度补偿。
 #
 # 链路: 掩码通道 (F13, region_masks) + region_adjust stage (F12) 提供
 # 执行位; loop._metrics_for_decide 产出 <prompt>_luminance 等 flatten
@@ -9,32 +9,47 @@
 # 两键均写 region.<prompt>.<param>, 由 loop._apply_decide_params 映射进
 # region_adjust.regions[prompt][param] 并联动 enabled=True (dehaze 模式)。
 #
+# 可靠性门控 (S-5, M1 评审): 所有 region.* 规则一律 AND *_reliable == true
+# —— 小面积/低置信区域的区域亮度不可信, 不得触发区域补偿 (测量报告
+# regions.<name>.reliable 由 loop._unreliable_regions 与规则双闸同源)。
+#
 # 注意: 本文件未加入 decide.rules.DEFAULT_RULES (保持基座渲染默认行为
 # 不变); 需要分区补偿的调用方显式加载 (或由后续门禁批准后再入默认包)。
 - rule_id: region_sky_exposure_001
   priority: 20
   condition:
-    metric: sky_luminance
-    op: gt
-    value: 150
+    all:
+      - metric: sky_luminance
+        op: gt
+        value: 150
+      - metric: sky_reliable
+        op: eq
+        value: true
   action:
     param: region.sky.exposure
     mode: set
-    # current = 命中条件时的 sky_luminance; 超阈越多负补偿越强
-    formula: "-0.5 * (current / 150.0)"
+    # current 取自注册键宇宙的 sky_luminance (S-5 改 all 型条件后,
+    # condition.get("metric") 不再存在, 公式须直引指标键 —— 键宇宙由
+    # SinglePhotoLoop 注册, 加载期 lint 放行)
+    formula: "-0.5 * (sky_luminance / 150.0)"
     clamp: [-2.0, 0.0]
     conflict_policy: high_priority_wins
 
 - rule_id: region_plant_exposure_002
   priority: 20
   condition:
-    metric: plant_luminance
-    op: lt
-    value: 70
+    all:
+      - metric: plant_luminance
+        op: lt
+        value: 70
+      - metric: plant_reliable
+        op: eq
+        value: true
   action:
     param: region.plant.exposure
     mode: set
     # 越暗提亮越多的比例补偿 (植被暗部), 方向钳制为只升不降
-    formula: "0.4 * ((70.0 - current) / 70.0)"
+    # (公式直引 plant_luminance, 理由同上)
+    formula: "0.4 * ((70.0 - plant_luminance) / 70.0)"
     clamp: [0.0, 2.0]
     conflict_policy: high_priority_wins

@@ -201,3 +201,28 @@
       量化误差源于入口 u8 化而非算子实现，唯一有效路径是 float 化
       （super-dev warm_sat spike 结论落盘后可复核本条，预计同向）。
     - 防复发：无机器断言（潜在代价非现状缺陷，启动条件为产品决策）。
+
+17. **compose free 模式像素矩形跨分辨率失准 × 掩码通道几何放大**（记债，
+    2026-09-07 第九轮 M1 评审 I-2；根因既有，掩码通道为放大器）：
+    - 现状：`modules/compose.py::compute_crop_rect` free 模式的 x/y/width/
+      height 为**全画布像素**矩形。同一参数在不同渲染分辨率下相对裁剪窗
+      不同（x=100px 在 320 宽 tier 占 31%、在 6000 宽导出占 1.7%）；loop
+      的 adopt_crop 路径写 full-canvas 像素矩形（loop.py rect_norm_to_px），
+      preview 在小 tier 按同像素值裁剪 —— preview/export 相对取景不同。
+    - 掩码通道放大效应：`render/pipeline/region_masks.py` 的适配只做
+      shape 对齐不做坐标重映射 —— 分割掩码（旧构图帧坐标）被直接 resize
+      到消费帧；裁剪窗相对不一致时，同一掩码坐标在两线对应**不同场景
+      内容**，区域效果落点错位可达 10%+ 画幅宽。F13 交付说明中「掩码通道
+      两线仍一致（同参数同适配）」的论断**仅对 ratio/full-frame 路径成立**
+      （该两线同参数同窗口；free-px-rect 路径不成立）。
+    - 时间性防线（M1 评审 I-1 同批）：compose 参数指纹变化（含 adopt_crop）
+      即清空 region 掩码缓存（loop._sync_region_masks），region_adjust
+      静默直通 —— "不作为"优于"错作为"；本条清偿前掩码不跨构图复用。
+    - 升级要点（原 hard-problems §6.1 记录，优先级提升）：涉及所有 free
+      模式用户（非仅掩码链路）；清偿方向 = compose 参数 px→相对坐标
+      归一化（独立战役，需迁移存量卡/用户参数）或适配器按裁剪窗差做
+      坐标重映射。
+    - 现状钉死：`tests/unit/test_region_masks_channel.py::
+      test_free_px_rect_cross_resolution_geometry_mismatch_recorded`
+      断言当前失配行为（防"静默变正确/静默变更坏"两边无感）——若未来
+      清偿，该用例应**有意翻转重写**而非删除。

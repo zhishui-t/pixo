@@ -189,9 +189,9 @@ def test_region_rules_yaml_loads_and_package_mirror_consistent():
 
 
 def test_sky_rule_fires_negative_compensation():
-    SinglePhotoLoop(prompts=["sky"])             # 注册指标键
+    SinglePhotoLoop()        # 默认 prompts 注册键宇宙 (strict lint 需覆盖两规则指标)
     rules = _load_region_rules()
-    metrics = {"sky_luminance": 225.0}
+    metrics = {"sky_luminance": 225.0, "sky_reliable": True}
     results = evaluate_rules(rules, metrics)
     sky = [r for r in results if r["param"] == "region.sky.exposure"]
     assert len(sky) == 1
@@ -202,14 +202,35 @@ def test_sky_rule_fires_negative_compensation():
 
 def test_sky_rule_not_fires_below_threshold():
     rules = _load_region_rules()
-    results = evaluate_rules(rules, {"sky_luminance": 100.0})
+    results = evaluate_rules(rules, {"sky_luminance": 100.0,
+                                     "sky_reliable": True})
     assert all(r["param"] != "region.sky.exposure" for r in results)
 
 
-def test_plant_rule_fires_positive_lift_and_direction_clamp():
-    SinglePhotoLoop(prompts=["plant"])
+def test_unreliable_region_blocks_rule():
+    """S-5 (M1 评审): 区域不可靠 (*_reliable != true) 时规则不得触发 ——
+    小面积/低置信区域的区域亮度不可信, 不做区域补偿。"""
     rules = _load_region_rules()
-    results = evaluate_rules(rules, {"plant_luminance": 35.0})
+    # 亮度超阈但 reliable 缺失/False → 不触发
+    for reliable in (False, None):
+        metrics = {"sky_luminance": 225.0}
+        if reliable is not None:
+            metrics["sky_reliable"] = reliable
+        results = evaluate_rules(rules, metrics)
+        assert all(r["param"] != "region.sky.exposure" for r in results), (
+            f"reliable={reliable!r} 时规则不应触发")
+    plant_metrics_variants = [{"plant_luminance": 35.0},
+                              {"plant_luminance": 35.0, "plant_reliable": False}]
+    for metrics in plant_metrics_variants:
+        results = evaluate_rules(rules, metrics)
+        assert all(r["param"] != "region.plant.exposure" for r in results)
+
+
+def test_plant_rule_fires_positive_lift_and_direction_clamp():
+    SinglePhotoLoop()        # 默认 prompts 注册键宇宙
+    rules = _load_region_rules()
+    results = evaluate_rules(rules, {"plant_luminance": 35.0,
+                                     "plant_reliable": True})
     plant = [r for r in results if r["param"] == "region.plant.exposure"]
     assert len(plant) == 1
     # 公式: 0.4 * (70-35)/70 = 0.2; 方向钳制 ≥ 0 (只提亮不压暗)
@@ -262,13 +283,13 @@ class _SkyMeasurer:
 def _make_region_loop(**kw):
     backend = SyntheticRenderBackend(
         _sky_image(), stages=("compose", "tone", "region_adjust"))
+    kw.setdefault("max_iterations", 2)
     return SinglePhotoLoop(
         render_backend=backend,
         segmenter=MockSegmenter(),
         measurer=_SkyMeasurer(),
         rules=load_rules(str(REGION_RULES_YAML)),
         prompts=["sky"],
-        max_iterations=2,
         preview_long_edge=64,
         **kw,
     )
@@ -320,3 +341,116 @@ def test_e2e_region_effect_is_localized_pixel_change():
     deep_ground_rows = slice(40, 64)             # 远离掩码羽化带 (边界 row 25/26)
     assert float(after[sky_rows].mean()) < float(before[sky_rows].mean())
     assert np.array_equal(after[deep_ground_rows], before[deep_ground_rows])
+
+
+# ---------------------------------------------------------------------------
+# I-1 (M1 评审): compose 参数变化 → region 掩码缓存失效 (不作为优于错作为)
+# ---------------------------------------------------------------------------
+
+def test_compose_fingerprint_basics():
+    from pixo.pipeline.loop import _compose_fingerprint
+    assert _compose_fingerprint({}) == ""                  # 无 compose
+    assert _compose_fingerprint({"compose": {}}) == ""
+    assert _compose_fingerprint({"compose": None}) == ""
+    a = _compose_fingerprint({"compose": {"mode": "free", "x": 10, "y": 0,
+                                          "width": 40, "height": 40}})
+    b = _compose_fingerprint({"compose": {"y": 0, "width": 40, "height": 40,
+                                          "x": 10, "mode": "free"}})
+    assert a == b                                          # 键序无关
+    assert a != _compose_fingerprint({"compose": {"mode": "ratio",
+                                                  "ratio": "3:2"}})
+
+
+def test_sync_region_masks_invalidates_on_compose_change(caplog):
+    """compose 指纹变化 (含 adopt_crop 改写) → 软掩码清空 + warn-once;
+    未变化时原对象返回 (F13 缓存指纹纪律)。"""
+    import logging
+
+    from pixo.pipeline.loop import _compose_fingerprint
+    loop = _make_region_loop(max_iterations=1)
+    masks = {"sky": np.full((64, 64), 1.0, dtype=np.float32)}
+    loop._region_masks_soft = masks
+    with caplog.at_level(logging.WARNING, logger="pixo.pipeline.loop"):
+        # 首轮同步 (无 compose): 建立基线指纹, 不清掩码、不告警
+        assert loop._sync_region_masks({}) is masks
+        assert loop._region_masks_soft is masks
+        assert not [r for r in caplog.records if "掩码缓存已失效" in r.message]
+        # 未变化: 幂等, 原对象返回
+        assert loop._sync_region_masks({}) is masks
+        # compose 变化 (模拟 adopt_crop 改写): 清空 + warn 一次
+        cropped = {"compose": {"mode": "free", "x": 8, "y": 8,
+                               "width": 48, "height": 48}}
+        assert loop._sync_region_masks(cropped) is None
+        assert loop._region_masks_soft is None
+        assert any("掩码缓存已失效" in r.message for r in caplog.records)
+        n_warn = sum(1 for r in caplog.records if "掩码缓存已失效" in r.message)
+        # 再次变化: 掩码本已空, 不再重复告警 (warn-once)
+        loop._sync_region_masks({"compose": {"mode": "ratio", "ratio": "3:2"}})
+        assert sum(1 for r in caplog.records
+                   if "掩码缓存已失效" in r.message) == n_warn
+    # 掩码清空后指纹跟随最新 compose (region_adjust wants 静默直通)
+    latest = {"compose": {"mode": "ratio", "ratio": "3:2"}}
+    loop._sync_region_masks(latest)
+    assert _compose_fingerprint(latest) == loop._compose_fp
+
+
+class _RecordingBackend(SyntheticRenderBackend):
+    """记录每次渲染入口的 state_extras (验证 loop 实际注入面)。"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rendered_extras: list = []
+
+    def _render(self, params, long_edge):
+        self.rendered_extras.append(
+            dict(getattr(self, "state_extras", None) or {}))
+        return super()._render(params, long_edge)
+
+
+def test_e2e_crop_adoption_drops_region_masks(monkeypatch, caplog):
+    """I-1 闭环: crop 建议被采纳 (compose 变化) 后, 后续渲染与导出线不再
+    注入 region_masks —— 区域效果消失, 而非作用到错误区域。"""
+    import logging
+
+    import pixo.pipeline.loop as loop_mod
+
+    def fake_suggest_crop(img, boxes, **kw):
+        rect = [0.1, 0.1, 0.9, 0.9]            # 归一化 [x0,y0,x1,y1]
+        return rect, [{"rect": rect, "ratio": "original", "score": 0.9}]
+
+    monkeypatch.setattr(loop_mod, "suggest_crop", fake_suggest_crop)
+    backend = _RecordingBackend(
+        _sky_image(), stages=("compose", "tone", "region_adjust"))
+    loop = SinglePhotoLoop(
+        render_backend=backend,
+        segmenter=MockSegmenter(),
+        measurer=_SkyMeasurer(),
+        rules=[
+            # region 规则 (首轮即触发, 建立掩码注入)
+            {"rule_id": "r", "condition": {"metric": "sky_luminance",
+                                           "op": "gt", "value": 150},
+             "action": {"param": "region.sky.exposure", "mode": "set",
+                        "value": -0.5}},
+            # crop 采纳规则: 首轮即写 compose.apply_suggestion=1
+            {"rule_id": "c", "condition": {"metric": "mean_luminance",
+                                           "op": "gt", "value": 0.0},
+             "action": {"param": "compose.apply_suggestion", "mode": "set",
+                        "value": 1}},
+        ],
+        prompts=["sky"],
+        max_iterations=2,
+        preview_long_edge=64,
+        crop_suggest=True,
+        jnd_threshold=None,
+    )
+    with caplog.at_level(logging.WARNING, logger="pixo.pipeline.loop"):
+        result = loop.run("crop_region", image_rgb=_sky_image())
+
+    # crop 确实被采纳 (compose 变化的前提成立)
+    assert result.params.get("compose", {}).get("mode") == "free"
+    # 渲染序列: 首轮 (分割前, 无掩码) → 次轮 (旧构图掩码本应注入)
+    assert len(backend.rendered_extras) >= 2
+    assert "region_masks" not in backend.rendered_extras[0]
+    # 关键断言: 采纳后区域效果消失 (掩码被失效, 而非携带旧几何继续作用)
+    assert "region_masks" not in backend.rendered_extras[1]
+    assert any("掩码缓存已失效" in r.message for r in caplog.records)

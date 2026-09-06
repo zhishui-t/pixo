@@ -628,3 +628,45 @@ def test_loop_single_iteration_final_qc_still_injects():
     base = backend.render_full(result.params)
     f_base, _ = _region_means(base, band)
     assert f_with - f_base > 5.0, "单轮闭环导出线区域无效果"
+
+
+# ---------------------------------------------------------------------------
+# 6) I-2 记债钉现状 (M1 评审): free 像素矩形跨分辨率几何失配
+# ---------------------------------------------------------------------------
+
+def test_free_px_rect_cross_resolution_geometry_mismatch_recorded():
+    """I-2 / tech_debt #17 —— 现状行为钉死 (已知记录, 非正确性断言)。
+
+    free 模式 x/y/width/height 为全画布**像素**矩形: 同一 px-rect 在两个
+    渲染分辨率下相对裁剪窗不同 (本例 x0 占比 50% vs 25%)。掩码适配只做
+    shape 对齐不做坐标重映射 → 两线消费帧 shape 相同 (px-rect 裁出同尺寸
+    窗) 时, 适配器给出**逐位相同**的掩码 —— 同一掩码坐标在两线对应不同
+    场景内容, 区域效果落点错位 (tech_debt #17 登记的失配)。
+
+    契约: 未来 compose px→相对坐标归一化或适配器坐标重映射清偿本债时,
+    本用例应**有意翻转重写** (断言两线掩码不同/几何一致), 不得静默通过。
+    """
+    from pixo.render.modules.compose import compute_crop_rect
+
+    compose = {"mode": "free", "x": 50.0, "y": 0.0, "width": 50.0,
+               "height": 50.0}
+    # 两线: preview tier (100×50 帧) 与导出 (200×100 帧), 同 px-rect 参数
+    line_a = adapt_region_masks({"sky": _top_band_mask(50, 100)},
+                                (50, 100), compose)
+    line_b = adapt_region_masks({"sky": _top_band_mask(100, 200)},
+                                (100, 200), compose)
+    # 现状: px-rect 尺寸与入参分辨率解耦 → 两线消费帧 shape 相同,
+    # 掩码被同构 resize → 逐位相同 (失配的可观测面)
+    assert line_a["sky"].shape == line_b["sky"].shape == (50, 50)
+    assert np.array_equal(line_a["sky"], line_b["sky"]), (
+        "若本断言失败, 说明适配器/compose 已做坐标重映射 —— "
+        "tech_debt #17 可能已清偿, 请翻转重写本用例")
+    # 而两线真实相对裁剪窗不同 (同一掩码坐标 ≠ 同一场景内容)
+    ra = compute_crop_rect(50, 100, "free", x=50.0, y=0.0,
+                           width=50.0, height=50.0)
+    rb = compute_crop_rect(100, 200, "free", x=50.0, y=0.0,
+                           width=50.0, height=50.0)
+    rel_a = ra[0] / 100.0
+    rel_b = rb[0] / 200.0
+    assert abs(rel_a - 0.5) < 1e-6 and abs(rel_b - 0.25) < 1e-6
+    assert rel_a != rel_b
