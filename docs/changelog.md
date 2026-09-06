@@ -1,5 +1,208 @@
 # Changelog
 
+## 2026-09-05 — 路线图收官批：HSM→OKLCh 运行时接线 · 风格卡全链接线（t64/t66）
+
+- HSM→OKLCh 接线（t64，自研管线路线图最终承诺）：新增 `core/huesat_oklch.py`
+  OKLCh 域连续形变（t17 点云 2765 点 → IDW 栅格化 72×24×24 + OKLCh 三线性）；
+  `HueSatStage` 按 `color_domain` 分派——hsv 走 DCP HSM、oklch 走形变，点云按
+  DCP 名 token 子序列自动匹配 `configs/color/hsm_oklch_*.json`，缺失回退 hsv 链
+  （一次性告警）；缺省仍 hsv，零行为变化。
+- 风格卡全链接线（t66）：`GET /api/styles` + `/api/styles/{id}` 后端端点
+  （from_films_dir 降载）；前端风格卡面板替换 mock 接真数据（Store/Panel/client
+  全链）；`film_portra_400.json` 历史双卡退役（守卫 24→23）；client.ts 未接线
+  端点清理。
+- 至此自研渲染管线路线图全部里程碑（M-O1/O2/O3/D1/D2/L*）完成。
+- 验收：54 张语料接线对照两域分歧 A↔B ΔE2000 median 10.890 / p95 16.070
+  （≈4.73 JND，`.artifacts/hsm_oklch_eval.md`）；单测 + 全量回归绿；风格卡守卫
+  24→23。
+
+## 2026-09-05 — 循环治理批：LLM 影子模式 · JND 早停 · 滑杆感知传递 · 切默认评估（t46-t65）
+
+- LLM 影子模式（t46，评审⑧采纳）：`PIXO_LLM_SHADOW=1` 默认开，低分验证后晋升，
+  影子拒绝留 trace 事件 `llm_shadow_reject`；迭代轨迹回放（t48）：
+  `scripts/loop_replay.py` + 单测；G-4 修复（t51）：`generate_gate_goldens.py
+  --out` 默认路径改正确位置，仓库根无参可跑。
+- JND 感知早停（t59，评审⑨采纳）：`pipeline/perceptual.py` 收尾，ΔE2000
+  median <0.5 连续 2 次终止 perceptual_convergence。
+- UI 滑杆非线性传递（t63，tech_debt 13.1 清偿）：`oklchScale.ts` gamma 幂映射
+  （sliderToC/cToSlider），HslBandRow oklch 色度滑杆接入，hsv 域零变化。
+- Oklab 切默认专项评估（t62，只评估不执行）：`.artifacts/oklch_default_eval.md`——
+  收益 A/B 只覆盖 hsl/split_tone 两内核，skin/colorcal 无 A/B 闸门；切缺省的
+  实际作用面为 4 个 stage 的 `default_params()`，波及存量胶片卡（12+12+18+24 张）
+  与全部默认渲染（skin 缺省开启），必破 A1 红线；翻转实验金样本 0 张报警属守卫
+  盲区。结论：不可一次翻 4 个缺省，先卡级锚定 + 分派级守卫 + 分 stage 渐进。
+- tech-debt 运行时断言（t65）：`tests/unit/test_tech_debt_invariants.py` 固化收尾；
+  评审处置表 v2（t58）：`docs/ARCH_REVIEW2_DISPOSITION.md` 5 维度 14 条逐条实证
+  （已达成 4 / 部分 4 / 在途收口 3 / backlog 3 / 驳回 1）。
+- 验收：切默认评估基线全量 1360 passed / 5 skipped / 1 xfailed、四缺省翻转实验
+  11 failed 逐项归因（`.artifacts/oklch_default_eval.md`）；滑杆传递单测
+  `frontend/tests/oklchScale.test.mjs` + `e2e/chroma_warp_check.mjs`，hsv 域零变化。
+
+## 2026-09-04 — 阶段三首块批：学习后端治理四门禁 + 光照估计评估否决（t42/t43）
+
+- 治理框架四门禁（t42，全部构造性验证）：① 许可白名单硬拒（MIT/Apache-2.0 only，
+  deny-by-default，六组变异测试含真实 manifest 翻转）；② import 隔离预铺门
+  （`src/pixo/render/learned/` 未建先铺门，红/绿/skip 三态实跑）；③ env opt-in
+  统一约定 `docs/LEARNED_BACKEND_GOVERNANCE.md`（15 个 env 逐一在 src 实存核对）；
+  ④ 三证据转正模板 `docs/LEARNED_BACKEND_PROMOTION.md`（收益 <1 JND 记录无转正
+  价值即停）。
+- 光照估计评估（t43，不接运行时）：Gray-World/Gray-Edge/White-Patch 三经典法
+  纯 numpy + WB 逆链，54 张语料全数劣于 as_shot（最佳 GE1 10.180 vs as_shot
+  5.946，improvement −1.841 JND 为负）——春节钨丝灯场景内容主导全局统计，
+  经典"场景平均灰"假设失效；诚实结论无转正价值，as_shot 链维持现状。
+- 验收：终审 GO（`.artifacts/stage3_first_verdict.md`）；全量 1334 passed /
+  5 skipped / 1 xfailed；src 渲染零 diff。
+
+## 2026-09-04 — 评审收口批：标定敏感金样本 · patch 闸门 oklch 防御 · 评分器守卫（t38-t41）
+
+- gate 增补 exposure_cal_auto / warmth_cal_auto 两 case（15→17 features，t38）：
+  触达 auto 标定路径，换表敏感实证 + 回退演练双向验证——收口阶段二入库终审
+  上报的"金样本对标定表零敏感"门禁缺口。
+- patch 闸门 oklch 防御（t40）：hsl.bands oklch 域感知拒绝（hue 越界硬拒）+
+  协议文案内嵌量纲说明 h∈[0,360) / C 0-0.33 / L∈[0,1]；评分器 sRGB 边界守卫
+  4 项测试 + 突变验证（t41）。
+- 外部评审处置表 `docs/OWN_PIPELINE_REVIEW_DISPOSITION.md`（t39）：12 条逐级
+  实证（6 已达成 / 4 backlog / 1 驳回 / 1 部分）。
+- 验收：全量 1130+ passed 绿（commit 记录口径）；gate 数量守卫 17 features。
+
+## 2026-09-04 — 阶段二入库批：标定新表入正式 configs + cal_ev_weights 修复（t36/t37）
+
+- calib_out 四件替换正式位：warmth_curve / target_offset / z5ii_neutral_trim /
+  rp_ccm_nikon_z5_2（skin_oklab 新旧相同未动），全部经 sha256 + 运行时加载链
+  双逐位校验；旧表备份 `configs/color/calib_prev/`（README 含回退指引）。
+- 端到端收益落地：ΔE2000 median 6.649→4.251，54/54 逐照片改善零反转。
+- `scripts/calib/optimize.py` 修 cal_ev_weights 重复 wb 键取值分歧（12 万次对拍
+  归零；src 代码零改动）。
+- 金样本 SOP：15 features 零漂移重生成 + reviewer 签注；"金样本对标定表零敏感"
+  如实留痕为门禁覆盖缺口（后由 t38 补 cal_auto case 收口）。
+- 验收：入库终审 GO（`.artifacts/stage2_adopt_verdict.md`，回退演练实证可回滚）；
+  全量 1297 passed / 4 skipped / 1 xfailed（QA 复跑 173s 一致）。
+
+## 2026-09-04 — 阶段二首跑批：M-D1 可微标定 + G-5 收口，运行时零变化（t30-t34）
+
+- `scripts/calib/` 可微标定链：diff_core（torch 可微代理，保真门 PASS
+  median/p95=0/0）、theta_io（θ 五组件 configs 双向序列化字节级恒等）、optimize
+  （Huber-Lab proxy + 罚项 + Adam→L-BFGS）、eval_stage2（独立双轨评估，与训练侧
+  数值逐位一致，QA 缓存重放复现）。
+- 首跑收益：端到端真值 ΔE2000 median 6.658→4.244（+36.3%），54/54 张全改善
+  零回归；checkpoint 轨迹单调下降。
+- G-5 收口：转默认门槛线 3/4 过（≥2 相机复验待语料补齐）；阶段一遗留回归簇
+  （523x-5250 拍摄段 9/54 张）全额消除——最差照片 DSC_5250 +2.607→−5.15；
+  分组系数将自身残余 8 张轻微回归（均 <1 JND）压至 ≤+0.224。
+- 新表落 `configs/color/calib_out/` 对照档不切默认；torch 只进 scripts/（120 个
+  src 文件零 torch import），运行时零变化铁律达成（QA git 全仓 diff 审计）。
+- 验收：终审 GO（`.artifacts/stage2_qa_verdict.md`）；全量 1297 passed /
+  4 skipped / 1 xfailed；git diff src 零行。
+
+## 2026-09-04 — 阶段一批：Oklab 编辑域双轨 + RP-CCM 并联 + 项目图谱（t1-t25）
+
+- M-O1 Oklab 双轨：`core/oklab.py` 转换内核（往返 1.8e-10）；hsl/split_tone 双域
+  化（`color_domain` band schema v2，存量 24 张胶片卡零迁移、hsv 域逐位不变）；
+  skin OKLab 椭圆重拟合 `skin_mask_oklab`（核内召回 0.955 / 背景误报 0.258，
+  旧 0.271）；native `oklab.cpp` F32 内核与 numpy 逐位等价（10/10）；前端
+  color_domain 双刻度（hsv 域视口像素级零变化）。
+- M-O3 RP-CCM 并联（只报告不切默认）：`core/rp_ccm.py` + 拟合/评估脚本，54 张
+  语料 ΔE2000 median −7.7%（45/54 改善）；9/54 回归簇（523x-5250 拍摄段）如实
+  上报，留阶段二可微标定消化。
+- 项目图谱：ast 解析生成脚本 + 后端/前端/全量三份图谱（268 节点 / 660 边）。
+- 质量资产：gate 金样本 15 case（hsl_oklch / split_tone_oklab / skin_oklch 新域
+  case + `SKIN_OKLAB_*` 常数逐位锁定，终审 GO 条件项 G-1 批内关闭）；
+  `ab_intent_compare.py` 意图级 A/B（不劣于闸门全过，高光落点误差 median
+  11.27°→4.48°、近白 C 强加 0.0756→0.0115）。
+- 验收：QA 终审 GO 有条件放行（`.artifacts/stage1_qa_verdict.md`）；全量
+  1231 passed / 4 skipped / 1 xfailed；hsv 旧 12 case 金样本三方核验逐位不变。
+
+## 2026-08-27 — 全链正确性修复批：meta/decide/vision/service/pipeline/frontend
+
+- meta（e216743）：burst aware/naive 时区混排统一归一 UTC naive（混相机照片库
+  不再崩溃）、无时间戳照片不再丢图、超大组 parent_id 全局唯一（原跨组碰撞）；
+  exif Flash 按 EXIF 位语义解析（'No Flash function' 不再误判 on）、GPS (度,分)
+  二元组保留分钟位（原 ~1° 误差）。
+- decide+know（417bc2a）：rules.py 同名包遮蔽致 load_rules 不可达修复；
+  check_termination off-by-one 消除（max_iterations 不再截断当轮规则计算）；
+  improvement 改朝目标的距离缩短量（振荡不再算改善）；知识层 PIXO_CONFIG_ROOT
+  去 CWD 化（不再静默丢包）、rag IDF + 词边界匹配、graph 命中 1-hop 邻域扩展。
+- vision（e922dae）：multi_router 全组失败抛 SegmenterUnavailable（loop 升级
+  manual_review，模型错误不再冒充无检出）；grounded_sam 默认关（数 GB 隐式下载
+  改 PIXO_GSAM_ENABLED opt-in）；vision_health 聚合可见；internal_development_only
+  后端 PIXO_ALLOW_RESTRICTED 合规门控。
+- service/state/review（47cedef + 26a97c5）：async 阻塞调用线程池化（不再冻结
+  事件循环）；runtime 假接线修复（PIXO_SEGMENTER 真生效、非法值 fail-fast）；
+  会话真 LRU（逐出同步清理死 id）；SQLite check_same_thread=False + 写锁 + WAL；
+  MANUAL_REVIEW 补出边不再卡死；配套 8 个回归用例补齐。
+- pipeline+agent（09616ab）：`_DOTTED_PARAM_REGISTRY` tone/clarity/dehaze 悬空
+  语义键落进 stage 桶（原整链静默忽略）；dehaze 规则命中联动 enabled；batch RAW
+  半尺寸解码通道（原批量 RAW 输入 100% no_image 判废）；patch 闸门 NaN/Infinity
+  封堵；suggest 提取器剥离回显前缀 + chat 连续失败熔断冷却。
+- frontend（7d6578b + 2debcc7）：types/client 对齐后端真实 schema（删 as 强转）；
+  滑杆修复（曝光键 ev→mode、tone ±100→±1、hsl bands 数组 patch）；onChangeEnd
+  防抖（消除 PUT 请求风暴）；导出真轮询；后端照片接线/状态过滤映射/原图契约
+  三断点填空；死代码与未用依赖清理（bundle −24KB）。
+- 验收：前端 tsc 零错误 + vite build 通过 + e2e 冒烟 5/5、在线模式 7/7（真实
+  后端实测）；test_loop_termination 新增 8 用例；runtime 假接线回归 8 用例。
+
+## 2026-08-27 — 渲染正确性与验证链批：native 逐位一致 · 曝光探针 · 标定加载治理
+
+- render 正确性与性能（57c7870）：stage 缓存键补全链参数指纹——修复 exposure
+  探针读 whitebalance 参数命中陈旧缓存的活跃像素 bug（改 WB 后 EV 不更新）；
+  tone lrfit 六键接回处理链、色彩矩阵插值序对齐 DNG SDK、colorcal 未声明参数补
+  schema 防 native 越界；性能指纹链式传递 ~310MB→8KB/渲染（3457x）+ 三把细粒度
+  锁 + RAW 双解压消除（−1.3s/次）。
+- native 逐位一致（3be14be）：colorcal DLL 中性权重改平台+高斯尾并 MinGW 重编，
+  native vs Python 全量路径 max diff 0.05098→0.0，一致性测试收严回严格
+  array_equal（删除 0.1 有界分歧临时上界）。
+- 曝光探针 tier 无关化（e8d7d61）：统计网格钉死帧坐标——三档预览/导出曝光决策
+  一致，合成图三档 EV 散度 0.219→0.0013 EV、真实 RAW 档间散度降 4-10x、默认
+  1024 档 EV 零变化。
+- 标定加载统一治理（e3c8f7c）：新 `core/calibration_store.py`（负缓存/mtime 失效/
+  RLock/reset 钩子），exposure 表/warmth 曲线/tone lrfit 三处迁移数值零变化；
+  解码缓存条数→字节预算（PIXO_DECODE_CACHE_MB）。
+- 管线框架质量（f48d453）：Stage domain 后验校验、ctx.mode 显式化（preview/export）、
+  渲染样板合并 runner.py、Renderer 调整路径 8bit 往返量化消除。
+- harness+dsh（5f62646）：金样本容差 rel 0.03→0.002（原实质放水 125 倍）+
+  4 用例锁口径；RAW/SYNTH schema 拆分三态校验 + --check 漂移模式；dsh 死端点
+  清理（11→4 真实路由工具）。
+- 验收：金样本零漂移 + test_render_perf_fixes 16 用例；native 一致性严格等价
+  恢复；曝光探针 test_exposure_tier_consistency 4 用例；标定加载新测试 17+5+3
+  条；双 gate 逐位不变。
+
+## 2026-08-27 — 16bit 精度改造批：u8 量化实测 → colorcal/LUT float 化 + RAW 默认路径金样本
+
+- 决策数据（7a31cbf）：`scripts/measure_u8_precision.py` 全分辨率渲染 + 进程内
+  去量化对照，报告 `docs/metrics/u8_midpoint_precision.md`——colorcal Lab u8
+  往返 0.81 ΔE / 24.7% 像素越阈占绝对大头（go）、stylize LUT 0.22（顺手改）、
+  refine sat_protection 0.012（不值得）、warm HSV 0.57-0.90（视预设定）。
+- colorcal Lab 路径 float 化（3925b69，改造主项）：native 新内核
+  PixoRenderColorCalApplyLabF32 + Python 三层回退（native F32 → 纯 float 镜像 →
+  legacy u8 兜底）；native vs 参考 Lab 域 ≤1.9e-6；暗样本实测增益 1.075 ΔE /
+  47.8% 像素越阈；附带修复肤色掩码误用中性校正后 a/b 的真 bug。
+- LUT native float 四面体内核（4388f37）：PixoRenderLut3DApplyF32 与 numpy 参考
+  逐位相等 0.0（镜像 NEP50 f64 MAC 语义，修出上边界步长错格）；预览 87-95ms
+  （6x）、全幅 333ms（7x）；stylize 切 apply_f32，u8 表路径保留供金样本生成器；
+  t111 顺带删除 256³ 表预热。
+- RAW 默认路径金样本（0e8d2a5）：新 `tests/regression/goldens/gate_defaults/`
+  24 条（wb_as_shot/exposure_auto/compose/clarity 四条默认路径 × 6 样本，全语料
+  2663 张 EXIF 扫描选样，manifest 匿名 ref）；旧 gate/ 8 条基线重生成（原 8/8
+  FAIL 形同虚设）；单 RAW CLI 忽略 --features/--reviewer 修复。
+- 验收：gate_defaults 24 条 bit-exact PASS + 旧 gate 8/8 重生成 PASS；colorcal
+  native vs Python ≤1.9e-6（Lab 域）；LUT 内核逐位 0.0、SYNTH gate 零漂移；
+  金样本零漂移。
+
+## 2026-08-27 — t110 落库收口 + 自研渲染管线路线图立项
+
+- YOLOE 移除正式落库（769a225，BREAKING CHANGE：`PIXO_SEGMENTER=yoloe` 移除，
+  迁移 `mock|multi`；内容同 2026-08-26 t110 条目）：删 segmenters/yoloe.py
+  （466 行，仓库唯一 ultralytics import 点）及 7 测试；新增 import 隔离门禁
+  （ultralytics 全 vision 包禁入 + torch/transformers/rfdetr 限适配器懒 import）。
+- 测试同步（07adce1）：t110 遗漏的清单/分割器测试补齐（yoloe 断言移除 + 隔离
+  门禁迁移）。
+- 仓库治理（146acfa）：.gitignore 实验残留与可再生 metrics、dsh 插件纳入跟踪、
+  tech_debt 台账 AGPL/torch 隔离口径同步。
+- 路线图立项（f68b158）：`docs/PIXO_RENDER_OWN_PIPELINE.md`——自研渲染管线
+  三阶段（Oklab 编辑层 / root-polynomial CCM 并联 / 可微标定 + 学习后端治理）；
+  决策记录：不走端到端 learned ISP（与可解释闭环定位冲突）、DCP 永不删除。
+- 验收：全仓 1031 passed（=1038−7 删测），vision/manifests/service 定向 48 绿。
+
 ## 2026-08-26 — t110 YOLOE 移除批（AGPL 依赖清零）
 
 - 移除 YOLOE 分割器（唯一 AGPL-3.0 依赖，tech_debt #1 发布阻断项清偿）：
