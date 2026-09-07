@@ -201,9 +201,11 @@ def test_skin_stage_oklch_uses_oklab_mask():
         outs[domain] = np.clip(ctx.image, 0, 1)
     assert not np.array_equal(outs["hsv"], outs["oklch"]), \
         "分歧探针色上两域磨皮输出必须不同"
-    # 掩码占比门控在 oklch 域同样生效 (探针色掩码均值过门限则放行)
+    # 掩码占比门控在 oklch 域同样生效 (探针色掩码均值过门限则放行);
+    # 显式钉 scene=portrait: 实心探针图覆盖 100%, 免 r11 未分类覆盖率上限
     ctx = StageContext("x.NEF", config={"stages": {"skin": {
         "enabled": True, "color_domain": "oklch"}}})
+    ctx.state["scene"] = {"id": "portrait"}
     ctx.set_image(img.copy(), DOMAIN_GAMMA_RGB)
     assert SkinStage().wants(ctx) is (m_new0 >= 0.005)
 

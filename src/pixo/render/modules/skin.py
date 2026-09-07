@@ -14,7 +14,12 @@
   - enabled=False → 不执行;
   - scene 状态注入: ctx.state['scene'] = {"id": ...} / 字符串; 仅 portrait 启用,
     其他场景 (landscape/night/street/food/mono) 直通;
-  - scene 缺失 (未分类) → 回退到掩码占比门限: 掩码占比 < 0.5% → 直通 (无肤色)。
+  - scene 缺失 (未分类) → 回退到掩码占比双测门限:
+      占比 < 3% → 直通 (无肤色);
+      占比 > 50% → 判定场景误判 (天空/墙面/沙滩等大面积均质区域), no-op + warn
+      (r11 观察窗清偿: 风景样本掩码覆盖 56~90%, 3% 单向下限形同虚设,
+      磨皮一直误作用于无人像默认链渲染; 真人像肤色占比实测 ≤40%)。
+    scene=="portrait" 显式分类时不设上限 (分类意图优先)。
 
 默认管线 (pipeline.DEFAULT_STAGES) 不包含本 Stage; 由 portrait 预设 / 显式
 config["stages"] 加入后接入, 无需改 Pipeline/core。
@@ -35,6 +40,13 @@ _LOGGER = logging.getLogger(__name__)
 # 掩码占比门限: 低于此值视为无肤色, 直通 (规格 §1 错误码: 无肤色 → 直通)
 _SKIN_RATIO_MIN = 0.005          # 场景已明确 portrait 时的宽松门限
 _SKIN_RATIO_NO_SCENE = 0.03      # 未分类 (无 scene 状态) 时的人像级门限
+# 覆盖率上限 (r11 观察窗清偿): 未分类图占比超过此值判定为场景误判
+# (天空/墙面/沙滩等大面积均质区域被肤色椭圆罩住), 磨皮 no-op + warn。
+# 依据: RAW 默认链从不注入 scene 状态 (渲染路径无分类器), 全部走未分类
+# 分支; F11 72 张语料真人像占比 ≤40% (tele 人像 6.6%), 而无人像风景样本
+# night_lowlight/wide_angle 达 90.2%/56.4% —— 3% 单向下限对此形同虚设。
+# scene=="portrait" 显式分类时不设上限 (分类意图优先)。
+_SKIN_RATIO_MAX_NO_SCENE = 0.50
 
 
 def _mask_fn(color_domain: str):
@@ -100,9 +112,21 @@ class SkinStage(Stage):
                 "[skin] wants 掩码占比门控计算失败, 直通: %s: %s",
                 type(exc).__name__, exc)
             return False
-        if float(np.asarray(m).mean()) < ratio_min:
+        ratio = float(np.asarray(m).mean())
+        if ratio < ratio_min:
             return False
-        ctx.state["skin_mask_ratio"] = float(np.asarray(m).mean())
+        if scene_id is None and ratio > _SKIN_RATIO_MAX_NO_SCENE:
+            # 覆盖率上限 (r11): 未分类图占比超限 → 场景误判 (非人像), no-op。
+            # 真人像肤色占比实测 ≤40%, 超限几乎必为天空/墙面/沙滩误罩;
+            # scene=="portrait" 显式分类时不设上限 (分类意图优先)。
+            _LOGGER.warning(
+                "[skin] 未分类图掩码占比 %.1f%% 超上限 %d%%, 判定场景误判"
+                "(非人像高覆盖), 磨皮 no-op",
+                ratio * 100.0, round(_SKIN_RATIO_MAX_NO_SCENE * 100))
+            ctx.state["skin_mask_ratio"] = ratio
+            ctx.state["skin_gate"] = "coverage-cap"
+            return False
+        ctx.state["skin_mask_ratio"] = ratio
         return True
 
     def process(self, ctx: StageContext) -> None:

@@ -266,9 +266,41 @@ def test_skin_stage_wants_portrait_true():
 
 
 def test_skin_stage_wants_no_scene_mask_gate():
-    """无 scene 状态 → 掩码占比门限: 肤色图启用, 中性灰图直通。"""
-    assert SkinStage().wants(_skin_ctx(_skin_block(48, 48) / 255.0)) is True
+    """无 scene 状态 → 掩码占比双测门限: 中等覆盖 (3%~50%) 肤色图启用, 中性灰直通。"""
+    # 部分覆盖: 肤色块占 1/4 (~25%, INTER_AREA 边界混算后仍在 [3%,50%]) → 启用
+    img = _solid(48, 48, _GRAY_RGB)
+    img[:24, :24] = _SKIN_RGB
+    assert SkinStage().wants(_skin_ctx(img / 255.0)) is True
+    # 无肤色
     assert SkinStage().wants(_skin_ctx(_solid(48, 48, _GRAY_RGB) / 255.0)) is False
+
+
+def test_skin_stage_wants_no_scene_coverage_cap(caplog):
+    """r11 观察窗清偿: 未分类图掩码占比 >50% → 判定场景误判 (非人像高覆盖),
+    磨皮 no-op + warn + 状态留痕 (风景 night_lowlight 90%/wide_angle 56% 类)。"""
+    import logging
+
+    img = _skin_block(48, 48)  # 满幅肤色 → 覆盖 ~100%
+    ctx = _skin_ctx(img / 255.0)
+    with caplog.at_level(logging.WARNING, logger="pixo.render.modules.skin"):
+        assert SkinStage().wants(ctx) is False
+    assert ctx.state.get("skin_gate") == "coverage-cap"
+    assert ctx.state["skin_mask_ratio"] > 0.5
+    assert any("场景误判" in m for m in caplog.messages)
+
+
+def test_skin_stage_wants_no_scene_below_cap_still_enabled():
+    """覆盖率在 (3%, 50%] 区间内不触发上限 (严格大于才截停): ~42% 覆盖肤色图启用。"""
+    img = _solid(48, 48, _GRAY_RGB)
+    img[:, :20] = _SKIN_RGB  # 20/48 ≈ 42% 覆盖
+    assert SkinStage().wants(_skin_ctx(img / 255.0)) is True
+
+
+def test_skin_stage_wants_portrait_bypasses_coverage_cap():
+    """scene=="portrait" 显式分类时不设覆盖率上限 (分类意图优先): 满幅肤色照样启用。"""
+    img = _skin_block(48, 48)
+    assert SkinStage().wants(_skin_ctx(img / 255.0, scene="portrait")) is True
+    assert SkinStage().wants(_skin_ctx(img / 255.0, scene={"id": "portrait"})) is True
 
 
 def test_skin_stage_process_smooths():
