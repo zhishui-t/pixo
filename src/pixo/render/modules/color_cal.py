@@ -201,8 +201,8 @@ class ColorCalStage(Stage):
         "scene_hue": {"type": "float_or_str"},        # [[wb_lo,wb_hi,deg], ...]
         "gamut_soft": {"type": "float", "min": 0.0},
         # 编辑域开关 (设计 §1.2/§3): "hsv"(缺省, float Lab 椭圆, 逐位不变) | "oklch"
-        # (core.skin 拟合 OKLab 椭圆, 与 SkinStage 同掩码)。oklch 域旁路 native
-        # 内核 (其肤色椭圆为 Lab 常数, 域不匹配) 走纯 Python 路径。
+        # (core.skin 拟合 OKLab 椭圆, 与 SkinStage 同掩码)。两域均有 native 内核
+        # (oklch 域 v1.5.0 起不再旁路, 掩码与 core.skin.skin_mask_oklab 对齐)。
         "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
     }
 
@@ -362,8 +362,9 @@ class ColorCalStage(Stage):
 
         gs = float(self.p(ctx, "gamut_soft"))
         # ---- 16bit 精度改造: 全量路径 float 全链, 分层回退 ----
-        # ① native F32 内核 PixoRenderColorCalApplyLabF32 (DLL ≥1.2.0):
-        #    cv2 float Lab (L∈[0,100], a/b 中心 0) 入/出, 生产首选;
+        # ① native F32 内核 (生产首选): hsv 域 PixoRenderColorCalApplyLabF32
+        #    (DLL ≥1.2.0) / oklch 域 ...F32Oklch (DLL ≥1.5.0, OKLab 掩码):
+        #    cv2 float Lab (L∈[0,100], a/b 中心 0) 入/出;
         # ② 纯 Python float Lab 实现 (与 ① 逐式对应): 仅依赖本模块已用的
         #    cv2 float cvtColor, 无新增环境依赖 → ① 不可用时总可达;
         # ③ 旧 u8 链 _full_path_u8_legacy: 原 uint8 Lab 往返实现逐行保留,
@@ -377,11 +378,14 @@ class ColorCalStage(Stage):
             try:
                 from .._native import (available as _native_available,
                                        colorcal_apply_lab_f32 as _native_cc_f32,
+                                       colorcal_apply_lab_f32_oklch as _native_cc_f32_ok,
                                        gamut_soft as _native_gamut_soft,
                                        PixoRenderColorCalParams)
-                # oklch 域旁路 native: 内核内嵌 float Lab 域肤色椭圆常数,
-                # 与 OKLab 椭圆不匹配 → 走下方纯 Python 路径 (同式对应)
-                if _native_available() and domain == "hsv":
+                # 域分派: hsv → F32 Lab 椭圆内核; oklch → oklch 内核 (v1.5.0,
+                # OKLab 椭圆掩码取原始 img, 掩码/校准式与下方纯 Python oklch
+                # 分支同式对应)。DLL < 1.5.0 未导出 oklch 内核时抛 RuntimeError
+                # → native_ok=False → 走纯 Python 路径 (分层回退不变)。
+                if _native_available():
                     curve_a = (np.asarray(a_curve, dtype=np.float32)
                                if a_curve is not None else None)
                     curve_b = (np.asarray(b_curve, dtype=np.float32)
@@ -395,7 +399,10 @@ class ColorCalStage(Stage):
                                 if curve_a is not None else None),
                         curveB=(curve_b.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
                                 if curve_b is not None else None))
-                    lab2 = _native_cc_f32(lab, params)
+                    if domain == "hsv":
+                        lab2 = _native_cc_f32(lab, params)
+                    else:
+                        lab2 = _native_cc_f32_ok(lab, img, params)
                     out = _lab_f_to_rgb(lab2)
                     if gs > 0.0:
                         out = _native_gamut_soft(out, gs)

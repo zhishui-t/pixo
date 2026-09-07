@@ -226,3 +226,22 @@
       test_free_px_rect_cross_resolution_geometry_mismatch_recorded`
       断言当前失配行为（防"静默变正确/静默变更坏"两边无感）——若未来
       清偿，该用例应**有意翻转重写**而非删除。
+
+18. **skin OKLab 椭圆常数双源（core/skin.py 单源 vs colorcal.cpp 硬编码副本）**
+    （记债，2026-09-07 r10；本次 dev-1 椭圆重拟合落地后 native 副本失同步，
+    test_native_colorcal_oklch 3 红，手工同步恢复）：
+    - 现状：OKLab 椭圆六常数的**单源**在 `core/skin.py SKIN_OKLAB_*`（r10
+      低彩度端重拟合：覆盖分位 0.96→0.98 + 软带 0.25→0.31）；
+      `native/src/colorcal.cpp` 的 `SkinOklab*` constexpr 为**硬编码副本**
+      （掩码逐位对齐纪律要求 hex 字面量：中心经 np.float32 舍入展宽、
+      cos/sin 取 np f64 结果、半轴 round-trip 十进制——非简单抄值）。
+      椭圆再变更时必须双侧同步，本次已同步（DLL 1.5.0 重编）。
+    - 防复发（现状防线）：`tests/unit/test_native_colorcal_oklch.py::
+      test_oklch_mask_isolated_bitwise`（掩码隔离路径与 skin_mask_oklab
+      逐位断言）会在常数失同步时**自动抓红**——双源漂移可检出，但检出
+      时点=下次跑测（非编译期/启动期）。
+    - 清偿条件：**下次椭圆变更前**必须参数化——内核签名传常数
+      （PixoRenderColorCalApplyLabF32Oklch 增椭圆参数结构体，Python 侧
+      从 core/skin.py 单源填充），colorcal.cpp 副本删除；一并评估
+      SkinStage oklch 掩码 native 化复用同一参数化内核（r10-hard-problems
+      §6.3 遗留：skin oklch 掩码仍走 numpy ~150ms @512）。

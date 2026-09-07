@@ -7,6 +7,8 @@
   - apply_local_warm_sat_native: M1 broad 分支整段内核。
   - colorcal_apply_lab_f32: colorcal 全量 Lab float 域内核 (v1.2.0, 生产路径);
     colorcal_apply_lab (uint8 Lab 域) 为兼容保留。
+  - colorcal_apply_lab_f32_oklch: colorcal oklch 域内核 (v1.5.0, OKLab 椭圆
+    肤色掩码; oklch 域不再旁路 native, F11 15x 性能鸿沟回收)。
   - lut3d_apply_f32: stylize 3D LUT 四面体插值 float 内核 (v1.3.0, 生产路径,
     逐位对齐 lut3d.lookup 的 float32 语义)。
   - srgb_to_oklab_f32 / oklab_to_srgb_f32: Oklab F32 平面版转换内核 (v1.4.0),
@@ -296,6 +298,19 @@ if _DLL_PATH.exists():
             _lib.PixoRenderColorCalApplyLabF32.restype = ctypes.c_int
             _lib.PixoRenderColorCalApplyLabF32.argtypes = [
                 ctypes.POINTER(ctypes.c_float),   # lab (float Lab 域)
+                ctypes.POINTER(ctypes.c_float),   # labOut (float Lab 域)
+                ctypes.c_int,                     # width
+                ctypes.c_int,                     # height
+                ctypes.POINTER(PixoRenderColorCalParams),
+            ]
+        # 1.5.0: colorcal oklch 域内核 (OKLab 椭圆掩码, rgb 取校正前 gamma
+        # sRGB 供掩码)。旧 v1.4 DLL 未导出时不影响加载, 调用方
+        # (modules/color_cal.py oklch 分支) 回退纯 Python float 实现。
+        if hasattr(_lib, "PixoRenderColorCalApplyLabF32Oklch"):
+            _lib.PixoRenderColorCalApplyLabF32Oklch.restype = ctypes.c_int
+            _lib.PixoRenderColorCalApplyLabF32Oklch.argtypes = [
+                ctypes.POINTER(ctypes.c_float),   # lab (float Lab 域)
+                ctypes.POINTER(ctypes.c_float),   # rgb (校正前 gamma sRGB)
                 ctypes.POINTER(ctypes.c_float),   # labOut (float Lab 域)
                 ctypes.c_int,                     # width
                 ctypes.c_int,                     # height
@@ -955,6 +970,43 @@ def colorcal_apply_lab_f32(lab: np.ndarray,
     return out
 
 
+def colorcal_apply_lab_f32_oklch(lab: np.ndarray, rgb: np.ndarray,
+                                 params: PixoRenderColorCalParams) -> np.ndarray:
+    """调用 C++ oklch 域全量内核 (v1.5.0)；返回 float32 Lab (H,W,3)。
+
+    与 colorcal_apply_lab_f32 同一校准域 (cv2 float Lab: L∈[0,100], a/b 中心
+    0) 与同一 params 布局, 唯一差异 = 肤色掩码源: OKLab 椭圆
+    (core/skin.py::skin_mask_oklab 同式, 常数同源), 由 rgb (校正前 gamma
+    sRGB float32 (H,W,3), 掩码取原始像素口径) 逐像素求出 —— 对应
+    modules/color_cal.py oklch 分支的 _skin_region_mask。
+    掩码对齐精度: 与 numpy 参考在 f64->f32 舍入后实际逐位一致 (cbrt 为
+    msun 复刻, 与 ucrt/np.cbrt 差 <=1 ULP f64; 见 colorcal.cpp CbrtFast
+    注释与 tests/unit/test_native_colorcal_oklch.py)。
+    DLL < 1.5.0 未导出该符号时抛 RuntimeError, 调用方回退纯 Python 实现。
+    """
+    _require_lib()
+    if not hasattr(_lib, "PixoRenderColorCalApplyLabF32Oklch"):
+        raise RuntimeError("native colorcal oklch F32 kernel unavailable (DLL 未导出)")
+    arr = np.ascontiguousarray(lab, dtype=np.float32)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(f"lab 须为 (H,W,3), 实际 {arr.shape}")
+    rgb_arr = np.ascontiguousarray(rgb, dtype=np.float32)
+    if rgb_arr.shape != arr.shape:
+        raise ValueError(f"rgb 须与 lab 同形 {arr.shape}, 实际 {rgb_arr.shape}")
+    h, w = arr.shape[:2]
+    out = np.empty((h, w, 3), dtype=np.float32)
+    ret = _lib.PixoRenderColorCalApplyLabF32Oklch(
+        arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        rgb_arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        out.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.c_int(w),
+        ctypes.c_int(h),
+        ctypes.byref(params),
+    )
+    _check_status(ret)
+    return out
+
+
 def gamut_soft(rgb: np.ndarray, strength: float) -> np.ndarray:
     """调用 C++ 色域软压缩；返回 float32 RGB (H,W,3)。"""
     _require_lib()
@@ -1163,7 +1215,8 @@ __all__ = ["available", "load_error", "version", "rgb_to_hsv", "hsv_to_rgb",
            "PixoRenderToneApplyLut1DParams", "PixoRenderClarityParams",
            "PixoRenderLut3DParams",
            "apply_local_warm_sat_native", "decode_cfa_half",
-           "colorcal_apply_lab", "colorcal_apply_lab_f32", "gamut_soft",
+           "colorcal_apply_lab", "colorcal_apply_lab_f32",
+           "colorcal_apply_lab_f32_oklch", "gamut_soft",
            "PixoRenderRefineSatProtectionParams",
            "PixoRenderRefineSharpenParams", "PixoRenderRefineChromaParams",
            "PixoRenderRefineHighlightParams", "PixoRenderRefineApplyParams",

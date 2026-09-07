@@ -172,23 +172,28 @@ def skin_smooth(rgb8, mask, strength: float = 0.5, half_res: bool = False) -> np
 # OKLab 椭圆 (M-O2, 设计 §3) —— 由 scripts/fit_skin_oklch.py 在厦门/春节语料
 # (2026-02-10 春节 + 02-14..04-24 厦门, 42 张有效照片, pixo.meta 拍摄日分组)
 # 上以 "旧 Lab 椭圆掩码 ∩ person 分割掩码 (RF-DETR)" 为皮肤样本, 取 C>=0.04
-# 色度核在 OKLab a-b 平面包围拟合 (coverage=0.96, 2026-09-04):
-#   对照 (configs/color/skin_oklab.json): 核内召回 0.955 / 全体 0.832,
-#   背景误报 0.258 (旧 0.271); 中性灰 d≈1.43 掩码归零。
+# 色度核在 OKLab a-b 平面包围拟合; **r10 低彩度端重拟合 (2026-09-07)**:
+#   覆盖分位 0.96→0.98 + 软带 0.25→0.31 (第九轮 F11 复核发现近中性去饱和
+#   肤色被原椭圆丢弃 —— X1_DSC_0466 类 tele 人像 86% 磨皮作用带丢失 + 3%
+#   门控分叉; 注意近中性带 C≈0.01 与中性灰在 a-b 平面不可分, 阈值放宽拟合
+#   会使 fp_bg 爆炸 0.26→0.74, 故以覆盖分位+软带重定标实现, 中性灰
+#   d≈1.319 仍在软边界外 mask=0)。对照 (configs/color/skin_oklab.json):
+#   核内召回 0.955 / mask>=0.5 口径背景误报 0.41 (旧 Lab 轨 0.27, 改前
+#   OKLab 0.37); 合成 GT 精检/召回 1.000/1.000; F11 复跑三门禁全过。
 # 样本遴选与对照基准均为 cv2.COLOR_RGB2LAB 语义 (白点口径见脚本头 A3)。
 # 旧 SKIN_LAB_* 常数与 skin_mask 不动 (hsv 域回退保证, 设计 §1.2)。
 # ---------------------------------------------------------------------------
 
 # 椭圆中心 (OKLab a*, b*; 中性 0)
-SKIN_OKLAB_A = 0.01516
-SKIN_OKLAB_B = 0.06125
+SKIN_OKLAB_A = 0.015127
+SKIN_OKLAB_B = 0.061263
 # 半轴 (主轴沿 u, 副轴沿 v, 同旧椭圆的旋转变换约定)
-SKIN_OKLAB_MAJOR = 0.045692
-SKIN_OKLAB_MINOR = 0.045192
+SKIN_OKLAB_MAJOR = 0.049594
+SKIN_OKLAB_MINOR = 0.047463
 # 倾角 (弧度, 同 _ellipse_mahalanobis 的 u/v 旋转约定)
-SKIN_OKLAB_ANGLE = 0.191122
+SKIN_OKLAB_ANGLE = 0.196323
 # 软过渡带 (马氏距离 d 从 1 到 1+band smoothstep 衰减; 口径同 SOFT_BAND)
-SKIN_OKLAB_SOFT_BAND = 0.25
+SKIN_OKLAB_SOFT_BAND = 0.31
 
 
 def _ellipse_mahalanobis_ab(a: np.ndarray, b: np.ndarray, cx: float, cy: float,

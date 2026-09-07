@@ -13,7 +13,7 @@
     "long_edge": 640,
     "seg_threshold": 0.5,
     "max_per_photo": 20000,
-    "coverage": 0.96,
+    "coverage": 0.98,
     "chroma_core": 0.04
   },
   "samples": {
@@ -22,21 +22,21 @@
     "n_person_nonskin": 549698
   },
   "constants": {
-    "SKIN_OKLAB_A": 0.01516,
-    "SKIN_OKLAB_B": 0.06125,
-    "SKIN_OKLAB_MAJOR": 0.045692,
-    "SKIN_OKLAB_MINOR": 0.045192,
-    "SKIN_OKLAB_ANGLE": 0.191122,
-    "SKIN_OKLAB_SOFT_BAND": 0.25
+    "SKIN_OKLAB_A": 0.015127,
+    "SKIN_OKLAB_B": 0.061263,
+    "SKIN_OKLAB_MAJOR": 0.049594,
+    "SKIN_OKLAB_MINOR": 0.047463,
+    "SKIN_OKLAB_ANGLE": 0.196323,
+    "SKIN_OKLAB_SOFT_BAND": 0.31
   },
   "new_ellipse_fit": {
-    "center_a": 0.01516,
-    "center_b": 0.06125,
-    "major": 0.045692,
-    "minor": 0.045192,
-    "angle_deg": 10.9505,
+    "center_a": 0.015127,
+    "center_b": 0.061263,
+    "major": 0.049594,
+    "minor": 0.047463,
+    "angle_deg": 11.2485,
     "trimmed": 967,
-    "coverage": 0.96,
+    "coverage": 0.98,
     "n_fit": 192509
   },
   "baseline_ellipse": {
@@ -63,11 +63,11 @@
         "area": 967.6
       },
       "new": {
-        "recall": 0.8316,
-        "fp_bg": 0.2578,
-        "fp_person_nonskin": 0.1926,
-        "area": 0.006487,
-        "recall_core": 0.9552
+        "recall": 0.9226,
+        "fp_bg": 0.3197,
+        "fp_person_nonskin": 0.2223,
+        "area": 0.007395,
+        "recall_core": 0.9751
       }
     },
     "per_group": {
@@ -79,11 +79,11 @@
           "area": 967.6
         },
         "new": {
-          "recall": 0.2662,
-          "fp_bg": 0.3058,
+          "recall": 0.4935,
+          "fp_bg": 0.393,
           "fp_person_nonskin": 0.0,
-          "area": 0.000228,
-          "recall_core": 0.9552
+          "area": 0.000868,
+          "recall_core": 0.9741
         }
       },
       "2026-02-14": {
@@ -94,11 +94,11 @@
           "area": 967.6
         },
         "new": {
-          "recall": 0.7921,
-          "fp_bg": 0.4828,
-          "fp_person_nonskin": 0.0577,
-          "area": 0.002839,
-          "recall_core": 0.9552
+          "recall": 0.813,
+          "fp_bg": 0.5613,
+          "fp_person_nonskin": 0.1157,
+          "area": 0.003306,
+          "recall_core": 0.9751
         }
       },
       "2026-02-15": {
@@ -109,11 +109,11 @@
           "area": 967.6
         },
         "new": {
-          "recall": 0.4114,
-          "fp_bg": 0.027,
-          "fp_person_nonskin": 0.1361,
-          "area": 0.000914,
-          "recall_core": 0.9552
+          "recall": 0.4371,
+          "fp_bg": 0.0293,
+          "fp_person_nonskin": 0.1584,
+          "area": 0.001113,
+          "recall_core": 0.975
         }
       },
       "2026-02-19": {
@@ -124,11 +124,11 @@
           "area": 967.6
         },
         "new": {
-          "recall": 0.6225,
-          "fp_bg": 0.0039,
-          "fp_person_nonskin": 0.001,
-          "area": 0.000922,
-          "recall_core": 0.9551
+          "recall": 0.675,
+          "fp_bg": 0.0054,
+          "fp_person_nonskin": 0.0054,
+          "area": 0.001202,
+          "recall_core": 0.9749
         }
       },
       "2026-02-25": {
@@ -139,11 +139,11 @@
           "area": 967.6
         },
         "new": {
-          "recall": 0.2291,
+          "recall": 0.2462,
           "fp_bg": 0.0,
           "fp_person_nonskin": 0.0,
-          "area": 7.5e-05,
-          "recall_core": 0.9551
+          "area": 8.7e-05,
+          "recall_core": 0.9745
         }
       },
       "2026-04-24": {
@@ -154,11 +154,11 @@
           "area": 967.6
         },
         "new": {
-          "recall": 0.5394,
-          "fp_bg": 0.1555,
-          "fp_person_nonskin": 0.1269,
-          "area": 0.001792,
-          "recall_core": 0.9553
+          "recall": 0.5739,
+          "fp_bg": 0.1979,
+          "fp_person_nonskin": 0.1819,
+          "area": 0.002347,
+          "recall_core": 0.9751
         }
       }
     }
@@ -168,27 +168,27 @@
       "n_photos": 2,
       "n_skin": 32861,
       "ellipse": {
-        "center_a": 0.019394,
-        "center_b": 0.037997,
-        "major": 0.008576,
-        "minor": 0.008444,
-        "angle_deg": 88.9906,
-        "trimmed": 14,
-        "coverage": 0.96,
-        "n_fit": 2954
+        "center_a": 0.019305,
+        "center_b": 0.037921,
+        "major": 0.030774,
+        "minor": 0.008973,
+        "angle_deg": -1.8112,
+        "trimmed": 15,
+        "coverage": 0.98,
+        "n_fit": 2953
       }
     },
     "2026-02-14": {
       "n_photos": 7,
       "n_skin": 114060,
       "ellipse": {
-        "center_a": 0.02741,
-        "center_b": 0.062307,
-        "major": 0.03801,
-        "minor": 0.023775,
-        "angle_deg": 24.0962,
+        "center_a": 0.027411,
+        "center_b": 0.06231,
+        "major": 0.040749,
+        "minor": 0.025822,
+        "angle_deg": 24.116,
         "trimmed": 470,
-        "coverage": 0.96,
+        "coverage": 0.98,
         "n_fit": 93503
       }
     },
@@ -196,13 +196,13 @@
       "n_photos": 8,
       "n_skin": 95013,
       "ellipse": {
-        "center_a": -0.006045,
-        "center_b": 0.057569,
-        "major": 0.020407,
-        "minor": 0.014259,
-        "angle_deg": -75.6174,
+        "center_a": -0.006043,
+        "center_b": 0.057562,
+        "major": 0.021842,
+        "minor": 0.016225,
+        "angle_deg": -75.695,
         "trimmed": 198,
-        "coverage": 0.96,
+        "coverage": 0.98,
         "n_fit": 39238
       }
     },
@@ -212,11 +212,11 @@
       "ellipse": {
         "center_a": 0.003146,
         "center_b": 0.054554,
-        "major": 0.020015,
-        "minor": 0.014661,
+        "major": 0.022569,
+        "minor": 0.016956,
         "angle_deg": 77.0749,
         "trimmed": 42,
-        "coverage": 0.96,
+        "coverage": 0.98,
         "n_fit": 8175
       }
     },
@@ -226,11 +226,11 @@
       "ellipse": {
         "center_a": 0.040881,
         "center_b": 0.020815,
-        "major": 0.007137,
-        "minor": 0.003336,
+        "major": 0.007914,
+        "minor": 0.003502,
         "angle_deg": 34.5392,
         "trimmed": 25,
-        "coverage": 0.96,
+        "coverage": 0.98,
         "n_fit": 4946
       }
     },
@@ -238,13 +238,13 @@
       "n_photos": 6,
       "n_skin": 78754,
       "ellipse": {
-        "center_a": 0.000853,
-        "center_b": 0.062869,
-        "major": 0.031548,
-        "minor": 0.018083,
-        "angle_deg": 51.1182,
+        "center_a": 0.000856,
+        "center_b": 0.062873,
+        "major": 0.033499,
+        "minor": 0.022299,
+        "angle_deg": 51.2019,
         "trimmed": 217,
-        "coverage": 0.96,
+        "coverage": 0.98,
         "n_fit": 43033
       }
     }
@@ -256,5 +256,5 @@
     "person 内非肤族 (发/衣) 在旧椭圆过宽的语料 (如红衣人像) 上可不足 500 样本, 此时 fp_person_nonskin 记 None (—) —— 空缺本身即旧椭圆 过宽的证据。",
     "方法学结论 (本语料实测): 正样本云含大量近中性像素 (C<0.03 占 32%), 密度矩/支撑包围拟合都会被拽向中性带 (fp_bg 0.27→0.75, 反而恶化); 色度核 (--chroma-core) 定形符合旧椭圆设计意图 (中心=平均色度肤色), 代价是主动放弃近中性带召回 (该带本应由中性保护机制兜底), 换来 fp_bg 首次低于旧椭圆。recall=全体正样本召回, recall_core=C>=0.04 色度核召回 (诚实口径)。"
   ],
-  "created": "2026-09-04T09:06:24"
+  "created": "2026-09-07T09:21:53"
 }

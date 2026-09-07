@@ -52,7 +52,7 @@ from pixo.render.core.skin import (
     SKIN_MAJOR,
     SKIN_MINOR,
     SKIN_ANGLE,
-    SOFT_BAND,
+    SKIN_OKLAB_SOFT_BAND,
     skin_mask,
 )
 
@@ -511,7 +511,7 @@ def main() -> None:
                       "SKIN_OKLAB_MINOR": new_ell["minor"],
                       "SKIN_OKLAB_ANGLE": round(
                           float(np.radians(new_ell["angle_deg"])), 6),
-                      "SKIN_OKLAB_SOFT_BAND": SOFT_BAND},
+                      "SKIN_OKLAB_SOFT_BAND": SKIN_OKLAB_SOFT_BAND},
         "new_ellipse_fit": new_ell,
         "baseline_ellipse": {**OLD_ELLIPSE,
                              "domain": "cv2.COLOR_RGB2LAB uint8 (a/b 中心 128)",

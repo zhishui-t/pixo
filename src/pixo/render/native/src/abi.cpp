@@ -7,6 +7,9 @@
 //        对齐 lut3d.lookup 的 float32 语义, 取代 u8 256³ 预计算查表路径)。
 // 1.4.0: 新增 PixoRenderSrgbToOklabF32 / PixoRenderOklabToSrgbF32 (Oklab
 //        F32 平面版转换内核, 与 core/oklab.py 逐位一致, M-O1)。
+// 1.5.0: 新增 PixoRenderColorCalApplyLabF32Oklch (colorcal oklch 域内核,
+//        OKLab 椭圆掩码版 —— F11 实测 oklch 旁路 native 走纯 Python 路径
+//        15x 慢 (8.5ms->131ms @512), 本内核堵回 native 量级)。
 #include "abi.h"
 
 PIXO_RENDER_NATIVE_API int PixoRenderVersion(struct PixoRenderVersion* version)
@@ -15,7 +18,7 @@ PIXO_RENDER_NATIVE_API int PixoRenderVersion(struct PixoRenderVersion* version)
         return PixoRenderInvalidArgs;
     }
     version->major = 1;
-    version->minor = 4;
+    version->minor = 5;
     version->patch = 0;
     return PixoRenderOk;
 }

@@ -35,6 +35,10 @@ run_tests.bat
 - `RgbToHsvF32` / `HsvToRgbF32`（float32，用于 `apply_local_warm_sat`）
 - `PixoRenderApplyLocalWarmSat`（M1 broad/spot）
 - `PixoRenderColorCalApplyLab` / `PixoRenderGamutSoft`（M2）
+- `PixoRenderColorCalApplyLabF32`（M2 float Lab 域，v1.2.0，生产路径）
+- `PixoRenderLut3DApplyF32`（v1.3.0，stylize 3D LUT 四面体插值）
+- `PixoRenderSrgbToOklabF32` / `PixoRenderOklabToSrgbF32`（v1.4.0，Oklab 转换）
+- `PixoRenderColorCalApplyLabF32Oklch`（v1.5.0，colorcal oklch 域 OKLab 掩码内核）
 - `PixoRenderRefine*` / `PixoRenderWarmSatGammaU8`（M3）
 - `PixoRenderDecodeCfaHalf`（P1 CFA 2×2 分箱快速解码）
 

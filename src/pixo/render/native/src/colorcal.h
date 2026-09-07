@@ -47,6 +47,16 @@ int ApplyColorCalLab(const float* lab, std::uint8_t* labOut, int width, int heig
 int ApplyColorCalLabF32(const float* lab, float* labOut, int width, int height,
                         const ColorCalParams& params);
 
+// oklch 域全量内核 (v1.5.0): 与 ApplyColorCalLabF32 逐式对应, 唯一差异 =
+// 肤色掩码源。掩码 = OKLab 椭圆 SkinMaskOklab(原始 gamma sRGB 像素), 与
+// core/skin.py::skin_mask_oklab 逐位对齐 (常数 hex 字面量同源; cbrt 用
+// msun 复刻, 与 ucrt/np.cbrt 差 <=1 ULP f64, 经 f64->f32 舍入后实际逐位
+// 一致 —— 见 colorcal.cpp CbrtFast 注释与 test_native_colorcal_oklch.py)。
+// rgb = 校正前 gamma sRGB float32 (H,W,3) (掩码取原始像素口径); lab/labOut
+// 仍为 cv2 float Lab 坐标 (校准域不换, 同 Python oklch 分支结构)。
+int ApplyColorCalLabF32Oklch(const float* lab, const float* rgb, float* labOut,
+                             int width, int height, const ColorCalParams& params);
+
 // Lab->RGB 之后的色域软压缩，与 color_cal.py 第 304~310 行一致。
 int ApplyGamutSoft(const float* rgb, float* out, int width, int height, float strength);
 
@@ -78,6 +88,12 @@ int PixoRenderColorCalApplyLab(const float* lab, std::uint8_t* labOut, int width
 // 亮度节点在 float L∈[0,100] 域解释 (见 ApplyColorCalLabF32)。
 int PixoRenderColorCalApplyLabF32(const float* lab, float* labOut, int width, int height,
                               const struct PixoRenderColorCalParams* params);
+
+// oklch 域内核 (v1.5.0, DLL >= 1.5.0): rgb = 校正前 gamma sRGB f32 (H,W,3)
+// 供 OKLab 椭圆掩码; 其余契约同 PixoRenderColorCalApplyLabF32。
+int PixoRenderColorCalApplyLabF32Oklch(const float* lab, const float* rgb,
+                                   float* labOut, int width, int height,
+                                   const struct PixoRenderColorCalParams* params);
 
 int PixoRenderGamutSoft(const float* rgb, float* out, int width, int height, float strength);
 
