@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-08 — 第十四轮：M1 前端暴露——region 控件上线
+
+- **后端状态 API**（6365eaa）：GET /api/sessions/{id}/region + params 响应状态节双面方案
+  （canonical 纯净）；available/prompts/reason 显式化；patch 嵌套闭环 6 测试（真渲染：
+  掩码区变暗 ≈2^(-0.5/2.2)/对照区逐位不变）
+- **前端 RegionSection**：区域选择+exposure/saturation/warmth 三滑杆（γ=1.6 有符号
+  感知传递，互逆 4.4e-16）；掩码不可用态=禁用+可行动文案+重试，不可用期零 PUT
+- **tester 抓 B1（P1）修复**：UI 曾写死 demo-session+404 静默回退 mock（历史检视同族
+  问题复发）——直读 store sessionId+mock 兜底收紧（唯一装可用分支=真离线）；一致性
+  断言 5/5；B2=vite proxy /api→8000 跨端联调可达
+
+验收：全量 1515 passed / 0 failed；前端 30/0+build+smoke 8/8；门禁 .r14_ok PASS
+
 ## 2026-09-07 — 第十三轮：M1 激活三件套（功能迭代）
 
 - **region 规则条件入包**（DEFAULT_RULES 激活，M1 决策闭环通水）：真实语料评估（6 样本
