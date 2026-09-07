@@ -84,15 +84,32 @@ def _probe_weights(path: str | Path) -> bool:
 def _default_model_path() -> str:
     """解析默认美学模型路径。
 
-    仓库检出布局：resources/models/aesthetic/aesthetic_scorer.pt（MIT，
-    rsinema/aesthetic-scorer HF model.pt 直存）。wheel 不捆绑权重，
-    安装态请设 PIXO_AESTHETIC_MODEL 或随发行版分发该文件。
+    候选链（首个存在者胜出，env 最高优先）：
+      1. ``PIXO_AESTHETIC_MODEL`` 环境变量（显式覆盖）；
+      2. 仓库检出布局 ``resources/models/aesthetic/aesthetic_scorer.pt``
+         （开发态，``__file__`` 向上三级即仓库根）；
+      3. pip 安装态 ``sys.prefix/data/resources/models/aesthetic/``
+         （wheel data-files 落位处——权重随 wheel 分发，见 pyproject
+         [tool.setuptools.data-files]）；
+      4. 旧式前缀 ``sys.prefix/resources/models/aesthetic/``（兜底）。
+    全部缺失时返回仓库布局路径（FileNotFoundError 的报错信息可理解）。
     """
     env = os.environ.get("PIXO_AESTHETIC_MODEL")
     if env:
         return env
+    _rel = ("resources", "models", "aesthetic", "aesthetic_scorer.pt")
+    import sys
+
     repo_root = Path(__file__).resolve().parents[3]
-    return str(repo_root / "resources" / "models" / "aesthetic" / "aesthetic_scorer.pt")
+    candidates = [
+        repo_root.joinpath(*_rel),
+        Path(sys.prefix).joinpath("data", *_rel),
+        Path(sys.prefix).joinpath(*_rel),
+    ]
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
+    return str(candidates[0])
 
 
 def _has_ml_deps() -> bool:

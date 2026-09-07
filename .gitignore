@@ -54,7 +54,7 @@ exports/
 # Agent teams 本地协作状态
 .agent-teams/
 
-# 美学评分器权重：部署期产物不捆绑（见 docs/metrics/scorer_weights_deployment.md）
+# 美学评分器权重：git 不跟踪（磁盘产物），随 wheel data-files 分发（2026-09-07 用户拍板；部署见 docs/metrics/scorer_weights_deployment.md）
 resources/models/aesthetic/*.pt
 frontend/dist/
 frontend/e2e/screenshots/

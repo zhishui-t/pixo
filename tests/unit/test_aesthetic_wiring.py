@@ -411,3 +411,50 @@ def test_synthetic_pool_internal_ordering_t98():
     # 实拍域不受合成池影响：r0 无合成域标记
     assert "r0" in verdicts
     assert verdicts["r0"].synthetic_rank is None
+
+
+def test_default_model_path_env_highest_priority(tmp_path, monkeypatch):
+    """env 覆盖仍最高优先（安装态候选链不改变显式指定语义）。"""
+    import sys
+    from pixo.vision import aesthetic as aest
+
+    fake = tmp_path / "env_model.pt"
+    fake.write_bytes(b"x")
+    monkeypatch.setenv("PIXO_AESTHETIC_MODEL", str(fake))
+    assert aest._default_model_path() == str(fake)
+
+
+def test_default_model_path_install_layout(tmp_path, monkeypatch):
+    """安装态候选：仓库布局缺失时解析 sys.prefix/data 落位（wheel data-files）。"""
+    import sys
+    from pixo.vision import aesthetic as aest
+
+    # 伪造仓库根（无权重）使候选 1 落空
+    fake_src = tmp_path / "repo" / "src" / "pixo" / "vision" / "aesthetic.py"
+    fake_src.parent.mkdir(parents=True)
+    fake_src.write_text("", encoding="utf-8")
+    monkeypatch.setattr(aest, "__file__", str(fake_src))
+
+    installed = tmp_path / "prefix" / "data" / "resources" / "models" / "aesthetic"
+    installed.mkdir(parents=True)
+    (installed / "aesthetic_scorer.pt").write_bytes(b"x")
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "prefix"))
+
+    assert aest._default_model_path() == str(installed / "aesthetic_scorer.pt")
+
+
+def test_default_model_path_all_missing_falls_back_to_repo_layout(tmp_path, monkeypatch):
+    """全部候选缺失：返回仓库布局路径（报错可理解），不抛路径解析异常。"""
+    import sys
+    from pixo.vision import aesthetic as aest
+
+    fake_src = tmp_path / "repo" / "src" / "pixo" / "vision" / "aesthetic.py"
+    fake_src.parent.mkdir(parents=True)
+    fake_src.write_text("", encoding="utf-8")
+    monkeypatch.setattr(aest, "__file__", str(fake_src))
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "nowhere"))
+
+    expected = str(
+        tmp_path / "repo" / "resources" / "models" / "aesthetic" / "aesthetic_scorer.pt"
+    )
+    assert aest._default_model_path() == expected

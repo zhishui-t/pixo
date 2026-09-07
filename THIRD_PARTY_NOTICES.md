@@ -96,21 +96,19 @@ torch 注记：若未来随分发物捆绑 torch 本体，其约 120 个第三�
 
 | # | 模型 | 许可 | status / 门控 | 来源 | 核验状态 |
 |---|---|---|---|---|---|
-| M1 | aesthetic_scorer.pt（rsinema/aesthetic-scorer） | MIT | redistribution_allowed_with_license_notice | https://huggingface.co/rsinema/aesthetic-scorer | 部署期产物（磁盘 333.7MB，`.gitignore` 排除不入 git，不随 wheel 分发）；安装态 `PIXO_AESTHETIC_MODEL` 指定 |
+| M1 | aesthetic_scorer.pt（rsinema/aesthetic-scorer） | MIT | redistribution_allowed_with_license_notice | https://huggingface.co/rsinema/aesthetic-scorer | **随 wheel 分发**（2026-09-07 用户拍板；git 不跟踪磁盘产物；安装态 `sys.prefix/data` 自动解析，`PIXO_AESTHETIC_MODEL` 覆盖仍最高优先） |
 | M2 | openai/clip-vit-base-patch32（aesthetic 底座） | MIT | redistribution_allowed_with_license_notice（运行时 HF 自动下载，不入仓） | https://huggingface.co/openai/clip-vit-base-patch32 | 双台账一致；HF 页面未独立复核（可信度中高） |
 | M3 | uniface-face-parsing（jonathandinu/face-parsing） | code MIT / **weights CC BY-NC-SA**（CelebAMask-HQ 派生） | **internal_development_only**，publishable=false，路由门控 `PIXO_ALLOW_RESTRICTED=1` | https://huggingface.co/jonathandinu/face-parsing | web 复核通过（2026-09-07）：model card 自述 non-commercial；NC 溯源 CelebAMask-HQ 数据集 |
 | M4 | rfdetr-seg-2xl（roboflow RF-DETR-Seg） | Apache-2.0 | redistribution_allowed_with_license_notice（rfdetr pip 包首用下载） | https://github.com/roboflow/rf-detr | 台账登记；未独立复核（可信度中高） |
 | M5 | segformer-b1-finetuned-ade-512-512（NVIDIA） | code Apache-2.0（原始）/ ADE20K 微调权重「随发布口径」 | **条目自相矛盾：publishable=false 但 status=redistribution_allowed_with_license_notice** | https://huggingface.co/nvidia/segformer-b1-finetuned-ade-512-512 | **存疑（本清单最大未决项）**：ADE20K 数据集商用条款不明确，HF license tag 未独立复核；**发布前须核验** |
 | M6 | facebook/sapiens-seg-0.3b（Meta） | **CC-BY-NC-4.0**（HF 页 tag；Sapiens 论文自述 CC BY-NC-SA 4.0，SA 之差——取 HF tag 并列注记） | **internal_development_only**，publishable=false，隔离文件 `src/pixo/vision/segmenters/sapiens_body.py`，路由门控同 M3 | https://huggingface.co/facebook/sapiens-seg-0.3b-torchscript | web 复核通过（2026-09-07） |
 
-**打包配置（2026-09-07 实测修正）**：`resources/models/README.md:3`「不保存大文件权重」的
-设计与实盘一致——`.gitignore` 排除 `resources/models/aesthetic/*.pt`（不入 git），权重为
-部署期产物（安装态设 `PIXO_AESTHETIC_MODEL` 或随发行版手动分发，缺失时评分功能
-`_degraded` 优雅降级）。**初版清单曾误报「随 wheel 分发」**：实为 `pyproject.toml
-[tool.setuptools.data-files]` 的 `resources/models/*` 通配符匹配到子目录导致 **wheel 构建
-直接失败**（任何检出可复现）——2026-09-07 队长修复（显式文件列表），实测构建通过
-（0.66MB wheel，权重/金样本不进包，23+2 卡与 6 DCP 进包）；若未来发行版选择分发权重，
-MIT 允许但须附本声明与上游许可文本。
+**打包配置（2026-09-07 实测修正+用户决策）**：`resources/models/README.md:3`「不保存大文件
+权重」指 git 布局（`.gitignore` 排除 `*.pt`）。**权重现随 wheel 分发**（用户 2026-09-07
+拍板）：data-files 显式包含 `aesthetic/*.pt`，加载器候选链含安装态 `sys.prefix/data/`
+落位（env > 仓库布局 > 安装态 > 旧式前缀，单测钉死）。历史缺陷存档：data-files 目录
+通配符曾致 wheel 构建失败（任何检出可复现），2026-09-07 队长修复（显式文件列表），
+实测 310MB wheel 构建通过。MIT 分发义务由本声明承载。
 
 **台账冲突 A（待处置，本批次不改台账）**：`src/pixo/manifests/vision_models.json:14` 仍写
 aesthetic「需核验」+ 旧 `$GUANLAN_ROOT` 路径，与 `model_licenses.json` 的 MIT 定论冲突——
