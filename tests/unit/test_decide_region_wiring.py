@@ -218,12 +218,12 @@ def test_sky_rule_fires_negative_compensation():
     SinglePhotoLoop()        # 默认 prompts 注册键宇宙 (strict lint 需覆盖两规则指标)
     rules = _load_region_rules()
     metrics = {"sky_luminance": 225.0, "sky_reliable": True,
-               "sky_area_ratio": 0.4}   # dev-2 warmth 批新增面积护栏 <0.7
+               "sky_area_ratio": 0.4}   # 面积护栏 <0.7 (R13)
     results = evaluate_rules(rules, metrics)
     sky = [r for r in results if r["param"] == "region.sky.exposure"]
     assert len(sky) == 1
-    # 公式 (dev-2 warmth 批已软化系数): -0.25 * 225/150 = -0.375; 钳制 ≤ 0
-    assert sky[0]["value"] == pytest.approx(-0.375)
+    # 公式 (R15 分层复权: sky 全量): -0.5 * 225/150 = -0.75; 钳制 ≤ 0
+    assert sky[0]["value"] == pytest.approx(-0.75)
     assert sky[0]["value"] <= 0.0
 
 
@@ -259,16 +259,17 @@ def test_unreliable_region_blocks_rule():
 
 
 def test_region_rules_activation_guard_and_trial_coefficients():
-    """R13 b+ 条件入包钉死: 覆盖率护栏 (area_ratio < 0.70, 拦截整图误罩 ——
-    实证 high_contrast 99.6% sky 全画面压暗 0.52 EV / ΔE7.80) 与试水系数
-    (-0.25 / 0.2) 在位; region_rules.yaml 已入 DEFAULT_RULES (M1 决策闭环
-    激活)。复权/调参/回退须显式修改本断言 (防静默变更)。"""
+    """R15 分层复权钉死: 覆盖率护栏 (area_ratio < 0.70)、sky 全量系数
+    (-0.5, 54 张零回退+救回主驱) 与 plant 试水系数 (0.2, 回退与 S-4 共现
+    续观察) 在位; region_rules.yaml 已入 DEFAULT_RULES (M1 决策闭环激活)。
+    复权/调参/回退须显式修改本断言 (防静默变更)。依据:
+    .artifacts/region_trial_54.md。"""
     from pixo.decide.rules import DEFAULT_RULES
 
     rules = _load_region_rules()
     by_id = {r["rule_id"]: r for r in rules}
     for rid, area_key, coef in (
-            ("region_sky_exposure_001", "sky_area_ratio", "-0.25 *"),
+            ("region_sky_exposure_001", "sky_area_ratio", "-0.5 *"),
             ("region_plant_exposure_002", "plant_area_ratio", "0.2 *")):
         cond = by_id[rid]["condition"]["all"]
         area_conds = [c for c in cond if c.get("metric") == area_key]
@@ -276,7 +277,7 @@ def test_region_rules_activation_guard_and_trial_coefficients():
         assert area_conds[0]["op"] == "lt", rid
         assert area_conds[0]["value"] == pytest.approx(0.70), rid
         assert coef in by_id[rid]["action"]["formula"], (
-            f"{rid} 试水系数漂移: {by_id[rid]['action']['formula']!r}")
+            f"{rid} 系数漂移: {by_id[rid]['action']['formula']!r}")
     assert any(Path(p).name == "region_rules.yaml" for p in DEFAULT_RULES), (
         "region_rules.yaml 未入 DEFAULT_RULES —— M1 决策闭环未激活")
 

@@ -18,9 +18,11 @@
 # 规则把全画面压暗 0.52 EV / ΔE7.80; 与 R11 skin 90% 覆盖同族)。
 # 阈值依据实测间隙: 合法区域覆盖 ≤~42% (portrait/wide_angle), 误罩 ≥90%。
 #
-# 激活 (R13 裁决, b+ 条件入包): 本文件已加入 decide.rules.DEFAULT_RULES;
-# 试水系数为原设计一半 (sky -0.5→-0.25 / plant 0.4→0.2), 观察窗后按数据
-# 复权 (复权须同步 test_decide_region_wiring 的系数钉死断言)。
+# 激活与复权沿革: R13 b+ 条件入包 (试水系数减半) → R15 分层复权
+# (54 张语料试水观察, .artifacts/region_trial_54.md): **sky 复权全量 -0.5**
+# (17 触发零回退 + 7 张 FINAL_QC 救回主驱 + 纯 sky 层 QC 0→2 全正);
+# **plant 维持试水 0.2 续观察** (2 张 pass→二超标回退与 plant 提亮共现,
+# 且高溢出轮被 S-4 限流吞一轮的 whipsaw 与其共现)。
 - rule_id: region_sky_exposure_001
   priority: 20
   condition:
@@ -40,8 +42,8 @@
     # current 取自注册键宇宙的 sky_luminance (S-5 改 all 型条件后,
     # condition.get("metric") 不再存在, 公式须直引指标键 —— 键宇宙由
     # SinglePhotoLoop 注册, 加载期 lint 放行)。
-    # R13 试水系数: 原 -0.5 减半, 观察后复权。
-    formula: "-0.25 * (sky_luminance / 150.0)"
+    # R15 分层复权: sky 全量 -0.5 (54 张零回退 + 救回主驱)。
+    formula: "-0.5 * (sky_luminance / 150.0)"
     clamp: [-2.0, 0.0]
     conflict_policy: high_priority_wins
 
@@ -63,7 +65,8 @@
     mode: set
     # 越暗提亮越多的比例补偿 (植被暗部), 方向钳制为只升不降
     # (公式直引 plant_luminance, 理由同上)。
-    # R13 试水系数: 原 0.4 减半, 观察后复权。
+    # R15 分层复权: plant 维持 R13 试水 0.2 续观察 (2 张 pass→二超标回退
+    # 与 plant 提亮共现; 高溢出轮 S-4 限流吞一轮 whipsaw 与其共现)。
     formula: "0.2 * ((70.0 - plant_luminance) / 70.0)"
     clamp: [0.0, 2.0]
     conflict_policy: high_priority_wins

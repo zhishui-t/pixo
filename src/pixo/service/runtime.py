@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+import numpy as np
+
 from pixo.meta import extract
 from pixo.decide import decide
 from pixo.state import PhotoStateMachine
@@ -46,6 +48,39 @@ _DETECTION_VERSIONS = {
     "mock": "mock_v1",
     "multi": "multi_v1",
 }
+
+# R15 region 掩码供给: env PIXO_REGION_SUPPLY（缺省**关**）。
+# 实测成本 (本机, PIXO_SEGMENTER=multi): 首次 segment 17.7s (权重冷加载
+# 主导, 208 文件 + segformer 首推), 进程热后 0.73s/次 —— 按 "成本 <1s 才
+# 建议默认开" 的裁决标准不满足, 故显式开启制; 常驻服务 + 热权重场景由
+# 运维设 PIXO_REGION_SUPPLY=1 启用 (热态 0.73s)。
+# mock segmenter 环境永不尝试 (R14 契约: 零掩码 + 不可用, 不装可用)。
+_REGION_SUPPLY_ENV = "PIXO_REGION_SUPPLY"
+_REGION_SUPPLY_EDGE = 512      # 分割输入渲染长边 (掩码经适配器分辨率无关)
+_REGION_PROMPTS = ("face", "sky", "plant")
+
+
+def _region_supply_enabled() -> bool:
+    """PIXO_REGION_SUPPLY 开关解析: 缺省关; "1/true/on" (任意大小写) 开。"""
+    raw = os.environ.get(_REGION_SUPPLY_ENV, "").strip().lower()
+    return raw in {"1", "true", "on"}
+
+
+def _mask_has_signal(mask) -> bool:
+    """R15 P1: 掩码有效性判定 —— 存在非零像素即有信号。
+
+    全零/空 → False（供给不注入, 不虚报可用）。uint8 0/255 与
+    float 0..1 两契约形态均适用。
+    刻意**不** try/except（r15 门禁教训: 初版漏 import numpy 曾被自身
+    except 吞成恒 False）——判定函数裸奔, 不可数值化的坏掩码数据显式
+    上抛, 由 _ensure_session_region_masks 外层 except 归类
+    segmenter_error 降级, 而非伪装成「分割成功但无掩码」
+    （segmenter_no_masks 两语义不混）。
+    """
+    arr = np.asarray(mask)
+    if arr.size == 0:
+        return False
+    return bool(np.any(arr != 0))
 
 
 def _env_int(name: str, default: int, minimum: int = 1) -> int:
@@ -123,6 +158,8 @@ class PixoServiceRuntime:
         self._session_photo: dict[str, str] = {}
         # FastAPI 线程池化路由下的 photos/sessions 并发变更锁。
         self._lock = threading.Lock()
+        # R15 region 掩码供给的并发防重入锁（GET /region 并发触发单次分割）。
+        self._region_supply_lock = threading.Lock()
 
         # 测量分割器：env PIXO_SEGMENTER（mock|multi），缺省 mock
         # 保持现行为（避免意外下载/加载真实模型）。
@@ -354,12 +391,15 @@ class PixoServiceRuntime:
         }
 
     def _region_status_of(self, session: Any) -> dict[str, Any]:
-        """会话 region 掩码状态节（M1, R14）。
+        """会话 region 掩码状态节（M1, R14; R15 扩展供给来源语义）。
 
         - available: `session.region_masks`（F13 Route B 属性）非空 dict；
         - prompts: 掩码 prompt 有序列表（仅可用时）;
-        - reason: 不可用原因——纯预览会话（无 loop 分割通道）未注入
-          region_masks 时为 "masks_not_injected"。
+        - reason（不可用原因, R15 P1 修复后三分）:
+          "masks_not_injected": 供给未开/未尝试（含 mock segmenter 环境）;
+          "segmenter_no_masks": 供给已尝试且分割成功, 但掩码全零/空
+          （无有效区域 → HSM 不应用, 不虚报可用）;
+          "segmenter_error": 分割异常降级（与"成功但全零"区分）。
         """
         masks = getattr(session, "region_masks", None)
         prompts = (
@@ -367,20 +407,84 @@ class PixoServiceRuntime:
             if isinstance(masks, dict) and masks else []
         )
         available = bool(prompts)
+        source = getattr(session, "region_masks_source", None)
+        if available:
+            reason = None
+        elif source == "segmenter":
+            reason = "segmenter_no_masks"
+        elif source == "segmenter_error":
+            reason = "segmenter_error"
+        else:
+            reason = "masks_not_injected"
         return {
             "available": available,
             "prompts": prompts,
-            "reason": None if available else "masks_not_injected",
+            "reason": reason,
         }
 
     def region_status(self, session_id: str) -> dict[str, Any]:
-        """查询会话 region 掩码状态（region 控件面板打开时的感知端点）。"""
+        """查询会话 region 掩码状态；开启供给时懒触发一次分割（R15）。"""
         session = self.get_session(session_id)
+        self._ensure_session_region_masks(session)
         return {
             "session_id": session.session_id,
             "generation": session.generation,
             **self._region_status_of(session),
         }
+
+    def _ensure_session_region_masks(self, session: Any) -> None:
+        """R15: 预览会话掩码供给 —— 懒触发一次分割并 Route B 注入。
+
+        语义与生命周期:
+          - 每会话至多一次（session.region_masks 非 None 即视为已尝试,
+            空 dict = "分割完成但无掩码", 同样不再重试）;
+          - 掩码缓存沿 session（重渲染不重分割; region_masks 经
+            region_masks.py 适配器分辨率无关适配, 透传纪律保 stage 缓存
+            命中）;
+          - 有效性判定 (R15 P1 修复): 注入前逐 prompt 检查非零像素 ——
+            全零/空掩码不注入（避免状态虚报 available=True 而 UI 滑杆
+            静默失效）; 仅保留有信号的 prompt（status.prompts 即真实
+            可用面）; 与「分割异常降级」路径 reason 区分
+            （segmenter_error vs segmenter_no_masks）;
+          - 门槛: PIXO_REGION_SUPPLY 开 + segmenter_type=="multi"（mock
+            环境零掩码 + 不可用, 不装可用 —— R14 契约不变）; 分割异常
+            降级为空掩码 + warn（不炸状态端点）。
+        """
+        if getattr(session, "region_masks", None) is not None:
+            return
+        if not _region_supply_enabled() or self.segmenter_type != "multi":
+            return
+        with self._region_supply_lock:
+            if getattr(session, "region_masks", None) is not None:
+                return                    # 并发 GET 下另一线程已完成
+            try:
+                img = session.render(
+                    long_edge=_REGION_SUPPLY_EDGE)
+                masks = self._segmenter.segment(img, list(_REGION_PROMPTS))
+                candidates = dict(masks) if isinstance(masks, dict) else {}
+                valid = {k: v for k, v in candidates.items()
+                         if _mask_has_signal(v)}
+                if valid:
+                    session.region_masks = valid
+                    session.region_masks_source = "segmenter"
+                    _LOGGER.info(
+                        "[pixo.runtime] region 掩码供给完成: session=%s "
+                        "prompts=%s", session.session_id, sorted(valid))
+                else:
+                    # 全零/空: 分割成功但无有效区域 → HSM 不应用（不注入,
+                    # 不虚报 available）
+                    session.region_masks = {}
+                    session.region_masks_source = "segmenter"
+                    _LOGGER.info(
+                        "[pixo.runtime] region 掩码供给: 分割成功但无有效"
+                        "区域掩码, HSM 不应用: session=%s", session.session_id)
+            except Exception as exc:  # noqa: BLE001 - 分割失败不炸状态端点
+                session.region_masks = {}
+                session.region_masks_source = "segmenter_error"
+                _LOGGER.warning(
+                    "[pixo.runtime] region 掩码供给失败 (降级为不可用): "
+                    "session=%s %s: %s", session.session_id,
+                    type(exc).__name__, exc)
 
     def _photo_id_for_session(self, session_id: str) -> str | None:
         """反查 photo_id：优先 session→photo 索引（O(1)），miss 再兜底扫描。"""
