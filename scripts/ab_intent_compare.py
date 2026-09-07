@@ -16,8 +16,9 @@
      跨域不同 (HSV S 随 V 缩放且饱和无中性保护, OKLCh C 感知比例 + 中性
      保护), 跨域无真值;
   2. 扇区外误伤 ΔE2000 (双轨掩码均 <0.05) —— 越低越好, 不劣于闸门: B/A ≤ 1.1,
-     median 小值地板 0.05 ΔE, p95 小值地板 1.0 (JND, 掩码软窗尾部两轨均
-     亚感知即不劣);
+     median 小值地板 0.05 ΔE, p95 小值地板 1.0 (保守带口径: 掩码软窗尾部两轨均
+     亚感知即不劣; 权威 JND 阈值 2.3 见 pixo.pipeline.perceptual.JND_DELTA_E,
+     此处取其保守带而非转正判据);
   3. 高光区色相漂移量 (split_tone 意图; HSV "V 保亮"已知缺陷的验证指标):
      - 色相落点误差: 染色主导像素 (w=wh·strength ≥ 0.5) 的结果 OKLCh 色相
        相对拨盘色相的角偏差。oklch 轨拨盘角即 OKLCh 角; hsv 轨拨盘角经
@@ -308,7 +309,8 @@ def _ratio_verdict(b_med: float | None, a_med: float | None,
     """比值 + 不劣于判定 (误伤/漂移类, 单侧越低越好; 小值保护见 docstring)。
 
     A < abs_eps (比值无意义) 时: B−A ≤ abs_eps 亦判 "不劣于(小值)"
-    (p95 闸门传 abs_eps=1.0 = JND 地板: 两轨尾部均不可感知即不劣)。
+    (p95 闸门传 abs_eps=1.0 = 保守带地板: 两轨尾部均不可感知即不劣;
+    权威 JND 2.3 见 perceptual.JND_DELTA_E)。
     """
     if a_med is None or b_med is None:
         return None, "无数据"
@@ -528,7 +530,8 @@ def write_report(out: Path, args, corpus, rows, summary, skipped, dropped,
         "- 判定准则: **不劣于闸门**只放在口径良定的伤害类指标上 —— 扇区外误伤 "
         "(median 与 p95)、高光色相落点误差 (median 与 p95)、近白色度强加 (median), "
         "单侧 B/A ≤ 1.1; A 侧小于绝对地板时改判小值 (median 地板 0.05 ΔE / B−A "
-        "≤ 0.05; p95 地板 1.0 = JND —— 两轨尾部均不可感知即不劣); 扇区内实现强度"
+        "≤ 0.05; p95 地板 1.0 = 保守带, 权威 JND 2.3 见 JND_DELTA_E —— 两轨尾部"
+        "均不可感知即不劣); 扇区内实现强度"
         "为**量级对照** (对齐带 [0.9,1.1], 否则标 更强/更弱) —— \"+10\" 的数值语义"
         "跨域不同 (HSV S 随 V 缩放且饱和无中性保护, OKLCh C 感知比例缩放 + 中性"
         "保护; 色相角非均匀, 绿区 HSV 30° ≈ OKLCh 9°), 跨域无真值, 不设不劣于闸门",
@@ -647,7 +650,8 @@ def write_report(out: Path, args, corpus, rows, summary, skipped, dropped,
         "> 误伤 p95 的机理注: 掩码是余弦软窗无硬截止, 色相平移在掩码尾部 (m≈0.05) "
         "仍有 ~0.5° 旋转 —— oklch 轨对彩度像素按感知角均匀旋转 (中性保护只压 "
         "C<0.02), hsv 轨的 hue_shift 另受 protect=S 阻尼, 故 hsv 尾部更小; 两者均 "
-        "≪ JND (ΔE2000 ≈ 1.0), 由 p95 闸门的 JND 地板口径覆盖。",
+        "≪ 保守带 JND (ΔE2000 ≈ 1.0; 权威 2.3 见 JND_DELTA_E), 由 p95 闸门的"
+        "保守带地板口径覆盖。",
         "",
     ]
 

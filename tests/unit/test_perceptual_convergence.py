@@ -242,6 +242,18 @@ def test_aesthetic_accept_still_wins_over_perceptual():
     assert len(result.measurements) == 1
 
 
+def test_jnd_caliber_single_source():
+    """JND 口径单源：权威常量 JND_DELTA_E=2.3（评估/转正判据引用）；
+    loop 早停缺省 jnd_threshold=0.5 行为零变化（保守带口径，见注释）。"""
+    from pixo.pipeline import perceptual
+
+    assert perceptual.JND_DELTA_E == 2.3
+    assert "JND_DELTA_E" in perceptual.__all__
+    loop = _make_loop()
+    assert loop.jnd_threshold == 0.5  # 缺省保守值钉死
+    assert loop.jnd_window == 2
+
+
 def test_perceptual_stops_even_when_score_below_accept():
     """分数未达上限但预览无感知差异：仍强制终止（评审建议的核心场景）。
     美学分递增避开美学停滞判停，指标改善避开量化停滞——排除竞争条件。"""

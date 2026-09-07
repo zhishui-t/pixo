@@ -692,7 +692,8 @@ class SinglePhotoLoop:
       last_iteration 标记在应用后退出。低改善停滞（low_improvement）
       优先于轮数上限判定。
     JND 感知收敛早停（perceptual_convergence）：连续 jnd_window 轮预览间
-      median ΔE2000 < jnd_threshold（默认 0.5，低于 1.0 JND 保守值）即使
+      median ΔE2000 < jnd_threshold（默认 0.5，低于 1.0 JND 保守值——保守带
+      取 1.0，权威阈值 2.3 见 perceptual.JND_DELTA_E）即使
       美学分未达上限也强制终止（防过度修图）。优先级：美学达标/停滞/
       manual_review（decide 判停）> 感知收敛 > 轮数上限；触发轮的 decide
       参数不落地——其效果未经 preview 验证，导出图保持与最后一张已评分
@@ -788,7 +789,8 @@ class SinglePhotoLoop:
             else None
         )
         # JND 感知收敛早停（防过度修图）：连续 jnd_window 轮预览间 median
-        # ΔE2000 < jnd_threshold（默认 0.5，低于 1.0 JND 保守值）强制终止；
+        # ΔE2000 < jnd_threshold（默认 0.5，低于 1.0 JND 保守值——保守带取
+        # 1.0，权威阈值 2.3 见 perceptual.JND_DELTA_E）强制终止；
         # jnd_threshold=None 关闭。度量底座见 pipeline/perceptual.py。
         self.jnd_threshold = (
             float(jnd_threshold) if jnd_threshold is not None else None

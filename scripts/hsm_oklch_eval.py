@@ -54,7 +54,7 @@ from pixo.render.core.io import camera_neutral_wb
 from pixo.render.core.huesat_oklch import (load_oklch_deform,
                                            is_identity_deform)
 
-JND = 2.3
+from pixo.pipeline.perceptual import JND_DELTA_E as JND  # JND 口径单源
 BANDS = ((1.5, "daylight(<1.5)"), (2.0, "mid(1.5-2.0)"))
 
 

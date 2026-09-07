@@ -59,7 +59,7 @@ import gray_edge
 import gray_world
 import white_patch
 
-JND = 2.3                      # 1 JND ≈ 2.3 ΔE00 (转正判据, 同阶段二口径)
+from pixo.pipeline.perceptual import JND_DELTA_E as JND  # JND 口径单源
 WARMTH = 0.9                   # warmth 标量 (whitebalance Stage 默认)
 WARM_CAL = (_SCRIPTS / ".." / "configs" / "calibration" / "warmth_curve.json")
 

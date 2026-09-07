@@ -17,12 +17,19 @@ import numpy as np
 from ..render.core.calibration import SRGB_TO_XYZ_D65
 
 __all__ = [
+    "JND_DELTA_E",
     "gamma_srgb_to_linear",
     "linear_srgb_to_lab",
     "delta_e_2000",
     "delta_e_median",
     "JndConvergenceTracker",
 ]
+
+# JND 口径单源（权威）：1 JND ≈ 2.3 ΔE2000。全仓评估/转正判据统一引用
+# 本常量（scripts/hsm_oklch_eval.py、scripts/illumination_est/eval_illum.py
+# 等），勿再复制字面量。loop 感知早停取更保守带（缺省 jnd_threshold=0.5，
+# 见 SinglePhotoLoop docstring——保守带 1.0 仅为该语境的宽上限口径）。
+JND_DELTA_E = 2.3
 
 _EPS_K = 216.0 / 24389.0    # CIE Lab 常数 (6/29)³
 _KAPPA = 24389.0 / 27.0     # CIE Lab 常数
