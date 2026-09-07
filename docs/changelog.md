@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-08 — 第十七轮：M1 收尾打磨——#18 清偿 × reason 联动 × 用户文档
+
+- **椭圆常数参数化**（9c780f0，tech_debt #18 ✅ 清偿关闭）：七 constexpr 副本删除，ABI
+  1.6.0（7 常数经 PixoRenderSkinOklabEllipse 从单源 core/skin.py 流入，数值纪律字段级
+  携带）；版本门（旧 DLL 回退纯 Python）；1.5.0↔1.6.0 快照对拍**逐位零漂移**；下次
+  椭圆重拟合只改一处
+- **前端 reason 矩阵**：四码全覆盖（warming=自动重查 2s×5 封顶转手动，策略纯函数钉死）
+  +6 用例
+- **M1 用户文档**：docs/MASK_REGION_ADJUST.md（150 行 5 章，事实锚定；qa 修 2 处偏差）
+
+验收：全量 1533 passed / 0 failed；门禁 .r17_ok PASS（零漂独立复认）
+
 ## 2026-09-08 — 第十六轮：plant 溢出门控 × segmenter 启动预热
 
 - **plant 溢出事前门控**（ef0a254，R15 遗留清偿）：`preview_overflow_ratio lt 0.01`（54 张实测
