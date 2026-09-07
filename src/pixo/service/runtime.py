@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import time
 import uuid
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -81,6 +82,25 @@ def _mask_has_signal(mask) -> bool:
     if arr.size == 0:
         return False
     return bool(np.any(arr != 0))
+
+
+# R16 segmenter 启动预热: env PIXO_SEGMENTER_WARMUP（沿 PIXO_SCORER_WARMUP
+# 惯例: "0/false/off/no" 关, **缺省开**）。预热内容 = multi 后端权重加载 +
+# 小图首推理（真预热而非 import）——吸收 R15 实测的冷启 17.7s（服务启动
+# 后台线程完成, 用户首次供给/测量即热态 0.73s）。非阻塞: 预热线程不挡
+# 主服务（app lifespan 以 daemon 线程启动, 不 join）。NC 门控: 预热经
+# MultiModelSegmenter 常规路由, PIXO_ALLOW_RESTRICTED 未放行时受限后端
+# 天然不在路由表（与注册语义同源, 无需单独门禁）。
+_WARMUP_DISABLED = {"0", "false", "off", "no"}
+_SEGMENTER_WARMUP_ENV = "PIXO_SEGMENTER_WARMUP"
+_SEGMENTER_WARM_PROMPTS = ("sky", "plant", "person")   # 覆盖 segformer+rfdetr
+_SEGMENTER_WARM_EDGE = 64     # 预热推理小图长边（加载是成本大头, 图越小越好）
+
+
+def _segmenter_warmup_enabled() -> bool:
+    """PIXO_SEGMENTER_WARMUP 解析: 缺省开; "0/false/off/no" 关。"""
+    return os.environ.get(_SEGMENTER_WARMUP_ENV, "1").strip().lower() \
+        not in _WARMUP_DISABLED
 
 
 def _env_int(name: str, default: int, minimum: int = 1) -> int:
@@ -160,6 +180,13 @@ class PixoServiceRuntime:
         self._lock = threading.Lock()
         # R15 region 掩码供给的并发防重入锁（GET /region 并发触发单次分割）。
         self._region_supply_lock = threading.Lock()
+        # R16 segmenter 推理锁: 预热与供给的 segment 调用互斥（后端懒加载
+        # 非线程安全, 并发首推理会重复加载权重）——预热在锁内吸收冷启,
+        # 供给持锁等待后即热态。
+        self._segmenter_infer_lock = threading.Lock()
+        # R16 预热状态（health 暴露, 沿 scorer health_info 惯例）:
+        # pending → warming → done|skipped|failed。
+        self.segmenter_warmup_info: dict[str, Any] = {"status": "pending"}
 
         # 测量分割器：env PIXO_SEGMENTER（mock|multi），缺省 mock
         # 保持现行为（避免意外下载/加载真实模型）。
@@ -395,8 +422,10 @@ class PixoServiceRuntime:
 
         - available: `session.region_masks`（F13 Route B 属性）非空 dict；
         - prompts: 掩码 prompt 有序列表（仅可用时）;
-        - reason（不可用原因, R15 P1 修复后三分）:
+        - reason（不可用原因, R16 四分）:
           "masks_not_injected": 供给未开/未尝试（含 mock segmenter 环境）;
+          "segmenter_warming": 供给开启且预热/另一供给持推理锁——非阻塞
+          返回, 稍后重查即可热态供给;
           "segmenter_no_masks": 供给已尝试且分割成功, 但掩码全零/空
           （无有效区域 → HSM 不应用, 不虚报可用）;
           "segmenter_error": 分割异常降级（与"成功但全零"区分）。
@@ -414,6 +443,8 @@ class PixoServiceRuntime:
             reason = "segmenter_no_masks"
         elif source == "segmenter_error":
             reason = "segmenter_error"
+        elif source == "warming":
+            reason = "segmenter_warming"
         else:
             reason = "masks_not_injected"
         return {
@@ -431,6 +462,51 @@ class PixoServiceRuntime:
             "generation": session.generation,
             **self._region_status_of(session),
         }
+
+    # ---- R16: segmenter 启动预热 ----
+
+    def warm_segmenter(self) -> dict[str, Any]:
+        """R16: segmenter 启动预热 —— 后端加载 + 小图首推理（真预热）。
+
+        由 app lifespan 以**非阻塞后台 daemon 线程**启动（冷启 ~18s 不挡
+        主服务；本方法在线程内执行, 幂等——预热完成后重复调用直接返回）。
+        返回预热信息 dict（同时写入 self.segmenter_warmup_info 供 health）。
+        """
+        info = self.segmenter_warmup_info
+        if info.get("status") == "done":
+            return dict(info)                     # 幂等（并发/重复预热）
+        if not _segmenter_warmup_enabled():
+            info.update(status="skipped", reason="env_off")
+            return dict(info)
+        if self.segmenter_type != "multi":
+            # mock 无权重可加载, 预热无意义（R14/R15 契约: 不装可用）
+            info.update(status="skipped",
+                        reason=f"segmenter={self.segmenter_type}")
+            return dict(info)
+        info["status"] = "warming"
+        t0 = time.perf_counter()
+        try:
+            img = np.full((_SEGMENTER_WARM_EDGE // 4 * 3,
+                           _SEGMENTER_WARM_EDGE, 3), 128, dtype=np.uint8)
+            with self._segmenter_infer_lock:
+                out = self._segmenter.segment(
+                    img, list(_SEGMENTER_WARM_PROMPTS))
+            backends = sorted({
+                self._segmenter.route_table.get(p)
+                for p in _SEGMENTER_WARM_PROMPTS
+            } - {None}) if hasattr(self._segmenter, "route_table") else []
+            info.update(status="done",
+                        duration_s=round(time.perf_counter() - t0, 2),
+                        prompts=list(_SEGMENTER_WARM_PROMPTS),
+                        backends=backends,
+                        masked_prompts=sorted(out) if isinstance(out, dict) else [])
+        except Exception as exc:  # noqa: BLE001 - 预热失败不挡服务
+            info.update(status="failed",
+                        duration_s=round(time.perf_counter() - t0, 2),
+                        error=f"{type(exc).__name__}: {exc}")
+            _LOGGER.warning("[pixo.runtime] segmenter 预热失败(不影响服务): %s",
+                            exc)
+        return dict(info)
 
     def _ensure_session_region_masks(self, session: Any) -> None:
         """R15: 预览会话掩码供给 —— 懒触发一次分割并 Route B 注入。
@@ -454,37 +530,49 @@ class PixoServiceRuntime:
             return
         if not _region_supply_enabled() or self.segmenter_type != "multi":
             return
-        with self._region_supply_lock:
-            if getattr(session, "region_masks", None) is not None:
-                return                    # 并发 GET 下另一线程已完成
-            try:
-                img = session.render(
-                    long_edge=_REGION_SUPPLY_EDGE)
-                masks = self._segmenter.segment(img, list(_REGION_PROMPTS))
-                candidates = dict(masks) if isinstance(masks, dict) else {}
-                valid = {k: v for k, v in candidates.items()
-                         if _mask_has_signal(v)}
-                if valid:
-                    session.region_masks = valid
-                    session.region_masks_source = "segmenter"
-                    _LOGGER.info(
-                        "[pixo.runtime] region 掩码供给完成: session=%s "
-                        "prompts=%s", session.session_id, sorted(valid))
-                else:
-                    # 全零/空: 分割成功但无有效区域 → HSM 不应用（不注入,
-                    # 不虚报 available）
+        # R16 非阻塞衔接: 推理锁被预热/另一供给持有时**立即返回**（预热不挡
+        # 请求, status.reason="segmenter_warming" 供 UI 稍后重查），锁释放后
+        # 的下次查询以热态执行供给。
+        if not self._segmenter_infer_lock.acquire(blocking=False):
+            session.region_masks_source = "warming"
+            return
+        try:
+            with self._region_supply_lock:
+                if getattr(session, "region_masks", None) is not None:
+                    return                    # 并发 GET 下另一线程已完成
+                try:
+                    img = session.render(
+                        long_edge=_REGION_SUPPLY_EDGE)
+                    # 持推理锁内分割: 与预热互斥（后端懒加载非线程安全）。
+                    masks = self._segmenter.segment(
+                        img, list(_REGION_PROMPTS))
+                    candidates = dict(masks) if isinstance(masks, dict) else {}
+                    valid = {k: v for k, v in candidates.items()
+                             if _mask_has_signal(v)}
+                    if valid:
+                        session.region_masks = valid
+                        session.region_masks_source = "segmenter"
+                        _LOGGER.info(
+                            "[pixo.runtime] region 掩码供给完成: session=%s "
+                            "prompts=%s", session.session_id, sorted(valid))
+                    else:
+                        # 全零/空: 分割成功但无有效区域 → HSM 不应用（不注入,
+                        # 不虚报 available）
+                        session.region_masks = {}
+                        session.region_masks_source = "segmenter"
+                        _LOGGER.info(
+                            "[pixo.runtime] region 掩码供给: 分割成功但无有效"
+                            "区域掩码, HSM 不应用: session=%s",
+                            session.session_id)
+                except Exception as exc:  # noqa: BLE001 - 失败不炸状态端点
                     session.region_masks = {}
-                    session.region_masks_source = "segmenter"
-                    _LOGGER.info(
-                        "[pixo.runtime] region 掩码供给: 分割成功但无有效"
-                        "区域掩码, HSM 不应用: session=%s", session.session_id)
-            except Exception as exc:  # noqa: BLE001 - 分割失败不炸状态端点
-                session.region_masks = {}
-                session.region_masks_source = "segmenter_error"
-                _LOGGER.warning(
-                    "[pixo.runtime] region 掩码供给失败 (降级为不可用): "
-                    "session=%s %s: %s", session.session_id,
-                    type(exc).__name__, exc)
+                    session.region_masks_source = "segmenter_error"
+                    _LOGGER.warning(
+                        "[pixo.runtime] region 掩码供给失败 (降级为不可用): "
+                        "session=%s %s: %s", session.session_id,
+                        type(exc).__name__, exc)
+        finally:
+            self._segmenter_infer_lock.release()
 
     def _photo_id_for_session(self, session_id: str) -> str | None:
         """反查 photo_id：优先 session→photo 索引（O(1)），miss 再兜底扫描。"""
@@ -631,6 +719,8 @@ class PixoServiceRuntime:
                 # t91：报告当前实际生效的分割器路由（构造失败回退后为 mock）。
                 "router": self.segmenter_type,
                 "part_prompts": ["hair", "skin", "clothes", "body"],
+                # R16: 启动预热状态/耗时（沿 scorer health_info 惯例）。
+                "warmup": dict(self.segmenter_warmup_info),
             },
             "photos": len(self.photos),
             "sessions": len(self.sessions),

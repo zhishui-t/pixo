@@ -18,6 +18,16 @@
 # 规则把全画面压暗 0.52 EV / ΔE7.80; 与 R11 skin 90% 覆盖同族)。
 # 阈值依据实测间隙: 合法区域覆盖 ≤~42% (portrait/wide_angle), 误罩 ≥90%。
 #
+# 溢出负联动 (R16, plant 提亮事前门控): preview_overflow_ratio >= 1% 时
+# plant 规则不触发 (提亮方向推高高光溢出)。阈值依据 R15 54 张实测分布:
+# 回退样本 (DSC_5276/5277, pass→二超标) 的溢出**地板** 1.35~1.64% (sky
+# 压暗后仍持续), 中性样本地板 ≤0.42% (5288 除外 7.28%, 其 plant 面积仅
+# 0.8%、作用亚 JND, 记录为接受 collateral) —— 1.0% 取分界间隙。
+# 附带收益: 消除 R15 观察的 S-4 whipsaw (高溢出轮 it1 提亮被引擎限流压 0、
+# it2 溢出回落后再落地的震铃 —— 事前不决定, 事后不压制)。sky 规则不加此
+# 门控 (压暗方向与溢出无关)。与引擎 S-4 限流 (engine.py 2.5% 事后压制)
+# 构成双层防线, 引擎侧不动。
+#
 # 激活与复权沿革: R13 b+ 条件入包 (试水系数减半) → R15 分层复权
 # (54 张语料试水观察, .artifacts/region_trial_54.md): **sky 复权全量 -0.5**
 # (17 触发零回退 + 7 张 FINAL_QC 救回主驱 + 纯 sky 层 QC 0→2 全正);
@@ -57,6 +67,11 @@
       - metric: plant_area_ratio
         op: lt
         value: 0.70
+      # R16 溢出负联动: 溢出已高 (>=1%) 时不得提亮 (事前门控, R15 回退
+      # DSC_5276/5277 清偿; 阈值依据见头注)。
+      - metric: preview_overflow_ratio
+        op: lt
+        value: 0.01
       - metric: plant_reliable
         op: eq
         value: true
@@ -66,7 +81,8 @@
     # 越暗提亮越多的比例补偿 (植被暗部), 方向钳制为只升不降
     # (公式直引 plant_luminance, 理由同上)。
     # R15 分层复权: plant 维持 R13 试水 0.2 续观察 (2 张 pass→二超标回退
-    # 与 plant 提亮共现; 高溢出轮 S-4 限流吞一轮 whipsaw 与其共现)。
+    # 与 plant 提亮共现; 高溢出轮 S-4 限流吞一轮 whipsaw 与其共现 —— R16
+    # 事前门控落地后 whipsaw 不再发生)。
     formula: "0.2 * ((70.0 - plant_luminance) / 70.0)"
     clamp: [0.0, 2.0]
     conflict_policy: high_priority_wins

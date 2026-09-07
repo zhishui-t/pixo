@@ -6,6 +6,7 @@ vision/meta/render/decide/state/trace。不实现 DSH 工具插件（P2）。
 from __future__ import annotations
 
 import logging
+import threading
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -52,12 +53,23 @@ def warm_aesthetic_scorer() -> dict[str, Any]:
 
 @asynccontextmanager
 async def scorer_warmup_lifespan(app: FastAPI):
-    """启动期预热评分器；预热在线程池执行避免阻塞事件循环。"""
+    """启动期预热；预热在线程池执行避免阻塞事件循环。
+
+    R16: segmenter 预热（multi 真权重冷启 ~18s）为**非阻塞后台 daemon
+    线程**——不 join、不挡 lifespan 完成，服务立即就绪；预热在后台吸收
+    权重加载与首推理，用户首次 region 供给/测量即热态（实测冷 17.7s →
+    热 0.73s，见 r16-stream-2.md）。PIXO_SEGMENTER_WARMUP=0/false/off/no
+    可关（沿 PIXO_SCORER_WARMUP 惯例，缺省开）。
+    """
+    rt = app.state.runtime
     try:
         info = await run_in_threadpool(warm_aesthetic_scorer)
         _LOGGER.info("[pixo.service] 评分器预热: %s", info)
     except Exception:  # noqa: BLE001 - 预热失败不阻断服务启动
         _LOGGER.exception("[pixo.service] 评分器预热失败(不影响启动)")
+    # R16: segmenter 预热（后台线程，不挡服务就绪）。
+    threading.Thread(target=rt.warm_segmenter,
+                     name="segmenter-warmup", daemon=True).start()
     yield
 
 

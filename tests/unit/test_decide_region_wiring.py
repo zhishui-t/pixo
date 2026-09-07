@@ -250,27 +250,30 @@ def test_unreliable_region_blocks_rule():
         assert all(r["param"] != "region.sky.exposure" for r in results), (
             f"reliable={reliable!r} 时规则不应触发")
     plant_metrics_variants = [
-        {"plant_luminance": 35.0, "plant_area_ratio": 0.4},
         {"plant_luminance": 35.0, "plant_area_ratio": 0.4,
-         "plant_reliable": False}]
+         "preview_overflow_ratio": 0.0},
+        {"plant_luminance": 35.0, "plant_area_ratio": 0.4,
+         "preview_overflow_ratio": 0.0, "plant_reliable": False}]
     for metrics in plant_metrics_variants:
         results = evaluate_rules(rules, metrics)
         assert all(r["param"] != "region.plant.exposure" for r in results)
 
 
 def test_region_rules_activation_guard_and_trial_coefficients():
-    """R15 分层复权钉死: 覆盖率护栏 (area_ratio < 0.70)、sky 全量系数
-    (-0.5, 54 张零回退+救回主驱) 与 plant 试水系数 (0.2, 回退与 S-4 共现
-    续观察) 在位; region_rules.yaml 已入 DEFAULT_RULES (M1 决策闭环激活)。
-    复权/调参/回退须显式修改本断言 (防静默变更)。依据:
-    .artifacts/region_trial_54.md。"""
+    """R15 分层复权 + R16 溢出负联动钉死: 覆盖率护栏 (area_ratio < 0.70)、
+    sky 全量系数 (-0.5, 54 张零回退+救回主驱)、plant 试水系数 (0.2, 回退与
+    S-4 共现续观察)、plant 溢出负联动 (preview_overflow_ratio < 1% 才提亮,
+    sky 豁免 —— 压暗方向与溢出无关) 在位; region_rules.yaml 已入
+    DEFAULT_RULES (M1 决策闭环激活)。复权/调参/回退须显式修改本断言
+    (防静默变更)。依据: .artifacts/region_trial_54.md +
+    .artifacts/region_rules_activation_eval.md。"""
     from pixo.decide.rules import DEFAULT_RULES
 
     rules = _load_region_rules()
     by_id = {r["rule_id"]: r for r in rules}
-    for rid, area_key, coef in (
-            ("region_sky_exposure_001", "sky_area_ratio", "-0.5 *"),
-            ("region_plant_exposure_002", "plant_area_ratio", "0.2 *")):
+    for rid, area_key, coef, ovf_gate in (
+            ("region_sky_exposure_001", "sky_area_ratio", "-0.5 *", False),
+            ("region_plant_exposure_002", "plant_area_ratio", "0.2 *", True)):
         cond = by_id[rid]["condition"]["all"]
         area_conds = [c for c in cond if c.get("metric") == area_key]
         assert len(area_conds) == 1, f"{rid} 缺覆盖率护栏条件"
@@ -278,6 +281,14 @@ def test_region_rules_activation_guard_and_trial_coefficients():
         assert area_conds[0]["value"] == pytest.approx(0.70), rid
         assert coef in by_id[rid]["action"]["formula"], (
             f"{rid} 系数漂移: {by_id[rid]['action']['formula']!r}")
+        ovf_conds = [c for c in cond
+                     if c.get("metric") == "preview_overflow_ratio"]
+        if ovf_gate:
+            assert len(ovf_conds) == 1 and ovf_conds[0]["op"] == "lt" \
+                and ovf_conds[0]["value"] == pytest.approx(0.01), (
+                f"{rid} 溢出负联动门控漂移")
+        else:
+            assert not ovf_conds, f"{rid} 不应有溢出门控 (sky 豁免)"
     assert any(Path(p).name == "region_rules.yaml" for p in DEFAULT_RULES), (
         "region_rules.yaml 未入 DEFAULT_RULES —— M1 决策闭环未激活")
 
@@ -287,12 +298,34 @@ def test_plant_rule_fires_positive_lift_and_direction_clamp():
     rules = _load_region_rules()
     results = evaluate_rules(rules, {"plant_luminance": 35.0,
                                      "plant_reliable": True,
-                                     "plant_area_ratio": 0.4})
+                                     "plant_area_ratio": 0.4,
+                                     "preview_overflow_ratio": 0.0})
     plant = [r for r in results if r["param"] == "region.plant.exposure"]
     assert len(plant) == 1
-    # 公式 (dev-2 warmth 批已软化系数): 0.2 * (70-35)/70 = 0.1; 钳制 ≥ 0
+    # 公式 (R15 分层复权维持试水): 0.2 * (70-35)/70 = 0.1; 钳制 ≥ 0
     assert plant[0]["value"] == pytest.approx(0.1)
     assert plant[0]["value"] >= 0.0
+
+
+def test_plant_rule_blocked_by_high_overflow():
+    """R16 溢出负联动: preview_overflow_ratio >= 1% 时 plant 提亮不触发
+    (事前门控, R15 回退 DSC_5276/5277 清偿 —— 决定轮溢出地板 1.35% 以上
+    不做提亮决定); 低于阈值正常触发; sky 规则无此门控 (压暗方向与溢出
+    无关, 高溢出下 sky 压暗照常触发)。"""
+    SinglePhotoLoop()
+    rules = _load_region_rules()
+    base = {"plant_luminance": 35.0, "plant_area_ratio": 0.4,
+            "plant_reliable": True, "sky_luminance": 225.0,
+            "sky_area_ratio": 0.4, "sky_reliable": True}
+    high = evaluate_rules(rules, {**base, "preview_overflow_ratio": 0.02})
+    assert all(r["param"] != "region.plant.exposure" for r in high), (
+        "溢出 >=1% 时 plant 提亮不应触发")
+    sky_high = [r for r in high if r["param"] == "region.sky.exposure"]
+    assert len(sky_high) == 1 and sky_high[0]["value"] < 0.0, (
+        "溢出门控不得波及 sky 压暗规则")
+    low = evaluate_rules(rules, {**base, "preview_overflow_ratio": 0.005})
+    assert any(r["param"] == "region.plant.exposure" for r in low), (
+        "溢出 <1% 时 plant 提亮应正常触发")
 
 
 # ---------------------------------------------------------------------------
