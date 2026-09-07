@@ -103,8 +103,9 @@ def test_legacy_cards_pin_hsv_domain_explicitly():
     "hsv"（hsl.py:34 / split_tone.py:43 / color_cal.py:218 / skin.py:67），
     卡级显式钉 hsv 后，切默认（F10 翻 hsl+split_tone 缺省）不再改变存量卡
     语义 —— A1「存量卡零迁移、逐位不变」由卡级锚定兑现，不再依赖 Stage 缺省。
-    计数为 qa 2026-09-07 实测：hsl 12 / split_tone 12 / skin 22（enabled=true
-    17）/ colorcal 23（新增卡应自觉带钉并同步此处计数）。
+    计数为 qa 2026-09-07 实测 + R10 补钉：hsl 12 / split_tone 12 / skin 23
+    （film_pro_400h 原无 skin 键，R10 补钉恢复 A1）/ colorcal 23
+    （新增卡应自觉带钉并同步此处计数）。
     """
     counts = {s: 0 for s in DOMAIN_STAGES}
     for card in StyleCard.from_films_dir(FILMS):
@@ -134,7 +135,9 @@ def test_legacy_cards_pin_hsv_domain_explicitly():
                 else hsl["bands"]
             assert all("domain" not in b for b in bands), (
                 f"存量卡 {card['style_id']} hsl bands 出现 domain 键")
-    assert counts == {"hsl": 12, "split_tone": 12, "skin": 22, "colorcal": 23}
+    # skin 23: R10 队长裁决——film_pro_400h 原无 skin 键 (唯一切默认链暴露卡),
+    # 补 "skin":{"color_domain":"hsv"} 钉域恢复 A1 逐位不变 (r10-stream-2 §3b)
+    assert counts == {"hsl": 12, "split_tone": 12, "skin": 23, "colorcal": 23}
 
 
 def test_legacy_domain_pin_merge_equivalent_to_defaults():

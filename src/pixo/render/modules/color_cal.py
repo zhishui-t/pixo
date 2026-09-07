@@ -215,7 +215,9 @@ class ColorCalStage(Stage):
                 "neutral_sigma": 14.0,
                 "skin_protect": 0.7, "skin_trim": None, "scene_trim": None,
                 "scene_skin_trim": None, "scene_hue": None, "gamut_soft": 0.5,
-                "color_domain": "hsv"}
+                # F10 第二批起缺省 oklch (native oklch 内核 v1.5.0, R10 双前置
+                # dca189c; 存量卡 A1 由 F07 卡级显式钉 "hsv" 兑现)
+                "color_domain": "oklch"}
 
     def _color_domain(self, ctx: StageContext) -> str:
         domain = str(self.p(ctx, "color_domain", "hsv")).strip().lower()

@@ -17,8 +17,8 @@
             "u8": "gate_defaults\\wb_as_shot_default\\night_lowlight\\output_u8.npy",
             "u16": "gate_defaults\\wb_as_shot_default\\night_lowlight\\output_u16.npy"
           },
-          "sha256_u8": "610237534aa4ca759ba6741dca0e568cab753f58cc1a3843a354e9bda4b2824f",
-          "sha256_u16": "2c5e03f4afee4dd25af7ad860cefae330d6e9e03d82721d2e905b1a501e670c0",
+          "sha256_u8": "0aed7451ac9ac0e8809d0c4287f54518e6b242f988dc011566f5b41066aa8be5",
+          "sha256_u16": "bfd3f9b32b95c2b46d5c9f14227bff4aba3d7f0bfab83a566f11add7d751cc3d",
           "shape_u8": [
             341,
             512,
@@ -37,8 +37,8 @@
             "u8": "gate_defaults\\wb_as_shot_default\\day_normal\\output_u8.npy",
             "u16": "gate_defaults\\wb_as_shot_default\\day_normal\\output_u16.npy"
           },
-          "sha256_u8": "03a4f06c7f51d8cdf325dec83454c8ea372faafaf95630702589d976dd23b504",
-          "sha256_u16": "a22ea012ff0537f46c8f3b0d7597ca85958feb6c2af6bebafa22716f26f4490b",
+          "sha256_u8": "abc87a812a2ae5df29f1bf03f5f9c1d6d5093bd10a23c32f9c3654570ddd3593",
+          "sha256_u16": "63e91a8e835cfd6e8ff51b85a8e65a61c502af7cedbff73ffa61844d7bc8b9ae",
           "shape_u8": [
             341,
             512,
@@ -57,8 +57,8 @@
             "u8": "gate_defaults\\wb_as_shot_default\\high_key_bright\\output_u8.npy",
             "u16": "gate_defaults\\wb_as_shot_default\\high_key_bright\\output_u16.npy"
           },
-          "sha256_u8": "86a0f78dd0b0dd45c7ffa76557a190ab2f026987f5e993cf7ea3b868bd51b481",
-          "sha256_u16": "0f71e01c81afa45c3fbde88280a4842b279ed63610eda4fb41a0b71ef51c2a7b",
+          "sha256_u8": "2d5cd0cb459aae5cef8f01d911ebb8211c700cc5db73a43f85a0d24e3b985f7a",
+          "sha256_u16": "0faec30a389537ceb0cd2be1b5f6022af2483aedec6be966a150a5d15cbaece3",
           "shape_u8": [
             341,
             512,
@@ -77,8 +77,8 @@
             "u8": "gate_defaults\\wb_as_shot_default\\portrait_tele\\output_u8.npy",
             "u16": "gate_defaults\\wb_as_shot_default\\portrait_tele\\output_u16.npy"
           },
-          "sha256_u8": "d3e205783d206584be99692529249c9d48be943e81bc95bd5dcc47be0ff0bf02",
-          "sha256_u16": "cb475d8ad1c64ec0d2a42837913345c59a14b8a90b7dca9a35e59273921f4a1b",
+          "sha256_u8": "df1566d28b8d0347783205fa048975b9ad58cf4d65867aa8e6db1cd8844016fa",
+          "sha256_u16": "12ff571e7a008c9ecef30e9ee1929fda850ba7310274cd803ba499ea1e9dfe4e",
           "shape_u8": [
             341,
             512,
@@ -97,8 +97,8 @@
             "u8": "gate_defaults\\wb_as_shot_default\\wide_angle\\output_u8.npy",
             "u16": "gate_defaults\\wb_as_shot_default\\wide_angle\\output_u16.npy"
           },
-          "sha256_u8": "12fd5675b35d4da2eceb74770764676f9ec57924794ac1e6ccef9411f18e5e60",
-          "sha256_u16": "1b2fd69ae05338c446cdc15312751493b22fdcecd871590d97112764bc7cee0d",
+          "sha256_u8": "1839bb4881949f9b903f8822cf1a86bcc00d6cef1883ff3deccb7ec57467ad1b",
+          "sha256_u16": "c53fa54ddb2288cc88b668b0ba14a10115073198b40db97b790043f7fc165a7a",
           "shape_u8": [
             341,
             512,
@@ -117,8 +117,8 @@
             "u8": "gate_defaults\\wb_as_shot_default\\high_contrast\\output_u8.npy",
             "u16": "gate_defaults\\wb_as_shot_default\\high_contrast\\output_u16.npy"
           },
-          "sha256_u8": "8273e3a340a8e1cdc47a0818759d1177a3caeb88105fc284489e1ec6aee82fbe",
-          "sha256_u16": "3208837bcf45e018beb437ab6a8044674c27d6e8203684359ad3b82daa27b373",
+          "sha256_u8": "fe58b8a416edefefb2b6de4974438da5443b2f3fa0e22324200b69e648bb2bbc",
+          "sha256_u16": "6bdcd1e54f431b4417546092e513796d3e4a2f4418a687dcebc6d67739d5f726",
           "shape_u8": [
             341,
             512,
@@ -148,8 +148,8 @@
             "u8": "gate_defaults\\exposure_auto_default\\night_lowlight\\output_u8.npy",
             "u16": "gate_defaults\\exposure_auto_default\\night_lowlight\\output_u16.npy"
           },
-          "sha256_u8": "610237534aa4ca759ba6741dca0e568cab753f58cc1a3843a354e9bda4b2824f",
-          "sha256_u16": "2c5e03f4afee4dd25af7ad860cefae330d6e9e03d82721d2e905b1a501e670c0",
+          "sha256_u8": "0aed7451ac9ac0e8809d0c4287f54518e6b242f988dc011566f5b41066aa8be5",
+          "sha256_u16": "bfd3f9b32b95c2b46d5c9f14227bff4aba3d7f0bfab83a566f11add7d751cc3d",
           "shape_u8": [
             341,
             512,
@@ -168,8 +168,8 @@
             "u8": "gate_defaults\\exposure_auto_default\\day_normal\\output_u8.npy",
             "u16": "gate_defaults\\exposure_auto_default\\day_normal\\output_u16.npy"
           },
-          "sha256_u8": "03a4f06c7f51d8cdf325dec83454c8ea372faafaf95630702589d976dd23b504",
-          "sha256_u16": "a22ea012ff0537f46c8f3b0d7597ca85958feb6c2af6bebafa22716f26f4490b",
+          "sha256_u8": "abc87a812a2ae5df29f1bf03f5f9c1d6d5093bd10a23c32f9c3654570ddd3593",
+          "sha256_u16": "63e91a8e835cfd6e8ff51b85a8e65a61c502af7cedbff73ffa61844d7bc8b9ae",
           "shape_u8": [
             341,
             512,
@@ -188,8 +188,8 @@
             "u8": "gate_defaults\\exposure_auto_default\\high_key_bright\\output_u8.npy",
             "u16": "gate_defaults\\exposure_auto_default\\high_key_bright\\output_u16.npy"
           },
-          "sha256_u8": "86a0f78dd0b0dd45c7ffa76557a190ab2f026987f5e993cf7ea3b868bd51b481",
-          "sha256_u16": "0f71e01c81afa45c3fbde88280a4842b279ed63610eda4fb41a0b71ef51c2a7b",
+          "sha256_u8": "2d5cd0cb459aae5cef8f01d911ebb8211c700cc5db73a43f85a0d24e3b985f7a",
+          "sha256_u16": "0faec30a389537ceb0cd2be1b5f6022af2483aedec6be966a150a5d15cbaece3",
           "shape_u8": [
             341,
             512,
@@ -208,8 +208,8 @@
             "u8": "gate_defaults\\exposure_auto_default\\portrait_tele\\output_u8.npy",
             "u16": "gate_defaults\\exposure_auto_default\\portrait_tele\\output_u16.npy"
           },
-          "sha256_u8": "d3e205783d206584be99692529249c9d48be943e81bc95bd5dcc47be0ff0bf02",
-          "sha256_u16": "cb475d8ad1c64ec0d2a42837913345c59a14b8a90b7dca9a35e59273921f4a1b",
+          "sha256_u8": "df1566d28b8d0347783205fa048975b9ad58cf4d65867aa8e6db1cd8844016fa",
+          "sha256_u16": "12ff571e7a008c9ecef30e9ee1929fda850ba7310274cd803ba499ea1e9dfe4e",
           "shape_u8": [
             341,
             512,
@@ -228,8 +228,8 @@
             "u8": "gate_defaults\\exposure_auto_default\\wide_angle\\output_u8.npy",
             "u16": "gate_defaults\\exposure_auto_default\\wide_angle\\output_u16.npy"
           },
-          "sha256_u8": "12fd5675b35d4da2eceb74770764676f9ec57924794ac1e6ccef9411f18e5e60",
-          "sha256_u16": "1b2fd69ae05338c446cdc15312751493b22fdcecd871590d97112764bc7cee0d",
+          "sha256_u8": "1839bb4881949f9b903f8822cf1a86bcc00d6cef1883ff3deccb7ec57467ad1b",
+          "sha256_u16": "c53fa54ddb2288cc88b668b0ba14a10115073198b40db97b790043f7fc165a7a",
           "shape_u8": [
             341,
             512,
@@ -248,8 +248,8 @@
             "u8": "gate_defaults\\exposure_auto_default\\high_contrast\\output_u8.npy",
             "u16": "gate_defaults\\exposure_auto_default\\high_contrast\\output_u16.npy"
           },
-          "sha256_u8": "8273e3a340a8e1cdc47a0818759d1177a3caeb88105fc284489e1ec6aee82fbe",
-          "sha256_u16": "3208837bcf45e018beb437ab6a8044674c27d6e8203684359ad3b82daa27b373",
+          "sha256_u8": "fe58b8a416edefefb2b6de4974438da5443b2f3fa0e22324200b69e648bb2bbc",
+          "sha256_u16": "6bdcd1e54f431b4417546092e513796d3e4a2f4418a687dcebc6d67739d5f726",
           "shape_u8": [
             341,
             512,
@@ -284,8 +284,8 @@
             "u8": "gate_defaults\\compose_param\\night_lowlight\\output_u8.npy",
             "u16": "gate_defaults\\compose_param\\night_lowlight\\output_u16.npy"
           },
-          "sha256_u8": "ba67838130e1e7b50e9824805fdedb7b34725bee271079d478f242fa5da2d1d6",
-          "sha256_u16": "2fecba8849e97d407870b0f30f8f914ff9eb838015775a4bd33adfcefbe8494e",
+          "sha256_u8": "f3cae7d96ced9c8fa15f211b4484ba01f07fa51da84a83614cd93c67eefbff64",
+          "sha256_u16": "37e7b5e0d5d7f8cffb3de0727cb159b91112918d3e663ecb140bac7de5faa241",
           "shape_u8": [
             288,
             512,
@@ -304,8 +304,8 @@
             "u8": "gate_defaults\\compose_param\\day_normal\\output_u8.npy",
             "u16": "gate_defaults\\compose_param\\day_normal\\output_u16.npy"
           },
-          "sha256_u8": "4aed793aeedc8efbe726b849c5a273fa04a04c7069eec86356cc1bfdcf077d02",
-          "sha256_u16": "c008309e4a0336a3fa38daf762656d19019bee1003255b54685090be7795beab",
+          "sha256_u8": "13e2894f421335faf273cc5a4b6ec5079f974162af70619c946e6daab7e51e66",
+          "sha256_u16": "b6f6e2205e49059e958c2741a029543411975357fb38bb8456afa9f8d2734b9c",
           "shape_u8": [
             288,
             512,
@@ -324,8 +324,8 @@
             "u8": "gate_defaults\\compose_param\\high_key_bright\\output_u8.npy",
             "u16": "gate_defaults\\compose_param\\high_key_bright\\output_u16.npy"
           },
-          "sha256_u8": "6ccfad6f794f73dd3a5a86037223926451f57fecfc5504872c31ce6526623656",
-          "sha256_u16": "480f90217eb204ca927a5225940497edcbfbbd5c489a7fdf8f98f2a363ae512b",
+          "sha256_u8": "b245c343ee0f78331ddef67dea1f94422fb25b5ecaa6cc22e974ffb1aab70ac0",
+          "sha256_u16": "69481b470bea90d0a7b2da18fb1c6141b89042882a69051b27e8bea998b5711a",
           "shape_u8": [
             288,
             512,
@@ -344,8 +344,8 @@
             "u8": "gate_defaults\\compose_param\\portrait_tele\\output_u8.npy",
             "u16": "gate_defaults\\compose_param\\portrait_tele\\output_u16.npy"
           },
-          "sha256_u8": "700372fef2a51d8af280bae20b07283fe871ce849593debe4e7e0c95f1df99d5",
-          "sha256_u16": "01d5e1b4fd39d0ee83593ae9945cb1a2750a3b4d835284519025f2c3b1be5da1",
+          "sha256_u8": "9ff193741f8cbb43fc80db82b0e50a7aef3d248a5df09e94c11316e23e9331db",
+          "sha256_u16": "d5c51a1229eaf7f2888baa9599beb6533546c8b4d2bcb3f62e2c85f41d2da0fa",
           "shape_u8": [
             288,
             512,
@@ -364,8 +364,8 @@
             "u8": "gate_defaults\\compose_param\\wide_angle\\output_u8.npy",
             "u16": "gate_defaults\\compose_param\\wide_angle\\output_u16.npy"
           },
-          "sha256_u8": "a29d972a0495c93a091725a65e24aca537a72eb5449b4675da7bcb2331943d5f",
-          "sha256_u16": "f2d0984d1aad8d941770833ac9373b5220edba3d821a2f2ad0c2d551ceb7a021",
+          "sha256_u8": "7ff2f8c27ff84be2d7265dabae08bf69bb41d37ac11b9b47b28cef9e01da49af",
+          "sha256_u16": "20d1f4b9a3ef81618dddf08f40d8475b9045302c696d2696c532cca4b40e3a5a",
           "shape_u8": [
             288,
             512,
@@ -384,8 +384,8 @@
             "u8": "gate_defaults\\compose_param\\high_contrast\\output_u8.npy",
             "u16": "gate_defaults\\compose_param\\high_contrast\\output_u16.npy"
           },
-          "sha256_u8": "7fd43df630ddcfd03130fed2ea1ace9ab1c4bd5db2dce7528cca79635e394b50",
-          "sha256_u16": "f1860f5a27d76fecd511763a47eda475c4fb975c2d0cf2ecf437e6a211c4f3d9",
+          "sha256_u8": "6978689d0e5eae24d5bd96f489023e7b1784067b9f9c288c7cb95e0c2383219e",
+          "sha256_u16": "7ab41aeacc83189fdfcd97bd45bc7c6f6532657ae4fe1e809ea392149943ac69",
           "shape_u8": [
             288,
             512,
@@ -416,8 +416,8 @@
             "u8": "gate_defaults\\clarity_default\\night_lowlight\\output_u8.npy",
             "u16": "gate_defaults\\clarity_default\\night_lowlight\\output_u16.npy"
           },
-          "sha256_u8": "610237534aa4ca759ba6741dca0e568cab753f58cc1a3843a354e9bda4b2824f",
-          "sha256_u16": "2c5e03f4afee4dd25af7ad860cefae330d6e9e03d82721d2e905b1a501e670c0",
+          "sha256_u8": "0aed7451ac9ac0e8809d0c4287f54518e6b242f988dc011566f5b41066aa8be5",
+          "sha256_u16": "bfd3f9b32b95c2b46d5c9f14227bff4aba3d7f0bfab83a566f11add7d751cc3d",
           "shape_u8": [
             341,
             512,
@@ -436,8 +436,8 @@
             "u8": "gate_defaults\\clarity_default\\day_normal\\output_u8.npy",
             "u16": "gate_defaults\\clarity_default\\day_normal\\output_u16.npy"
           },
-          "sha256_u8": "03a4f06c7f51d8cdf325dec83454c8ea372faafaf95630702589d976dd23b504",
-          "sha256_u16": "a22ea012ff0537f46c8f3b0d7597ca85958feb6c2af6bebafa22716f26f4490b",
+          "sha256_u8": "abc87a812a2ae5df29f1bf03f5f9c1d6d5093bd10a23c32f9c3654570ddd3593",
+          "sha256_u16": "63e91a8e835cfd6e8ff51b85a8e65a61c502af7cedbff73ffa61844d7bc8b9ae",
           "shape_u8": [
             341,
             512,
@@ -456,8 +456,8 @@
             "u8": "gate_defaults\\clarity_default\\high_key_bright\\output_u8.npy",
             "u16": "gate_defaults\\clarity_default\\high_key_bright\\output_u16.npy"
           },
-          "sha256_u8": "86a0f78dd0b0dd45c7ffa76557a190ab2f026987f5e993cf7ea3b868bd51b481",
-          "sha256_u16": "0f71e01c81afa45c3fbde88280a4842b279ed63610eda4fb41a0b71ef51c2a7b",
+          "sha256_u8": "2d5cd0cb459aae5cef8f01d911ebb8211c700cc5db73a43f85a0d24e3b985f7a",
+          "sha256_u16": "0faec30a389537ceb0cd2be1b5f6022af2483aedec6be966a150a5d15cbaece3",
           "shape_u8": [
             341,
             512,
@@ -476,8 +476,8 @@
             "u8": "gate_defaults\\clarity_default\\portrait_tele\\output_u8.npy",
             "u16": "gate_defaults\\clarity_default\\portrait_tele\\output_u16.npy"
           },
-          "sha256_u8": "d3e205783d206584be99692529249c9d48be943e81bc95bd5dcc47be0ff0bf02",
-          "sha256_u16": "cb475d8ad1c64ec0d2a42837913345c59a14b8a90b7dca9a35e59273921f4a1b",
+          "sha256_u8": "df1566d28b8d0347783205fa048975b9ad58cf4d65867aa8e6db1cd8844016fa",
+          "sha256_u16": "12ff571e7a008c9ecef30e9ee1929fda850ba7310274cd803ba499ea1e9dfe4e",
           "shape_u8": [
             341,
             512,
@@ -496,8 +496,8 @@
             "u8": "gate_defaults\\clarity_default\\wide_angle\\output_u8.npy",
             "u16": "gate_defaults\\clarity_default\\wide_angle\\output_u16.npy"
           },
-          "sha256_u8": "12fd5675b35d4da2eceb74770764676f9ec57924794ac1e6ccef9411f18e5e60",
-          "sha256_u16": "1b2fd69ae05338c446cdc15312751493b22fdcecd871590d97112764bc7cee0d",
+          "sha256_u8": "1839bb4881949f9b903f8822cf1a86bcc00d6cef1883ff3deccb7ec57467ad1b",
+          "sha256_u16": "c53fa54ddb2288cc88b668b0ba14a10115073198b40db97b790043f7fc165a7a",
           "shape_u8": [
             341,
             512,
@@ -516,8 +516,8 @@
             "u8": "gate_defaults\\clarity_default\\high_contrast\\output_u8.npy",
             "u16": "gate_defaults\\clarity_default\\high_contrast\\output_u16.npy"
           },
-          "sha256_u8": "8273e3a340a8e1cdc47a0818759d1177a3caeb88105fc284489e1ec6aee82fbe",
-          "sha256_u16": "3208837bcf45e018beb437ab6a8044674c27d6e8203684359ad3b82daa27b373",
+          "sha256_u8": "fe58b8a416edefefb2b6de4974438da5443b2f3fa0e22324200b69e648bb2bbc",
+          "sha256_u16": "6bdcd1e54f431b4417546092e513796d3e4a2f4418a687dcebc6d67739d5f726",
           "shape_u8": [
             341,
             512,
@@ -638,5 +638,5 @@
       }
     }
   },
-  "reviewer": "qa-reverified 2026-09-07 (regen@f357b35)"
+  "reviewer": "round10-regen (第二批切换: skin 椭圆修正旧 Lab 误判, 队长重生成, 待qa复验)"
 }

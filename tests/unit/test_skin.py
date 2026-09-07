@@ -239,9 +239,11 @@ def test_skin_stage_registered_order_and_domain():
     assert cls.order == 55
     assert cls.domain_in == DOMAIN_GAMMA_RGB
     assert cls.domain_out == DOMAIN_GAMMA_RGB
-    # M-O2: color_domain 域开关 (缺省 hsv = 旧 Lab 椭圆行为逐位不变)
+    # M-O2: color_domain 域开关。F10 第二批起缺省 oklch (重拟合椭圆 +
+    # F11 意图级不劣于; 原断言钉 hsv, 翻期望非删除); hsv 路径由存量卡
+    # F07 卡级钉域继续锁定。
     assert cls().default_params() == {"enabled": True, "strength": 0.5,
-                                      "color_domain": "hsv"}
+                                      "color_domain": "oklch"}
 
 
 def test_skin_stage_wants_disabled():

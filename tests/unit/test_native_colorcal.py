@@ -400,6 +400,10 @@ def test_full_path_float_precision_sentinel(monkeypatch):
         "neutral_a_curve": _SENTINEL_ARGS["curve_a"],
         "neutral_b_curve": _SENTINEL_ARGS["curve_b"],
         "skin_protect": 0.7, "skin_trim": [-2.0, -4.0], "gamut_soft": 0.5,
+        # F10 第二批起缺省 oklch; 本哨兵锁的是 Lab 链 (hsv) 精度 (W4 结论
+        # 口径), 显式钉 hsv——oklch 链精度由 test_native_colorcal_oklch.py
+        # 专属覆盖 (内核 vs 纯 Python oklch 参考, 掩码隔离逐位)。
+        "color_domain": "hsv",
     }}}
 
     for label, disable in (("native", False), ("fallback", True)):

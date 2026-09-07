@@ -31,6 +31,9 @@
       "saturation": 0.0,
       "color_domain": "hsv"
     },
+    "skin": {
+      "color_domain": "hsv"
+    },
     "stylize": {},
     "refine": {
       "sharpen": 0.28,

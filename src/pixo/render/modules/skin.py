@@ -6,7 +6,7 @@
 参数:
   enabled       是否启用 (默认 True)
   strength      磨皮强度 0..1 (默认 0.5)
-  color_domain  肤色掩码域: "hsv"(缺省, 旧 cv2-Lab 椭圆, 行为逐位不变) |
+  color_domain  肤色掩码域: "hsv"(旧 cv2-Lab 椭圆) |
                 "oklch" (core.skin 拟合 OKLab 椭圆, 设计 §3; colorcal 的
                 skin_trim/scene_skin_trim 同参数同掩码联动)
 
@@ -40,7 +40,7 @@ _SKIN_RATIO_NO_SCENE = 0.03      # 未分类 (无 scene 状态) 时的人像级�
 def _mask_fn(color_domain: str):
     """color_domain → 肤色掩码函数 (设计 §3 双轨分派)。
 
-    "hsv" (缺省) → 旧 Lab 椭圆 skin_mask (逐位不变回退);
+    "hsv" → 旧 Lab 椭圆 skin_mask (逐位不变回退);
     "oklch"     → OKLab 椭圆 skin_mask_oklab (拟合常数, core.skin)。
     """
     domain = str(color_domain).strip().lower()
@@ -59,12 +59,14 @@ class SkinStage(Stage):
     param_schema = {
         "enabled": {"type": "bool"},
         "strength": {"type": "float", "min": 0.0, "max": 1.0},
-        # 编辑域开关 (设计 §1.2/§3): "hsv"(缺省, 旧 Lab 椭圆, 逐位不变) | "oklch"
+        # 编辑域开关 (设计 §1.2/§3): "hsv"(旧 Lab 椭圆) | "oklch"。
+        # F10 第二批起缺省 oklch (重拟合椭圆三验收过, F11 意图级不劣于);
+        # 存量卡 A1 由 F07 卡级显式钉 "hsv" 兑现, 不再依赖 Stage 缺省。
         "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
     }
 
     def default_params(self):
-        return {"enabled": True, "strength": 0.5, "color_domain": "hsv"}
+        return {"enabled": True, "strength": 0.5, "color_domain": "oklch"}
 
     def wants(self, ctx: StageContext) -> bool:
         if not bool(self.p(ctx, "enabled", True)):
@@ -108,7 +110,7 @@ class SkinStage(Stage):
         strength = float(self.p(ctx, "strength"))
         if strength <= 0.0:
             return
-        # 掩码按 color_domain 分派 (缺省 hsv → 旧 Lab 椭圆, 逐位不变)
+        # 掩码按 color_domain 分派 (F10 第二批起缺省 oklch; hsv=旧 Lab 椭圆)
         mask_fn = _mask_fn(self.p(ctx, "color_domain", "hsv"))
 
         # M6: 优先读 ctx.mode ("preview"/"export", 三渲染入口显式传入);

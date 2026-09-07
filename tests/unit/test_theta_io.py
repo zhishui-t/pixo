@@ -155,10 +155,15 @@ def test_skin_angle_roundtrip_arbitrary_value(theta, tmp_path):
 
 
 def test_skin_angle_initial_keeps_fit_convention(theta, tmp_path):
-    """初值角度经 4 位小数惯例无损往返时沿用惯例写法 (对照 diff 零噪声)。"""
+    """初值角度经 4 位小数惯例无损往返时沿用惯例写法 (对照 diff 零噪声)。
+
+    11.2485 = round(degrees(SKIN_OKLAB_ANGLE=0.196323), 4)——R10 重拟合
+    (dca189c) 后的初值源角; 原断言 10.9505 为旧拟合角 (0.191122 rad),
+    源文件已随重拟合更新而断言漏改, 此处同步 (R10 队长授权, 断言族修订)。
+    """
     out = theta_io.save_theta(theta, tmp_path)
     doc = json.loads(out["skin_ellipse"].read_text(encoding="utf-8"))
-    assert doc["new_ellipse_fit"]["angle_deg"] == 10.9505
+    assert doc["new_ellipse_fit"]["angle_deg"] == 11.2485
     assert doc["new_ellipse_fit"]["angle_deg"] == _raw("skin_ellipse")[
         "new_ellipse_fit"]["angle_deg"]
 
