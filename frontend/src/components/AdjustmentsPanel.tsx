@@ -9,6 +9,7 @@ import { DomainToggle } from './DomainToggle';
 import { HslBandRow } from './HslBandRow';
 import { HueRing } from './HueRing';
 import { HueSpectrumBar } from './HueSpectrumBar';
+import { RegionSection } from './RegionSection';
 import type { ColorDomain, ParamPatch } from '../types';
 import { buildBandFieldPatch, readColorDomain, readHslBands } from './hslBands';
 
@@ -86,7 +87,7 @@ export function AdjustmentsPanel() {
 
       <Accordion
           multiple
-          defaultValue={['basic', 'curve', 'hsl', 'calibration', 'detail', 'split']}
+          defaultValue={['basic', 'region', 'curve', 'hsl', 'calibration', 'detail', 'split']}
           className="adjustments-accordion"
           styles={{
             item: { backgroundColor: DESIGN_TOKENS.panel, borderWidth: 0 },
@@ -113,6 +114,18 @@ export function AdjustmentsPanel() {
             <Badge size="xs" variant="light" color={skinMaskReady ? 'accent' : 'gray'}>
               {skinMaskReady ? 'skin 掩码就绪 · 磨皮限定皮肤区' : 'skin 掩码未加载 · 全局磨皮回退'}
             </Badge>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="region">
+          <Accordion.Control>区域调整</Accordion.Control>
+          <Accordion.Panel>
+            {/* R14 (M1)：掩码驱动的区域调整（prompt 胶囊 + exposure/saturation/
+                warmth 三滑杆）；掩码状态来自状态 API，不可用态控件禁用 + 提示。 */}
+            <RegionSection
+              params={params as Record<string, Record<string, unknown>>}
+              onPatch={patch}
+            />
           </Accordion.Panel>
         </Accordion.Item>
 

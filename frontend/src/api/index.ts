@@ -1,6 +1,7 @@
 import type {
   HealthInfo,
   ParamPatch,
+  RegionMaskStatus,
   Photo,
   PhotoView,
   Project,
@@ -12,6 +13,8 @@ import {
   createSession as createSessionRemote,
   getExportStatus as getExportStatusRemote,
   getHealth as getHealthRemote,
+  getRegionMasks as getRegionMasksRemote,
+  PixoApiError,
   getStyle as getStyleRemote,
   listPhotos as listPhotosRemote,
   listStyles as listStylesRemote,
@@ -23,6 +26,7 @@ import {
 import {
   mockGetPhotos,
   mockGetProjects,
+  mockGetRegionMaskStatus,
   mockGetStyleCards,
   mockPatchParams,
   mockPreviewDataUrl,
@@ -97,6 +101,41 @@ export async function ensureSession(photoId: string): Promise<string> {
     }
   }
   return getMockSessionId();
+}
+
+function regionUnavailable(reason: string): RegionMaskStatus {
+  return { available: false, prompts: [], reason };
+}
+
+/**
+ * 区域掩码状态（R14 B1 收紧语义）：
+ *  1. 真离线（backendAvailable === false）→ mock 恒可用（离线开发态，
+ *     唯一装可用的分支）；
+ *  2. 无会话（sessionId=null，尚未 ensureSession）→ 未激活态
+ *     （session_not_ready），不装可用；
+ *  3. 后端在线：真实会话 GET——404（会话不存在/过期）→ 显式错误态
+ *     （session_not_found）；其余失败（网络/5xx/端点未实施）→ 显式错误态
+ *     （fetch_failed）。两种错误态均不回退 mock 恒可用——真实后端语义
+ *     必须到达 UI（tester B1 回归面）。
+ * backendAvailable 全局信号不被本函数修改（子端点失败 ≠ 后端不在线）。
+ */
+export async function fetchRegionMaskStatus(
+  sessionId: string | null,
+): Promise<RegionMaskStatus> {
+  if (backendAvailable === false) {
+    return mockGetRegionMaskStatus();          // 真离线：mock（唯一可用分支）
+  }
+  if (!sessionId) {
+    return regionUnavailable('session_not_ready');
+  }
+  try {
+    return await getRegionMasksRemote(sessionId);
+  } catch (err) {
+    if (err instanceof PixoApiError && err.status === 404) {
+      return regionUnavailable('session_not_found');
+    }
+    return regionUnavailable('fetch_failed');
+  }
 }
 
 export async function patchParams(

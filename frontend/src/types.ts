@@ -133,6 +133,32 @@ export interface MeasurementsResult {
   error?: string;
 }
 
+/**
+ * 区域掩码状态（R14，dev-2 状态 API 契约：available + prompts + 原因；
+ * 端点以其实施为准——前端经 api 层适配位接入，本类型为唯一消费面）。
+ */
+export interface RegionMaskStatus {
+  /** 掩码可用（true = 区域调整控件可操作）。 */
+  available: boolean;
+  /** 可调区域 prompt 列表（如 ['sky','face','plant']）。 */
+  prompts: string[];
+  /** 不可用原因（available=false 时的数据面，UI 转提示文案）。 */
+  reason?: string | null;
+}
+
+/**
+ * region_adjust 单区域调整（prompt → 滑杆值；后端 _regions 白名单校验：
+ * exposure EV -2..2 / saturation -1..1 / warmth -1..1，缺省 0 = no-op）。
+ */
+export interface RegionAdjustment {
+  /** 区域曝光补偿（EV）。 */
+  exposure?: number;
+  /** 区域饱和度缩放偏置。 */
+  saturation?: number;
+  /** 区域色温偏置（dev-2 warmth 批）。 */
+  warmth?: number;
+}
+
 /** VisionMeasure.measure 报告（global + regions + 溯源版本）。 */
 export interface MeasurementReport {
   global: Record<string, unknown>;
@@ -240,6 +266,12 @@ export interface ParamPatch {
     /** 编辑域开关（设计 §2.3）：hsl/split_tone 双域后端均已就绪（modules/split_tone.py 与 HslStage 同枚举分派），patch 经 PUT params 深合并生效；UI 保留规格 §5.3 的回读门控作兜底。 */
     color_domain?: ColorDomain;
   };
+  /**
+   * 区域调整（R14，M1）：prompt → 三滑杆值。PUT params 深合并语义——
+   * 仅提交被改动的 prompt/参数键，其余区域与其余参数键后端原样保留；
+   * 回读含 decide 规则/卡建议写入的值（用户可见规则做了什么）。
+   */
+  region_adjust?: { regions?: Record<string, RegionAdjustment> };
 }
 
 // ---------- 前端本地概念（暂无后端端点） ----------

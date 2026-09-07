@@ -9,6 +9,7 @@ import type {
   HealthInfo,
   MeasurementsResult,
   ParamPatch,
+  RegionMaskStatus,
   ParamsUpdateResult,
   Photo,
   SessionInfo,
@@ -18,8 +19,21 @@ import type {
   TimelineInfo,
 } from '../types';
 
-export const API_BASE: string =
-  import.meta.env.VITE_PIXO_API_URL ?? 'http://localhost:8000';
+/**
+ * API 基址：缺省同源相对路径（''）—— dev 模式经 vite proxy '/api' 转发到
+ * 后端（R14 B2 裁决：proxy 方案，免 CORS）；生产同源部署同理。
+ * 显式绝对地址仍可经 VITE_PIXO_API_URL 覆盖（直连后端场景）。
+ */
+export const API_BASE: string = import.meta.env.VITE_PIXO_API_URL ?? '';
+
+/** 带 HTTP 状态码的 API 错误（消费方可区分 404 会话失效 / 5xx 等）。 */
+export class PixoApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(`pixo-service ${status}: ${message}`);
+    this.status = status;
+  }
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -27,7 +41,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
   });
   if (!res.ok) {
-    throw new Error(`pixo-service ${res.status}: ${await res.text()}`);
+    throw new PixoApiError(res.status, await res.text());
   }
   return res.json();
 }
@@ -35,6 +49,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 /** GET /api/health */
 export function getHealth(): Promise<HealthInfo> {
   return request<HealthInfo>('/api/health');
+}
+
+/**
+ * GET region masks（R14 适配位：dev-2 状态 API 的端点以其实施为准——
+ * 形态契约 available+prompts+reason 已在前端 types.RegionMaskStatus 固定，
+ * 端点路径/字段名变化时仅需对齐此处，消费面（RegionSection）不动。
+ * 失败以 PixoApiError 抛出（带 status）——404/其他失败的兜底语义在
+ * api/index.ts::fetchRegionMaskStatus（B1 收紧后：仅真离线走 mock，
+ * 404/失败为显式错误态，不装可用）。 */
+export function getRegionMasks(sessionId: string): Promise<RegionMaskStatus> {
+  return request<RegionMaskStatus>(`/api/sessions/${sessionId}/region`);
 }
 
 /** GET /api/photos */

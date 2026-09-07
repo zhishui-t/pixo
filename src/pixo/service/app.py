@@ -148,6 +148,18 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
         except KeyError as exc:
             raise _not_found(str(exc)) from exc
 
+    @app.get("/api/sessions/{session_id}/region")
+    def api_region_status(session_id: str) -> dict[str, Any]:
+        """返回会话 region 掩码状态（M1 region 控件可用性感知）。
+
+        available=False 时前端置灰 region 滑杆（纯预览会话无分割掩码，
+        调 region 参数会静默失效——状态显式化避免该陷阱）。
+        """
+        try:
+            return rt.region_status(session_id)
+        except KeyError as exc:
+            raise _not_found(str(exc)) from exc
+
     @app.get("/api/sessions/{session_id}/image")
     def api_image(
         session_id: str,

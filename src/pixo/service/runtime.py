@@ -327,7 +327,11 @@ class PixoServiceRuntime:
         patch: dict[str, Any],
         source: str | None = None,
     ) -> dict[str, Any]:
-        """深合并局部参数并递增 generation，同时记录 Trace。"""
+        """深合并局部参数并递增 generation，同时记录 Trace。
+
+        响应附 `region` 状态节（M1 前端 region 控件的可用性感知）：每次
+        patch 后 UI 即可感知掩码是否可用（不可用时滑杆置灰而非静默失效）。
+        """
         session = self.get_session(session_id)
         generation = session.update_params(dict(patch or {}))
         photo_id = self._photo_id_for_session(session_id)
@@ -346,6 +350,36 @@ class PixoServiceRuntime:
             "generation": generation,
             "params": dict(session.params),
             "canonical": session.canonical_params(),
+            "region": self._region_status_of(session),
+        }
+
+    def _region_status_of(self, session: Any) -> dict[str, Any]:
+        """会话 region 掩码状态节（M1, R14）。
+
+        - available: `session.region_masks`（F13 Route B 属性）非空 dict；
+        - prompts: 掩码 prompt 有序列表（仅可用时）;
+        - reason: 不可用原因——纯预览会话（无 loop 分割通道）未注入
+          region_masks 时为 "masks_not_injected"。
+        """
+        masks = getattr(session, "region_masks", None)
+        prompts = (
+            sorted(str(k) for k in masks)
+            if isinstance(masks, dict) and masks else []
+        )
+        available = bool(prompts)
+        return {
+            "available": available,
+            "prompts": prompts,
+            "reason": None if available else "masks_not_injected",
+        }
+
+    def region_status(self, session_id: str) -> dict[str, Any]:
+        """查询会话 region 掩码状态（region 控件面板打开时的感知端点）。"""
+        session = self.get_session(session_id)
+        return {
+            "session_id": session.session_id,
+            "generation": session.generation,
+            **self._region_status_of(session),
         }
 
     def _photo_id_for_session(self, session_id: str) -> str | None:

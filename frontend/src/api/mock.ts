@@ -1,6 +1,7 @@
 import type {
   ColorLabel,
   ParamPatch,
+  RegionMaskStatus,
   Photo,
   PhotoView,
   Project,
@@ -135,6 +136,25 @@ export function mockScanDirectory(): Array<{ path: string; name: string; size: n
   }));
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** 递归深合并（plain object 逐级合流；数组/标量右侧整值覆盖）。 */
+function deepMerge(
+  base: Record<string, unknown>,
+  over: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(over)) {
+    const prev = out[key];
+    out[key] = isPlainObject(prev) && isPlainObject(value)
+      ? deepMerge(prev, value)
+      : value;
+  }
+  return out;
+}
+
 export function mockPatchParams(patch: ParamPatch): {
   generation: number;
   params: ParamPatch;
@@ -146,14 +166,16 @@ export function mockPatchParams(patch: ParamPatch): {
   const next: Record<string, Record<string, unknown>> = {
     ...(params as Record<string, Record<string, unknown>>),
   };
+  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+    typeof v === 'object' && v !== null && !Array.isArray(v);
   (Object.keys(patch) as Array<keyof ParamPatch>).forEach((stage) => {
     const incoming = patch[stage];
     if (incoming === undefined) return;
     const cur = next[stage] ?? {};
-    next[stage] = {
-      ...cur,
-      ...(incoming as Record<string, unknown>),
-    };
+    // 递归深合并（对齐后端 PUT params 深合并语义）：region_adjust 的
+    // regions.<prompt>.<param> 为三级嵌套，prompt 子键必须逐级累积而非
+    // 整层替换（R14）；数组（如 hsl.bands）与标量保持整值替换。
+    next[stage] = deepMerge(cur, incoming as Record<string, unknown>);
   });
   params = next as ParamPatch;
   return { generation, params, canonical: params };
@@ -169,4 +191,9 @@ export function mockGetProjects(): Project[] {
 
 export function mockGetStyleCards(): StyleCardData[] {
   return mockStyleCards;
+}
+
+/** 区域掩码状态（R14 mock）：恒 available——离线开发态不呈现禁用面。 */
+export function mockGetRegionMaskStatus(): RegionMaskStatus {
+  return { available: true, prompts: ['sky', 'face', 'plant'], reason: null };
 }
