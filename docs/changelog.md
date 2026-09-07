@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-09-07 — 第十一轮：huesat A 轨删除（GPL 清偿）× scene 门控
+
+- **A 轨删除**（337702e，用户拍板「删」）：HSV 查表应用链（core 24→17 函数）+ use_dng
+  复刻分支删尽；RawTherapee/rtengine/dng_render/dng_color_spec grep 清零（F18 高危
+  H1/H2/H3/H9 落面；color.py H4-H8 另案）；前置补点云——含表 DCP 3/3 全覆盖（回退链
+  断裂风险消除），重写 oklch-or-no-op（缺省翻 oklch+退役域 warn-once）
+- **【知情裁决】**：评估报告「生产零影响」被 dev-2 实测证伪——10 张 Fujifilm 卡在用
+  A 轨（strength 0.15~0.45），删除=10 卡 A→B look 替换（ΔE median 0.19~1.02 亚 JND/
+  超 JND 像素 10.5~29.6%，13 卡不变）；队长裁决接受（GPL 清偿目标不变+中位亚 JND+
+  单点 revert 可逆），qa 独立抽验 3 卡量级吻合；**用户推翻权保留**
+- **scene 门控**（098d42c，观察窗清偿）：诊断发现 scene 判定渲染路径从未接线（portrait
+  恒缺）——无人像图磨皮一直在默认链误伤（覆盖最高 90.2%）；修法=未分类图覆盖率上限
+  0.50（F11 语料人像/风景间隙）判误判 no-op+warn，portrait 豁免；人像位级保全
+  （X1_DSC_0466 四 case）；RAW 基线 round11-regen 恰 12 case（qa 三证合一归因：
+  门控 100% 驱动）
+- tech_debt #2 huesat 部分清偿、FUNCTION_GATE_SPEC §5.12 收缩、theta_io 断言修复
+
+验收：全量 1478 passed / 5 skipped / 1 xfailed / 0 failed（-6 对账=删 A 轨用例 -8+
+门控 +3+1）；GPL grep 三文件零命中；gate --check 20 零漂；RAW 24/24（round11 后）；
+门禁 .r11_ok PASS（六条+推翻权回滚提示）
+
 ## 2026-09-07 — 第十轮：oklch 第二批切换 × JND 统一 × 打包修复
 
 - **打包三连修**（用户质询引出）：wheel 构建失败修复（data-files 目录通配炸构建，
