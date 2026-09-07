@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-09-07 — 第十轮：oklch 第二批切换 × JND 统一 × 打包修复
+
+- **打包三连修**（用户质询引出）：wheel 构建失败修复（data-files 目录通配炸构建，
+  任何检出可复现——显式文件列表化）；films 23 卡补进包（非递归 glob 漏配）；
+  **aesthetic_scorer.pt 随 wheel 分发**（用户拍板开箱即用，310MB wheel；加载器补
+  安装态候选链 env>仓库>sys.prefix/data>前缀，3 单测钉死；初版 NOTICES「随 wheel
+  分发」误报实为构建失败，已实测修正留痕）；data/golden 48MB 移出打包（开发资产）
+- **JND 口径单源化**（baec4ec）：权威常量 `JND_DELTA_E=2.3` 落 pipeline/perceptual.py，
+  loop 早停行为零变化（钉死），评估脚本统一引常量——F19 发现的 1.0/2.3 两套并存清偿
+- **colorcal oklch native 内核**（dca189c，super-dev spike 先行）：ApplyColorCalLabF32
+  换 SkinMaskOklab 整体进 native；15×（131ms Python）→~2× hsv native（提速 ~11×，
+  4096px 外推 8.4s→0.75s/图）；掩码隔离逐位对齐/全参数 1 ULP f32；ucrt≠msun cbrt
+  陷阱以 FreeBSD msun 逐句复刻处置（省 33% 掩码成本）；ABI 1.5.0
+- **skin OKLab 椭圆重拟合**（dca189c）：低彩度端过紧修正（覆盖分位 0.96→0.98+软带
+  0.25→0.31 重定标，中性灰不变量保持）；三验收全过（覆盖腰斩 5/72→0/门控分叉
+  2/72→0/误伤闸门守住）；椭圆常数双源（cpp 硬编码副本）记 tech_debt #18，
+  bitwise 测试为防复发防线，清偿=下次变更前参数化
+- **oklch 第二批切换**（02a77b1）：skin/colorcal default_params 翻 oklch——四涉域
+  stage 全部完成 t52 渐进方案。依据=人像域召回/精度修正（F11+refit 三验收）；
+  RAW 漂移=掩码边缘 ~2% 像素重分布的预期语义变化（qa 独立加严归因：colorcal
+  贡献精确 0/skin 100% 驱动/两代椭圆 RAW 覆盖 IoU 0.979-0.997）；film_pro_400h
+  补 skin 钉域（唯一无键卡盲区，F07 计数 23）；三组基线队长重生成（RAW 24/
+  gate default_dispatch v3/region_adjust v2）
+- **huesat A 轨删除评估**（research）：有条件可行 2.5-3.5 人日（210 行精确界定/
+  生产零影响/B 轨血缘干净），前置=补 5 个无点云 DCP（0.5 人日）——GPL 血缘
+  釜底抽薪路径，待拍板
+- 观察窗（qa .r10b_ok）：无人像高覆盖磨皮两代同在（scene 门控/覆盖率上限留待
+  下轮）/双肤区强度尾部 9 张亚 JND/gate skin case 对软边带零敏感建议增补探针
+
+验收：全量 1484 passed / 5 skipped / 1 xfailed / 0 failed（第九轮基线 1474+10
+全为新增测试对账）；A1 23 卡双基线字节级全等；RAW 24/24（round10-regen 后零漂）；
+性能缺省 1.02×/意图 ~2× hsv native；门禁 .r10b_ok PASS（六条结论+归因独立加严）
+
 ## 2026-09-07 — 第九轮战役：收口清债 × oklch 切默认 × M1 掩码驱动渲染
 
 - 模型栈清债（651f5d1，F03/F04）：FairFace 彻底移除（person.py 整删、manifest/路由/
