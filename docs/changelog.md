@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-09-07 — 第十二轮：SDK 痕迹清偿终章 × 观察窗扫尾
+
+- **color.py SDK 痕迹清偿**（66c91c6，GPL 三段全清）：精查定性后 SDK 衍生仅 2 处
+  （~55 行，camera_white/cam_to_prophoto_matrix）——按白点定义与「场景白→PCS 白」
+  约束唯一解重构，常数 pin 4 位 ICC 公开值（红线：7 位值漂移 ~8e-5 击穿金样本，qa
+  实测吻合）；8 处注释出处改公开规范（ICC PCS/IEC/ISO，章节+页码经 colour-hdri
+  交叉核对）；**逐位等价实证**：git HEAD 对拍全函数（8 函数×6 DCP×8 WB+真 Nikon
+  Z5 DCP）逐位一致、gate 21 零漂、RAW 24/24 零漂
+- **tech_debt #2 ✅ 终章关闭**：huesat A 轨+color.py 三段全清偿——GPL/DNG SDK
+  血缘清零（grep 仅存 7 处中性表述）；git 历史旧注释属发布快照口径（归发布决策）
+- **观察窗扫尾**：gate 20→21 features（skin_oklch_softband 探针 case——软带变化
+  可观测，R10 椭圆盲区关闭）；9 张双肤区亚 JND 尾部记录节（|B−A|≤0.150 ΔE，
+  判定记录即可）；qa 修复 3 项（manifest reviewer 历史链恢复/软带带宽测试补强）
+
+验收：全量 1481 passed / 5 skipped / 1 xfailed / 0 failed；门禁 .r12_ok PASS
+（等价性独立复认+常数纪律+GPL 终态六条）
+
 ## 2026-09-07 — 第十一轮：huesat A 轨删除（GPL 清偿）× scene 门控
 
 - **A 轨删除**（337702e，用户拍板「删」）：HSV 查表应用链（core 24→17 函数）+ use_dng
