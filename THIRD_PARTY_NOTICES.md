@@ -96,17 +96,21 @@ torch 注记：若未来随分发物捆绑 torch 本体，其约 120 个第三�
 
 | # | 模型 | 许可 | status / 门控 | 来源 | 核验状态 |
 |---|---|---|---|---|---|
-| M1 | aesthetic_scorer.pt（rsinema/aesthetic-scorer） | MIT | redistribution_allowed_with_license_notice | https://huggingface.co/rsinema/aesthetic-scorer | **在仓**（333.7MB，`resources/models/aesthetic/`）；冲突 A 见下 |
+| M1 | aesthetic_scorer.pt（rsinema/aesthetic-scorer） | MIT | redistribution_allowed_with_license_notice | https://huggingface.co/rsinema/aesthetic-scorer | 部署期产物（磁盘 333.7MB，`.gitignore` 排除不入 git，不随 wheel 分发）；安装态 `PIXO_AESTHETIC_MODEL` 指定 |
 | M2 | openai/clip-vit-base-patch32（aesthetic 底座） | MIT | redistribution_allowed_with_license_notice（运行时 HF 自动下载，不入仓） | https://huggingface.co/openai/clip-vit-base-patch32 | 双台账一致；HF 页面未独立复核（可信度中高） |
 | M3 | uniface-face-parsing（jonathandinu/face-parsing） | code MIT / **weights CC BY-NC-SA**（CelebAMask-HQ 派生） | **internal_development_only**，publishable=false，路由门控 `PIXO_ALLOW_RESTRICTED=1` | https://huggingface.co/jonathandinu/face-parsing | web 复核通过（2026-09-07）：model card 自述 non-commercial；NC 溯源 CelebAMask-HQ 数据集 |
 | M4 | rfdetr-seg-2xl（roboflow RF-DETR-Seg） | Apache-2.0 | redistribution_allowed_with_license_notice（rfdetr pip 包首用下载） | https://github.com/roboflow/rf-detr | 台账登记；未独立复核（可信度中高） |
 | M5 | segformer-b1-finetuned-ade-512-512（NVIDIA） | code Apache-2.0（原始）/ ADE20K 微调权重「随发布口径」 | **条目自相矛盾：publishable=false 但 status=redistribution_allowed_with_license_notice** | https://huggingface.co/nvidia/segformer-b1-finetuned-ade-512-512 | **存疑（本清单最大未决项）**：ADE20K 数据集商用条款不明确，HF license tag 未独立复核；**发布前须核验** |
 | M6 | facebook/sapiens-seg-0.3b（Meta） | **CC-BY-NC-4.0**（HF 页 tag；Sapiens 论文自述 CC BY-NC-SA 4.0，SA 之差——取 HF tag 并列注记） | **internal_development_only**，publishable=false，隔离文件 `src/pixo/vision/segmenters/sapiens_body.py`，路由门控同 M3 | https://huggingface.co/facebook/sapiens-seg-0.3b-torchscript | web 复核通过（2026-09-07） |
 
-**打包矛盾（如实记录，待处置）**：`resources/models/README.md:3` 称「不保存大文件权重」，
-但 `aesthetic_scorer.pt`（333.7MB）**实际在仓**，且 `pyproject.toml [tool.setuptools.data-files]`
-打包 `resources/models/*` → **随 wheel 分发**。许可上 MIT 可分发，但必须附本声明与上游
-许可文本；README 属过期文档，与实盘不符（清单 §0.4，按实盘口径取数）。
+**打包配置（2026-09-07 实测修正）**：`resources/models/README.md:3`「不保存大文件权重」的
+设计与实盘一致——`.gitignore` 排除 `resources/models/aesthetic/*.pt`（不入 git），权重为
+部署期产物（安装态设 `PIXO_AESTHETIC_MODEL` 或随发行版手动分发，缺失时评分功能
+`_degraded` 优雅降级）。**初版清单曾误报「随 wheel 分发」**：实为 `pyproject.toml
+[tool.setuptools.data-files]` 的 `resources/models/*` 通配符匹配到子目录导致 **wheel 构建
+直接失败**（任何检出可复现）——2026-09-07 队长修复（显式文件列表），实测构建通过
+（0.66MB wheel，权重/金样本不进包，23+2 卡与 6 DCP 进包）；若未来发行版选择分发权重，
+MIT 允许但须附本声明与上游许可文本。
 
 **台账冲突 A（待处置，本批次不改台账）**：`src/pixo/manifests/vision_models.json:14` 仍写
 aesthetic「需核验」+ 旧 `$GUANLAN_ROOT` 路径，与 `model_licenses.json` 的 MIT 定论冲突——
@@ -230,7 +234,7 @@ native 无 DNG/Adobe 引用）。MinGW-w64 + CMake 为构建期工具不随产�
 | DCP ×6 再分发条款 | 未核验（RawLab 社区，推测置信度中） | 发布前核验；wheel 打包事实并陈（§5） |
 | segformer ADE20K 权重 | 存疑（台账自相矛盾 + 数据集条款不明） | publishable=false、发布前须核验（§3 M5） |
 | sapiens 许可 SA 差异 | HF 页 CC-BY-NC-4.0 vs 论文 CC BY-NC-SA 4.0 | 取 HF tag，已并列注记（§3 M6） |
-| aesthetic_scorer.pt 位置 | README 称不入仓 vs 实际在仓 + 随 wheel 打包 | 以实盘为准：MIT 可分发、须附声明；README 过期待修（§3） |
+| ~~aesthetic_scorer.pt 位置~~ | 初版误报「在仓+随 wheel 打包」；实测：磁盘部署产物（不入 git）、曾致 wheel 构建失败（data-files 目录通配） | **已修复（2026-09-07）**：打包配置改显式文件列表，构建通过，权重不进包=既定设计 |
 | vision_models.json | 过期（「需核验」+ 旧路径） | 以 model_licenses.json 为准；台账更新待办（§3 冲突 A） |
 | guanlan 许可性质 | 未确认（内部推断） | 内部移植披露 + 待队长确认（§6.3） |
 | clean-room 过程记录 | CLEANROOM_M1..M5 不在仓 | 补档或 git 考古后才能坐实 warp/tone/resample 主张（§6.2） |
