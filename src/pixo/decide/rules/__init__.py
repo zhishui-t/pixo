@@ -34,6 +34,11 @@ DEFAULT_RULES = [
     RULES_DIR / "crop_suggest_rule_003.yaml",
     RULES_DIR / "tone_clarity_rules.yaml",
     RULES_DIR / "color_rules.yaml",
+    # region.* 分区补偿 (R13 裁决: b+ 条件入包, M1 决策闭环激活) ——
+    # 覆盖率护栏 (area_ratio < 0.70, 实证拦截 high_contrast 99.6% 整图误罩)
+    # + 试水系数 (原设计一半), 观察窗后复权。评估证据:
+    # .artifacts/region_rules_activation_eval.md
+    RULES_DIR / "region_rules.yaml",
 ]
 
 __all__ = [

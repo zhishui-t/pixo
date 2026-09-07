@@ -543,3 +543,119 @@ def test_all_zero_mask_no_write():
     stage.process(ctx)
     assert ctx.image_writes == writes_before
     assert np.array_equal(ctx.image, img)
+
+
+# ---------------------------------------------------------------------------
+# 暖色内核 (R13): gamma 域通道增益近似 (白平衡 warmth 标定的暖方向锚定)
+# ---------------------------------------------------------------------------
+
+def test_warmth_gains_exact():
+    """_warmth_gains 公式级: +1 → [1, 1.10, 0.74] (暖黄向), -1 → [1, 0.90, 1.26]
+    (冷向对称), 0 → 恒等; 越界输入钳到 [-1,1]。"""
+    from pixo.render.modules.region_adjust import _warmth_gains
+    assert np.allclose(_warmth_gains(1.0), [1.0, 1.10, 0.74], atol=1e-6)
+    assert np.allclose(_warmth_gains(-1.0), [1.0, 0.90, 1.26], atol=1e-6)
+    assert np.allclose(_warmth_gains(0.0), [1.0, 1.0, 1.0], atol=1e-6)
+    assert np.allclose(_warmth_gains(5.0), _warmth_gains(1.0), atol=1e-6)
+    assert np.allclose(_warmth_gains(-5.0), _warmth_gains(-1.0), atol=1e-6)
+
+
+@pytest.mark.parametrize("wm", [-1.0, -0.5, 0.5, 1.0])
+def test_warmth_gamma_gain_exact(wm):
+    """常数掩码=1.0 下逐通道精确: out = in * _warmth_gains(wm) (clip 前)。"""
+    from pixo.render.modules.region_adjust import _warmth_gains
+    img = _uniform(8, 8, 0.5)
+    p = {"enabled": True, "regions": {"sky": {"warmth": wm}}}
+    masks = {"sky": np.ones((8, 8), dtype=np.float32)}
+    stage = RegionAdjustStage(params=p)
+    ctx = _ctx(img, masks, p)
+    assert stage.wants(ctx) is True
+    stage.process(ctx)
+    expected = np.clip(img * _warmth_gains(wm), 0.0, 1.0)
+    assert np.allclose(ctx.image, expected, atol=1e-6), (
+        f"wm={wm}: 期望 {expected.flat[0]}, 实际 {ctx.image.flat[0]}")
+
+
+def test_warmth_direction_on_blue_sky():
+    """方向语义: 蓝天 (B 主导) + warmth>0 → B 降 G 升 (变暖), warmth<0 → 反向;
+    R 通道不动 (标定暖方向 r_slope=0)。"""
+    img = np.zeros((4, 4, 3), dtype=np.float32)
+    img[..., 2] = 0.6                                   # 纯蓝天空
+    img[..., 1] = 0.3
+    p = {"enabled": True, "regions": {"sky": {"warmth": 0.5}}}
+    masks = {"sky": np.ones((4, 4), dtype=np.float32)}
+    ctx = _ctx(img, masks, p)
+    RegionAdjustStage(params=p).process(ctx)
+    assert float(ctx.image[..., 2].mean()) < 0.6        # B 降 (变暖)
+    assert float(ctx.image[..., 1].mean()) > 0.3        # G 升
+    assert float(ctx.image[..., 0].mean()) == pytest.approx(0.0, abs=1e-6)
+    ctx_cold = _ctx(img, masks, {"enabled": True,
+                                 "regions": {"sky": {"warmth": -0.5}}})
+    RegionAdjustStage(params=ctx_cold.config["stages"]["region_adjust"]).process(ctx_cold)
+    assert float(ctx_cold.image[..., 2].mean()) > 0.6   # 冷向 B 升
+    assert float(ctx_cold.image[..., 1].mean()) < 0.3
+
+
+def test_warmth_zero_identity():
+    """warmth=0 (含混在其他非零参数外的单warmth区域): 完全不触碰像素。"""
+    rng = np.random.default_rng(11)
+    img = rng.random((16, 16, 3)).astype(np.float32)
+    masks = {"sky": np.full((16, 16), 1.0, dtype=np.float32)}
+    p = {"enabled": True, "regions": {"sky": {"warmth": 0.0}}}
+    stage = RegionAdjustStage(params=p)
+    ctx = _ctx(img, masks, p)
+    assert stage.wants(ctx) is False                    # 全零参数 → 无实际效果
+    writes_before = ctx.image_writes
+    stage.process(ctx)
+    assert ctx.image_writes == writes_before
+    assert np.array_equal(ctx.image, img)
+
+
+def test_warmth_clips_highlights():
+    """暖向增益把近 1.0 的 B/G 推过 1 → 区域末尾 clip 兜底 ≤1。"""
+    img = np.zeros((4, 4, 3), dtype=np.float32)
+    img[..., 1] = 0.95
+    img[..., 2] = 0.95
+    p = {"enabled": True, "regions": {"sky": {"warmth": 1.0}}}
+    ctx = _ctx(img, {"sky": np.ones((4, 4), np.float32)}, p)
+    RegionAdjustStage(params=p).process(ctx)
+    assert float(ctx.image.max()) <= 1.0
+    assert float(ctx.image[..., 2].mean()) < 0.95       # B 被压 (未贴 clip)
+    assert float(ctx.image[..., 1].mean()) == pytest.approx(1.0, abs=1e-6)
+
+
+def test_warmth_out_of_range_raises():
+    p = {"enabled": True, "regions": {"sky": {"warmth": 1.5}}}
+    ctx = _ctx(_uniform(4, 4, 0.5), {"sky": np.ones((4, 4), np.float32)}, p)
+    with pytest.raises(ValueError):
+        RegionAdjustStage(params=p).wants(ctx)
+
+
+def test_exposure_warmth_saturation_combined_path():
+    """组合路径公式级钉死 (R13): 施加序 = 曝光增益 → 暖色通道增益 →
+    饱和度 HSV 核, 区域末尾一次 clip —— 两次增益乘法均不经中间 clip。"""
+    from pixo.render.modules.region_adjust import (
+        _apply_saturation, _warmth_gains)
+
+    rng = np.random.default_rng(13)
+    img = (rng.random((12, 12, 3)).astype(np.float32) * 0.7 + 0.15)
+    p = {"enabled": True,
+         "regions": {"sky": {"exposure": 0.6, "warmth": -0.4,
+                             "saturation": 0.25}}}
+    masks = {"sky": np.ones((12, 12), dtype=np.float32)}
+    ctx = _ctx(img, masks, p)
+    RegionAdjustStage(params=p).process(ctx)
+    ev_gain = np.float32(2.0 ** (0.6 / 2.2))
+    stepped = np.clip(img * ev_gain, 0.0, None).astype(np.float32)
+    stepped = (stepped * _warmth_gains(-0.4)).astype(np.float32)
+    expected = np.clip(
+        _apply_saturation(np.clip(stepped, 0.0, None).astype(np.float32),
+                          0.25).astype(np.float32), 0.0, 1.0)
+    assert np.allclose(ctx.image, expected, atol=1e-6)
+
+
+def test_region_param_limits_single_source_includes_warmth():
+    """S-3 单源: warmth 限幅入 REGION_PARAM_LIMITS (loop 映射侧钳制同源)。"""
+    from pixo.render.modules.region_adjust import REGION_PARAM_LIMITS
+    assert REGION_PARAM_LIMITS["warmth"] == 1.0
+    assert set(REGION_PARAM_LIMITS) == {"exposure", "saturation", "warmth"}

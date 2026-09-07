@@ -30,7 +30,7 @@ from pixo.decide.engine import (
     registered_metric_keys,
     reset_metric_keys,
 )
-from pixo.decide.rules import RULES_DIR
+from pixo.decide.rules import DEFAULT_RULES, RULES_DIR
 from pixo.pipeline.loop import (
     SyntheticRenderBackend,
     SinglePhotoLoop,
@@ -67,6 +67,32 @@ def test_region_saturation_key_maps():
     out = _apply_decide_params({}, {"region.plant.saturation": 0.3})
     assert out["region_adjust"]["enabled"] is True
     assert out["region_adjust"]["regions"]["plant"]["saturation"] == 0.3
+
+
+def test_region_warmth_key_maps_and_enables():
+    """R13: region.<prompt>.warmth 新键映射 + enabled 联动 (与 exposure/
+    saturation 同款); 规则 YAML 可引用该键 (映射侧准入即规则可用性确认)。"""
+    out = _apply_decide_params({}, {"region.sky.warmth": 0.5})
+    assert out["region_adjust"]["enabled"] is True
+    assert out["region_adjust"]["regions"]["sky"]["warmth"] == 0.5
+    assert "region.sky.warmth" not in out
+
+
+def test_region_warmth_key_clamped_and_sign_preserved():
+    """warmth 越界钳制到 [-1,1] 且符号保留 (负=冷, 正=暖)。"""
+    out = _apply_decide_params({}, {"region.sky.warmth": 5.0})
+    assert out["region_adjust"]["regions"]["sky"]["warmth"] == 1.0
+    out2 = _apply_decide_params({}, {"region.sky.warmth": -5.0})
+    assert out2["region_adjust"]["regions"]["sky"]["warmth"] == -1.0
+
+
+def test_region_warmth_admitted_by_mapping_for_rules():
+    """规则可用性确认 (不写真规则): decide 动作 param="region.<p>.warmth"
+    经 _apply_decide_params 准入并落 region_adjust 嵌套参数面 —— 即
+    region_rules.yaml 的 action.param 引用该键的通路已通。"""
+    rule_action_param = "region.sky.warmth"
+    out = _apply_decide_params({}, {rule_action_param: 0.4})
+    assert out["region_adjust"]["regions"]["sky"]["warmth"] == 0.4
 
 
 def test_region_key_preserves_existing_bucket_and_multi_region():
@@ -191,50 +217,80 @@ def test_region_rules_yaml_loads_and_package_mirror_consistent():
 def test_sky_rule_fires_negative_compensation():
     SinglePhotoLoop()        # 默认 prompts 注册键宇宙 (strict lint 需覆盖两规则指标)
     rules = _load_region_rules()
-    metrics = {"sky_luminance": 225.0, "sky_reliable": True}
+    metrics = {"sky_luminance": 225.0, "sky_reliable": True,
+               "sky_area_ratio": 0.4}   # dev-2 warmth 批新增面积护栏 <0.7
     results = evaluate_rules(rules, metrics)
     sky = [r for r in results if r["param"] == "region.sky.exposure"]
     assert len(sky) == 1
-    # 公式: -0.5 * 225/150 = -0.75; 方向钳制 ≤ 0
-    assert sky[0]["value"] == pytest.approx(-0.75)
+    # 公式 (dev-2 warmth 批已软化系数): -0.25 * 225/150 = -0.375; 钳制 ≤ 0
+    assert sky[0]["value"] == pytest.approx(-0.375)
     assert sky[0]["value"] <= 0.0
 
 
 def test_sky_rule_not_fires_below_threshold():
     rules = _load_region_rules()
     results = evaluate_rules(rules, {"sky_luminance": 100.0,
-                                     "sky_reliable": True})
+                                     "sky_reliable": True,
+                                     "sky_area_ratio": 0.4})
     assert all(r["param"] != "region.sky.exposure" for r in results)
 
 
 def test_unreliable_region_blocks_rule():
     """S-5 (M1 评审): 区域不可靠 (*_reliable != true) 时规则不得触发 ——
-    小面积/低置信区域的区域亮度不可信, 不做区域补偿。"""
+    小面积/低置信区域的区域亮度不可信, 不做区域补偿。
+    (metrics 补 area_ratio: 保证拦截因素是 reliable 闸, 而非 R13 覆盖率
+    护栏条件缺指标导致的同形失败。)"""
     rules = _load_region_rules()
     # 亮度超阈但 reliable 缺失/False → 不触发
     for reliable in (False, None):
-        metrics = {"sky_luminance": 225.0}
+        metrics = {"sky_luminance": 225.0, "sky_area_ratio": 0.4}
         if reliable is not None:
             metrics["sky_reliable"] = reliable
         results = evaluate_rules(rules, metrics)
         assert all(r["param"] != "region.sky.exposure" for r in results), (
             f"reliable={reliable!r} 时规则不应触发")
-    plant_metrics_variants = [{"plant_luminance": 35.0},
-                              {"plant_luminance": 35.0, "plant_reliable": False}]
+    plant_metrics_variants = [
+        {"plant_luminance": 35.0, "plant_area_ratio": 0.4},
+        {"plant_luminance": 35.0, "plant_area_ratio": 0.4,
+         "plant_reliable": False}]
     for metrics in plant_metrics_variants:
         results = evaluate_rules(rules, metrics)
         assert all(r["param"] != "region.plant.exposure" for r in results)
+
+
+def test_region_rules_activation_guard_and_trial_coefficients():
+    """R13 b+ 条件入包钉死: 覆盖率护栏 (area_ratio < 0.70, 拦截整图误罩 ——
+    实证 high_contrast 99.6% sky 全画面压暗 0.52 EV / ΔE7.80) 与试水系数
+    (-0.25 / 0.2) 在位; region_rules.yaml 已入 DEFAULT_RULES (M1 决策闭环
+    激活)。复权/调参/回退须显式修改本断言 (防静默变更)。"""
+    from pixo.decide.rules import DEFAULT_RULES
+
+    rules = _load_region_rules()
+    by_id = {r["rule_id"]: r for r in rules}
+    for rid, area_key, coef in (
+            ("region_sky_exposure_001", "sky_area_ratio", "-0.25 *"),
+            ("region_plant_exposure_002", "plant_area_ratio", "0.2 *")):
+        cond = by_id[rid]["condition"]["all"]
+        area_conds = [c for c in cond if c.get("metric") == area_key]
+        assert len(area_conds) == 1, f"{rid} 缺覆盖率护栏条件"
+        assert area_conds[0]["op"] == "lt", rid
+        assert area_conds[0]["value"] == pytest.approx(0.70), rid
+        assert coef in by_id[rid]["action"]["formula"], (
+            f"{rid} 试水系数漂移: {by_id[rid]['action']['formula']!r}")
+    assert any(Path(p).name == "region_rules.yaml" for p in DEFAULT_RULES), (
+        "region_rules.yaml 未入 DEFAULT_RULES —— M1 决策闭环未激活")
 
 
 def test_plant_rule_fires_positive_lift_and_direction_clamp():
     SinglePhotoLoop()        # 默认 prompts 注册键宇宙
     rules = _load_region_rules()
     results = evaluate_rules(rules, {"plant_luminance": 35.0,
-                                     "plant_reliable": True})
+                                     "plant_reliable": True,
+                                     "plant_area_ratio": 0.4})
     plant = [r for r in results if r["param"] == "region.plant.exposure"]
     assert len(plant) == 1
-    # 公式: 0.4 * (70-35)/70 = 0.2; 方向钳制 ≥ 0 (只提亮不压暗)
-    assert plant[0]["value"] == pytest.approx(0.2)
+    # 公式 (dev-2 warmth 批已软化系数): 0.2 * (70-35)/70 = 0.1; 钳制 ≥ 0
+    assert plant[0]["value"] == pytest.approx(0.1)
     assert plant[0]["value"] >= 0.0
 
 
@@ -295,6 +351,28 @@ def _make_region_loop(**kw):
     )
 
 
+def _make_default_rules_region_loop(**kw):
+    """真 DEFAULT_RULES 包 (含 region_rules) 的闭环工厂 —— 守护「入包」:
+    region 规则不靠注入、随默认包参与决策 (R13 激活)。
+    先构造 priming loop 注册键宇宙 (镜像生产 strict 次序), 再装载默认包。"""
+    SinglePhotoLoop(prompts=["sky", "plant"])   # 注册 → 全进程 strict lint
+    default_rules: list[dict] = []
+    for path in DEFAULT_RULES:
+        default_rules.extend(load_rules(str(path)))
+    backend = SyntheticRenderBackend(
+        _sky_image(), stages=("compose", "tone", "region_adjust"))
+    kw.setdefault("max_iterations", 2)
+    return SinglePhotoLoop(
+        render_backend=backend,
+        segmenter=MockSegmenter(),
+        measurer=_SkyMeasurer(),
+        rules=default_rules,
+        prompts=["sky", "plant"],
+        preview_long_edge=64,
+        **kw,
+    )
+
+
 def test_e2e_region_rule_closed_loop():
     """闭环证明: 掩码 → measure(sky_luminance 超阈) → decide 写 region 键 →
     映射进 region_adjust (enabled 联动) → 下轮渲染天空区变暗 (测量回读)。"""
@@ -320,6 +398,27 @@ def test_e2e_region_rule_closed_loop():
     lum_last = result.measurements[-1]["regions"]["sky"]["mean_luminance"]
     assert lum_last < lum_first - 5.0, (
         f"区域调整未生效: sky 亮度 {lum_first:.1f} -> {lum_last:.1f}")
+
+
+def test_e2e_region_rule_participates_under_default_rules_package():
+    """R13 激活闭环 (真 DEFAULT_RULES 包, 非注入): region 规则随默认包参与
+    决策 —— rule_ids 含 region_sky_exposure_001 且 region_adjust 落位
+    (enabled 联动 + 天空负补偿)。与注入版 e2e 互补, 本用例守护「入包」本身:
+    region_rules 被移出默认包即翻红。"""
+    result = _make_default_rules_region_loop().run(
+        "region_e2e_default", image_rgb=_sky_image())
+
+    decide_events = [e for e in result.trace_events
+                     if e["event_type"] == "decide"]
+    assert decide_events
+    assert any("region_sky_exposure_001" in (e["value"].get("rule_ids") or [])
+               for e in decide_events), (
+        "默认规则包下 region 规则未参与决策 —— 激活回退或护栏误拦")
+
+    ra = result.params["region_adjust"]
+    assert ra["enabled"] is True
+    assert ra["regions"]["sky"]["exposure"] < 0.0
+    json.dumps(result.params, allow_nan=False)   # params 面无 ndarray
 
 
 def test_e2e_region_effect_is_localized_pixel_change():

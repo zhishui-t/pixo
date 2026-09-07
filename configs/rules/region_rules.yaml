@@ -13,8 +13,14 @@
 # —— 小面积/低置信区域的区域亮度不可信, 不得触发区域补偿 (测量报告
 # regions.<name>.reliable 由 loop._unreliable_regions 与规则双闸同源)。
 #
-# 注意: 本文件未加入 decide.rules.DEFAULT_RULES (保持基座渲染默认行为
-# 不变); 需要分区补偿的调用方显式加载 (或由后续门禁批准后再入默认包)。
+# 覆盖率护栏 (R13 激活评估): *_area_ratio >= 0.70 判定「整图误罩」——
+# 区域语义在极端覆盖下失效 (实证: high_contrast 被 segformer 判 99.6% sky,
+# 规则把全画面压暗 0.52 EV / ΔE7.80; 与 R11 skin 90% 覆盖同族)。
+# 阈值依据实测间隙: 合法区域覆盖 ≤~42% (portrait/wide_angle), 误罩 ≥90%。
+#
+# 激活 (R13 裁决, b+ 条件入包): 本文件已加入 decide.rules.DEFAULT_RULES;
+# 试水系数为原设计一半 (sky -0.5→-0.25 / plant 0.4→0.2), 观察窗后按数据
+# 复权 (复权须同步 test_decide_region_wiring 的系数钉死断言)。
 - rule_id: region_sky_exposure_001
   priority: 20
   condition:
@@ -22,6 +28,9 @@
       - metric: sky_luminance
         op: gt
         value: 150
+      - metric: sky_area_ratio
+        op: lt
+        value: 0.70
       - metric: sky_reliable
         op: eq
         value: true
@@ -30,8 +39,9 @@
     mode: set
     # current 取自注册键宇宙的 sky_luminance (S-5 改 all 型条件后,
     # condition.get("metric") 不再存在, 公式须直引指标键 —— 键宇宙由
-    # SinglePhotoLoop 注册, 加载期 lint 放行)
-    formula: "-0.5 * (sky_luminance / 150.0)"
+    # SinglePhotoLoop 注册, 加载期 lint 放行)。
+    # R13 试水系数: 原 -0.5 减半, 观察后复权。
+    formula: "-0.25 * (sky_luminance / 150.0)"
     clamp: [-2.0, 0.0]
     conflict_policy: high_priority_wins
 
@@ -42,6 +52,9 @@
       - metric: plant_luminance
         op: lt
         value: 70
+      - metric: plant_area_ratio
+        op: lt
+        value: 0.70
       - metric: plant_reliable
         op: eq
         value: true
@@ -49,7 +62,8 @@
     param: region.plant.exposure
     mode: set
     # 越暗提亮越多的比例补偿 (植被暗部), 方向钳制为只升不降
-    # (公式直引 plant_luminance, 理由同上)
-    formula: "0.4 * ((70.0 - plant_luminance) / 70.0)"
+    # (公式直引 plant_luminance, 理由同上)。
+    # R13 试水系数: 原 0.4 减半, 观察后复权。
+    formula: "0.2 * ((70.0 - plant_luminance) / 70.0)"
     clamp: [0.0, 2.0]
     conflict_policy: high_priority_wins

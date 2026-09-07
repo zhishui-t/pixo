@@ -83,7 +83,9 @@ _DOTTED_PARAM_REGISTRY: dict[str, tuple[str, str]] = {
 # REGION_PARAM_LIMITS（S-3, M1 评审: 防双份定义漂移），函数内懒 import
 # （loop 对 render 子模块沿用惰性导入惯例，不拖重启动链）。
 _REGION_KEY_PREFIX = "region."
-_REGION_PARAM_NAMES = ("exposure", "saturation")
+# R13: +warmth（区域暖色意图, region_adjust._warmth_gains 通道增益近似;
+# 限幅常量仍单源 REGION_PARAM_LIMITS, 映射分支零改动）
+_REGION_PARAM_NAMES = ("exposure", "saturation", "warmth")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -108,6 +110,30 @@ def llm_shadow_enabled(env: Mapping[str, str] | None = None) -> bool:
     return str(source.get(_LLM_SHADOW_ENV, "")).strip().lower() \
         not in _LLM_SHADOW_OFF_VALUES
 
+
+# 风格卡片接入 decide_context（R13，知识层→决策链最后一公里）
+# ---------------------------------------------------------------------------
+# 开关 PIXO_STYLE_CARDS：**缺省关**（队长裁决，R13）。裁决依据：默认开曾实测
+# 改变既有闭环光度结果——QC 回退集成测试中 portra 卡
+# if_highlight_clip_ratio_gt_0.03 提前压曝光，溢出在 QC 前消失，
+# MANUAL_REVIEW 漂移为 ACCEPTED——默认态不应替用户决定，激活留用户明示
+# （PIXO_STYLE_CARDS=1/true/on 等）。功能双态均已测试；安全性设计不变：
+# 用户锁定(10000)/软偏好(9000)恒高于卡(6000)，锁定参数引擎硬保护；
+# 卡规则 if_* 条件不命中即 no-op。
+_STYLE_CARDS_ENV = "PIXO_STYLE_CARDS"
+
+
+def style_cards_enabled(env: Mapping[str, str] | None = None) -> bool:
+    """读 PIXO_STYLE_CARDS 风格卡片开关（**缺省关**，R13 裁决）。
+
+    显式开态值：非关态值的任意非空串（如 "1"/"true"/"on"）；显式关态值
+    {"0","false","off","no"}；未设置/空串 = 缺省关。
+    """
+    source = os.environ if env is None else env
+    raw = str(source.get(_STYLE_CARDS_ENV, "")).strip().lower()
+    if not raw:
+        return False                     # 缺省关（R13 裁决）
+    return raw not in _LLM_SHADOW_OFF_VALUES
 
 def _truncate_text(text: Any, limit: int) -> tuple[str | None, bool]:
     """把超长文本截到 limit 字符，返回 (截断后文本, 是否发生截断)。"""
@@ -735,6 +761,7 @@ class SinglePhotoLoop:
         llm_shadow: bool | None = None,
         llm_shadow_rel_gain: float = 0.05,
         llm_shadow_min_gain: float = 0.0,
+        enable_style_cards: bool | None = None,
     ) -> None:
         self.render_backend = render_backend or renderer
         self.segmenter = segmenter
@@ -823,6 +850,28 @@ class SinglePhotoLoop:
         # 0.05（相对 5%）；已知评分 σ 时可设 min_gain=0.05σ 作绝对下限。
         self.llm_shadow_rel_gain = float(llm_shadow_rel_gain)
         self.llm_shadow_min_gain = float(llm_shadow_min_gain)
+        # R13 风格卡片接入 decide_context：enable_style_cards=None 时读
+        # PIXO_STYLE_CARDS（**缺省关**，R13 裁决——QC 回退漂移实证，激活留
+        # 用户明示）；显式传入以 DI 优先（同 llm_shadow）。
+        # 卡源 = know.load_style_cards()（内置 6 张 builtin 卡，纯内存零
+        # I/O；configs/styles/films 的渲染卡无 recommended_adjustments，
+        # 经 style_card_to_decide_rules 产出零规则，不作为决策卡源）。
+        # know 层无缓存惯例（registry 每次现构），loop 以实例为缓存点：
+        # 构造期加载一次，迭代间复用同一批 dict。加载失败降级为空列表
+        # （知识层故障不阻断闭环，与引擎 _style_card_rules 的降级同向）。
+        self.enable_style_cards = (
+            style_cards_enabled() if enable_style_cards is None
+            else bool(enable_style_cards)
+        )
+        self._style_cards: list[dict[str, Any]] = []
+        if self.enable_style_cards:
+            try:
+                from ..know import load_style_cards
+                self._style_cards = [c.to_dict() for c in load_style_cards()]
+            except Exception as exc:  # noqa: BLE001 - 知识层降级不阻断
+                _LOGGER.warning(
+                    "[pixo.loop] 风格卡片加载失败, decide_context 不带 "
+                    "style_cards: %s: %s", type(exc).__name__, exc)
 
     def _build_backend(
         self,
@@ -1415,6 +1464,11 @@ class SinglePhotoLoop:
                 ),
                 "manual_on_unreliable": self.manual_on_unreliable,
             }
+            if self._style_cards:
+                # R13：知识层风格卡片进决策（schema = card.to_dict() 列表，
+                # test_know 权威用法；引擎 _style_card_rules 生成 priority
+                # 6000 规则——低于用户锁定/软偏好、高于系统默认 3000）。
+                decide_context["style_cards"] = list(self._style_cards)
             if self.agent_suggest:
                 # t47 建议链（默认关）：accepted 入建议态 llm_suggestions，
                 # rejected 全文/环境未配置跳过均留痕 trace；异常降级不阻断闭环。

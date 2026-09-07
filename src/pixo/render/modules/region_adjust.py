@@ -3,10 +3,11 @@
 位置: skin(55) 之后、stylize(60) 之前 (56-59 槽位空闲, skin 磨皮后、
 风格化 LUT 前施加分区意图, LUT/精修保持全图统一口径)。
 
-参数 (F12, 设计 §2):
+参数 (F12, 设计 §2; R13 扩展 warmth):
   enabled       是否启用 (默认 **False** —— 基座零影响, 沿 dehaze t108 先例)
   regions       dict: prompt → {"exposure": float EV [-2,2] (默认 0),
-                               "saturation": float [-1,1] (默认 0)}
+                               "saturation": float [-1,1] (默认 0),
+                               "warmth": float [-1,1] (默认 0, 负=冷调正=暖调)}
 
 掩码契约 (ctx.state["region_masks"], F13 通道注入):
   dict: prompt → float 0..1 软掩码 (HxW 或 HxWx1; 分辨率可与图不同, 自动缩放)。
@@ -19,7 +20,11 @@
     增大 (sRGB 分段幂 2.4 段), 高光由 clip 兜底 —— 意图级软区域可接受。
     二选一取 a) 快路径 (单次乘法), 弃 b) 线性化往返 (精确但全图两次幂运算)。
   - 饱和度 = HSV S 缩放: S' = clip(S*(1+sat), 0, 1) (中性像素 S=0 不受影响)。
-  - 同区域先曝光后饱和; 多区域按 regions 声明序顺序软合成:
+  - 暖色 (R13) = gamma 域 RGB 通道增益近似 (白平衡 warmth 标定链的意图级
+    近似, 见 _warmth_gains): G 上 / B 下为暖 (标定暖黄方向), 负 warmth 对称
+    反向为冷。精度纪律与 exposure 的 2^(ev/2.2) 同级 (意图级近似, 不做
+    色温线性化往返)。
+  - 同区域施加序: 先曝光 → 再暖色 → 后饱和; 多区域按 regions 声明序顺序软合成:
     out = out*(1-m) + adjusted*m (与 skin_smooth 同一线性混合纪律)。
   - 掩码羽化沿 skin stage 软掩码纪律 (禁硬边): 应用前做尺度相对的高斯羽化
     (sigma 随长边缩放; 相对过渡带仅在长边 512..4096 区间近似分辨率无关,
@@ -29,8 +34,8 @@
 启用条件 (wants):
   - enabled=False / regions 缺失或空 → False;
   - ctx.state 无 "region_masks" (非 dict 或空) → False (静默);
-  - 无任一区域同时满足「掩码存在 + 参数有实际效果 (exposure/saturation 非全零)」
-    → False。
+  - 无任一区域同时满足「掩码存在 + 参数有实际效果 (exposure/saturation/warmth
+    非全零)」→ False。
 """
 from __future__ import annotations
 
@@ -57,14 +62,24 @@ _FEATHER_REF = 512.0
 _FEATHER_SIGMA_MIN = 1.0
 _FEATHER_SIGMA_MAX = 8.0
 
-_ALLOWED_REGION_KEYS = ("exposure", "saturation")
+_ALLOWED_REGION_KEYS = ("exposure", "saturation", "warmth")
 _EXPOSURE_LIMIT = 2.0     # EV ∈ [-2, 2]
 _SATURATION_LIMIT = 1.0   # saturation ∈ [-1, 1]
+_WARMTH_LIMIT = 1.0       # warmth ∈ [-1, 1] (负=冷调, 正=暖调)
+
+# warmth 意图级近似 (R13): 满档 |warmth|=1 的通道增益幅度, 锚定白平衡
+# warmth 标定的暖方向通道斜率 (white_balance.apply_warmth 缺省斜率
+# g_slope=0.10 / b_slope=0.26 —— 冻结锚点 wb_B∈[1.79, 2.287] 的暖黄方向;
+# r_slope 缺省 0, R 通道不动, R 增益由 WB 链负责)。gamma 域直接乘增益,
+# 不做色温线性化往返 (与 exposure 的 2^(ev/2.2) 同级意图近似纪律)。
+_WARMTH_GAIN_G = 0.10
+_WARMTH_GAIN_B = 0.26
 
 # 区域参数域单源 (S-3, M1 评审): loop._apply_decide_params 对 decide 写出的
 # region.* 值做映射侧钳制时复用本表, 防双份常量漂移。
 REGION_PARAM_LIMITS = {"exposure": _EXPOSURE_LIMIT,
-                       "saturation": _SATURATION_LIMIT}
+                       "saturation": _SATURATION_LIMIT,
+                       "warmth": _WARMTH_LIMIT}
 
 
 class MaskContentError(ValueError):
@@ -81,6 +96,19 @@ def _gamma_gain(ev: float) -> float:
     return float(2.0 ** (float(ev) / _GAMMA))
 
 
+def _warmth_gains(warmth: float) -> np.ndarray:
+    """区域暖色意图 → gamma 域 RGB 通道增益 (float32 (3,))。
+
+    正 = 暖调: G 上 / B 下 (白平衡 warmth 标定的暖黄方向, 幅度锚
+    _WARMTH_GAIN_G/_B); 负 = 冷调 (对称反向); 0 = 恒等 [1,1,1]。
+    意图级近似 (R13): 不做色温线性化往返, 与 exposure 同级纪律。
+    """
+    w = max(-1.0, min(1.0, float(warmth)))
+    return np.array([1.0,
+                     1.0 + _WARMTH_GAIN_G * w,
+                     1.0 - _WARMTH_GAIN_B * w], dtype=np.float32)
+
+
 def _apply_saturation(img: np.ndarray, saturation: float) -> np.ndarray:
     """HSV S 缩放 (RGB float32 0..1 → HSV, S' = clip(S*(1+sat), 0, 1) → RGB)。
 
@@ -95,7 +123,7 @@ def _apply_saturation(img: np.ndarray, saturation: float) -> np.ndarray:
 @register_stage("region_adjust", order=57,
                 domain_in=DOMAIN_GAMMA_RGB, domain_out=DOMAIN_GAMMA_RGB)
 class RegionAdjustStage(Stage):
-    """掩码驱动的分区曝光/饱和度调整 (M1 主体, 默认关)。"""
+    """掩码驱动的分区曝光/暖色/饱和度调整 (M1 主体, 默认关)。"""
 
     param_schema = {
         "enabled": {"type": "bool"},
@@ -111,7 +139,8 @@ class RegionAdjustStage(Stage):
     # ---- 参数规范化 ----
 
     def _regions(self, ctx: StageContext) -> dict:
-        """regions 参数 → 规范化 {prompt: {"exposure": float, "saturation": float}}。
+        """regions 参数 → 规范化 {prompt: {"exposure": float, "saturation": float,
+        "warmth": float}}。
 
         结构非法 (非 dict / 区域值非 dict / 未知键 / 数值非法或越界) 抛
         ValueError; regions 整体缺失或空 dict 返回 {} (wants 据此直通)。
@@ -132,7 +161,7 @@ class RegionAdjustStage(Stage):
                 raise ValueError(
                     f"[{self.name}] regions[{prompt!r}] 含未知键 {sorted(unknown)}; "
                     f"合法键: {list(_ALLOWED_REGION_KEYS)}")
-            adj = {"exposure": 0.0, "saturation": 0.0}
+            adj = {key: 0.0 for key in _ALLOWED_REGION_KEYS}
             for key in _ALLOWED_REGION_KEYS:
                 if key not in spec:
                     continue
@@ -142,8 +171,7 @@ class RegionAdjustStage(Stage):
                         f"[{self.name}] regions[{prompt!r}].{key} 需为数值, "
                         f"实际 {val!r}")
                 val = float(val)
-                limit = (_EXPOSURE_LIMIT if key == "exposure"
-                         else _SATURATION_LIMIT)
+                limit = REGION_PARAM_LIMITS[key]
                 if not (-limit <= val <= limit):
                     raise ValueError(
                         f"[{self.name}] regions[{prompt!r}].{key}={val} "
@@ -165,7 +193,8 @@ class RegionAdjustStage(Stage):
             # 掩码通道缺失 (F13 未注入) → 静默跳过, 无掩码 = 无区域效果
             return False
         for prompt, adj in regions.items():
-            if adj["exposure"] == 0.0 and adj["saturation"] == 0.0:
+            if (adj["exposure"] == 0.0 and adj["saturation"] == 0.0
+                    and adj["warmth"] == 0.0):
                 continue
             if prompt in masks:
                 return True
@@ -218,8 +247,8 @@ class RegionAdjustStage(Stage):
         applied: list = []
         coverage: dict = {}
         for prompt, adj in regions.items():
-            ex, sat = adj["exposure"], adj["saturation"]
-            if ex == 0.0 and sat == 0.0:
+            ex, sat, wm = adj["exposure"], adj["saturation"], adj["warmth"]
+            if ex == 0.0 and sat == 0.0 and wm == 0.0:
                 continue          # 零效果区域: 不触碰像素
             raw_mask = masks.get(prompt)
             if raw_mask is None:
@@ -245,6 +274,8 @@ class RegionAdjustStage(Stage):
             adjusted = out
             if ex != 0.0:
                 adjusted = adjusted * _gamma_gain(ex)
+            if wm != 0.0:
+                adjusted = adjusted * _warmth_gains(wm)
             if sat != 0.0:
                 adjusted = _apply_saturation(adjusted, sat)
             adjusted = np.clip(adjusted, 0.0, 1.0).astype(np.float32)
