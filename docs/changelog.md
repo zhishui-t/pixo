@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-08 — 第十六轮：plant 溢出门控 × segmenter 启动预热
+
+- **plant 溢出事前门控**（ef0a254，R15 遗留清偿）：`preview_overflow_ratio lt 0.01`（54 张实测
+  干净分界：回退图地板 1.35~1.64% vs 中性 ≤0.42%）；sky 豁免；**2 张回退图回退消除**+15 中性
+  图零误伤（qa 独立复算吻合）；双层防线（规则事前+引擎 S-4 事后并存）
+- **segmenter 启动预热**：lifespan 后台 daemon 非阻塞（预热中 GET /region 秒回 warming 供
+  UI 重查）；**冷启 17.70s→首供给 2.85s**；PIXO_SEGMENTER_WARMUP 缺省开；NC 门控实测
+  ⊆{rfdetr,segformer}；无权重环境降级不炸启动
+
+验收：全量 1532 passed / 0 failed；门禁 .r16_ok PASS（零修复）
+
 ## 2026-09-08 — 第十五轮：预览掩码供给 × region 分层复权
 
 - **预览会话掩码供给**（21bb0fe）：GET /region 懒触发分割+`PIXO_REGION_SUPPLY` 开关（缺省关，
