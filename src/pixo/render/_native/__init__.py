@@ -7,8 +7,9 @@
   - apply_local_warm_sat_native: M1 broad 分支整段内核。
   - colorcal_apply_lab_f32: colorcal 全量 Lab float 域内核 (v1.2.0, 生产路径);
     colorcal_apply_lab (uint8 Lab 域) 为兼容保留。
-  - colorcal_apply_lab_f32_oklch: colorcal oklch 域内核 (v1.5.0, OKLab 椭圆
-    肤色掩码; oklch 域不再旁路 native, F11 15x 性能鸿沟回收)。
+  - colorcal_apply_lab_f32_oklch: colorcal oklch 域内核 (v1.5.0 引入, v1.6.0
+    椭圆参数化 —— 常数单源 core/skin.py, skin_oklab_ellipse() 构造;
+    oklch 域不再旁路 native, F11 15x 性能鸿沟回收)。
   - lut3d_apply_f32: stylize 3D LUT 四面体插值 float 内核 (v1.3.0, 生产路径,
     逐位对齐 lut3d.lookup 的 float32 语义)。
   - srgb_to_oklab_f32 / oklab_to_srgb_f32: Oklab F32 平面版转换内核 (v1.4.0),
@@ -83,6 +84,30 @@ class PixoRenderColorCalParams(ctypes.Structure):
         ("skinTrimB", ctypes.c_float),
         ("curveA", ctypes.POINTER(ctypes.c_float)),
         ("curveB", ctypes.POINTER(ctypes.c_float)),
+    ]
+
+
+class PixoRenderSkinOklabEllipse(ctypes.Structure):
+    """OKLab 肤色椭圆常数 (v1.6.0 参数化, tech_debt #18 清偿)。
+
+    单源 = pixo.render.core.skin 的 SKIN_OKLAB_*; 字段携带的对齐纪律:
+      centerA/centerB: np.float32(...) 舍入后展宽的 f64 (Python 侧完成
+        舍入 —— 十进制值的 f32 非精确, da/db 减法须用 f32 舍入后的值);
+      cosAngle/sinAngle: np.cos/np.sin(angle) 的 f64 结果直传 (内核不调
+        libm cos/sin, 消除跨实现 1 ULP);
+      major/minor: Python float (f64) 直传;
+      softBand: f32 (smoothstep 除法按 f32 语义, NEP50 同款)。
+    缺省实例由 skin_oklab_ellipse() 从单源构造 (缓存)。
+    """
+
+    _fields_ = [
+        ("centerA", ctypes.c_double),
+        ("centerB", ctypes.c_double),
+        ("cosAngle", ctypes.c_double),
+        ("sinAngle", ctypes.c_double),
+        ("major", ctypes.c_double),
+        ("minor", ctypes.c_double),
+        ("softBand", ctypes.c_float),
     ]
 
 
@@ -304,8 +329,10 @@ if _DLL_PATH.exists():
                 ctypes.POINTER(PixoRenderColorCalParams),
             ]
         # 1.5.0: colorcal oklch 域内核 (OKLab 椭圆掩码, rgb 取校正前 gamma
-        # sRGB 供掩码)。旧 v1.4 DLL 未导出时不影响加载, 调用方
-        # (modules/color_cal.py oklch 分支) 回退纯 Python float 实现。
+        # sRGB 供掩码); **1.6.0 签名变化**: 增第 7 参 ellipse (椭圆常数参数化,
+        # 单源 core/skin.py)。旧 v1.5 的 6 参签名与现行不兼容 —— 调用门 =
+        # version >= 1.6.0 (见 colorcal_apply_lab_f32_oklch), 不满足回退纯
+        # Python float 实现。
         if hasattr(_lib, "PixoRenderColorCalApplyLabF32Oklch"):
             _lib.PixoRenderColorCalApplyLabF32Oklch.restype = ctypes.c_int
             _lib.PixoRenderColorCalApplyLabF32Oklch.argtypes = [
@@ -315,6 +342,7 @@ if _DLL_PATH.exists():
                 ctypes.c_int,                     # width
                 ctypes.c_int,                     # height
                 ctypes.POINTER(PixoRenderColorCalParams),
+                ctypes.POINTER(PixoRenderSkinOklabEllipse),
             ]
         if hasattr(_lib, "PixoRenderGamutSoft"):
             _lib.PixoRenderGamutSoft.restype = ctypes.c_int
@@ -970,29 +998,66 @@ def colorcal_apply_lab_f32(lab: np.ndarray,
     return out
 
 
+_default_oklab_ellipse = None
+
+
+def skin_oklab_ellipse() -> PixoRenderSkinOklabEllipse:
+    """从单源 core/skin.py SKIN_OKLAB_* 构造内核椭圆常数 (首次调用缓存)。
+
+    tech_debt #18 清偿后的唯一常数入口: native 内核不再持有编译期副本,
+    椭圆再变更只需改 core/skin.py 一处。数值纪律 (对齐语义, 勿"简化"):
+      - 中心经 np.float32 舍入后展宽 f64 (十进制值的 f32 非精确);
+      - cos/sin 取 np.cos/np.sin 的 f64 结果直传;
+      - 半轴为 Python float (f64) 直传; 软带舍入 f32。
+    """
+    global _default_oklab_ellipse
+    if _default_oklab_ellipse is None:
+        from pixo.render.core.skin import (SKIN_OKLAB_A, SKIN_OKLAB_B,
+                                           SKIN_OKLAB_MAJOR, SKIN_OKLAB_MINOR,
+                                           SKIN_OKLAB_ANGLE,
+                                           SKIN_OKLAB_SOFT_BAND)
+        _default_oklab_ellipse = PixoRenderSkinOklabEllipse(
+            centerA=float(np.float32(SKIN_OKLAB_A)),
+            centerB=float(np.float32(SKIN_OKLAB_B)),
+            cosAngle=float(np.cos(SKIN_OKLAB_ANGLE)),
+            sinAngle=float(np.sin(SKIN_OKLAB_ANGLE)),
+            major=float(SKIN_OKLAB_MAJOR),
+            minor=float(SKIN_OKLAB_MINOR),
+            softBand=float(np.float32(SKIN_OKLAB_SOFT_BAND)))
+    return _default_oklab_ellipse
+
+
 def colorcal_apply_lab_f32_oklch(lab: np.ndarray, rgb: np.ndarray,
-                                 params: PixoRenderColorCalParams) -> np.ndarray:
-    """调用 C++ oklch 域全量内核 (v1.5.0)；返回 float32 Lab (H,W,3)。
+                                 params: PixoRenderColorCalParams,
+                                 ellipse: PixoRenderSkinOklabEllipse | None = None
+                                 ) -> np.ndarray:
+    """调用 C++ oklch 域全量内核 (v1.6.0, 椭圆参数化)；返回 float32 Lab。
 
     与 colorcal_apply_lab_f32 同一校准域 (cv2 float Lab: L∈[0,100], a/b 中心
-    0) 与同一 params 布局, 唯一差异 = 肤色掩码源: OKLab 椭圆
-    (core/skin.py::skin_mask_oklab 同式, 常数同源), 由 rgb (校正前 gamma
-    sRGB float32 (H,W,3), 掩码取原始像素口径) 逐像素求出 —— 对应
+    0) 与同一 params 布局, 唯一差异 = 肤色掩码源: OKLab 椭圆, 由 rgb (校正前
+    gamma sRGB float32 (H,W,3), 掩码取原始像素口径) 逐像素求出 —— 对应
     modules/color_cal.py oklch 分支的 _skin_region_mask。
+    ellipse 缺省 = skin_oklab_ellipse() (单源 core/skin.py); 显式传入用于
+    实验/测试 (对齐验收默认口径)。
     掩码对齐精度: 与 numpy 参考在 f64->f32 舍入后实际逐位一致 (cbrt 为
     msun 复刻, 与 ucrt/np.cbrt 差 <=1 ULP f64; 见 colorcal.cpp CbrtFast
     注释与 tests/unit/test_native_colorcal_oklch.py)。
-    DLL < 1.5.0 未导出该符号时抛 RuntimeError, 调用方回退纯 Python 实现。
+    调用门: 需 DLL >= 1.6.0 (1.5.0 的 6 参旧签名与本封装不兼容 —— 版本
+    不满足时抛 RuntimeError, 由调用方回退纯 Python 实现)。
     """
     _require_lib()
-    if not hasattr(_lib, "PixoRenderColorCalApplyLabF32Oklch"):
-        raise RuntimeError("native colorcal oklch F32 kernel unavailable (DLL 未导出)")
+    if (_version is None or _version < (1, 6, 0)
+            or not hasattr(_lib, "PixoRenderColorCalApplyLabF32Oklch")):
+        raise RuntimeError(
+            "native colorcal oklch F32 kernel unavailable "
+            f"(需 DLL >= 1.6.0, 实际 {_version})")
     arr = np.ascontiguousarray(lab, dtype=np.float32)
     if arr.ndim != 3 or arr.shape[2] != 3:
         raise ValueError(f"lab 须为 (H,W,3), 实际 {arr.shape}")
     rgb_arr = np.ascontiguousarray(rgb, dtype=np.float32)
     if rgb_arr.shape != arr.shape:
         raise ValueError(f"rgb 须与 lab 同形 {arr.shape}, 实际 {rgb_arr.shape}")
+    ell = ellipse if ellipse is not None else skin_oklab_ellipse()
     h, w = arr.shape[:2]
     out = np.empty((h, w, 3), dtype=np.float32)
     ret = _lib.PixoRenderColorCalApplyLabF32Oklch(
@@ -1002,6 +1067,7 @@ def colorcal_apply_lab_f32_oklch(lab: np.ndarray, rgb: np.ndarray,
         ctypes.c_int(w),
         ctypes.c_int(h),
         ctypes.byref(params),
+        ctypes.byref(ell),
     )
     _check_status(ret)
     return out
@@ -1225,4 +1291,5 @@ __all__ = ["available", "load_error", "version", "rgb_to_hsv", "hsv_to_rgb",
            "warm_sat_gamma_u8", "exposure_apply", "matrix_apply3",
            "tone_apply_lut1d", "clarity_apply", "lut3d_apply_f32",
            "PixoRenderSrgbToOklabParams", "PixoRenderOklabToSrgbParams",
-           "srgb_to_oklab_f32", "oklab_to_srgb_f32", "srgb_to_oklab", "oklab_to_srgb"]
+           "srgb_to_oklab_f32", "oklab_to_srgb_f32", "srgb_to_oklab", "oklab_to_srgb",
+           "PixoRenderSkinOklabEllipse", "skin_oklab_ellipse"]

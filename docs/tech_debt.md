@@ -263,8 +263,9 @@
       清偿，该用例应**有意翻转重写**而非删除。
 
 18. **skin OKLab 椭圆常数双源（core/skin.py 单源 vs colorcal.cpp 硬编码副本）**
-    （记债，2026-09-07 r10；本次 dev-1 椭圆重拟合落地后 native 副本失同步，
-    test_native_colorcal_oklch 3 红，手工同步恢复）：
+    （记债，2026-09-07 r10；dev-1 椭圆重拟合落地后 native 副本失同步，
+    test_native_colorcal_oklch 3 红，手工同步恢复；**✅ 已清偿关闭，2026-09-07
+    R17 参数化**——详见文末终章注记）：
     - 现状：OKLab 椭圆六常数的**单源**在 `core/skin.py SKIN_OKLAB_*`（r10
       低彩度端重拟合：覆盖分位 0.96→0.98 + 软带 0.25→0.31）；
       `native/src/colorcal.cpp` 的 `SkinOklab*` constexpr 为**硬编码副本**
@@ -280,3 +281,24 @@
       从 core/skin.py 单源填充），colorcal.cpp 副本删除；一并评估
       SkinStage oklch 掩码 native 化复用同一参数化内核（r10-hard-problems
       §6.3 遗留：skin oklch 掩码仍走 numpy ~150ms @512）。
+
+    - **终章（2026-09-07 R17 清偿）**：椭圆常数参数化落地——
+      ① `PixoRenderSkinOklabEllipse` ABI 结构（7 常数: 中心×2 / cos·sin /
+      半轴×2 / 软带），`PixoRenderColorCalApplyLabF32Oklch` 增第 7 参
+      （**DLL 1.6.0，签名与 1.5.0 不兼容**，ctypes 侧以 version ≥ 1.6.0
+      为调用门，旧 DLL 自动回退纯 Python 路径）；colorcal.cpp 的
+      `SkinOklab*` constexpr 副本**删除**，内核只从参数读椭圆。
+      ② Python 侧单源流入：`_native.skin_oklab_ellipse()` 从
+      core/skin.py SKIN_OKLAB_* 构造（缓存），对齐变换随字段携带——
+      中心经 np.float32 舍入展宽 f64、cos/sin 为 np.cos/np.sin 产物直传、
+      半轴 Python float 直传、软带舍入 f32（NEP50 除法语义）——椭圆再
+      变更只改 core/skin.py 一处。
+      ③ 逐位等价实证：v1.5.0（编译期常数）vs v1.6.0（参数化）同语料
+      快照对拍**逐位零漂移**（`.agent-team/spike/_r17_kernel_snapshot.py`）；
+      test_native_colorcal_oklch 7/7 绿（含新增
+      `test_ellipse_parameterized_single_source`：字段=单源变换 + 自定义
+      椭圆实时生效）；native 回归 29 绿；gate --check 21 features 零漂移
+      （oklch 已是缺省域的现役金样本）；全量 1533 passed。
+      ④ 性能无损：内核 11.96 vs 11.8 ms @512²（噪声内）。
+      SkinStage oklch 掩码 native 化（复用本参数化内核）仍为独立机会项
+      （非本债范围，见 r10-hard-problems §6.3）。

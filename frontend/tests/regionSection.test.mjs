@@ -12,6 +12,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   regionReasonText,
+  showManualRetry,
+  warmingRetryDelayMs,
+  WARMING_AUTO_RETRY_MAX,
   REGION_PARAM_KEYS,
   REGION_SLIDER_DEFS,
   buildRegionPatch,
@@ -205,6 +208,54 @@ test('B1 未知 reason 码回退通用文案 + 原因码透传（不吞诊断信
   const hint = regionReasonText('some_future_code');
   assert.match(hint, /运行分析后可用区域调整/);
   assert.match(hint, /some_future_code/);
+});
+
+// ---------------------------------------------------------------------------
+// R17: segmenter reason 四码覆盖 + warming 自动重试策略
+// ---------------------------------------------------------------------------
+
+test('R17 四码文案：warming / no_masks / segmenter_error / masks_not_injected', () => {
+  assert.equal(regionReasonText('segmenter_warming'), '模型加载中，稍候自动重试');
+  assert.equal(regionReasonText('segmenter_no_masks'), '此图未检出可调区域');
+  assert.match(regionReasonText('segmenter_error'), /分割服务异常/);
+  assert.equal(regionReasonText('masks_not_injected'), '运行分析后可用区域调整');
+  // 既有码不回归
+  assert.match(regionReasonText('session_not_found'), /会话已失效/);
+});
+
+test('R17 warming 自动重试策略：固定间隔、封顶转手动（纯函数钉死）', () => {
+  // 固定 2000ms，无抖动（锁死不闪断——文案/间隔全程恒定）
+  for (let n = 0; n < WARMING_AUTO_RETRY_MAX; n++) {
+    assert.equal(warmingRetryDelayMs(n), 2000, `第 ${n} 次重查延时`);
+  }
+  // 封顶：>= MAX → null（停止自动，UI 转手动重试）
+  assert.equal(warmingRetryDelayMs(WARMING_AUTO_RETRY_MAX), null);
+  assert.equal(warmingRetryDelayMs(WARMING_AUTO_RETRY_MAX + 3), null);
+});
+
+test('R17 手动重试按钮可见性：warming 自动期隐藏，封顶/其余原因显示', () => {
+  assert.equal(showManualRetry('segmenter_warming', 0), false);
+  assert.equal(showManualRetry('segmenter_warming', WARMING_AUTO_RETRY_MAX - 1), false);
+  assert.equal(showManualRetry('segmenter_warming', WARMING_AUTO_RETRY_MAX), true);
+  assert.equal(showManualRetry('segmenter_error', 0), true);
+  assert.equal(showManualRetry('masks_not_injected', 0), true);
+  assert.equal(showManualRetry(null, 0), true);
+});
+
+test('R17 不可用态文案矩阵：warming 徽标/提示走 regionReasonText 同源', () => {
+  const ui = maskStatusToUi(normalizeRegionMaskStatus({
+    available: false, prompts: [], reason: 'segmenter_warming',
+  }));
+  assert.equal(ui.enabled, false);
+  assert.equal(ui.hint, '模型加载中，稍候自动重试');
+  const nm = maskStatusToUi(normalizeRegionMaskStatus({
+    available: false, prompts: [], reason: 'segmenter_no_masks',
+  }));
+  assert.equal(nm.hint, '此图未检出可调区域');
+  const err = maskStatusToUi(normalizeRegionMaskStatus({
+    available: false, prompts: [], reason: 'segmenter_error',
+  }));
+  assert.match(err.hint, /分割服务异常/);
 });
 
 // ---------------------------------------------------------------------------

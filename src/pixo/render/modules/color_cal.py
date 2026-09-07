@@ -383,10 +383,13 @@ class ColorCalStage(Stage):
                                        colorcal_apply_lab_f32_oklch as _native_cc_f32_ok,
                                        gamut_soft as _native_gamut_soft,
                                        PixoRenderColorCalParams)
-                # 域分派: hsv → F32 Lab 椭圆内核; oklch → oklch 内核 (v1.5.0,
-                # OKLab 椭圆掩码取原始 img, 掩码/校准式与下方纯 Python oklch
-                # 分支同式对应)。DLL < 1.5.0 未导出 oklch 内核时抛 RuntimeError
-                # → native_ok=False → 走纯 Python 路径 (分层回退不变)。
+                # 域分派: hsv → F32 Lab 椭圆内核; oklch → oklch 内核 (v1.5.0
+                # 引入; v1.6.0 椭圆参数化 —— 常数由包装函数内的
+                # skin_oklab_ellipse() 从单源 core/skin.py SKIN_OKLAB_* 构造后
+                # 传入, native 侧无编译期副本; 掩码取原始 img, 掩码/校准式与
+                # 下方纯 Python oklch 分支同式对应)。DLL < 1.6.0 时抛
+                # RuntimeError → native_ok=False → 走纯 Python 路径 (分层回退
+                # 不变)。
                 if _native_available():
                     curve_a = (np.asarray(a_curve, dtype=np.float32)
                                if a_curve is not None else None)

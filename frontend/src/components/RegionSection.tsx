@@ -4,11 +4,15 @@ import { SectionLabel } from './SectionLabel';
 import { SliderParam } from './SliderParam';
 import {
   REGION_SLIDER_DEFS,
+  WARMING_AUTO_RETRY_MAX,
+  WARMING_REASON,
   buildRegionPatch,
   maskStatusToUi,
   readRegionAdjustment,
+  showManualRetry,
   signedPerceptualFromSlider,
   signedPerceptualToSlider,
+  warmingRetryDelayMs,
 } from './regionAdjust';
 import { fetchRegionMaskStatus } from '../api';
 import { useAppStore } from '../store/useAppStore';
@@ -42,6 +46,8 @@ export function RegionSection({
   const sessionId = useAppStore((s) => s.sessionId);
   // B1：显式错误态 + 重试（nonce 变化触发重新查询）。
   const [retryNonce, setRetryNonce] = useState(0);
+  // R17：segmenter_warming 自动重查计数（0 起；封顶后转手动重试）。
+  const [warmingAttempts, setWarmingAttempts] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -58,6 +64,26 @@ export function RegionSection({
       alive = false;
     };
   }, [sessionId, retryNonce]);
+
+  // R17：warming 自动重查（锁死不闪断）——status 仍为 warming 且未封顶时，
+  // 按固定间隔静默重查（仅 retryNonce 递增 → 复用既有查询 effect，不触碰
+  // selected/徽标结构）；reason 变化或换会话即重置计数。封顶后停止自动，
+  // 转手动重试按钮。
+  useEffect(() => {
+    if (status?.reason !== WARMING_REASON) return;
+    const delay = warmingRetryDelayMs(warmingAttempts);
+    if (delay === null) return;
+    const timer = setTimeout(() => {
+      setWarmingAttempts((n) => n + 1);
+      setRetryNonce((n) => n + 1);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [status?.reason, warmingAttempts]);
+
+  // 计数与原因/会话解耦复位：离开 warming 或换会话即归零。
+  useEffect(() => {
+    if (status?.reason !== WARMING_REASON) setWarmingAttempts(0);
+  }, [status?.reason, sessionId]);
 
   const ui = useMemo(
     () => maskStatusToUi(status ?? { available: false, prompts: [], reason: null }),
@@ -87,18 +113,22 @@ export function RegionSection({
         <Group gap={6} mb={4}>
           <Text size="xs" c="dimmed" data-testid="region-unavailable-hint">
             {ui.hint}
+            {/* R17：warming 重查进度（每次重查才变化，全程文案恒定不闪断）。 */}
+            {status?.reason === WARMING_REASON &&
+              `（${warmingAttempts}/${WARMING_AUTO_RETRY_MAX}）`}
           </Text>
-          {/* B1：显式错误态提供重试（重新查询真实会话的掩码状态）。 */}
-          <Text
-            size="xs"
-            c="accent"
-            span
-            style={{ cursor: 'pointer' }}
-            onClick={() => setRetryNonce((n) => n + 1)}
-            data-testid="region-retry"
-          >
-            重试
-          </Text>
+          {showManualRetry(status?.reason, warmingAttempts) && (
+            <Text
+              size="xs"
+              c="accent"
+              span
+              style={{ cursor: 'pointer' }}
+              onClick={() => setRetryNonce((n) => n + 1)}
+              data-testid="region-retry"
+            >
+              重试
+            </Text>
+          )}
         </Group>
       )}
 

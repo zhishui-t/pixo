@@ -159,7 +159,38 @@ const REASON_TEXT: Readonly<Record<string, string>> = {
   session_not_ready: '会话未建立：开始调整或运行分析后可用区域调整',
   session_not_found: '会话已失效：将随下次操作自动重建',
   fetch_failed: '区域状态获取失败，可点击重试',
+  // R16 四分（runtime.py _region_status_of）：
+  segmenter_warming: '模型加载中，稍候自动重试',   // 非阻塞预热/推理锁——前端定时重查
+  segmenter_no_masks: '此图未检出可调区域',         // 分割成功但掩码全零——如实呈现
+  segmenter_error: '分割服务异常，可点击重试',       // 分割异常降级——手动重试
 };
+
+// ---------------------------------------------------------------------------
+// segmenter_warming 自动重试策略（R17）：纯函数便于 node --test 直测。
+// 固定间隔无抖动（锁死不闪断——UI 文案全程恒定，静默后台重查）；封顶后
+// 交还手动重试（避免无限轮询打后端）。
+// ---------------------------------------------------------------------------
+
+export const WARMING_REASON = 'segmenter_warming';
+export const WARMING_AUTO_RETRY_MAX = 5;
+export const WARMING_RETRY_DELAY_MS = 2000;
+
+/**
+ * warming 第 retryCount 次重查（0 起）的延时；≥MAX 返回 null（停止自动，
+ * UI 转手动重试）。固定间隔、无指数退避——预热是秒级确定性过程，抖动
+ * 只会拉长感知等待。
+ */
+export function warmingRetryDelayMs(retryCount: number): number | null {
+  return retryCount < WARMING_AUTO_RETRY_MAX ? WARMING_RETRY_DELAY_MS : null;
+}
+
+/** 手动重试按钮可见性：warming 自动重试期间不显示（避免与自动重查打架），其余可手动。 */
+export function showManualRetry(reason: string | null | undefined, warmingAttempts: number): boolean {
+  if (reason === WARMING_REASON && warmingAttempts < WARMING_AUTO_RETRY_MAX) {
+    return false;
+  }
+  return true;
+}
 
 /** reason 机器码 → 提示文案（已知码映射；未知码 = 通用文案 + 原因码）。 */
 export function regionReasonText(reason: string | null | undefined): string {

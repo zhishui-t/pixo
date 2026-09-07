@@ -1,4 +1,6 @@
-"""T9: colorcal oklch 域原生内核对齐测试 (v1.5.0, F11 15x 性能鸿沟回收)。
+"""T9: colorcal oklch 域原生内核对齐测试 (v1.5.0 引入; v1.6.0 椭圆参数化,
+tech_debt #18 清偿 —— 常数单源 core/skin.py SKIN_OKLAB_*, 经
+skin_oklab_ellipse() 变换后传入内核, native 无编译期副本)。
 
 对象: PixoRenderColorCalApplyLabF32Oklch —— 与 PixoRenderColorCalApplyLabF32
 (float Lab 域 hsv 内核) 逐式对应, 唯一差异 = 肤色掩码源:
@@ -18,6 +20,9 @@ OKLab 椭圆 (core/skin.py::skin_mask_oklab 同式, 掩码取校正前原始 gam
   - **stage 级 (native vs Python 回退)**: RGB 域 mean <= 1e-5 / max <= 2.5e-3
     (口径同 test_native_colorcal 的 _assert_stage_close_u8_strict: ULP 级
     Lab 差被 cv2 LAB2RGB 阴影膝点条件数放大)。
+  - **参数化口径 (v1.6.0)**: 椭圆常数从单源流入 (改 core/skin.py 一处即
+    全链生效), 与参数化前 (v1.5.0 编译期常数) 输出逐位一致
+    (R17 前后快照对拍实证)。
 """
 from __future__ import annotations
 
@@ -43,13 +48,17 @@ def native_required():
 
 
 def _oklch_kernel_exported() -> bool:
-    return native.available() and hasattr(native._lib, "PixoRenderColorCalApplyLabF32Oklch")
+    # v1.6.0 签名变化 (增 ellipse 参): 1.5.x 的旧签名与本封装不兼容,
+    # 版本不足视为不可用 (stage 回退纯 Python 路径)。
+    return (native.available()
+            and native.version() is not None and native.version() >= (1, 6, 0)
+            and hasattr(native._lib, "PixoRenderColorCalApplyLabF32Oklch"))
 
 
 @pytest.fixture()
 def oklch_kernel_required(native_required):
     if not _oklch_kernel_exported():
-        pytest.skip("native DLL < 1.5.0 未导出 oklch 内核 (旧 DLL 兼容路径, 见回退测试)")
+        pytest.skip("native DLL < 1.6.0 (oklch 内核参数化签名), 旧 DLL 走回退路径, 见回退测试")
 
 
 # ---------------------------------------------------------------------------
@@ -285,10 +294,51 @@ def test_oklch_stage_fallback_when_kernel_missing(native_required, monkeypatch):
 
 
 def test_oklch_kernel_version_gate(native_required):
-    """DLL >= 1.5.0 必须导出 oklch 内核 (版本-符号一致性)。"""
+    """DLL >= 1.6.0 必须导出参数化 oklch 内核 (版本-符号一致性)。"""
     if not _oklch_kernel_exported():
         ver = native.version()
-        assert ver is None or ver < (1, 5, 0), (
-            f"DLL 版本 {ver} >= 1.5.0 但未导出 PixoRenderColorCalApplyLabF32Oklch")
+        assert ver is None or ver < (1, 6, 0), (
+            f"DLL 版本 {ver} >= 1.6.0 但未导出 PixoRenderColorCalApplyLabF32Oklch")
     else:
-        assert native.version() is not None and native.version() >= (1, 5, 0)
+        assert native.version() is not None and native.version() >= (1, 6, 0)
+
+
+def test_ellipse_parameterized_single_source(oklch_kernel_required):
+    """v1.6.0 参数化: 椭圆常数从单源 core/skin.py 流入且实时生效。
+
+    ① 缺省椭圆字段 == SKIN_OKLAB_* 的对齐变换 (中心 np.float32 舍入展宽 /
+    cos-sin 为 np 产物 / 软带 f32); ② 自定义椭圆 (半轴缩到 ~0) 掩码趋零,
+    输出与缺省显著不同 —— 常数确实走参数而非编译期残留 (tech_debt #18)。
+    """
+    from pixo.render.core.skin import (SKIN_OKLAB_A, SKIN_OKLAB_B,
+                                       SKIN_OKLAB_MAJOR, SKIN_OKLAB_MINOR,
+                                       SKIN_OKLAB_ANGLE, SKIN_OKLAB_SOFT_BAND)
+    e = native.skin_oklab_ellipse()
+    assert e.centerA == float(np.float32(SKIN_OKLAB_A))
+    assert e.centerB == float(np.float32(SKIN_OKLAB_B))
+    assert e.cosAngle == float(np.cos(SKIN_OKLAB_ANGLE))
+    assert e.sinAngle == float(np.sin(SKIN_OKLAB_ANGLE))
+    assert e.major == SKIN_OKLAB_MAJOR
+    assert e.minor == SKIN_OKLAB_MINOR
+    assert e.softBand == pytest.approx(SKIN_OKLAB_SOFT_BAND, abs=1e-7)  # f32
+
+    rng = np.random.default_rng(20260907)
+    img = rng.uniform(0.0, 1.0, size=(24, 24, 3)).astype(np.float32)
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    params = _make_params(saturation=0.0, vibrance=0.0, hueDeg=0.0,
+                          neutralA=0.0, neutralB=0.0, neutralSigma=14.0,
+                          skinProtect=0.7, skinTrimA=-2.0, skinTrimB=-4.0)
+    out_default = native.colorcal_apply_lab_f32_oklch(lab, img, params)
+
+    tiny = native.PixoRenderSkinOklabEllipse(
+        centerA=e.centerA, centerB=e.centerB,
+        cosAngle=e.cosAngle, sinAngle=e.sinAngle,
+        major=1e-6, minor=1e-6, softBand=e.softBand)
+    out_tiny = native.colorcal_apply_lab_f32_oklch(lab, img, params, ellipse=tiny)
+    # 半轴→0: 所有像素 d 巨大 → 掩码=0 → skin_trim/protect 全失效,
+    # 输出退化为恒等 (仅限幅) —— 与缺省 (掩码非零) 明显不同
+    identity = np.stack([np.clip(lab[..., 0], 0.0, 100.0),
+                         np.clip(lab[..., 1], -128.0, 127.0),
+                         np.clip(lab[..., 2], -128.0, 127.0)], axis=-1)
+    assert np.array_equal(out_tiny, identity), "半轴→0 的掩码应全零 (参数实时生效)"
+    assert not np.array_equal(out_default, identity), "缺省椭圆掩码应非零 (皮肤区存在)"

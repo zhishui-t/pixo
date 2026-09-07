@@ -3,6 +3,8 @@
 // 一次计算 skinMask，供 skin_trim 与饱和度肤色保护共用（修复 Python 重复计算）。
 // v1.5.0: 新增 ApplyColorCalLabF32Oklch (oklch 域, OKLab 椭圆掩码版, F11
 // 15x 性能鸿沟的 native 回收), 见该函数头注释。
+// v1.6.0: oklch 内核椭圆常数参数化 (SkinOklabEllipse 运行时传入,
+// 编译期副本删除 —— tech_debt #18 清偿, 单源 core/skin.py)。
 #include "colorcal.h"
 
 #include "abi.h"
@@ -119,28 +121,14 @@ float SkinMaskF32(float a, float b)
     return 1.0f - t * t * (3.0f - 2.0f * t);
 }
 
-// ---- OKLab 椭圆掩码 (v1.5.0, oklch 域) ----
+// ---- OKLab 椭圆掩码 (v1.5.0 引入, v1.6.0 参数化 —— tech_debt #18 清偿) ----
 // Python 参考链: core/skin.py::skin_mask_oklab (f32 gamma sRGB -> f64 clip
 // [0,1] -> core/oklab.srgb_to_oklab -> OKLab a-b 椭圆马氏距离 -> f32
-// smoothstep)。掩码常数 hex 字面量与 Python 运行时逐位相同:
-//   - 中心 np.float32(...) 舍入后展宽的 f64 (十进制 0.061263 的 f32 不是
-//     精确值, 直接写 double 常数会差 1 ULP);
-//   - 倾角 np.cos/np.sin(angle) 的 f64 结果 (消除 libm cos/sin 跨实现
-//     1 ULP 风险);
-//   - 半轴为 Python float 的 round-trip 十进制 (精确); 软带为 f32 (NEP50
-//     语义: f32 数组除以该标量按 f32 除)。
-// **双源警告 (tech_debt #18)**: 单源在 core/skin.py SKIN_OKLAB_*, 本处为
-// 硬编码副本 —— 椭圆再变更时必须同步此处并跑 test_native_colorcal_oklch
-// (常数失同步会被掩码 bitwise 测试抓红); 清偿=内核签名参数化。
-// 常数为 **r10 低彩度端重拟合版** (2026-09-07, 覆盖分位 0.96→0.98 + 软带
-// 0.25→0.31 重定标, 出处 core/skin.py r10 注释 / configs/color/skin_oklab.json)。
-constexpr double SkinOklabA = 0x1.efae7ap-7;             // float32(0.015127) 展宽
-constexpr double SkinOklabB = 0x1.f5ddd2p-5;             // float32(0.061263) 展宽
-constexpr double SkinOklabCos = 0x1.f62a2ab9fefa4p-1;   // np.cos(0.196323)
-constexpr double SkinOklabSin = 0x1.8f7dddf635799p-3;   // np.sin(0.196323)
-constexpr double SkinOklabMajor = 0.049594;             // SKIN_OKLAB_MAJOR
-constexpr double SkinOklabMinor = 0.047463;             // SKIN_OKLAB_MINOR
-constexpr float SkinOklabSoftBand = 0.31f;              // SKIN_OKLAB_SOFT_BAND
+// smoothstep)。**椭圆常数不再有编译期副本**: 全部经 SkinOklabEllipse 由
+// Python 侧传入, 单源 = core/skin.py SKIN_OKLAB_* (字段携带的对齐语义:
+// 中心 np.float32 舍入展宽 / cos-sin 为 np 产物 f64 / 软带 f32 —— 见
+// colorcal.h SkinOklabEllipse 注释)。掩码对齐验收:
+// test_native_colorcal_oklch.py (掩码隔离路径与 numpy 参考逐位)。
 
 // M1/M2 矩阵照抄 core/oklab.py (同 oklab.cpp, 勿改字面值/勿重排求和序)。
 constexpr double M1LsrgbToLms[3][3] = {
@@ -223,8 +211,9 @@ double CbrtFast(double x)
 
 // OKLab 椭圆肤色软掩码 (单像素): 原始 gamma sRGB f32 -> 掩码 f32,
 // 与 core/skin.py::skin_mask_oklab 逐式对应 (数值契约见上方块注释)。
+// 椭圆常数全部来自 ellipse 参数 (Python 单源, 无编译期副本)。
 // 掩码取**原始**像素 (校正前, 与 SkinMaskF32(aOrig,bOrig) 同口径)。
-float SkinMaskOklab(float r32, float g32, float b32)
+float SkinMaskOklab(const SkinOklabEllipse& e, float r32, float g32, float b32)
 {
     // 入参清洗: f32 -> f64 展宽 -> clip [0,1] (skin_mask_oklab 入口)
     const double r = std::min(std::max(static_cast<double>(r32), 0.0), 1.0);
@@ -259,16 +248,17 @@ float SkinMaskOklab(float r32, float g32, float b32)
                       + M2LmspToLab[1][2] * s_;
     const double labB = M2LmspToLab[2][0] * l_ + M2LmspToLab[2][1] * m_
                       + M2LmspToLab[2][2] * s_;
-    // OKLab a-b 平面椭圆马氏距离 (f64; 中心为 np.float32 舍入后展宽值)
-    const double da = labA - SkinOklabA;
-    const double db = labB - SkinOklabB;
-    const double u = da * SkinOklabCos + db * SkinOklabSin;
-    const double v = -da * SkinOklabSin + db * SkinOklabCos;
-    const double d2 = (u / SkinOklabMajor) * (u / SkinOklabMajor)
-                    + (v / SkinOklabMinor) * (v / SkinOklabMinor);
+    // OKLab a-b 平面椭圆马氏距离 (f64; 中心为 Python 侧 np.float32 舍入
+    // 展宽后传入的值)
+    const double da = labA - e.centerA;
+    const double db = labB - e.centerB;
+    const double u = da * e.cosAngle + db * e.sinAngle;
+    const double v = -da * e.sinAngle + db * e.cosAngle;
+    const double d2 = (u / e.major) * (u / e.major)
+                    + (v / e.minor) * (v / e.minor);
     const float d = static_cast<float>(std::sqrt(d2 > 0.0 ? d2 : 0.0));
-    // smoothstep 软带 (f32, NEP50: Python 标量不提升 dtype)
-    const float t = std::clamp((d - 1.0f) / SkinOklabSoftBand, 0.0f, 1.0f);
+    // smoothstep 软带 (f32; e.softBand 为 f32, 除法按 f32 语义 = NEP50)
+    const float t = std::clamp((d - 1.0f) / e.softBand, 0.0f, 1.0f);
     return 1.0f - t * t * (3.0f - 2.0f * t);
 }
 
@@ -479,15 +469,18 @@ int ApplyColorCalLabF32(const float* lab, float* labOut, int width, int height,
     return 0;
 }
 
-// oklch 域全量内核 (v1.5.0): 与 ApplyColorCalLabF32 逐式对应, **唯一差异**=
-// 肤色掩码源 —— Lab 椭圆 SkinMaskF32(aOrig,bOrig) 换成 OKLab 椭圆
-// SkinMaskOklab(rgb 原始像素) (与 modules/color_cal.py oklch 分支的
-// _skin_region_mask -> core/skin.py::skin_mask_oklab 同掩码, F11 设计 §3)。
+// oklch 域全量内核 (v1.5.0; v1.6.0 椭圆参数化): 与 ApplyColorCalLabF32
+// 逐式对应, **唯一差异** = 肤色掩码源 —— Lab 椭圆 SkinMaskF32(aOrig,bOrig)
+// 换成 OKLab 椭圆 SkinMaskOklab(ellipse, rgb 原始像素) (与
+// modules/color_cal.py oklch 分支的 _skin_region_mask ->
+// core/skin.py::skin_mask_oklab 同掩码, F11 设计 §3)。椭圆常数经 ellipse
+// 参数传入 (Python 单源 core/skin.py, tech_debt #18 清偿, 无编译期副本)。
 // rgb 额外输入 = 校正前 gamma sRGB f32 (H,W,3) —— 掩码取原始像素口径。
 // 其余算步骤 (中性轴/曲线/色相/饱和增益/限幅) 与 float Lab 域 hsv 内核
 // 完全相同: oklch 只换掩码域, 不换校准域 (同 Python 侧结构)。
 int ApplyColorCalLabF32Oklch(const float* lab, const float* rgb, float* labOut,
-                             int width, int height, const ColorCalParams& params)
+                             int width, int height, const ColorCalParams& params,
+                             const SkinOklabEllipse& ellipse)
 {
     if (lab == nullptr || rgb == nullptr || labOut == nullptr
             || width <= 0 || height <= 0) {
@@ -515,8 +508,9 @@ int ApplyColorCalLabF32Oklch(const float* lab, const float* rgb, float* labOut,
         const float C = std::sqrt(aOrig * aOrig + bOrig * bOrig);
         float skinMaskValue = 0.0f;
         if (needSkin) {
-            // oklch 域: OKLab 椭圆掩码取原始 gamma RGB 像素
-            skinMaskValue = SkinMaskOklab(rgb[i * 3 + 0], rgb[i * 3 + 1], rgb[i * 3 + 2]);
+            // oklch 域: OKLab 椭圆掩码取原始 gamma RGB 像素 (椭圆常数参数化传入)
+            skinMaskValue = SkinMaskOklab(ellipse, rgb[i * 3 + 0],
+                                          rgb[i * 3 + 1], rgb[i * 3 + 2]);
         }
 
         float a = aOrig;
@@ -670,10 +664,11 @@ PIXO_RENDER_NATIVE_API int PixoRenderColorCalApplyLabF32(
 
 PIXO_RENDER_NATIVE_API int PixoRenderColorCalApplyLabF32Oklch(
     const float* lab, const float* rgb, float* labOut, int width, int height,
-    const struct PixoRenderColorCalParams* params)
+    const struct PixoRenderColorCalParams* params,
+    const struct PixoRenderSkinOklabEllipse* ellipse)
 {
     try {
-        if (params == nullptr) {
+        if (params == nullptr || ellipse == nullptr) {
             return PixoRenderInvalidArgs;
         }
         ColorCalParams p;
@@ -688,7 +683,15 @@ PIXO_RENDER_NATIVE_API int PixoRenderColorCalApplyLabF32Oklch(
         p.skinTrimB = params->skinTrimB;
         p.curveA = params->curveA;
         p.curveB = params->curveB;
-        const int status = ApplyColorCalLabF32Oklch(lab, rgb, labOut, width, height, p);
+        SkinOklabEllipse e;
+        e.centerA = ellipse->centerA;
+        e.centerB = ellipse->centerB;
+        e.cosAngle = ellipse->cosAngle;
+        e.sinAngle = ellipse->sinAngle;
+        e.major = ellipse->major;
+        e.minor = ellipse->minor;
+        e.softBand = ellipse->softBand;
+        const int status = ApplyColorCalLabF32Oklch(lab, rgb, labOut, width, height, p, e);
         return status < 0 ? PixoRenderInvalidArgs : PixoRenderOk;
     } catch (...) {
         return PixoRenderInternalError;
