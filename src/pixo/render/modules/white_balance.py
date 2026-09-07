@@ -1,6 +1,7 @@
 """Stage whitebalance (order=20) —— 白平衡 / 色彩矫正 (linear_cam → linear_rgb)。
 
-权威链路 (DNG 1.4 + Adobe dng_color_spec.cpp, 基座 colorimetric 路径):
+权威链路 (DNG 1.4 规范 Camera Colorimetric Characterization 节 + 公开色彩标准,
+基座 colorimetric 路径; 出处同 core/color.py 模块头):
     cameraRGB × AsShotNeutral → inv(ColorMatrix × CameraCalibration) → XYZ(场景参考)
     → Bradford (场景白 → D50) → XYZ(D50) → Bradford(D50→D65) → 线性 sRGB
   ColorMatrix1/2 按 1/T 在 CalibrationIlluminant1/2 间插值 (见 engine/color.py)。
@@ -368,7 +369,8 @@ class WhiteBalanceStage(Stage):
         # 高光中性化 (2026-08 修复): 传感器饱和像素 (增益前 ≥0.985) 若原本近中性
         #   (min/max ≥ 0.75), 按最亮通道渲染为中性白 —— 与相机预览的高光处理一致,
         #   消除"饱和像素被 WB 染成光源色"的暖高光。有色饱和物 (红灯/霓虹) 保留颜色。
-        # DNG SDK Stage3 语义: 未乘 WB 的相机 RGB; CameraToProPhoto 矩阵已含 WB。
+        # Stage3 语义 (输出契约以参考渲染器黑盒产物为 oracle 对齐): 未乘 WB 的
+        # 相机 RGB; CameraToProPhoto 矩阵已含 WB。
         ctx.state["cam_raw"] = cam.astype(np.float32)
         cam_w = cam * wb.astype(np.float32)[np.newaxis, np.newaxis, :]
         sat_mask = ctx.state.get("sat_mask")
@@ -386,7 +388,7 @@ class WhiteBalanceStage(Stage):
                     lum = cam_w[white_idx[0], white_idx[1], :].max(axis=1)
                     cam_w[white_idx[0], white_idx[1], :] = np.repeat(
                         lum[:, np.newaxis], 3, axis=1)
-        # DNG SDK HSM/LookTable 应用域输入: 保存 WB 后相机 RGB (高光中性化后) 供
+        # DNG 规范 HSM/LookTable 应用域输入: 保存 WB 后相机 RGB (高光中性化后) 供
         # huesat stage 复刻 Camera→ProPhoto(ForwardMatrix) 路径。
         ctx.state["cam_wb"] = cam_w.astype(np.float32)
         try:

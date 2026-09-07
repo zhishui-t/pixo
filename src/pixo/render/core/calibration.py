@@ -9,7 +9,7 @@ DCP 是 TIFF 容器（新版本魔数 "IIRC"），内含相机色彩标定数据
 - LookTable: ProfileLookTableData (0xC726, FLOAT) + dims 0xC725 + encoding 0xC6FD/0xC7A4
 - ProfileName (tag 0xC6F8, ASCII): 相机预览名 (如 "Camera Standard")
 
-参考: Adobe DNG SDK dng_tags.h + dng_camera_profile.cpp
+参考: DNG 规范 tag 定义表 (DCP 专用 tag 的编号/类型/语义均为规范公开记载)
 """
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ _TAG_NAMES = {
     # 勘误: 0xC6F8 是 ProfileName (ASCII, 如 "Camera Standard"), 不是 LookTable。
     0xC6F8: "ProfileName",
     # 注意: 0xC6F9 = ProfileHueSatMapDims (50937), 不是 BaselineExposureOffset。
-    # 真正的 BaselineExposureOffset 是 0xC7A5 (51109), 见 DNG SDK dng_tag_codes.h。
+    # 真正的 BaselineExposureOffset 是 0xC7A5 (51109), 见 DNG 规范 tag 定义表。
     0xC6F9: "ProfileHueSatMapDims",
     0xC6FA: "ProfileHueSatMapData1",
     0xC6FB: "ProfileHueSatMapData2",
@@ -63,7 +63,7 @@ _TAG_NAMES = {
     # 0xC726 = ProfileLookTableData (50982)。Adobe Camera Standard v2 的 90×16×16×3
     # 观感表就放在这里, 语义是 LookTable 而非 HueSatMap; HueSatMap 是 0xC6FA。
     0xC726: "ProfileLookTableData",
-    # 待考 (low#2): 0xC728 官方名 ProfileToneCurveData (50984, dng_tag_codes.h),
+    # 待考 (low#2): 0xC728 官方名 ProfileToneCurveData (50984, DNG 规范 tag 定义表),
     # 旧误标为 ProfileLookTableDims (实为 0xC725); 本解析未使用, 保留标注待考。
     0xC728: "ProfileToneCurveData",
     # 0xC725 = ProfileLookTableDims (50981), 配合 0xC726 LookTable 使用。

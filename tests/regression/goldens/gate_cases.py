@@ -25,7 +25,7 @@ from pixo.render.modules.refine import RefineStage
 FEATURES = (
     "exposure", "whitebalance", "curves", "huesat", "clarity", "colorcal",
     "calibration", "hsl", "hsl_oklch", "split_tone", "split_tone_oklab",
-    "skin", "skin_oklch", "stylize", "refine",
+    "skin", "skin_oklch", "skin_oklch_softband", "stylize", "refine",
     # 标定数据敏感 case (t36 §5 门禁缺口关闭): 触达正式标定表的 auto 路径,
     # 换表即漂移 (前置 15 case 均为纯函数+显式参数, 对表替换零敏感)。
     "exposure_cal_auto", "warmth_cal_auto",
@@ -74,6 +74,46 @@ def _skin_patch():
     img = np.full((64, 64, 3), 128, dtype=np.uint8)
     img[16:48, 16:48] = (210, 155, 130)
     return img
+
+
+def _skin_softband_probe():
+    """skin_oklch_softband case 输入 (r12 观察窗清偿): OKLab 椭圆**软边带探针**。
+
+    背景: skin/skin_oklch case 输入为饱和经典肤色 (210,155,130, 核内 d≈0.85,
+    mask≡1) + 远外灰底 (mask≡0) —— R10 椭圆重拟合改了半轴与软带
+    (SKIN_OKLAB_SOFT_BAND 0.25→0.31), 两 case 输出零变化 = 软边带盲区
+    (qa .r10b_ok 观察窗项)。
+
+    设计: 以经典肤色 sRGB 为**固定锚** (常数无关 —— 若探针色从椭圆常数推导,
+    常数变更时输入随之平移、掩码恒定, 盲区重现), 沿两条色相射线扫色度:
+    射线 A = 肤色色相方向 (45.5°), 射线 B = 肤色色相 −30° (15.5°);
+    C ∈ [0.3, 1.8]×C_skin 共 32 步 × 2 射线 = 64 行 (行内均匀纯色)。
+    实测 (r10 修后常数): 射线 A d∈[0.67,1.76] (核内20/软带5/核外7),
+    射线 B d∈[1.16,2.39] (软带11/核外21) —— 椭圆五常数或软带宽度任一漂移,
+    过渡带行的掩码值即移动 (软带行掩码梯度实测 0.94→0.01)。
+    纯函数确定性 (无随机); 全部探针色已验证 sRGB 色域内无 clip
+    (色域塌缩会使不同 d 的像素同色, 锁死掩码)。
+    """
+    import math
+
+    from pixo.render.core.oklab import oklab_to_srgb, srgb_to_oklab
+
+    skin01 = np.array([210, 155, 130], dtype=np.float64) / 255.0
+    l0, a0, b0 = srgb_to_oklab(skin01)
+    c0 = math.hypot(a0, b0)
+    n = 32
+    rows = []
+    for hue in (math.atan2(b0, a0), math.atan2(b0, a0) - math.radians(30.0)):
+        cs = np.linspace(0.3 * c0, 1.8 * c0, n)
+        rgb = oklab_to_srgb(np.stack([
+            np.full(n, l0),
+            cs * math.cos(hue),
+            cs * math.sin(hue),
+        ], axis=-1))
+        rows.append(np.clip(rgb, 0.0, 1.0))
+    # (2×32, 3) → 每行颜色铺满 64 列 → (64, 64, 3)
+    return np.repeat(np.concatenate(rows, axis=0), 64, axis=0).reshape(
+        64, 64, 3).astype(np.float32)
 
 
 def _random_small():
@@ -221,6 +261,12 @@ def compute(feature: str) -> np.ndarray:
         # (210,155,130) 应在核内（d≈0.85 → 全量 1），128 灰底应在核外（d≈1.43 → 0），
         # 常数漂移使 d 越过 1±band 边界即翻红。
         return skin_mask_oklab(_skin_patch() / 255.0).astype(np.float32)
+    if feature == "skin_oklch_softband":
+        # 软边带探针 (r12 观察窗清偿, 设计见 _skin_softband_probe): 直接捕获
+        # OKLab 掩码 —— 椭圆五常数或软带宽度任一漂移, 过渡带行掩码即移动。
+        # 与 skin_oklch (核内饱和锚) 互补, 关闭「改软带/半轴金样本零敏感」盲区
+        # (R10 实证: 重拟合改半轴+软带, skin/skin_oklch 两 case 输出零变化)。
+        return skin_mask_oklab(_skin_softband_probe()).astype(np.float32)
     if feature == "stylize":
         g = np.linspace(0.0, 1.0, 2, dtype=np.float32)
         r, gg, b = np.meshgrid(g, g, g, indexing="ij")

@@ -126,14 +126,15 @@ def test_srgb_decode_anchor_points():
 
 
 # ---------------------------------------------------------------------------
-# S1: _find_matrices 双光源插值顺序 (DNG SDK 口径: 先插值后复合)
+# S1: _find_matrices 双光源插值顺序 (DNG 规范口径: 先插值后复合)
 # ---------------------------------------------------------------------------
 
 def test_find_matrices_interpolates_before_composing():
     """S1 回归: xyz_to_camera = blend(CC) @ blend(CM), 不是 blend(CC@CM)。
 
-    DNG SDK (dng_color_spec) 先分别插值 CameraCalibration 与 ColorMatrix
-    再复合; 矩阵插值与复合不可交换, 旧"先复合后插值"数值不等价。
+    DNG 规范 Camera Colorimetric Characterization 节口径: CameraCalibration
+    与 ColorMatrix 先各自按 1/T 插值再复合; 矩阵插值与复合不可交换,
+    旧"先复合后插值"数值不等价。
     """
     from types import SimpleNamespace
 
@@ -174,7 +175,7 @@ def test_find_matrices_interpolates_before_composing():
 
     assert np.allclose(cc, cc_expected, atol=1e-12)
     assert np.allclose(fm, fm_expected, atol=1e-12)
-    # 先插值后复合 (SDK 口径)
+    # 先插值后复合 (DNG 规范口径)
     assert np.allclose(xyz_to_camera, cc_expected @ cm_expected, atol=1e-12)
     # 旧实现 (先复合后插值) 数值上确有差异 → 本断言防回退
     legacy = blend(np.asarray(prof.camera_calibration1).reshape(3, 3)

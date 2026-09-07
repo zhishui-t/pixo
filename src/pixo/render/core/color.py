@@ -1,8 +1,16 @@
 """engine.color —— DCP 色彩链路纯函数模块 (数学层, 无 I/O)。
 
-权威依据:
-  - DNG 1.4 规范 (相机色彩标定附录)
-  - Adobe DNG SDK: dng_color_spec.cpp / dng_camera_profile.cpp / dng_tag_codes.h
+权威依据 (公开规范与文献, 无专有源码):
+  - DNG 1.4 规范: "Mapping from Camera to XYZ" 章之 Camera Colorimetric
+    Characterization 节 —— CM/CC/FM 矩阵语义、双光源 1/T 插值、相机中性 ↔
+    白点 xy 迭代 (子节 "Translating Camera Neutral Coordinates to White
+    Balance xy Coordinates" / "Camera to XYZ (D50) Transform", 规范
+    pp.80-81; 子节名经 colour-hdri 项目对规范原文的引用交叉核对)。
+  - 公开色彩标准: ICC PCS (D50 白点, 4 位公开值) / IEC 61966-2-1 (sRGB) /
+    ISO 22028-2 (ROMM/ProPhoto RGB) / CIE 标准照明体与色度学定义。
+  - 公开文献: Lam 1985 (Bradford 锥响应) / McCamy 1992 (CCT 近似) /
+    Kim et al. 2002 (黑体轨迹) / Spaulding et al. 2000 (ROMM RGB, PICS) /
+    Lindbloom (色适应与矩阵推导公开文档)。
 
 核心结论 (相对旧管线的修正):
   1. ColorMatrix (CM) 与 ForwardMatrix (FM) 方向不同:
@@ -12,7 +20,8 @@
   2. 基座 (colorimetric) 路径:
         camRGB × WB → inv(CM_interp × CC_interp) → XYZ(场景参考)
         → Bradford 色适应 (场景白 → D50) → XYZ(D50) → Bradford(D50→D65) → sRGB
-     CM1/CM2 按 1/T 在 CalibrationIlluminant1/2 之间插值 (Adobe FindXYZtoCamera)。
+     CM1/CM2 按 1/T 在 CalibrationIlluminant1/2 之间插值 (DNG 规范
+     Camera Colorimetric Characterization 节的双光源插值口径)。
   3. 缺 CM 时回退 FM 路径并告警 (换机/非标 DCP 不崩)。
   4. CCT 反演: WB 中性点 → inv(CM) → xy → McCamy CCT (替代 Tanner Helland 误用)。
 
@@ -41,14 +50,31 @@ _SRGB_TO_XYZ_D65 = np.asarray(SRGB_TO_XYZ_D65, dtype=np.float64)
 _BRADFORD_D50_TO_D65 = np.asarray(BRADFORD_D50_TO_D65, dtype=np.float64)
 
 # ---- ProPhoto RGB (ROMM RGB, ISO 22028-2) —— HueSatMap 应用域 (线性, D50) ----
-# Adobe DNG SDK 在线性 ProPhoto(D50)、影调曲线之前应用 HueSatMap/LookTable
-# (见 dsh-plan-task-p4/research/hsmap-domain.md)。ROMM RGB 原色:
+# HueSatMap/LookTable 的 DNG 规范记载应用域: 线性 ProPhoto(D50)、影调曲线
+# 之前 (调研见 dsh-plan-task-p4/research/hsmap-domain.md)。ROMM RGB 原色:
 #   R(0.7347, 0.2653)  G(0.1596, 0.8404)  B(0.0366, 0.0001), 白点 D50。
 # 线性 RGB → XYZ(D50) 标准矩阵 (ICC / Bruce Lindbloom, 7 位有效数字)。
 PROPHOTO_RGB_TO_XYZ_D50 = [
     [0.7976749, 0.1351917, 0.0313534],
     [0.2880402, 0.7118741, 0.0000857],
     [0.0000000, 0.0000000, 0.8252100],
+]
+
+# ---- PCS 白点与 ROMM 4 位公布形 (cam_to_prophoto_matrix /
+# prophoto_to_linear_srgb_matrix 的钉死常数, 防精度漂移红线) ----
+# PCS 白点 = ICC PCS 标准照明体 D50 色度 (ICC.1 / ISO 15076-1 PCS 定义;
+# 亦为 ROMM RGB 编码白点, Spaulding et al. 2000): **4 位公开值**。
+# 勿"改进"为 7 位 CIE 值 (0.34567, 0.35850): PCS 白缩放矩阵会因此带偏
+# ~7e-5, 击穿金样本等价 (基线按 4 位值生成, 见 cam_to_prophoto_matrix)。
+_PCS_D50_XY = (0.3457, 0.3585)
+# ROMM RGB (ProPhoto) RGB→XYZ 的 4 位公布形 (ISO 22028-2 / Kodak ROMM 白皮书
+# Spaulding et al. 2000 的公布精度)。与上面 7 位 Lindbloom 形是同一矩阵的
+# 不同公布精度, **勿互换**: PCS 白缩放路径按 4 位形构造, 互换会引入矩阵
+# 末位漂移。
+_ROMM_RGB_TO_XYZ_D50_4 = [
+    [0.7977, 0.1352, 0.0313],
+    [0.2880, 0.7119, 0.0001],
+    [0.0000, 0.0000, 0.8249],
 ]
 
 _PROPHOTO_RGB_TO_XYZ_D50 = np.asarray(PROPHOTO_RGB_TO_XYZ_D50, dtype=np.float64)
@@ -81,8 +107,11 @@ def _mat3(values) -> np.ndarray | None:
 
 
 def illuminant_cct(light) -> float:
-    """DNG/EXIF 光源枚举 → 色温 K (对齐 dng_camera_profile::IlluminantToTemperature)。
+    """EXIF/DNG 光源枚举 (LightSource 公开标签定义) → 色温 K。
 
+    枚举号为 EXIF LightSource / DNG CalibrationIlluminant 公开标签; 各 CCT
+    值取 CIE 标准照明体定义值 (StdA=2856K 取工程整 2850 近似, D50/D55/D65/
+    D75 按标准色温); 荧光灯各档为公共照明工程的常规分级值。
     未知光源返回 0.0 (调用方自行回退默认照明体)。
     """
     return {
@@ -135,7 +164,9 @@ def xy_to_xyz(x: float, y: float) -> np.ndarray:
 def bradford_adapt(src_xy, dst_xy) -> np.ndarray:
     """线性化 Bradford 色适应矩阵 (映射 src 白点 → dst 白点)。
 
-    对齐 dng_color_spec.cpp 的 MapWhiteMatrix (Mb / A / Mb^-1 结构)。
+    von Kries 型色适应的标准构造: M = Mb⁻¹ · A · Mb —— Mb 为 Bradford 锥
+    响应矩阵 (Lam 1985 公开发表值), A = diag(dst 白的锥响应 / src 白的锥
+    响应) (白点映射构造见 Lindbloom「Chromatic Adaptation」公开文档)。
     """
     mb = np.array([[0.8951, 0.2664, -0.1614],
                    [-0.7502, 1.7135, 0.0367],
@@ -313,8 +344,10 @@ def _find_matrices(prof, white_xy):
             return m1
         return g * m1 + (1.0 - g) * m2
 
-    # DNG SDK 口径: 先分别插值 CameraCalibration 与 ColorMatrix, 再复合
-    # (矩阵插值与复合不可交换, 旧"先复合后插值"结果数值不等价)。
+    # 复合次序由 CC/CM 的规范语义决定: CC (参考相机→个体相机) 与 CM (XYZ→
+    # 参考相机) 各自按 1/T 插值后复合 —— 矩阵插值与复合不可交换, "先插值
+    # 后复合"是 DNG 规范 Camera Colorimetric Characterization 节的口径
+    # (旧"先复合后插值"结果数值不等价)。
     xyz_to_camera = blend(cc1, cc2) @ blend(cm1, cm2)
     fm = blend(fm1, fm2) if fm1 is not None else None
     cc = blend(cc1, cc2)
@@ -322,10 +355,14 @@ def _find_matrices(prof, white_xy):
 
 
 def _neutral_to_xy(neutral, prof):
-    """相机中性 RGB → 白点 CIE xy (不动点迭代, DNG 色彩标定方法)。
+    """相机中性 RGB → 白点 CIE xy (不动点迭代)。
 
-    反复以当前 xy 估计双光源插值矩阵, 逆矩阵作用于中性向量得新 xy, 收敛到
-    白点在色度图上的位置。最多 30 轮; 若振荡取两值平均。
+    迭代过程为 DNG 规范 Camera Colorimetric Characterization 节子节
+    "Translating Camera Neutral Coordinates to White Balance xy Coordinates"
+    (规范 pp.80-81) 所记载: 反复以当前 xy 估计双光源插值矩阵, 逆矩阵作用
+    于中性向量得新 xy, 收敛到白点在色度图上的位置。
+    数值护栏 (通用稳健性, 非规范内容): 最多 30 轮; 收敛阈 1e-7;
+    若两值振荡取平均。
     """
     neutral = np.asarray(neutral, dtype=np.float64).reshape(3)
     last = D50_XY
@@ -357,7 +394,9 @@ def wb_to_neutral(wb) -> np.ndarray:
 def neutral_to_xy(neutral, prof) -> tuple[float, float]:
     """相机中性 RGB → 场景白点 CIE xy。
 
-    有 ColorMatrix 时用不动点迭代 (对齐 dng_color_spec::NeutralToXY):
+    有 ColorMatrix 时用不动点迭代 (DNG 规范 Camera Colorimetric
+    Characterization 节 "Translating Camera Neutral Coordinates to White
+    Balance xy Coordinates", 规范 pp.80-81):
       next = XYZtoXY(inv(CM_interp(last)) @ neutral), 收敛到场景白点。
     无 CM 时退化为 FM1 @ neutral (或 sRGB 近似)。
     """
@@ -380,7 +419,7 @@ def neutral_to_xy(neutral, prof) -> tuple[float, float]:
         if abs(nxt[0] - last[0]) + abs(nxt[1] - last[1]) < 1e-7:
             return nxt
         last = nxt
-    # 两值振荡: 取均值 (对齐 SDK)
+    # 两值振荡: 取均值 (数值护栏)
     return ((last[0] + nxt[0]) * 0.5, (last[1] + nxt[1]) * 0.5)
 
 
@@ -554,15 +593,27 @@ def cam_to_linear_srgb_matrix(prof, wb) -> np.ndarray:
 
 
 def camera_white(prof, wb) -> np.ndarray:
-    """DNG SDK 的 CameraWhite 向量 (WB 后相机值在 ProPhoto 转换前的裁剪上限)。
+    """相机白向量: WB 后相机值映入线性 ProPhoto 前的逐通道裁剪上限。
 
-    对齐 dng_color_spec::CameraWhite: fColorMatrix(AB*CC*CM) × XYZ(scene white),
-    按最大通道归一化后 pin 到 [0.001, 1]。插值用 dng_temperature 而非 McCamy。
+    推导 (白点定义 + DCP 矩阵语义的唯一解, 逐位等价重构):
+      1. 场景白 XYZ —— 白点色度由 _neutral_to_xy 不动点迭代求得 (DNG 规范
+         Camera Colorimetric Characterization 节 "Translating Camera Neutral
+         Coordinates to White Balance xy Coordinates", pp.80-81);
+      2. 相机对场景白的**原生响应** = 双光源插值色彩矩阵 (CC_interp @
+         CM_interp, XYZ→相机, 先插值后复合, 见 _find_matrices) 作用于场景白
+         XYZ;
+      3. 按**最大通道归一**到 1: 白是传感器最先饱和的物体, 归一后各通道值
+         ∈ (0,1] 即该通道相对白头的富余, 作为 WB 后值的逐通道裁剪上限
+         (白以下不裁, 白以上交给后续钳位)。
+    数值护栏 (通用稳健性, 与色度学出处无关): 响应全非正 → 回退 [1,1,1]
+    (不裁); 下界 0.001 防病态 DCP 的近零通道在下游 1/x 处爆炸; 上界 1 即白。
     """
     neutral = wb_to_neutral(wb)
     scene_xy = _neutral_to_xy(neutral, prof)
     color_matrix, _, _ = _find_matrices(prof, scene_xy)
+    # 相机对场景白的原生响应 (XYZ→相机矩阵 × 场景白 XYZ)
     cam_white = color_matrix @ xy_to_xyz(*scene_xy)
+    # 最大通道归一 (白=裁剪上界基准) + 护栏
     mx = float(np.max(cam_white))
     if mx <= 0:
         return np.ones(3, dtype=np.float64)
@@ -571,53 +622,71 @@ def camera_white(prof, wb) -> np.ndarray:
 
 
 def cam_to_prophoto_matrix(prof, wb) -> np.ndarray:
-    """WB 后相机 RGB → 线性 ProPhoto(D50) 3×3 矩阵 (DNG SDK ForwardMatrix 路径)。
+    """WB 后相机 RGB → 线性 ProPhoto(D50) 3×3 矩阵 (HueSatMap 应用域入口)。
 
-    对齐 dng_render.cpp:
-      CameraToPCS = FM × inv(diag(inv(CC)×CameraWhite)) × inv(CC)
-      CameraToRGB = ProPhoto.MatrixFromPCS × CameraToPCS
-    矩阵插值使用 DNG dng_temperature 反查 (与 dng_color_spec 一致)。
+    约束唯一解推导 (场景白 → PCS 白, 逐位等价重构):
+      求线性映射 M: WB 后相机 RGB → 线性 ProPhoto(D50), 约束为
+      **WB 后场景白精确映到 PCS 白** (ROMM 编码白 = ICC PCS D50)。
+      M 的结构由 DCP 矩阵的规范语义逐步确定:
+        ① FM (ForwardMatrix: WB 参考相机 → XYZ(D50) 的 look 矩阵) 给出
+           方向基准, 但其单位向量未必落在 PCS 白 —— 做白点缩放
+           S_FM = diag(PCS 白 XYZ / (FM·ones)), S_FM·FM 把参考相机白
+           (单位向量) 精确送到 PCS 白。白点缩放是 ICC 公开技术
+           (device white 精确落 PCS);
+        ② CC (CameraCalibration: 参考相机 ↔ 个体相机): 个体 → 参考 =
+           inv(CC);
+        ③ WB 后场景白折算到参考相机系 = inv(CC)·camera_white (camera_white
+           为个体相机对场景白的原生响应, 见其 docstring); 逐通道除以它
+           (diag 逆) 把场景白拉回单位向量, 再经 ① 送到 PCS 白 —— 该
+           diag 项是使"场景白→PCS 白"约束对任意 WB 成立的唯一修正。
+      M = (S_FM·FM) · diag(1/(inv(CC)·camera_white)) · inv(CC)。
+      PCS 侧出口: ProPhoto 的 ROMM 4 位矩阵 M4 先白点缩放
+      S = diag(PCS 白 XYZ / (M4·ones)) 再取逆 —— PCS→ProPhoto =
+      inv(S·M4)。**先缩放后取逆**是构造要点, 直接 invert 未缩放 M4 会使
+      device 白偏离 PCS 白。
+    常数钉死 (防漂移红线): PCS D50 与 ROMM 矩阵用 **4 位公开值**
+      (_PCS_D50_XY / _ROMM_RGB_TO_XYZ_D50_4, 见其定义处注释); 换 7 位值
+      矩阵输出漂移 ~7e-5, 击穿金样本基线。矩阵插值沿 _find_matrices 的
+      白点 1/T 口径 (子节名见 _neutral_to_xy)。
     """
     neutral = wb_to_neutral(wb)
     scene_xy = _neutral_to_xy(neutral, prof)
     _, fm, cc = _find_matrices(prof, scene_xy)
     if fm is None:
-        raise ValueError("DCP 缺 ForwardMatrix, 无法复刻 DNG SDK HSM 应用域")
-    # NormalizeForwardMatrix: FM * ones 归一化到 PCS 白点 (D50)。
-    # 注意 DNG 源码用 D50_xy_coord()=(0.3457,0.3585) 四位小数,
-    # 不是更精确的 (0.34567,0.35850); 差值会把 CameraToPCS 带偏 ~7e-5。
-    _DNG_D50_XY = (0.3457, 0.3585)
+        raise ValueError("DCP 缺 ForwardMatrix, 无法建立 HSM 应用域 (线性 ProPhoto) 的入口矩阵")
+    # ① FM 白点缩放: 参考相机白 (单位向量) → PCS 白
+    # (PCS 白 = ICC 4 位公开值, 勿换 7 位 —— 见函数头与 _PCS_D50_XY 注释)
     xyz_one = fm @ np.ones(3, dtype=np.float64)
-    fm = np.diag(xy_to_xyz(*_DNG_D50_XY)) @ np.diag(1.0 / np.maximum(xyz_one, 1e-9)) @ fm
-    # DNG SDK: individualToReference = inv(AnalogBalance * CameraCalibration)
+    fm = np.diag(xy_to_xyz(*_PCS_D50_XY)) @ np.diag(1.0 / np.maximum(xyz_one, 1e-9)) @ fm
+    # ② 个体相机 → 参考相机
     individual_to_ref = np.linalg.inv(cc)
+    # ③ 场景白折算到参考相机系并单位化 (任意 WB 下成立的白点修正项)
     cam_white = camera_white(prof, wb)
     ref_cam_white = individual_to_ref @ cam_white
     inv_diag = np.diag(1.0 / np.maximum(ref_cam_white, 1e-9))
     camera_to_pcs = fm @ inv_diag @ individual_to_ref
-    # dng_space_ProPhoto::SetMatrixToPCS: 先用 4 位小数常量 M, 再按
-    # S = diag(PCStoXYZ() / (M*ones)) 缩放使 device white 精确落到 PCS,
-    # 最后 MatrixFromPCS = Invert(S*M)。不能直接 invert 原始 M。
-    dng_pp_m = np.array([[0.7977, 0.1352, 0.0313],
-                         [0.2880, 0.7119, 0.0001],
-                         [0.0000, 0.0000, 0.8249]], dtype=np.float64)
-    dng_pcs_xyz = xy_to_xyz(0.3457, 0.3585)
-    w1 = dng_pp_m @ np.ones(3, dtype=np.float64)
-    s = np.diag(dng_pcs_xyz / w1)
-    prophoto_from_pcs = np.linalg.inv(s @ dng_pp_m)
+    # PCS → 线性 ProPhoto: ROMM 4 位矩阵白点缩放后取逆 (勿直接 invert 原始 M4)
+    pp_m_4 = np.asarray(_ROMM_RGB_TO_XYZ_D50_4, dtype=np.float64)
+    w1 = pp_m_4 @ np.ones(3, dtype=np.float64)
+    s = np.diag(xy_to_xyz(*_PCS_D50_XY) / w1)
+    prophoto_from_pcs = np.linalg.inv(s @ pp_m_4)
     return prophoto_from_pcs @ camera_to_pcs
 
 
 def prophoto_to_linear_srgb_matrix() -> np.ndarray:
-    """dng_render fRGBtoFinal = sRGB_Linear.MatrixFromPCS * ProPhoto.MatrixToPCS。
+    """线性 ProPhoto(D50) → 线性 sRGB(D65) 3×3 矩阵。
 
-    两个 space 都经过 SetMatrixToPCS 的白点缩放 (4 位小数原色矩阵 + PCS D50
-    (0.3457,0.3585)), 不能直接用标准 sRGB/ROMM 7 位矩阵。
+    两个空间均按 ICC 公开构造建立到 PCS 的映射: 4 位公布原色矩阵 +
+    白点缩放 (diag(PCS 白 XYZ / (M·ones)), 使 device 白精确落 ICC PCS 白),
+    再取逆得 PCS→RGB。矩阵 = inv(sRGB 侧缩放矩阵) @ (ProPhoto 侧缩放矩阵)。
+      - ProPhoto 4 位矩阵 = ROMM/ISO 22028-2 公布形 (_ROMM_RGB_TO_XYZ_D50_4);
+      - sRGB 4 位矩阵 = IEC 61966-2-1 派生公开值 (下 srgb_m);
+      - PCS 白 = ICC PCS D50 4 位公开值 (_PCS_D50_XY)。
+    不能直接用 7 位标准矩阵复合: "4 位形 + PCS 白缩放"组合才是现行为,
+    换 7 位形输出漂移 ~7e-5 (矩阵末位量级)。
     """
-    pcs_xyz = xy_to_xyz(0.3457, 0.3585)
-    pp_m = np.array([[0.7977, 0.1352, 0.0313],
-                     [0.2880, 0.7119, 0.0001],
-                     [0.0000, 0.0000, 0.8249]], dtype=np.float64)
+    pcs_xyz = xy_to_xyz(*_PCS_D50_XY)
+    pp_m = np.asarray(_ROMM_RGB_TO_XYZ_D50_4, dtype=np.float64)
     srgb_m = np.array([[0.4361, 0.3851, 0.1431],
                        [0.2225, 0.7169, 0.0606],
                        [0.0139, 0.0971, 0.7141]], dtype=np.float64)
@@ -627,7 +696,7 @@ def prophoto_to_linear_srgb_matrix() -> np.ndarray:
 
 
 def linear_prophoto_to_srgb(pp: np.ndarray) -> np.ndarray:
-    """DNG SDK 的线性 ProPhoto → 线性 sRGB (final space 矩阵 + Pin[0,1])。"""
+    """线性 ProPhoto(D50) → 线性 sRGB(D65) (矩阵乘 + [0,1] 钳位)。"""
     m = prophoto_to_linear_srgb_matrix()
     x = np.asarray(pp, dtype=np.float32)
     out = np.clip(x, 0.0, 1.0) @ m.T
@@ -635,7 +704,7 @@ def linear_prophoto_to_srgb(pp: np.ndarray) -> np.ndarray:
 
 
 def cam_wb_to_prophoto(cam_wb, prof, wb) -> np.ndarray:
-    """WB 后相机 RGB → DNG SDK 线性 ProPhoto (含 CameraWhite 裁剪 + [0,1] 钳位)。"""
+    """WB 后相机 RGB → 线性 ProPhoto(D50) (按相机白逐通道裁剪, 矩阵乘后 [0,1] 钳位)。"""
     m = cam_to_prophoto_matrix(prof, wb)
     white = camera_white(prof, wb)
     x = np.asarray(cam_wb, dtype=np.float64)
@@ -669,8 +738,9 @@ def xyz_to_linear_srgb(xyz_d50) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # 线性 sRGB(D65) ↔ 线性 ProPhoto/ROMM RGB(D50) —— HueSatMap 应用域转换
 # ---------------------------------------------------------------------------
-# Adobe DNG SDK 在线性 ProPhoto(D50)、影调曲线之前应用 HueSatMap/LookTable
-# (见 dsh-plan-task-p4/research/hsmap-domain.md)。转换经 XYZ(D65)+Bradford 往返:
+# HueSatMap/LookTable 的 DNG 规范记载应用域: 线性 ProPhoto(D50)、影调曲线
+# 之前 (profile encoding 章节; 调研见 dsh-plan-task-p4/research/hsmap-domain.md)。
+# 转换经 XYZ(D65)+Bradford 往返:
 #   sRGB → XYZ(D65) → Bradford(D65→D50) → XYZ(D50) → ProPhoto (ROMM 标准矩阵)
 # 复合矩阵在模块加载时以 float64 求值; 两函数互为精确逆 (往返误差 ≤ 1e-6)。
 

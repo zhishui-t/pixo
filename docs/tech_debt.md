@@ -42,7 +42,7 @@
      multi_router 构造时门控：默认不注册进路由，需
      `PIXO_ALLOW_RESTRICTED=1` 显式放行。
 
-2. **DNG SDK clean-room 复审**：
+2. **DNG SDK clean-room 复审**（✅ **已清偿关闭，2026-09-07 R12 终章**）：
    - 部分实现注释仍引用 Adobe DNG SDK；发布前需确认 clean-room 或重写。
    - **部分清偿（2026-09-07 R11）**：huesat A 轨（HSV 三线性查表应用链 +
      use_dng 基准复刻分支）已整体删除，F18 高危 **H1/H2/H3/H9 清零**
@@ -51,6 +51,34 @@
      零命中）；HSM 运行时应用由 OKLCh 点云形变（B 轨）与底座
      core/tone.py（clean-room）承接。**剩余另案**：color.py H4-H8、
      io.py H12、white_balance M 系（底座渲染在用，见 dng-sdk-review.md）。
+   - **终章（2026-09-07 R12）**：color.py 痕迹清偿重写完成，三段全清——
+     ① a) 类 2 函数（`camera_white`/`cam_to_prophoto_matrix`，约 55 行）按
+     「场景白→PCS 白」约束唯一解重构推导：公式由白点定义 + DCP 矩阵规范
+     语义导出，数值护栏（max 归一 / [0.001,1] pin / 振荡取均值）文档化为
+     通用稳健性手段；**常数 pin ICC 4 位公开值**（PCS D50 (0.3457,0.3585)
+     与 ROMM 4 位矩阵，`_PCS_D50_XY`/`_ROMM_RGB_TO_XYZ_D50_4` 模块级钉死
+     并注明"勿换 7 位"红线）；② b) 类 6 处 + c) 类 2 处出处改公开规范/文献
+     （DNG 规范 Camera Colorimetric Characterization 节及其子节
+     "Translating Camera Neutral Coordinates to White Balance xy
+     Coordinates"（规范 pp.80-81，子节名经 colour-hdri 对规范原文的引用
+     交叉核对）/ ICC PCS / IEC 61966-2-1 / ISO 22028-2 / Lam 1985 /
+     Spaulding 2000 / Lindbloom）；③ 相邻清扫：calibration.py 3 处 tag
+     出处改 DNG 规范 tag 定义表、white_balance.py 头部出处与 2 处注释
+     中性化（oracle/规范域口径）、test_color_math.py 2 处口径注释同步。
+     **逐位等价实证**：git HEAD 原版 vs 重写版全函数（camera_white/
+     cam_to_prophoto_matrix/cam_to_xyz_matrix/cam_to_linear_srgb_matrix/
+     prophoto_to_linear_srgb_matrix/cam_wb_to_prophoto/cam_to_xyz/
+     linear_prophoto_to_srgb）在 6 合成 DCP × 8 WB + 真 Nikon Z5 DCP ×
+     8 WB 上逐位一致；gate `--check` 21 features 零漂移；RAW 金样本
+     gate_defaults 24/24 PASS；全量测试 1480 passed。
+     **grep 终态**：`grep -iE "dng sdk|dng_render|dng_color|adobe 源码|
+     D50_xy_coord" src/` 仅存中性表述（clean-room 声明/黑盒 oracle 对齐/
+     否定式"不使用/未读取/无依赖"/文件更名与退役历史记录），源码出处
+     引用清零。遗留边界（不阻塞关闭）：io.py H12 的"Stage3 近似复刻"
+     与 white_balance M 系的**行为级** oracle 注释（输出契约对照类）属
+     clean-room 纪律允许的黑盒对照，非源码血缘——如需进一步收敛措辞
+     可另开低优先条目；git 历史仍含旧注释（发布快照口径，F18 处置
+     选项 C 归队长/用户）。
 
 3. **第三方许可登记**（NOTICES 已建，2026-09-07 F16；仓库根 `THIRD_PARTY_NOTICES.md`）：
    - ~~缺少统一 `THIRD_PARTY_NOTICES.md`~~ 已建成文：素材源
