@@ -87,3 +87,4 @@ src/pixo/.graphify/
 # Agent team 本地协作状态（黑板）
 .agent-team/
 .zcode/
+build/

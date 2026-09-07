@@ -101,14 +101,19 @@ def test_geometry_crop_rotate_is_same_as_compose():
 
 
 def test_pyproject_lists_phase_c_resource_paths():
-    """pyproject 已声明 configs/resources/data 作为数据路径。"""
+    """pyproject 已声明 configs/resources 作为随包数据路径。
+
+    data/golden（48MB 金样本基线）已移出打包（e09053f）：开发/CI 资产，
+    安装态跑不了 gate（需本机 RAW 语料），且多级目录无法用 data-files
+    的非递归 glob 干净表达。
+    """
     pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
     text = pyproject.read_text(encoding="utf-8")
     for token in [
         "configs/styles",
+        "configs/styles/films",
         "resources/dcp",
         "resources/camera_profiles",
         "resources/models",
-        "data/golden",
     ]:
         assert token in text, f"pyproject 缺少资源路径: {token}"
