@@ -44,12 +44,19 @@
 
 2. **DNG SDK clean-room 复审**：
    - 部分实现注释仍引用 Adobe DNG SDK；发布前需确认 clean-room 或重写。
+   - **部分清偿（2026-09-07 R11）**：huesat A 轨（HSV 三线性查表应用链 +
+     use_dng 基准复刻分支）已整体删除，F18 高危 **H1/H2/H3/H9 清零**
+     （`grep -iE "rawtherapee|rtengine|dng_render|dng_color_spec"
+     src/pixo/render/core/huesat.py src/pixo/render/modules/huesat.py`
+     零命中）；HSM 运行时应用由 OKLCh 点云形变（B 轨）与底座
+     core/tone.py（clean-room）承接。**剩余另案**：color.py H4-H8、
+     io.py H12、white_balance M 系（底座渲染在用，见 dng-sdk-review.md）。
 
 3. **第三方许可登记**（NOTICES 已建，2026-09-07 F16；仓库根 `THIRD_PARTY_NOTICES.md`）：
    - ~~缺少统一 `THIRD_PARTY_NOTICES.md`~~ 已建成文：素材源
      `.agent-team/research/license-inventory.md`（researcher 盘点）+ F18
-     `dng-sdk-review.md`（代码血缘节）；三项发布警示（huesat RawTherapee GPL-3.0
-     衍生 / DCP×6 再分发未核验 / NC 模型门控）置顶。
+     `dng-sdk-review.md`（代码血缘节）；三项发布警示（~~huesat RawTherapee GPL-3.0 衍生~~ R11 已清偿：A 轨删除,
+     2026-09-07 / DCP×6 再分发未核验 / NC 模型门控）置顶。
    - `model_licenses.json` 与 `vision_models.json` 的过期冲突（aesthetic「需核验」
      + 旧 `$GUANLAN_ROOT` 路径 vs MIT 定论）**仍待处置**（NOTICES §3 冲突 A 已
      如实记录，台账更新不在 F16 范围）；segformer 条目 publishable/status 自相

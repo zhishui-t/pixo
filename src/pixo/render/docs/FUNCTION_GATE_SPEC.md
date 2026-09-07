@@ -259,21 +259,22 @@ warm_sat_gamma）
 | 3D LUT 应用 | 格点精确、插值 ≤2/255 + 视觉说明 | §3 |
 | 输出值域 | [0,1] 无 NaN | 严格 |
 
-### 5.12 色相/饱和映射（huesat：HueSatMap/LookTable + 局部暖高光饱和）
+### 5.12 色相/饱和映射（huesat：局部暖高光饱和 + OKLCh 点云形变）
 
-- 输入构造：六色相阶 + 灰阶 + `warm_highlight`；恒等 HueSatMap、非恒等
-  sat_scale/hue_shift 表；warm_highlight_sat ∈ {1, 3, 5}。
+> R11 A 轨退役：HueSatMap/LookTable 的 HSV 三线性查表应用链已删除，
+> HSM 语义改由 OKLCh 点云形变（core/huesat_oklch, 单测全覆盖）与底座
+> prophoto 路径（core/tone.py clean-room）承接。gate `huesat` case 锁的
+> 是自研局部暖高光饱和（apply_local_warm_sat, lr_* 配置在用）。
+
+- 输入构造：六色相阶 + 灰阶 + `warm_highlight`；warm_highlight_sat ∈ {1, 3, 5}。
 - 期望性质与阈值：
 
 | 用例 | 期望 | 阈值 |
 |---|---|---|
-| strength=0 / 无表 / warm=1 | 输出=输入 | 逐位 |
-| 恒等表 | 往返 max\|Δ\| ≤1e-6 | ≤1e-6 |
-| H 轴环绕 | 0° 与 360° 邻域一致 | ≤1e-6 |
-| sat_scale 带 | 带内全效、带外不变、边缘 smoothstep | ≤1e-3 |
 | warm_highlight_sat | 只增强命中暖带像素；中性不动 | 中性 ≤1e-6 |
 | coverage 分支 | 低覆盖 broad、高覆盖 spot，与 Python 同分支 | 分支一致 + f32 ≤1e-6 |
 | native `PixoRenderApplyLocalWarmSat` | 同图同参 vs Python | f32 ≤1e-6 |
+| OKLCh 点云形变（B 轨） | 单测覆盖（test_huesat_oklch）：no-op/touch/分派 | 见单测 |
 
 ---
 
@@ -377,7 +378,7 @@ python -m pytest src/render/tests/gate -q -m "gate and gate_e2e"
 | exposure | ✓ | ✓ | ✓ | ✓ | ExposureApply |
 | whitebalance | ✓ | ✓ | ✓ | ✓ | MatrixApply3 |
 | curves/tone | ✓ | ✓ | ✓ | ✓ | ToneApplyLut1D |
-| huesat | ✓ | ✓ | ✓ | ✓ | hsv/warm_sat |
+| huesat | ✓ | ✓ | ✓ | ✓ | warm_sat/oklch |
 | clarity | ✓ | ✓ | ✓ | ✓ | ClarityApply |
 | colorcal | ✓ | ✓ | ✓ | ✓ | ColorCalApplyLab/Lut3D |
 | calibration | ✓ | N/A | ✓ | ✓ | 暂无 |

@@ -238,9 +238,10 @@ class TestLoadAndDispatch:
         assert out.shape == img.shape and np.all(np.isfinite(out))
         assert out.dtype == np.float32
 
-    def test_stage_default_domain_unchanged(self):
-        """缺省 (无 color_domain 键) 与显式 "hsv" 渲染逐位一致 (金样本 hsv
-        域不变的单测表达)。"""
+    def test_stage_default_domain_oklch(self):
+        """缺省 (无 color_domain 键) ≡ 显式 "oklch" (R11: A 轨退役, 缺省翻
+        oklch —— 原断言钉 hsv 缺省, 随 A 轨删除翻期望); 退役域 "hsv" 为
+        no-op (与不加 huesat 的基座直渲逐位一致)。"""
         if not DCP_PATH.is_file():
             pytest.skip("DCP 不存在")
         from pixo.render.api import Renderer
@@ -254,8 +255,13 @@ class TestLoadAndDispatch:
         a = r.render_preview_full(str(raws[0]), long_edge=192,
                                   params={"huesat": dict(hs)})
         b = r.render_preview_full(str(raws[0]), long_edge=192,
+                                  params={"huesat": {**hs, "color_domain": "oklch"}})
+        c = r.render_preview_full(str(raws[0]), long_edge=192,
                                   params={"huesat": {**hs, "color_domain": "hsv"}})
-        np.testing.assert_array_equal(a, b)
+        base = r.render_preview_full(str(raws[0]), long_edge=192, params={})
+        np.testing.assert_array_equal(a, b)          # 缺省 ≡ 显式 oklch
+        assert not np.array_equal(a, base)           # oklch 形变真实作用
+        np.testing.assert_array_equal(c, base)       # 退役域 no-op
 
     def test_stage_oklch_dispatch_applies(self):
         """color_domain=oklch → 渲染路径走形变 (与 hsv 输出有实质差异)。"""

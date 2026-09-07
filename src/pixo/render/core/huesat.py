@@ -1,38 +1,44 @@
-"""engine.huesat —— DCP HueSatMap / LookTable 解码与应用 (纯函数, 无 I/O)。
+"""engine.huesat —— DCP HueSatMap / LookTable 数据访问与应用工具 (纯函数, 无 I/O)。
 
-权威依据:
-  - DNG 1.4 规范 (Camera Profile 章节, HueSatMap / LookTable)
-  - Adobe 参考实现 (dng_render.cpp / dng_color_spec.cpp) 经 RawTherapee
-    rtengine/dcp.cc 移植
+权威依据: DNG 1.4 规范 (Camera Profile 章节, HueSatMap / LookTable;
+tags 0xC6F9 dims / 0xC6FA 数据 / 0xC725 look dims / 0xC726 look 数据 /
+0xC6FC encoding)。
 
-应用域 (2026-08 域修复, 见 dsh-plan-task-p4/research/hsmap-domain.md):
-  Adobe DNG SDK 在**线性 ProPhoto(ROMM RGB, D50)、影调曲线之前**应用
-  HueSatMap 与 LookTable, 而非旧实现的 gamma_rgb (sRGB 编码、tone 之后)。
-  本模块输入/输出均为**线性 sRGB(D65)** (engine.color 的域转换函数负责
-  sRGB ↔ ProPhoto 往返); 阶段内: 线性 sRGB → 线性 ProPhoto → HSV 查表 →
-  逆回线性 sRGB。域转换与 HSV 往返全部用 float64 计算 (恒等表 max|Δ| ≤ 1e-6)。
+历史注记 (R11 A 轨退役): 本模块曾包含 HSV 三线性查表应用链
+(apply_table_to_hsv / apply_hue_sat_map / apply_look_table 及 prophoto
+旧路径包装), 已随 huesat "hsv 域" 执行链整体删除。HSM/Look 的运行时
+应用现由两条独立路径承接:
+  - 底座渲染: apply_hue_sat_map_prophoto / apply_look_table_prophoto
+    (薄包装) → core/tone.py 的 4096 表插值 (clean-room M1 实现);
+  - huesat Stage: core/huesat_oklch.py 的 OKLCh 点云连续形变 (B 轨,
+    点云经 scripts/convert_hsm_to_oklch.py 从 DCP 表数据转译)。
 
-解码约定 (与 RT/Adobe 参考实现一致, 已用本机 DCP 数据实测验证):
+本模块保留:
+  - DCP 表数据访问/解码 (get_hue_sat_table / get_look_table /
+    decode_table / _resolve_dims —— tag 格式为 DNG 规范公开定义);
+  - 通用 6 扇区 HSV 数学 (_rgb_to_hsv / _hsv_to_rgb, 非 DCP 特有;
+    local warm sat / native 内核等价测试 / HSM→OKLCh 转译脚本共用);
+  - 数值工具 (_srgb_encode_v / _srgb_decode_v / _smoothstep / _sat_rolloff);
+  - T5 表构造工具 make_hue_sat_map (自研 band-drift 方案 b);
+  - 局部暖色高光饱和 apply_local_warm_sat (自研 + native warm_sat 内核)。
+
+解码约定 (DNG 1.4 规范语义, 本机 DCP 数据实测验证):
   1. 每个表项 = 3 个 float: (hue_shift_deg, sat_scale, val_scale)。
      hue_shift_deg: 色相偏移, 单位**度** (0..360 体系);
      sat_scale/val_scale: **乘数** (1.0 = 不变)。
   2. 表布局: 平面索引 = ((v * hue_divs) + h) * sat_divs + s, s 变化最快,
-     v 最慢。即 table 形状 (hue_divs, sat_divs, val_divs, 3)。
+     v 最慢。即 table 形状 (hue_divs, sat_divs, val_divs, 3) (0xC6FA/0xC726
+     tag 数据布局的公开定义)。
   3. dims 来源: ProfileHueSatMapDims (0xC6F9); 旧版联合标签
      ProfileHueSatMapData (0xC726) 的 dims 按 DNG 规范取自
      ProfileLookTableDims (0xC725) —— 本机 DCP 正是这种形态。
   4. 编码 (ProfileHueSatMapEncoding 0xC6FC): 0=线性, 1=sRGB gamma;
      本机 DCP 的 0xC6FC 实为 125 点影调曲线 (历史兼容, 见 dcp.py),
-     无有效 encoding → 按线性处理。
-  5. 应用: HSV 域三线性插值 (H 轴环绕), 然后
-     H += strength * hue_shift_deg (mod 360);
-     S *= 1 + strength * (sat_scale - 1);
-     V *= 1 + strength * (val_scale - 1)。
-     encoding=1 时 V 轴先在 sRGB gamma 域查表 (与参考实现一致)。
-  6. RGB↔HSV 用自实现 float64 转换 (cv2 仅支持 float32, 精度不够满足
-     恒等表 ≤1e-6 验收), 约定与 cv2 全范围 float 一致: H ∈ [0, 360),
-     S/V ∈ [0, 1]。
-  7. 表构造工具 make_hue_sat_map: 按 (hue_center, hue_halfwidth, sat_scale)
+     无有效 encoding → 按线性处理。encoding=1 的语义: V 轴先过 sRGB
+     gamma 域再缩放 (转译脚本将其烘焙进点云)。
+  5. RGB↔HSV 用自实现 float64 转换 (cv2 仅支持 float32, 精度不足),
+     约定与 cv2 全范围 float 一致: H ∈ [0, 360), S/V ∈ [0, 1]。
+  6. 表构造工具 make_hue_sat_map: 按 (hue_center, hue_halfwidth, sat_scale)
      列表生成恒等基表 + 指定 hue 带 sat_scale 写入 (三线性平滑边缘), 用于
      T5 品红带拟合固化 (见 dsh-plan-task-p4/research/band-drift.md 方案 b)。
 """
@@ -40,11 +46,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .tone import (
-    apply_hue_sat_map as _apply_hue_sat_map_table,
-    srgb_decode,
-    srgb_encode,
-)
+from .tone import apply_hue_sat_map as _apply_hue_sat_map_table
 
 # HSV 与 RGB 互转用全范围 float 约定: H ∈ [0, 360), S/V ∈ [0, 1]
 _H_MIN = 0.0
@@ -104,7 +106,8 @@ def _resolve_dims(prof) -> tuple[int, int, int] | None:
 def decode_table(data, dims: tuple[int, int, int] | None) -> np.ndarray | None:
     """把 DCP 原始表数据解包为 (H, S, V, 3) float32 表 (hue_shift_deg, sat_scale, val_scale)。
 
-    布局 (与 RT/Adobe 参考一致): 平面索引 = ((v*H)+h)*S+s。
+    布局 (DNG 0xC6FA/0xC726 tag 数据布局的公开定义):
+    平面索引 = ((v*H)+h)*S+s。
     数据量不足/维度不符返回 None (调用方直通)。
     """
     if data is None or dims is None:
@@ -120,13 +123,13 @@ def decode_table(data, dims: tuple[int, int, int] | None) -> np.ndarray | None:
 
 
 def _srgb_encode_v(v: np.ndarray) -> np.ndarray:
-    """sRGB EOTF 编码 (encoding=1 时 V 轴用; 与参考实现 gammatab_srgb1 一致)。"""
+    """sRGB EOTF 编码 (encoding=1 时 V 轴的感知域坐标)。"""
     v = np.clip(v, 0.0, None)
     return np.where(v <= 0.0031308, 12.92 * v, 1.055 * np.power(v, 1.0 / 2.4) - 0.055)
 
 
 def _srgb_decode_v(v_enc: np.ndarray) -> np.ndarray:
-    """sRGB EOTF 解码 (encoding=1 时 V 轴查表后从编码域回线性域)。"""
+    """sRGB EOTF 解码 (encoding=1 时 V 轴从编码域回线性域)。"""
     v_enc = np.clip(v_enc, 0.0, None)
     return np.where(v_enc <= 0.04045, v_enc / 12.92,
                     np.power((v_enc + 0.055) / 1.055, 2.4))
@@ -178,7 +181,8 @@ def make_hue_sat_map(points, h_divs: int = 90, s_divs: int = 16, v_divs: int = 1
       hue_shift 平面全 0; sat_scale 平面在指定 hue 带写入指定值 (三线性平滑边缘),
       其余区域恒等 (sat_scale=1); val_scale 平面恒 1。points 为空 → 恒等表。
 
-    表坐标语义 (对齐 apply_table_to_hsv / Adobe 参考实现):
+    表坐标语义 (DNG HueSatMap 查表坐标, 与转译脚本
+    convert_hsm_to_oklch.py 的采样口径一致):
       - hue 轴: 0..360 → 0..h_divs (环绕); 带边缘 smoothstep 滚降, 边缘宽
         edge_deg (缺省 = 1 个 hue 格 = 360/h_divs 度);
       - sat 轴: 0..1 → 0..s_divs-1; S<sat_min (缺省 0.05) 的近中性区用跨
@@ -226,80 +230,6 @@ def make_hue_sat_map(points, h_divs: int = 90, s_divs: int = 16, v_divs: int = 1
     return _flatten_dcp(table)
 
 
-def _tri_index(pos: np.ndarray, n: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """把连续坐标 pos (值域 [0, n-1]) 拆成 (i0, i1, frac), i1=i0+1 且钳位到 n-1。"""
-    pos = np.clip(pos, 0.0, float(n - 1))
-    i0 = np.floor(pos).astype(np.int32)
-    i0 = np.minimum(i0, n - 2)
-    frac = (pos - i0).astype(np.float32)
-    return i0, i0 + 1, frac
-
-
-def apply_table_to_hsv(h_deg: np.ndarray, s: np.ndarray, v: np.ndarray,
-                       table: np.ndarray, dims: tuple[int, int, int],
-                       encoding: int = 0, strength: float = 1.0
-                       ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """对 HSV 图应用 HueSatMap/LookTable 表 (三线性插值, H 轴环绕)。
-
-    返回 (H_deg, S, V), 与输入同形; strength=0 恒等。
-    """
-    if strength <= 0.0:
-        return h_deg, s, v
-    h_divs, s_divs, v_divs = dims
-
-    # H 轴: 0..360 → 0..h_divs (环绕); S/V 轴: 0..1 → 0..n-1
-    h_pos = (h_deg / _H_MAX) * float(h_divs)
-    h0 = np.floor(h_pos).astype(np.int32) % h_divs
-    h1 = (h0 + 1) % h_divs
-    fh = (h_pos - np.floor(h_pos)).astype(np.float32)
-
-    s0, s1, fs = _tri_index(s * (s_divs - 1), s_divs)
-    v_axis = _srgb_encode_v(v) if encoding == 1 else v
-    v0, v1, fv = _tri_index(v_axis * (v_divs - 1), v_divs)
-
-    def corner(h_idx, s_idx, v_idx):
-        return table[h_idx, s_idx, v_idx]  # (..., 3)
-
-    c000 = corner(h0, s0, v0)
-    c001 = corner(h0, s0, v1)
-    c010 = corner(h0, s1, v0)
-    c011 = corner(h0, s1, v1)
-    c100 = corner(h1, s0, v0)
-    c101 = corner(h1, s0, v1)
-    c110 = corner(h1, s1, v0)
-    c111 = corner(h1, s1, v1)
-
-    fh, fs, fv = fh[..., None], fs[..., None], fv[..., None]
-    # 三线性: 先 s/v 双线性, 再 h 线性
-    top = (c000 * (1 - fs) * (1 - fv) + c001 * (1 - fs) * fv
-           + c010 * fs * (1 - fv) + c011 * fs * fv)
-    bot = (c100 * (1 - fs) * (1 - fv) + c101 * (1 - fs) * fv
-           + c110 * fs * (1 - fv) + c111 * fs * fv)
-    interp = top * (1 - fh) + bot * fh  # (..., 3)
-
-    hue_shift = interp[..., 0]
-    sat_scale = interp[..., 1]
-    val_scale = interp[..., 2]
-
-    h_out = (h_deg + strength * hue_shift) % _H_MAX
-    s_out = np.clip(s * (1.0 + strength * (sat_scale - 1.0)), 0.0, 1.0)
-    # encoding=1: DNG RefBaselineHueSatMap 语义 —— V 轴先过 4096 项
-    # sRGB encode table, 缩放后再过 decode table; 没有"近恒等短路"
-    # (旧 1e-5 短路在边界处不连续且偏离 SDK)。encode/decode 表与
-    # dng_render.BuildHueSatMapEncodingTable(subSample=false) 逐项一致。
-    # encoding=0: 直接线性 V。
-    # V 只钳下界: 线性域高光 (>1) 应保留 (查表坐标在 _tri_index 已钳到边界行)。
-    if encoding == 1:
-        v_encoded_out = np.clip(v_axis * (1.0 + strength * (val_scale - 1.0)),
-                                0.0, None)
-        v_out = np.clip(srgb_decode(v_encoded_out), 0.0, None)
-    else:
-        v_out = np.clip(v * (1.0 + strength * (val_scale - 1.0)), 0.0, None)
-    # 保持输入精度: float64 输入 (线性域路径) 不降级到 float32 (恒等表 ≤1e-6)
-    return (h_out.astype(h_deg.dtype), s_out.astype(s.dtype),
-            v_out.astype(v.dtype))
-
-
 def get_hue_sat_table(prof) -> tuple[np.ndarray | None, tuple[int, int, int] | None, int]:
     """(table, dims, encoding): 取 HueSatMap (0xC6FA 数据)。"""
     dims = _resolve_dims(prof)
@@ -319,23 +249,12 @@ def get_look_table(prof) -> tuple[np.ndarray | None, tuple[int, int, int] | None
     return decode_table(data, dims), dims, encoding
 
 
-def apply_hue_sat_map(rgb_linear: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:
-    """线性 sRGB(D65) → 线性 ProPhoto → HSV → HueSatMap → 逆回线性 sRGB。
-
-    无数据/strength=0 直通 (原样返回)。输入为线性域 (float32, 可 >1 高光);
-    高光保留 (查表坐标钳到 V 边界行, 输出不截顶)。
-    """
-    table, dims, encoding = get_hue_sat_table(prof)
-    if table is None or strength <= 0.0:
-        return rgb_linear
-    return _apply_table_linear(rgb_linear, table, dims, encoding, strength)
-
-
 def apply_hue_sat_map_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:
-    """对 DNG SDK 同款 Camera→ProPhoto 中间图应用 HueSatMap (真 0xC6FA)。
+    """对 DNG 同款 Camera→ProPhoto 中间图应用 HueSatMap (真 0xC6FA)。
 
-    走 dng_render.apply_hue_sat_map: float32/4096 表插值, 与
-    RefBaselineHueSatMap 同语义, 且 6MP 级输入比 float64 通用 HSV 快约一个量级。
+    经 core/tone.py 的 float32/4096 表插值 (clean-room M1 实现, 依据公开
+    规范材料), 与 DNG HueSatMap 规范语义一致, 且 6MP 级输入比通用
+    float64 路径快约一个量级。
     """
     table, dims, encoding = get_hue_sat_table(prof)
     if table is None or strength <= 0.0:
@@ -344,46 +263,11 @@ def apply_hue_sat_map_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> n
 
 
 def apply_look_table_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:
-    """对 DNG SDK 同款 Camera→ProPhoto 中间图应用 LookTable (0xC726)。"""
+    """对 DNG 同款 Camera→ProPhoto 中间图应用 LookTable (0xC726)。"""
     table, dims, encoding = get_look_table(prof)
     if table is None or strength <= 0.0:
         return pp
     return _apply_hue_sat_map_table(pp, table, dims, encoding, strength)
-
-
-def apply_look_table(rgb_linear: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:
-    """兼容旧路径: 线性 sRGB → 标准 ProPhoto → HSV → LookTable → 逆回线性 sRGB。"""
-    table, dims, encoding = get_look_table(prof)
-    if table is None or strength <= 0.0:
-        return rgb_linear
-    return _apply_table_linear(rgb_linear, table, dims, encoding, strength)
-
-
-def _apply_table_prophoto(pp: np.ndarray, table: np.ndarray,
-                          dims: tuple[int, int, int], encoding: int,
-                          strength: float, clip_hi: bool = True) -> np.ndarray:
-    """在已给定的线性 ProPhoto 数组上做 HSV 三线性查表, 返回 ProPhoto。"""
-    x = np.asarray(pp, dtype=np.float64)
-    x = np.clip(x, 0.0, 1.0 if clip_hi else None)
-    h, s, v = _rgb_to_hsv(x)
-    h2, s2, v2 = apply_table_to_hsv(h, s, v, table, dims, encoding, strength)
-    out = _hsv_to_rgb(h2, s2, v2)
-    return np.clip(out, 0.0, 1.0 if clip_hi else None).astype(np.float32)
-
-
-def _apply_table_linear(rgb_linear: np.ndarray, table: np.ndarray,
-                        dims: tuple[int, int, int], encoding: int,
-                        strength: float) -> np.ndarray:
-    """兼容旧路径: 线性 sRGB → 标准 ProPhoto → 查表 → 逆回线性 sRGB。"""
-    from .color import (linear_prophoto_to_linear_srgb,
-                                     linear_srgb_to_linear_prophoto)
-
-    x = np.asarray(rgb_linear, dtype=np.float32)
-    pp = linear_srgb_to_linear_prophoto(x)
-    out_pp = _apply_table_prophoto(pp, table, dims, encoding, strength,
-                                    clip_hi=False)
-    out = linear_prophoto_to_linear_srgb(out_pp.astype(np.float64))
-    return np.clip(out, 0.0, None).astype(np.float32)
 
 
 # ---------------------------------------------------------------------------
@@ -522,4 +406,7 @@ def apply_local_warm_sat(rgb_linear: np.ndarray, sat_scale: float = 1.0,
     out = linear_prophoto_to_linear_srgb(out_pp)
     return np.clip(out, 0.0, None).astype(target_dtype)
 
-__all__ = ["apply_hue_sat_map", "apply_look_table", "apply_hue_sat_map_prophoto", "apply_look_table_prophoto", "make_hue_sat_map", "get_hue_sat_table", "get_look_table"]
+
+__all__ = ["apply_hue_sat_map_prophoto", "apply_look_table_prophoto",
+           "make_hue_sat_map", "get_hue_sat_table", "get_look_table",
+           "apply_local_warm_sat"]

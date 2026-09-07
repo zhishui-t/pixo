@@ -1,19 +1,17 @@
-"""T2 单元测试: HueSatMap 域修复 —— 线性 ProPhoto(D50)、tone 之前。
+"""T2 单元测试: HueSatMap 域修复 —— 线性 ProPhoto(D50)、tone 之前 (R11 后)。
 
 覆盖对象:
   - pixo.render.core.color.linear_srgb_to_linear_prophoto / linear_prophoto_to_linear_srgb
-  - pixo.render.core.huesat.apply_hue_sat_map / apply_look_table (线性域输入)
   - pixo.render.core.huesat._rgb_to_hsv / _hsv_to_rgb (float64 HSV 往返)
-  - pixo.render.modules.huesat.HueSatStage (order=25 < tone=30, domain=linear_rgb, 默认关)
-  - 默认全链 (huesat 关) 输出不变
+  - pixo.render.modules.huesat.HueSatStage (order=25 < tone=30, domain=linear_rgb,
+    默认关; 缺省 color_domain="oklch" —— R11 A 轨退役, 原 "hsv" 缺省随之翻转)
+  - 默认全链 (huesat 关) 输出不变; 启用但点云缺失 → no-op (链输出不变)
 
-验收标准 (03-specification §3 AC / 任务 T2):
-  - 恒等表精确往返: max|Δ| ≤ 1e-6 (encoding 0/1, HueSatMap 与 LookTable 同验)
-  - ProPhoto 转换往返: max|Δ| ≤ 1e-5
-  - 端点断言: 黑→黑、白→白、灰→灰; 单调性: 灰阶斜坡单调、S/V 表应用单调
-  - 全链默认 (huesat 关) 输出不变; stage order=25 < tone=30; domain=linear_rgb
+历史注记: 原 区段 2/3 (apply_hue_sat_map/apply_look_table/apply_table_to_hsv
+的恒等表往返与单调性) 随 R11 A 轨删除移除; OKLCh 域形变的数值验收在
+test_huesat_oklch.py。
 
-运行: python -m pytest tests/test_huesat_domain.py -q
+运行: python -m pytest tests/unit/test_huesat_domain.py -q
 """
 from __future__ import annotations
 
@@ -27,13 +25,8 @@ from pixo.render.core.color import (
 from pixo.render.core.huesat import (
     _hsv_to_rgb,
     _rgb_to_hsv,
-    apply_hue_sat_map,
-    apply_look_table,
-    apply_table_to_hsv,
 )
 
-_H, _S, _V = 90, 16, 16  # Adobe Camera 系列联合形态 HueSatMap dims
-IDENTITY_TOL = 1e-6       # 恒等表精确往返上限 (规格 AC)
 PROPHOTO_TOL = 1e-5       # ProPhoto 转换往返上限 (规格 AC)
 
 
@@ -41,7 +34,7 @@ class MockProf:
     """最小 DcpProfile 替身: 恒等 ColorMatrix (白平衡链路) + HSM/LookTable 字段。"""
 
     def __init__(self, hue_sat_map=None, hue_sat_dims=None, hue_sat_encoding=None,
-                 look_table=None, look_table_dims=None):
+                 look_table=None, look_table_dims=None, name=""):
         self.hue_sat_map = hue_sat_map
         self.hue_sat_map1 = hue_sat_map
         self.hue_sat_dims = hue_sat_dims
@@ -59,9 +52,10 @@ class MockProf:
         self.calibration_illuminant2 = 21
         self.baseline_exposure_offset = 0.0
         self.profile_tone_curve = None
+        self.name = name
 
 
-def _identity_table(H=_H, S=_S, V=_V):
+def _identity_table(H=90, S=16, V=16):
     """(H,S,V,3) 恒等表: 每格 (hue_shift=0, sat_scale=1, val_scale=1)。"""
     t = np.zeros((H, S, V, 3), dtype=np.float32)
     t[..., 0] = 0.0
@@ -91,7 +85,7 @@ def _sample_inputs(n=3000):
 
 
 # ---------------------------------------------------------------------------
-# 1) ProPhoto 域转换: 往返精度 / 端点 / 单调性
+# 1) ProPhoto 域转换: 往返精度 / 端点 / 单调性 + HSV float64 往返
 # ---------------------------------------------------------------------------
 
 def test_prophoto_roundtrip():
@@ -141,7 +135,7 @@ def test_prophoto_gray_ramp_monotonic():
 
 
 def test_hsv_float64_roundtrip():
-    """HSV 自实现 (float64) 往返精度 ≪ 1e-6 (恒等表预算不在此消耗)。"""
+    """HSV 自实现 (float64) 往返精度 ≪ 1e-6 (保留原语, warm sat / 转译脚本共用)。"""
     x = _sample_inputs(2000).astype(np.float64)
     h, s, v = _rgb_to_hsv(x)
     y = _hsv_to_rgb(h, s, v)
@@ -150,84 +144,7 @@ def test_hsv_float64_roundtrip():
 
 
 # ---------------------------------------------------------------------------
-# 2) 恒等表精确往返 (域修复核心验收: max|Δ| ≤ 1e-6)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.parametrize("encoding", [0, 1])
-def test_identity_table_roundtrip(encoding):
-    """恒等表 (线性域输入) 精确往返: max|Δ| ≤ 1e-6, encoding 0/1 同验。"""
-    prof = MockProf(hue_sat_map=_flatten(_identity_table()), hue_sat_dims=[_H, _S, _V],
-                    hue_sat_encoding=encoding)
-    x = _sample_inputs()
-    y = apply_hue_sat_map(x, prof, strength=1.0)
-    assert y.shape == x.shape and y.dtype == np.float32
-    err = float(np.abs(y - x).max())
-    assert err <= IDENTITY_TOL, \
-        f"恒等表往返 (encoding={encoding}) max|Δ| {err:.3e} ≥ {IDENTITY_TOL}"
-
-
-def test_identity_table_roundtrip_look_table():
-    """LookTable 恒等表同域往返 ≤ 1e-6 (与 HueSatMap 同一色彩空间)。"""
-    prof = MockProf(look_table=_flatten(_identity_table()), look_table_dims=[_H, _S, _V])
-    x = _sample_inputs(1500)
-    y = apply_look_table(x, prof, strength=1.0)
-    err = float(np.abs(y - x).max())
-    assert err <= IDENTITY_TOL, f"LookTable 恒等往返 max|Δ| {err:.3e} ≥ {IDENTITY_TOL}"
-
-
-def test_identity_table_roundtrip_small_dims():
-    """小表 (16×8×8) 恒等往返 ≤ 1e-6 —— 三线性插值路径 (非退化为格点直读)。"""
-    H, S, V = 16, 8, 8
-    prof = MockProf(hue_sat_map=_flatten(_identity_table(H, S, V)), hue_sat_dims=[H, S, V],
-                    hue_sat_encoding=1)
-    x = _sample_inputs(2000)
-    err = float(np.abs(apply_hue_sat_map(x, prof) - x).max())
-    assert err <= IDENTITY_TOL, f"小表恒等往返 max|Δ| {err:.3e} ≥ {IDENTITY_TOL}"
-
-
-def test_identity_table_roundtrip_above_one():
-    """线性域高光 (>1) 恒等表往返 ≤ 1e-6: 高光不截顶 (查表坐标钳到 V 边界行)。"""
-    prof = MockProf(hue_sat_map=_flatten(_identity_table()), hue_sat_dims=[_H, _S, _V],
-                    hue_sat_encoding=1)
-    x = np.array([[1.5, 1.2, 0.8], [0.0, 2.0, 0.5], [3.0, 0.1, 1.7],
-                  [0.9, 0.3, 1.4], [2.84, 0.0, 0.12]], dtype=np.float32)
-    y = apply_hue_sat_map(x, prof)
-    assert y.shape == x.shape and y.dtype == np.float32
-    assert np.isfinite(y).all() and float(y.min()) >= 0.0
-    err = float(np.abs(y - x).max())
-    assert err <= IDENTITY_TOL, f"高光恒等往返 max|Δ| {err:.3e} ≥ {IDENTITY_TOL}"
-
-
-# ---------------------------------------------------------------------------
-# 3) 单调性断言 (表应用路径)
-# ---------------------------------------------------------------------------
-
-def test_sat_val_monotonicity():
-    """sat_scale/val_scale ≥ 1 的常数表: 输出 S/V 随输入 S/V 斜坡单调不减。"""
-    H, S, V = 16, 8, 8
-    table = np.zeros((H, S, V, 3), dtype=np.float32)
-    table[..., 0] = 0.0
-    table[..., 1] = 2.0   # sat_scale 恒 2
-    table[..., 2] = 1.5   # val_scale 恒 1.5
-    n = 513
-
-    s_ramp = np.linspace(0.0, 1.0, n, dtype=np.float64)
-    h_fix = np.zeros_like(s_ramp)
-    v_fix = np.full_like(s_ramp, 0.8)
-    _, s_out, _ = apply_table_to_hsv(h_fix, s_ramp, v_fix, table, (H, S, V), strength=1.0)
-    assert np.all(np.diff(s_out) >= -1e-6), "输出 S 随输入 S 非单调"
-
-    v_ramp = np.linspace(0.0, 1.0, n, dtype=np.float64)
-    h_fix = np.zeros_like(v_ramp)
-    s_fix = np.full_like(v_ramp, 0.5)
-    _, _, v_out = apply_table_to_hsv(h_fix, s_fix, v_ramp, table, (H, S, V), strength=1.0)
-    assert np.all(np.diff(v_out) >= -1e-6), "输出 V 随输入 V 非单调"
-    # V 只钳下界 (线性域语义): val_scale=1.5 不再截顶到 1.0
-    assert float(v_out[-1]) == pytest.approx(1.5, abs=1e-6)
-
-
-# ---------------------------------------------------------------------------
-# 4) Stage 注册: order=25 < tone=30, domain=linear_rgb, 默认关
+# 2) Stage 注册: order=25 < tone=30, domain=linear_rgb, 默认关, 缺省域 oklch
 # ---------------------------------------------------------------------------
 
 def test_stage_order_domain():
@@ -240,13 +157,13 @@ def test_stage_order_domain():
     assert hs.order < ToneStage().order == 30          # tone 之前
     assert hs.domain_in == DOMAIN_LINEAR_RGB
     assert hs.domain_out == DOMAIN_LINEAR_RGB
-    # color_domain 双轨批次为 default_params 补 color_domain/oklch_points_file
+    # R11: A 轨退役, 缺省 color_domain 翻 "oklch" (原 "hsv" 缺省已无执行链)
     assert hs.default_params() == {"enabled": False, "strength": 1.0,
-                                   "color_domain": "hsv", "oklch_points_file": ""}
+                                   "color_domain": "oklch", "oklch_points_file": ""}
 
 
 # ---------------------------------------------------------------------------
-# 5) 全链默认 (huesat 关) 输出不变 + 启用时域/顺序正确
+# 3) 全链默认 (huesat 关) 输出不变 + 启用时域/顺序正确 + 点云缺失 no-op
 # ---------------------------------------------------------------------------
 
 def _run_default_chain(prof, img, params):
@@ -282,12 +199,16 @@ def test_default_chain_output_unchanged_with_huesat_disabled():
     assert np.array_equal(out1, out2), "huesat 默认关时全链输出应逐位不变"
 
 
-def test_huesat_enabled_identity_chain_before_tone():
-    """启用 huesat (恒等表): 在 tone 之前执行, 线性域接线无域错位, 输出有限。"""
+def test_huesat_enabled_runs_before_tone():
+    """启用 huesat (点云命中 profile): 在 tone 之前执行, 线性域接线无域错位。
+
+    R11 后执行体 = OKLCh 点云形变 (非恒等表 HSV 应用), 故此处用点云命中的
+    profile 名; 数值验收在 test_huesat_oklch.py。"""
     params = {"exposure": {"mode": "off"}, "whitebalance": {"mode": "off"},
               "skin": {"enabled": False}, "huesat": {"enabled": True}}
     prof = MockProf(hue_sat_map=_flatten(_identity_table(16, 8, 8)),
-                    hue_sat_dims=[16, 8, 8], hue_sat_encoding=1)
+                    hue_sat_dims=[16, 8, 8], hue_sat_encoding=1,
+                    name="Nikon Z 5 2 RawLab LR Baseline")
     img = np.random.default_rng(3).random((16, 16, 3)).astype(np.float32)
 
     ctx, out = _run_default_chain(prof, img, params)
@@ -300,8 +221,20 @@ def test_huesat_enabled_identity_chain_before_tone():
     assert np.isfinite(out).all()
     assert float(out.min()) >= 0.0 and float(out.max()) <= 1.0
 
-    # 恒等表全链 ≈ 关闭 huesat 的基线 (误差经 tone/colorcal 放大后仍很小)
-    params_off = dict(params, huesat={"enabled": False})
-    _, out_off = _run_default_chain(prof, img, params_off)
-    diff = float(np.abs(out.astype(np.float64) - out_off.astype(np.float64)).max())
-    assert diff <= 1e-4, f"恒等表全链与基线偏差 {diff:.3e} 过大"
+
+def test_huesat_enabled_without_spec_is_noop_chain_identical():
+    """启用 huesat 但点云缺失 (R11 防御语义): stage 跳过 → 全链与基线逐位一致
+    (不再回退任何旧链)。"""
+    params = {"exposure": {"mode": "off"}, "whitebalance": {"mode": "off"},
+              "skin": {"enabled": False}, "huesat": {"enabled": True}}
+    prof_missing = MockProf(hue_sat_map=_flatten(_identity_table(16, 8, 8)),
+                            hue_sat_dims=[16, 8, 8], hue_sat_encoding=1,
+                            name="No Such DCP Profile 12345")
+    prof_none = MockProf()
+    img = np.random.default_rng(3).random((16, 16, 3)).astype(np.float32)
+
+    ctx1, out1 = _run_default_chain(prof_missing, img, params)
+    ctx2, out2 = _run_default_chain(prof_none, img, params)
+
+    assert "huesat" not in [r.name for r in ctx1.results]   # spec 缺失 → wants False
+    assert np.array_equal(out1, out2), "点云缺失 no-op 全链输出应逐位不变"

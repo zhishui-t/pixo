@@ -6,13 +6,13 @@ configs/color/hsm_oklch_*.json (t17 convert_hsm_to_oklch 产出, schema
 OKLCh 语义转译: 每点 = (h, c, l = 查表前像素 OKLCh 坐标;
 dh = 色相增量(度, ±180 折回); c_gain/l_gain = 色度/亮度增益)。
 
-方法 (与 core.huesat 的 HSV 三线性同风格, O(px) 纯 numpy —— core 隔离纪律:
+方法 (O(px) 纯 numpy —— core 隔离纪律:
 运行时不用 scipy):
   1. 加载期把散点栅格化为规则 3D 表 (Shepard IDW 填充): 对每个格中心取
      K 近邻点反距离加权 (p=2); 距离的 h 轴用环距 (min(|Δh|, 360−|Δh|)),
      c/l 轴按跨度归一量纲 (c∈[0,c_hi] 窄、l∈[0,1] 宽 → wc=1/c_hi);
   2. 运行时对像素 OKLCh 坐标三线性插值 (h 环绕) 出 (dh, c_gain, l_gain),
-     strength 线性混合到恒等 (语义同 apply_table_to_hsv):
+     strength 线性混合到恒等 (DNG HSM 缩放语义):
      h' = h + strength·dh;  c' = c·(1 + strength·(c_gain−1));
      l' = l·(1 + strength·(l_gain−1));
   3. 色域软限幅复用 hsl_oklch._soft_limit_chroma (仅压增强量, tanh 渐近
@@ -211,7 +211,7 @@ def apply_oklch_deform(rgb01_gamma, spec: OklchDeform,
     lch = oklab_to_oklch(srgb_to_oklab(img))
     L, C, h = lch[..., 0], lch[..., 1], lch[..., 2]
     dh, cg, lg = _trilinear(spec.table, h, C, L)
-    # strength 线性混合到恒等 (语义同 apply_table_to_hsv)
+    # strength 线性混合到恒等 (DNG HSM 缩放语义)
     h2 = (h + s * dh) % 360.0
     c2 = C * (1.0 + s * (cg - 1.0))
     l2 = np.clip(L * (1.0 + s * (lg - 1.0)), 0.0, 1.0)

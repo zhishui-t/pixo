@@ -1,25 +1,29 @@
-"""Stage huesat (order=25) —— DCP HueSatMap + LookTable 应用 (linear_rgb → linear_rgb)。
+"""Stage huesat (order=25) —— DCP HueSatMap/LookTable 的 OKLCh 形变应用
+(linear_rgb → linear_rgb) + 局部暖色高光饱和。
 
-基座的一部分: HueSatMap 是 Adobe Camera 渲染链路中"相机观感"的主要载体
-(色相偏移/饱和度/明度重映射)。LookTable 在多数 DCP 中缺失 (本机无),
-有数据时同域应用。
+HSM/Look 语义载体: OKLCh 域连续形变 (core.huesat_oklch, t17 点云接线;
+路线图阶段二起用 OKLCh 连续形变替代 DCP HSM)。点云经
+scripts/convert_hsm_to_oklch.py 从 DCP 表数据离线转译
+(configs/color/hsm_oklch_<slug>.json, slug = DCP 名 token 匹配)。
+
+R11 A 轨退役: 旧 "hsv" 域执行链 (HSV 三线性查表 + DNG SDK 基准复刻
+分支) 已整体删除 —— color_domain 现仅 "oklch" 有效; "hsv" 取值保留于
+schema 仅为历史配置兼容, 语义 = HSM 不应用 (warn-once 后 no-op)。
+无匹配点云/DCP 无表: 同为显式 no-op (warn-once), 不再回退任何旧链。
 
 域修复 (2026-08, 见 dsh-plan-task-p4/research/hsmap-domain.md):
-  Adobe DNG SDK 在**线性 ProPhoto(D50)、影调曲线之前**应用 HueSatMap/LookTable,
-  而非旧实现的 gamma_rgb (sRGB 编码、tone 之后)。故:
-  - order 从 40 → 25 (tone=30 之前, 影调曲线之前);
-  - domain_in/out 从 gamma_rgb → linear_rgb (阶段内做 sRGB↔ProPhoto 往返)。
+  HueSatMap 应在**线性 ProPhoto(D50)、影调曲线之前**应用; 本 stage 的
+  底座渲染路径 (pipeline/base.py) 即该口径 (prophoto 包装 → core/tone.py
+  clean-room 4096 表插值)。本 Stage 的 oklch 分支: 线性 sRGB → gamma 域 →
+  OKLCh 形变 → 解码回线性 (域接口不变)。
 
 参数:
-  enabled   启用 (默认 False, 见下; 无数据时自动直通)
+  enabled   启用 (默认 False; 无点云/无表时自动直通)
   strength  强度 0..1 (0=不套, 1=完整效果; 线性混合到恒等)
-  color_domain  "hsv"(缺省, DCP HSM 的 HSV 三线性链, 行为不变) | "oklch"
-                (OKLCh 域连续形变, core.huesat_oklch; t17 点云接线)。
-                use_dng_huesat_path (DNG SDK 基准复刻) 优先级更高, 不受本参数
-                影响 —— oklch 分派只替代常规 gamma 分支。
+  color_domain  "oklch"(有效执行域) | "hsv"(历史取值, no-op)
   oklch_points_file  点云 JSON 路径; 空 (缺省) = 按 DCP 名自动推导
-                configs/color/hsm_oklch_<slug>.json (slug = 名字非字母数字
-                转下划线), 文件不存在 → 回退 hsv 链并告警一次。
+                configs/color/hsm_oklch_<slug>.json; 无匹配 → warn-once
+                + no-op (R11 起不再回退旧链)。
   warm_highlight_sat  局部暖色高光饱和 (sat_scale, 1.0=关; >1 增强, 默认 1.0)
                       —— 问题清单 A1: 烟花/暖灯橙黄局部补饱和, 不写死全局
                       HueSatMap (5236 高光锚点安全)。
@@ -29,7 +33,7 @@
   中性区 neu_b -8.5→-15.0。原因: 基座目标 = 复现**相机预览** (机内
   Picture Control 链路), 而 DCP HueSatMap 是 **Adobe Camera Raw 的观感**
   (hue twist ±37°, 饱和/明度重映射), 两者并不等价。HueSatMap 保留为
-  "Adobe look" 可选开关 (后续作为 preset 提供), 基座默认关闭。
+  可选 look 开关, 基座默认关闭。
 """
 from __future__ import annotations
 
@@ -39,9 +43,8 @@ import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_LINEAR_RGB
-from ..core.huesat import (apply_hue_sat_map, apply_look_table,
-                     apply_hue_sat_map_prophoto, apply_look_table_prophoto,
-                     apply_local_warm_sat, get_hue_sat_table, get_look_table)
+from ..core.huesat import (apply_hue_sat_map_prophoto, apply_look_table_prophoto,
+                           apply_local_warm_sat, get_hue_sat_table, get_look_table)
 from ..core.huesat_oklch import (OklchDeform, apply_oklch_deform,
                                  is_identity_deform, load_oklch_deform)
 
@@ -83,7 +86,8 @@ def _default_oklch_points(prof) -> list:
 
 def _resolve_oklch_spec(prof, file_param: str | None) -> OklchDeform | None:
     """color_domain=oklch 的点云解析: 显式路径 → 按 DCP 名 token 子序列
-    匹配缺省路径; 无匹配 → None (回退 hsv 链, 每解析失败只告警一次)。"""
+    匹配缺省路径; 无匹配 → None (HSM 不应用, warn-once; R11 起不再回退
+    旧链 —— 全部含表 DCP 均有点云, 此路径仅防御性存在)。"""
     candidates: list = []
     if file_param:
         candidates.append(str(file_param))
@@ -96,7 +100,7 @@ def _resolve_oklch_spec(prof, file_param: str | None) -> OklchDeform | None:
             import logging
             logging.getLogger(__name__).warning(
                 "[huesat] color_domain=oklch 但未找到匹配的 HSM→OKLCh 点云"
-                " (prof=%r; 回退 hsv 链)", prof_key)
+                " (prof=%r; HSM 不应用)", prof_key)
         return None
     for cand in candidates:
         p = pathlib.Path(cand)
@@ -111,9 +115,19 @@ def _resolve_oklch_spec(prof, file_param: str | None) -> OklchDeform | None:
         _OKLCH_MISSING_WARNED.add(tuple(candidates))
         import logging
         logging.getLogger(__name__).warning(
-            "[huesat] color_domain=oklch 但点云文件不存在: %s (回退 hsv 链)",
+            "[huesat] color_domain=oklch 但点云文件不存在: %s (HSM 不应用)",
             candidates[0])
     return None
+
+
+def _warn_hsv_retired(ctx: StageContext) -> None:
+    """color_domain="hsv" (退役域) warn-once: A 轨已删, HSM 不应用。"""
+    if "hsv" not in _OKLCH_MISSING_WARNED:
+        _OKLCH_MISSING_WARNED.add("hsv")
+        import logging
+        logging.getLogger(__name__).warning(
+            "[huesat] color_domain='hsv' 执行链已删除 (R11 A 轨退役); "
+            "HSM 不应用, 请改用 'oklch'")
 
 
 @register_stage("huesat", order=25,
@@ -130,12 +144,13 @@ class HueSatStage(Stage):
         "warm_sat_hue_halfwidth": {"type": "float", "min": 1.0, "max": 90.0},
         "warm_sat_val_min": {"type": "float", "min": 0.0, "max": 1.0},
         "warm_sat_coverage_max": {"type": "float", "min": 0.0, "max": 1.0},
+        # "hsv" 为退役取值 (历史配置兼容, no-op); 有效执行域仅 "oklch"
         "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
         "oklch_points_file": {"type": "str"},
     }
 
     def default_params(self):
-        return {"enabled": False, "strength": 1.0, "color_domain": "hsv",
+        return {"enabled": False, "strength": 1.0, "color_domain": "oklch",
                 "oklch_points_file": ""}
 
     def wants(self, ctx: StageContext) -> bool:
@@ -146,72 +161,53 @@ class HueSatStage(Stage):
             return False
         if prof is None:
             return False
-        if self._oklch_domain(ctx, prof):
-            spec = _resolve_oklch_spec(prof, self.p(ctx, "oklch_points_file",
-                                                    None))
-            if spec is not None:
-                return not is_identity_deform(spec)
-            # 点云缺失: 回退 hsv 链 (与 process 回退一致) —— 不能在此返回
-            # False, 否则整个 stage 被跳过连 hsv 都不应用。
+        # 非法域 fail-fast (先于无表短路: 配置错误不允许静默)
+        domain_oklch = self._oklch_domain(ctx)
+        # DCP 无表 (如 Preview 系): B 轨无从形变 → 静默 no-op (与 A 轨时代
+        # "无表直通" 同语义, 不告警)
         hs_table, _, _ = get_hue_sat_table(prof)
         lt_table, _, _ = get_look_table(prof)
-        return hs_table is not None or lt_table is not None
+        if hs_table is None and lt_table is None:
+            return False
+        if domain_oklch:
+            spec = _resolve_oklch_spec(prof, self.p(ctx, "oklch_points_file",
+                                                    None))
+            # 点云缺失/恒等: 显式 no-op (warn-once), 不回退任何旧链
+            return spec is not None and not is_identity_deform(spec)
+        # color_domain="hsv": A 轨已退役 → HSM 不应用 (warn-once)
+        _warn_hsv_retired(ctx)
+        return False
 
-    def _oklch_domain(self, ctx: StageContext, prof) -> bool:
-        """color_domain=oklch 且非 DNG 基准路径 (该路径为相机基准复刻,
-        不受 color_domain 影响)。非法值 raise (与 hsl Stage 同口径)。"""
-        domain = str(self.p(ctx, "color_domain", "hsv")).strip().lower()
+    def _oklch_domain(self, ctx: StageContext) -> bool:
+        """color_domain 是否为有效执行域 "oklch"。非法值 raise (与 hsl
+        Stage 同口径); "hsv" 为退役取值 (返回 False, wants 告警)。"""
+        domain = str(self.p(ctx, "color_domain", "oklch")).strip().lower()
         if domain not in ("hsv", "oklch"):
             raise ValueError(
                 f"huesat color_domain 需为 'hsv'|'oklch' (实际 {domain!r})")
-        return domain == "oklch" and not bool(
-            ctx.state.get("use_dng_huesat_path", False))
+        return domain == "oklch"
 
     def process(self, ctx: StageContext) -> None:
         strength = float(self.p(ctx, "strength"))
         warm_scale = float(self.p(ctx, "warm_highlight_sat", 1.0))
         img = ctx.image
-        cam_raw = ctx.state.get("cam_raw", ctx.state.get("cam_wb"))
-        has_fm = bool(getattr(ctx.prof, "forward_matrix1", None))
-        use_dng_path = bool(ctx.state.get("use_dng_huesat_path", False))
-        oklch_branch = (self._oklch_domain(ctx, ctx.prof)
-                        and ctx.prof is not None)
-        oklch_spec = (_resolve_oklch_spec(ctx.prof, self.p(
-            ctx, "oklch_points_file", None)) if oklch_branch else None)
         oklch_applied = False
-        if oklch_branch and oklch_spec is None:
-            oklch_branch = False      # 点云缺失已告警, 回退 hsv 链
-        if (use_dng_path and cam_raw is not None and ctx.prof is not None
-                and has_fm):
-            # DNG SDK 同源应用域: 未乘 WB 的相机 RGB → ForwardMatrix ProPhoto。
-            # SDK 顺序: HueSatMap -> ExposureRamp -> LookTable -> RGBTone -> final。
-            from ..core.color import (cam_wb_to_prophoto,
-                                 linear_prophoto_to_srgb)
-            from ..core.tone import apply_rgb_tone, exposure_ramp
-            pp = cam_wb_to_prophoto(cam_raw, ctx.prof, ctx.state.get("wb"))
-            if bool(self.p(ctx, "enabled")):
-                pp = apply_hue_sat_map_prophoto(pp, ctx.prof, strength=strength)
-            baseline_ev = ctx.state.get("dng_baseline_ev")
-            if baseline_ev is not None:
-                pp = exposure_ramp(pp, float(baseline_ev))
-            if bool(self.p(ctx, "enabled")):
-                pp = apply_look_table_prophoto(pp, ctx.prof, strength=strength)
-            ctx.state["dng_prophoto_pre_tone"] = pp
-            tone_table = ctx.state.get("dng_tone_table")
-            if bool(ctx.state.get("dng_apply_tone")) and tone_table is not None:
-                pp = apply_rgb_tone(pp, tone_table)
-            img = linear_prophoto_to_srgb(pp)
-        elif (oklch_branch and bool(self.p(ctx, "enabled"))):
-            # OKLCh 域连续形变 (t17 点云): 输入线性 sRGB → gamma 域 →
-            # OKLCh 形变 → gamma → 解码回线性 (stage 域接口不变)。
-            from ..core.tone import srgb_decode, srgb_encode
-            gamma = srgb_encode(np.clip(np.asarray(img, np.float64), 0.0, None))
-            deformed = apply_oklch_deform(gamma, oklch_spec, strength=strength)
-            img = srgb_decode(deformed)
-            oklch_applied = True
-        elif bool(self.p(ctx, "enabled")) and ctx.prof is not None:
-            img = apply_hue_sat_map(img, ctx.prof, strength=strength)
-            img = apply_look_table(img, ctx.prof, strength=strength)
+        enabled = bool(self.p(ctx, "enabled"))
+        if enabled and ctx.prof is not None and self._oklch_domain(ctx):
+            spec = _resolve_oklch_spec(ctx.prof, self.p(
+                ctx, "oklch_points_file", None))
+            if spec is not None and not is_identity_deform(spec):
+                # OKLCh 域连续形变 (t17 点云): 输入线性 sRGB → gamma 域 →
+                # OKLCh 形变 → gamma → 解码回线性 (stage 域接口不变)。
+                from ..core.tone import srgb_decode, srgb_encode
+                gamma = srgb_encode(np.clip(np.asarray(img, np.float64), 0.0, None))
+                deformed = apply_oklch_deform(gamma, spec, strength=strength)
+                img = srgb_decode(deformed)
+                oklch_applied = True
+        elif enabled:
+            # color_domain="hsv" (退役域) 或无 prof: 显式告警, HSM 不应用
+            # (R11 A 轨退役; 点云缺失场景在 oklch 分支内已 warn-once)
+            _warn_hsv_retired(ctx)
         if warm_scale > 1.0:
             img = apply_local_warm_sat(
                 img, sat_scale=warm_scale,
@@ -231,5 +227,5 @@ class HueSatStage(Stage):
             "hue_sat_dims": list(dims) if dims else None,
             "look_table": bool(lt_table is not None and not oklch_applied),
             "local_warm_sat": warm_scale,
-            "color_domain": "oklch" if oklch_applied else "hsv",
+            "color_domain": "oklch" if oklch_applied else "none",
         }

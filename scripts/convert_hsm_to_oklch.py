@@ -1,7 +1,7 @@
 """DCP HueSatMap 表 → OKLCh 控制点云离线转换 (设计 §3 / M-O2, 供 M-D1 标定)。
 
 输入: DCP 的 HueSatMap (0xC6FA, 本机表 dims 90×16×16, 每格 (hue_shift_deg,
-sat_scale, val_scale)); 采样域与运行时 apply_hue_sat_map_prophoto 完全同构:
+sat_scale, val_scale)); 采样域为 DNG HueSatMap 规范查表语义:
   HSV(线性 ProPhoto 域, H∈[0,360), S/V∈[0,1]) → RGB_pp → 线性 sRGB →
   gamma sRGB → OKLab → OKLCh; 对每个网格节点记录"查表前/后"的 OKLCh 坐标
   (h_in, C_in, L_in) 与表的 OKLCh 语义作用量: Δh (环绕折回 ±180)、C 增益、
@@ -77,13 +77,13 @@ def convert(table: np.ndarray, dims: tuple[int, int, int], encoding: int,
             strength: float = 1.0) -> list[dict]:
     """(H,S,V,3) 表 → OKLCh 控制点列表 (含恒等节点, 剪除由调用方做)。"""
     h_divs, s_divs, v_divs = dims
-    # 网格节点坐标 (对齐 apply_table_to_hsv 的三线性节点语义)
+    # 网格节点坐标 (DNG HueSatMap 查表节点语义)
     h_axis = (np.arange(h_divs, dtype=np.float64) * (360.0 / h_divs))
     s_axis = np.arange(s_divs, dtype=np.float64) / max(s_divs - 1, 1)
     v_axis = np.arange(v_divs, dtype=np.float64) / max(v_divs - 1, 1)
     hh, ss, vv = np.meshgrid(h_axis, s_axis, v_axis, indexing="ij")
 
-    # 表作用量 (strength 语义同 apply_table_to_hsv)
+    # 表作用量 (strength 线性混合语义, 与 B 轨运行时一致)
     hue_shift = table[..., 0].astype(np.float64) * strength
     sat_scale = 1.0 + strength * (table[..., 1].astype(np.float64) - 1.0)
     val_scale = 1.0 + strength * (table[..., 2].astype(np.float64) - 1.0)
