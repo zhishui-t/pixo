@@ -303,7 +303,21 @@
       SkinStage oklch 掩码 native 化（复用本参数化内核）仍为独立机会项
       （非本债范围，见 r10-hard-problems §6.3）。
 
-19. ~~**标定覆盖缺口：warmth 曲线/曝光表与语料 wb_B 域错配**~~ **已评估-记录接受（2026-09-08 R19 专项）**：垫片偏差亚 JND（OOS-low 31 张日光 median +0.76/p90 +1.33 ΔE00，方向系统=垫片过暖但量级可接受）；错配根源=语料双峰（日光簇 58%/暖簇 39%）非域保守；曝光轴贡献可忽略（0.017 EV）。条件触发选项挂起：warmth 曲线补日光段 2 结点（0.5-1 人日域内零风险）——日光观感人评反馈再启。证据 .artifacts/calib_domain_gap_eval.md。原记录：
+19. ~~**标定覆盖缺口：warmth 曲线/曝光表与语料 wb_B 域错配**~~ **已清偿-日光段扩域落地（2026-09-08 R20，用户批准执行 R19 条件触发选项）**：
+    - **执行**：warmth 曲线补日光段 2 结点（D1 wb_B=1.10 / D2 wb_B=1.40，由
+      R19 OOS-low 31 张逐照片最优 warmth 分箱中位数换算增益），拟合域扩为
+      [1.10, 2.3984]；暖簇 5 结点全保留 → 域内 [1.7578,2.3984] 2001 点增益
+      **逐位不变**实证（warmth_cal_auto gate case 零漂移）。
+    - **效果**：OOS-low 31 张垫片偏差（生产−逐照片最优）median +0.537 →
+      **+0.019** / p90 +1.117 → +0.109 / max 2.426 → 0.526；方向性过暖消除。
+    - **金样本影响（报队长裁决）**：RAW gate_defaults 24/24 漂移（全部金样本
+      wb_B<1.6778 落新日光段=预期改善性漂移，ΔE76 mean 2.34~9.91 / max u8
+      24~65，方向=移除垫片过暖）；合成 gate 恰 2 case（default_dispatch max
+      0.030 / card_portra_400 max 0.016，b=0.96 合成相机移入新插值段），
+      warmth_cal_auto **零漂移**（域内不变性 gate 级证明）。基线重生成权在队长。
+    - 证据：`.artifacts/warmth_daylight_knots_r20.md`、
+      脚本 `_r20_fit_daylight_knots.py` / `_r20_warmth_daylight_verify.py`、
+      机读 `r20_warmth_daylight_verify.json`。R19 评估记录（下存档）：
     - warmth 曲线 56% 样本、曝光表 wb 轴 89% 样本落标定适用域外（垫片近似
       生效中）；属 EV 无关的覆盖缺口，量级与影响待专项评估（是否扩域
       重标定 vs 垫片精度实测）。证据 .artifacts/ev_stress_experiment.md。

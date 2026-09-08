@@ -1,7 +1,19 @@
 {
-  "version": 1,
+  "version": 2,
   "type": "warmth_curve",
   "knots": [
+    [
+      1.1,
+      1.0965828,
+      0.9547201,
+      0.9382479
+    ],
+    [
+      1.4,
+      1.0,
+      1.0,
+      1.0
+    ],
     [
       1.6778,
       1.1736442985008826,
@@ -35,10 +47,10 @@
   ],
   "_domain": {
     "wb_B": [
-      1.7578,
+      1.1,
       2.3984
     ],
-    "note": "拟合样本覆盖域; 域外由端点垫片承接(近似斜率模型)"
+    "note": "拟合样本覆盖域 (R19 日光簇 + R13 暖簇); 域外由端点垫片承接(近似斜率模型)"
   },
   "meta": {
     "holdouts": {
@@ -89,6 +101,23 @@
       "DSC_0355": "|da|<=6 且 |db|<=6",
       "DSC_5236": "|da|<=5"
     },
-    "note": "结点经 Stage warmth 缩放生效 gain=1+warmth*(knot-1)"
+    "note": "结点经 Stage warmth 缩放生效 gain=1+warmth*(knot-1); R20 新增日光段 2 结点 (1.10/1.40), 暖簇 5 结点不变"
+  },
+  "r20_daylight_extension": {
+    "date": "2026-09-08",
+    "method": "R19 逐照片最优 warmth (抛物线细化, 5 臂网格) 分箱中位数 → 增益换算 g = 1 + (w/0.9)·(g0−1)",
+    "data": ".artifacts/calib_domain_gap_eval.md (OOS-low n=31)",
+    "new_knots": {
+      "D1": {
+        "wb_B": 1.1,
+        "warmth_equiv": 0.5006
+      },
+      "D2": {
+        "wb_B": 1.4,
+        "warmth_equiv": 0.0
+      }
+    },
+    "in_domain_guarantee": "旧 5 结点全保留, [1.6778, 2.4784] 分段逐位不变",
+    "trial_history": "R13 试水系数 → R15 分层复权 → R20 日光段扩域"
   }
 }

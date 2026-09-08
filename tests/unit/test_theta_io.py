@@ -45,7 +45,9 @@ def test_default_sources_exist():
 
 
 def test_load_theta_shapes_and_values(theta):
-    assert theta.warmth_knots.shape == (5, 4)          # warmth_knots[5]
+    # R20 日光段扩域: 5 → 7 结点 (D1@1.10/D2@1.40)。形状与源文件结点数
+    # 动态对齐 (防止后续扩域再次钉死碎裂), 列数 4 = [wb_B, r, g, b]。
+    assert theta.warmth_knots.shape == (len(_raw("warmth_knots")["knots"]), 4)
     assert theta.exposure_table.ndim == 2
     assert theta.exposure_table.shape[1] == 3          # [m_log2, wb_B, ev] 二维表
     assert theta.probe_hi.shape == theta.exposure_table.shape
