@@ -1,0 +1,2477 @@
+{
+  "corpus": "exports/auto/full_scan",
+  "n_samples": 54,
+  "prompts": [
+    "sky",
+    "plant"
+  ],
+  "trial_coefficients": {
+    "sky": -0.25,
+    "plant": 0.2,
+    "guard_area_ratio": 0.7
+  },
+  "runs": {
+    "DSC_5269_raw": {
+      "sample": "DSC_5269_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0875,
+        "de_p95": 0.9153,
+        "changed_ratio": 0.0881
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 25.41,
+          "area_ratio": 0.085489,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 26.3,
+          "area_ratio": 0.085489,
+          "fired": true,
+          "decided": 0.1274,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 1,
+      "guard_blocked": true,
+      "blocked_entries": [
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 26.28,
+          "area_ratio": 0.085489,
+          "fired": false,
+          "decided": 0.12485714285714287,
+          "overflow": 0.0
+        }
+      ],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12485714285714287
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 116.2
+    },
+    "DSC_5270_raw": {
+      "sample": "DSC_5270_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0921,
+        "de_p95": 0.9353,
+        "changed_ratio": 0.0929
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 26.35,
+          "area_ratio": 0.089768,
+          "fired": true,
+          "decided": null,
+          "overflow": 5.8e-05
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 27.23,
+          "area_ratio": 0.089768,
+          "fired": true,
+          "decided": 0.12471428571428572,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 1,
+      "guard_blocked": true,
+      "blocked_entries": [
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 27.21,
+          "area_ratio": 0.089768,
+          "fired": false,
+          "decided": 0.1222,
+          "overflow": 0.0
+        }
+      ],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.1222
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 88.7
+    },
+    "DSC_5271_raw": {
+      "sample": "DSC_5271_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0173,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0176
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 24.38,
+          "area_ratio": 0.017086,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000271
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 25.76,
+          "area_ratio": 0.017086,
+          "fired": true,
+          "decided": 0.13034285714285718,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 1,
+      "guard_blocked": true,
+      "blocked_entries": [
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 25.73,
+          "area_ratio": 0.017086,
+          "fired": false,
+          "decided": 0.12639999999999998,
+          "overflow": 0.0
+        }
+      ],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12639999999999998
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 87.9
+    },
+    "DSC_5272_raw": {
+      "sample": "DSC_5272_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0116,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0119
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 24.83,
+          "area_ratio": 0.011505,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 25.89,
+          "area_ratio": 0.011505,
+          "fired": true,
+          "decided": 0.12905714285714287,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 1,
+      "guard_blocked": true,
+      "blocked_entries": [
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 25.88,
+          "area_ratio": 0.011505,
+          "fired": false,
+          "decided": 0.12602857142857143,
+          "overflow": 0.0
+        }
+      ],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12602857142857143
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 87.1
+    },
+    "DSC_5273_raw": {
+      "sample": "DSC_5273_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0076,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0079
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 25.74,
+          "area_ratio": 0.007638,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 26.49,
+          "area_ratio": 0.007638,
+          "fired": true,
+          "decided": 0.12645714285714288,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 1,
+      "guard_blocked": true,
+      "blocked_entries": [
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 26.47,
+          "area_ratio": 0.007638,
+          "fired": false,
+          "decided": 0.12431428571428574,
+          "overflow": 0.0
+        }
+      ],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12431428571428574
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 87.6
+    },
+    "DSC_5274_raw": {
+      "sample": "DSC_5274_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0102,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0106
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 23.12,
+          "area_ratio": 0.010235,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000271
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 23.8,
+          "area_ratio": 0.010235,
+          "fired": true,
+          "decided": 0.1339428571428571,
+          "overflow": 0.000251
+        }
+      ],
+      "guard_blocked_iterations": 1,
+      "guard_blocked": true,
+      "blocked_entries": [
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 23.79,
+          "area_ratio": 0.010235,
+          "fired": false,
+          "decided": 0.132,
+          "overflow": 0.000251
+        }
+      ],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.132
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 87.3
+    },
+    "DSC_5275_raw": {
+      "sample": "DSC_5275_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0145,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0151
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 26.76,
+          "area_ratio": 0.014527,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000541
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 27.51,
+          "area_ratio": 0.014527,
+          "fired": true,
+          "decided": 0.12354285714285713,
+          "overflow": 0.000387
+        }
+      ],
+      "guard_blocked_iterations": 1,
+      "guard_blocked": true,
+      "blocked_entries": [
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 27.49,
+          "area_ratio": 0.014527,
+          "fired": false,
+          "decided": 0.12139999999999998,
+          "overflow": 0.000387
+        }
+      ],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12139999999999998
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 87.9
+    },
+    "DSC_5276_raw": {
+      "sample": "DSC_5276_raw",
+      "a_qc": "pass",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 1.4579,
+        "de_p95": 3.3009,
+        "changed_ratio": 0.9118
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 178.88,
+          "area_ratio": 0.044117,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.036061
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 26.12,
+          "area_ratio": 0.376791,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.036061
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 157.21,
+          "area_ratio": 0.044117,
+          "fired": true,
+          "decided": -0.2981333333333333,
+          "overflow": 0.016397
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 24.44,
+          "area_ratio": 0.376791,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.016397
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 158.95,
+          "area_ratio": 0.044117,
+          "fired": true,
+          "decided": -0.2620166666666667,
+          "overflow": 0.016403
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 25.45,
+          "area_ratio": 0.376791,
+          "fired": true,
+          "decided": 0.13017142857142858,
+          "overflow": 0.016403
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.26491666666666663
+          },
+          "plant": {
+            "exposure": 0.12728571428571428
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 102.6
+    },
+    "DSC_5277_raw": {
+      "sample": "DSC_5277_raw",
+      "a_qc": "pass",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 1.5111,
+        "de_p95": 3.9102,
+        "changed_ratio": 0.921
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 182.88,
+          "area_ratio": 0.056473,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.034714
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 25.8,
+          "area_ratio": 0.350984,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.034714
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 160.2,
+          "area_ratio": 0.056473,
+          "fired": true,
+          "decided": -0.3048,
+          "overflow": 0.01347
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 24.13,
+          "area_ratio": 0.350984,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.01347
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 162.08,
+          "area_ratio": 0.056473,
+          "fired": true,
+          "decided": -0.26699999999999996,
+          "overflow": 0.01349
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 25.14,
+          "area_ratio": 0.350984,
+          "fired": true,
+          "decided": 0.13105714285714287,
+          "overflow": 0.01349
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.27013333333333334
+          },
+          "plant": {
+            "exposure": 0.12817142857142858
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 102.4
+    },
+    "DSC_5278_raw": {
+      "sample": "DSC_5278_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.2875,
+        "de_p95": 5.2089,
+        "changed_ratio": 0.9212
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 207.47,
+          "area_ratio": 0.247269,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.044059
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 25.62,
+          "area_ratio": 0.16858,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.044059
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 178.45,
+          "area_ratio": 0.247269,
+          "fired": true,
+          "decided": -0.34578333333333333,
+          "overflow": 0.000657
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 24.0,
+          "area_ratio": 0.16858,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.000657
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 181.18,
+          "area_ratio": 0.247269,
+          "fired": true,
+          "decided": -0.29741666666666666,
+          "overflow": 0.000657
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 25.0,
+          "area_ratio": 0.16858,
+          "fired": true,
+          "decided": 0.13142857142857142,
+          "overflow": 0.000657
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.30196666666666666
+          },
+          "plant": {
+            "exposure": 0.1285714285714286
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 169.8
+    },
+    "DSC_5279_raw": {
+      "sample": "DSC_5279_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.3084,
+        "de_p95": 5.2321,
+        "changed_ratio": 0.9224
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 208.13,
+          "area_ratio": 0.247385,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.044485
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 25.6,
+          "area_ratio": 0.19097,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.044485
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 178.96,
+          "area_ratio": 0.247385,
+          "fired": true,
+          "decided": -0.3468833333333333,
+          "overflow": 0.000741
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 23.97,
+          "area_ratio": 0.19097,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.000741
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 181.72,
+          "area_ratio": 0.247385,
+          "fired": true,
+          "decided": -0.2982666666666667,
+          "overflow": 0.000741
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 24.98,
+          "area_ratio": 0.19097,
+          "fired": true,
+          "decided": 0.13151428571428572,
+          "overflow": 0.000741
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.3028666666666667
+          },
+          "plant": {
+            "exposure": 0.12862857142857143
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 170.0
+    },
+    "DSC_5280_raw": {
+      "sample": "DSC_5280_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.1632,
+        "de_p95": 1.4563,
+        "changed_ratio": 0.1157
+      },
+      "n_fires": 3,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 25.25,
+          "area_ratio": 0.116413,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.004196
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 26.26,
+          "area_ratio": 0.116413,
+          "fired": true,
+          "decided": 0.12785714285714286,
+          "overflow": 0.004196
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 26.24,
+          "area_ratio": 0.116413,
+          "fired": true,
+          "decided": 0.12497142857142857,
+          "overflow": 0.004196
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12497142857142857
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 122.6
+    },
+    "DSC_5281_raw": {
+      "sample": "DSC_5281_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.2626,
+        "de_p95": 1.7749,
+        "changed_ratio": 0.1798
+      },
+      "n_fires": 3,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 22.37,
+          "area_ratio": 0.184654,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.0033
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 23.33,
+          "area_ratio": 0.184654,
+          "fired": true,
+          "decided": 0.13608571428571428,
+          "overflow": 0.0033
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 23.31,
+          "area_ratio": 0.184654,
+          "fired": true,
+          "decided": 0.13334285714285715,
+          "overflow": 0.0033
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.13334285714285715
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 123.1
+    },
+    "DSC_5282_raw": {
+      "sample": "DSC_5282_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.2211,
+        "de_p95": 1.7749,
+        "changed_ratio": 0.1467
+      },
+      "n_fires": 3,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 23.63,
+          "area_ratio": 0.149322,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.002404
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 24.62,
+          "area_ratio": 0.149322,
+          "fired": true,
+          "decided": 0.1324857142857143,
+          "overflow": 0.002404
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 24.6,
+          "area_ratio": 0.149322,
+          "fired": true,
+          "decided": 0.12965714285714286,
+          "overflow": 0.002404
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12965714285714286
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 122.9
+    },
+    "DSC_5283_raw": {
+      "sample": "DSC_5283_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: perceptual_convergence",
+      "ab_compare": {
+        "de_mean": 2.2527,
+        "de_p95": 5.1934,
+        "changed_ratio": 0.9337
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 198.56,
+          "area_ratio": 0.226928,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.013947
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 21.65,
+          "area_ratio": 0.211079,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.013947
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 179.02,
+          "area_ratio": 0.226928,
+          "fired": true,
+          "decided": -0.33093333333333336,
+          "overflow": 0.000483
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 22.6,
+          "area_ratio": 0.211079,
+          "fired": true,
+          "decided": 0.13814285714285715,
+          "overflow": 0.000483
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 180.85,
+          "area_ratio": 0.226928,
+          "fired": true,
+          "decided": -0.29836666666666667,
+          "overflow": 0.000483
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 22.58,
+          "area_ratio": 0.211079,
+          "fired": true,
+          "decided": 0.13542857142857143,
+          "overflow": 0.000483
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.29836666666666667
+          },
+          "plant": {
+            "exposure": 0.13542857142857143
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 166.7
+    },
+    "DSC_5284_raw": {
+      "sample": "DSC_5284_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: perceptual_convergence",
+      "ab_compare": {
+        "de_mean": 2.25,
+        "de_p95": 5.2263,
+        "changed_ratio": 0.9329
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 199.04,
+          "area_ratio": 0.227779,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.015494
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 20.71,
+          "area_ratio": 0.20796,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.015494
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 179.41,
+          "area_ratio": 0.227779,
+          "fired": true,
+          "decided": -0.3317333333333333,
+          "overflow": 0.000567
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 21.63,
+          "area_ratio": 0.20796,
+          "fired": true,
+          "decided": 0.14082857142857144,
+          "overflow": 0.000567
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 181.25,
+          "area_ratio": 0.227779,
+          "fired": true,
+          "decided": -0.29901666666666665,
+          "overflow": 0.000567
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 21.62,
+          "area_ratio": 0.20796,
+          "fired": true,
+          "decided": 0.13820000000000002,
+          "overflow": 0.000567
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.29901666666666665
+          },
+          "plant": {
+            "exposure": 0.13820000000000002
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 166.1
+    },
+    "DSC_5285_raw": {
+      "sample": "DSC_5285_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: perceptual_convergence",
+      "ab_compare": {
+        "de_mean": 1.8722,
+        "de_p95": 4.3362,
+        "changed_ratio": 0.926
+      },
+      "n_fires": 4,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 155.06,
+          "area_ratio": 0.313693,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000271
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 17.55,
+          "area_ratio": 0.045741,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000271
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 18.33,
+          "area_ratio": 0.045741,
+          "fired": true,
+          "decided": 0.14985714285714288,
+          "overflow": 0.000271
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 18.31,
+          "area_ratio": 0.045741,
+          "fired": true,
+          "decided": 0.14762857142857144,
+          "overflow": 0.000271
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.25843333333333335
+          },
+          "plant": {
+            "exposure": 0.14762857142857144
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 165.6
+    },
+    "DSC_5286_raw": {
+      "sample": "DSC_5286_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: perceptual_convergence",
+      "ab_compare": {
+        "de_mean": 1.8625,
+        "de_p95": 4.3321,
+        "changed_ratio": 0.9231
+      },
+      "n_fires": 4,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 154.78,
+          "area_ratio": 0.314988,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000232
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 16.47,
+          "area_ratio": 0.039187,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000232
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 17.22,
+          "area_ratio": 0.039187,
+          "fired": true,
+          "decided": 0.15294285714285716,
+          "overflow": 0.000232
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 17.21,
+          "area_ratio": 0.039187,
+          "fired": true,
+          "decided": 0.15080000000000002,
+          "overflow": 0.000232
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.2579666666666667
+          },
+          "plant": {
+            "exposure": 0.15080000000000002
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 165.9
+    },
+    "DSC_5287_raw": {
+      "sample": "DSC_5287_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: perceptual_convergence",
+      "ab_compare": {
+        "de_mean": 1.8838,
+        "de_p95": 4.359,
+        "changed_ratio": 0.9248
+      },
+      "n_fires": 4,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 155.4,
+          "area_ratio": 0.314215,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000232
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 16.82,
+          "area_ratio": 0.054977,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000232
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 17.59,
+          "area_ratio": 0.054977,
+          "fired": true,
+          "decided": 0.15194285714285716,
+          "overflow": 0.000232
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 17.58,
+          "area_ratio": 0.054977,
+          "fired": true,
+          "decided": 0.14974285714285715,
+          "overflow": 0.000232
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.259
+          },
+          "plant": {
+            "exposure": 0.14974285714285715
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 165.4
+    },
+    "DSC_5288_raw": {
+      "sample": "DSC_5288_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0448,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0094
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 253.01,
+          "area_ratio": 0.007728,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.082692
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 43.98,
+          "area_ratio": 0.008153,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.082692
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 222.35,
+          "area_ratio": 0.007728,
+          "fired": true,
+          "decided": -0.4216833333333333,
+          "overflow": 0.072785
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 41.6,
+          "area_ratio": 0.008153,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.072785
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 226.06,
+          "area_ratio": 0.007728,
+          "fired": true,
+          "decided": -0.3705833333333333,
+          "overflow": 0.072805
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 41.6,
+          "area_ratio": 0.008153,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.072805
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.3767666666666667
+          },
+          "plant": {
+            "exposure": 0.0
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 124.1
+    },
+    "DSC_0352_2026春节": {
+      "sample": "DSC_0352_2026春节",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 95.2
+    },
+    "DSC_0353_2026春节": {
+      "sample": "DSC_0353_2026春节",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 147.8
+    },
+    "DSC_0354_2026春节": {
+      "sample": "DSC_0354_2026春节",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 119.0
+    },
+    "DSC_0355_2026春节": {
+      "sample": "DSC_0355_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 195.3
+    },
+    "DSC_0356_2026春节": {
+      "sample": "DSC_0356_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 116.2
+    },
+    "DSC_0357_2026春节": {
+      "sample": "DSC_0357_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 117.1
+    },
+    "DSC_0358_2026春节": {
+      "sample": "DSC_0358_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 116.6
+    },
+    "DSC_0359_2026春节": {
+      "sample": "DSC_0359_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 116.9
+    },
+    "DSC_0360_2026春节": {
+      "sample": "DSC_0360_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 207.8
+    },
+    "DSC_0361_2026春节": {
+      "sample": "DSC_0361_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 195.7
+    },
+    "DSC_0362_2026春节": {
+      "sample": "DSC_0362_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 198.1
+    },
+    "DSC_0363_2026春节": {
+      "sample": "DSC_0363_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 194.1
+    },
+    "DSC_0364_2026春节": {
+      "sample": "DSC_0364_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 81.3
+    },
+    "DSC_0365_2026春节": {
+      "sample": "DSC_0365_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 81.1
+    },
+    "DSC_0366_2026春节": {
+      "sample": "DSC_0366_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 81.3
+    },
+    "DSC_0367_2026春节": {
+      "sample": "DSC_0367_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 132.0
+    },
+    "DSC_0368_2026春节": {
+      "sample": "DSC_0368_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 131.2
+    },
+    "DSC_0369_2026春节": {
+      "sample": "DSC_0369_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 132.5
+    },
+    "DSC_0370_2026春节": {
+      "sample": "DSC_0370_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 196.7
+    },
+    "DSC_0371_2026春节": {
+      "sample": "DSC_0371_2026春节",
+      "a_qc": "escalate_2x",
+      "b_qc": "escalate_2x",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 194.8
+    },
+    "DSC_5236_raw": {
+      "sample": "DSC_5236_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 117.1
+    },
+    "DSC_5237_raw": {
+      "sample": "DSC_5237_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 127.3
+    },
+    "DSC_5238_raw": {
+      "sample": "DSC_5238_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 126.4
+    },
+    "DSC_5239_raw": {
+      "sample": "DSC_5239_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 126.1
+    },
+    "DSC_5240_raw": {
+      "sample": "DSC_5240_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.1274,
+        "de_p95": 5.4713,
+        "changed_ratio": 0.7896
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 233.36,
+          "area_ratio": 0.351184,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.081506
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 65.73,
+          "area_ratio": 0.571686,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.081506
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 204.24,
+          "area_ratio": 0.351184,
+          "fired": true,
+          "decided": -0.38893333333333335,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 62.51,
+          "area_ratio": 0.571686,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 207.4,
+          "area_ratio": 0.351184,
+          "fired": true,
+          "decided": -0.34040000000000004,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 62.94,
+          "area_ratio": 0.571686,
+          "fired": true,
+          "decided": 0.021400000000000006,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.3456666666666667
+          },
+          "plant": {
+            "exposure": 0.02017142857142858
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 127.4
+    },
+    "DSC_5241_raw": {
+      "sample": "DSC_5241_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.526,
+        "de_p95": 5.3214,
+        "changed_ratio": 0.9171
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 227.38,
+          "area_ratio": 0.404305,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.121537
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 51.47,
+          "area_ratio": 0.522304,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.121537
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 196.5,
+          "area_ratio": 0.404305,
+          "fired": true,
+          "decided": -0.3789666666666667,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 48.97,
+          "area_ratio": 0.522304,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 199.74,
+          "area_ratio": 0.404305,
+          "fired": true,
+          "decided": -0.3275,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 49.9,
+          "area_ratio": 0.522304,
+          "fired": true,
+          "decided": 0.06008571428571429,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.33290000000000003
+          },
+          "plant": {
+            "exposure": 0.05742857142857143
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 126.5
+    },
+    "DSC_5242_raw": {
+      "sample": "DSC_5242_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.1885,
+        "de_p95": 5.5611,
+        "changed_ratio": 0.8323
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 237.65,
+          "area_ratio": 0.357578,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.093139
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 64.7,
+          "area_ratio": 0.574999,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.093139
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 207.51,
+          "area_ratio": 0.357578,
+          "fired": true,
+          "decided": -0.39608333333333334,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 61.44,
+          "area_ratio": 0.574999,
+          "fired": true,
+          "decided": 0.0,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 210.74,
+          "area_ratio": 0.357578,
+          "fired": true,
+          "decided": -0.34585,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 61.92,
+          "area_ratio": 0.574999,
+          "fired": true,
+          "decided": 0.024457142857142865,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.35123333333333334
+          },
+          "plant": {
+            "exposure": 0.023085714285714282
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 126.7
+    },
+    "DSC_5243_raw": {
+      "sample": "DSC_5243_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.7768,
+        "de_p95": 5.6797,
+        "changed_ratio": 0.994
+      },
+      "n_fires": 3,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 241.15,
+          "area_ratio": 0.083123,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.058084
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 211.56,
+          "area_ratio": 0.083123,
+          "fired": true,
+          "decided": -0.4019166666666667,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 215.02,
+          "area_ratio": 0.083123,
+          "fired": true,
+          "decided": -0.3526,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.35836666666666667
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 168.4
+    },
+    "DSC_5244_raw": {
+      "sample": "DSC_5244_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 129.3
+    },
+    "DSC_5245_raw": {
+      "sample": "DSC_5245_raw",
+      "a_qc": "escalate_2x",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.9644,
+        "de_p95": 5.6797,
+        "changed_ratio": 0.9972
+      },
+      "n_fires": 3,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 243.24,
+          "area_ratio": 0.205524,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.117315
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 213.73,
+          "area_ratio": 0.205524,
+          "fired": true,
+          "decided": -0.40540000000000004,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 217.18,
+          "area_ratio": 0.205524,
+          "fired": true,
+          "decided": -0.3562166666666666,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.36196666666666666
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 168.2
+    },
+    "DSC_5250_raw": {
+      "sample": "DSC_5250_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "changed_ratio": 0.0
+      },
+      "n_fires": 0,
+      "fires": [],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": null,
+      "elapsed_s": 130.0
+    },
+    "DSC_5257_raw": {
+      "sample": "DSC_5257_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 1.6786,
+        "de_p95": 4.3094,
+        "changed_ratio": 0.4116
+      },
+      "n_fires": 4,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 160.44,
+          "area_ratio": 0.395572,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 51.84,
+          "area_ratio": 0.010364,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 50.1,
+          "area_ratio": 0.010364,
+          "fired": true,
+          "decided": 0.051885714285714285,
+          "overflow": 0.0
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 50.17,
+          "area_ratio": 0.010364,
+          "fired": true,
+          "decided": 0.056857142857142856,
+          "overflow": 0.0
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.26739999999999997
+          },
+          "plant": {
+            "exposure": 0.05665714285714285
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 131.6
+    },
+    "DSC_5260_raw": {
+      "sample": "DSC_5260_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "ab_compare": {
+        "de_mean": 2.3943,
+        "de_p95": 5.0534,
+        "changed_ratio": 0.9663
+      },
+      "n_fires": 6,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "sky",
+          "luminance": 189.13,
+          "area_ratio": 0.161284,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.014766
+        },
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 52.4,
+          "area_ratio": 0.117811,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.014766
+        },
+        {
+          "iteration": 2,
+          "prompt": "sky",
+          "luminance": 171.21,
+          "area_ratio": 0.161284,
+          "fired": true,
+          "decided": -0.31521666666666665,
+          "overflow": 0.001109
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 53.15,
+          "area_ratio": 0.117811,
+          "fired": true,
+          "decided": 0.050285714285714295,
+          "overflow": 0.001109
+        },
+        {
+          "iteration": 3,
+          "prompt": "sky",
+          "luminance": 172.81,
+          "area_ratio": 0.161284,
+          "fired": true,
+          "decided": -0.28535,
+          "overflow": 0.001102
+        },
+        {
+          "iteration": 3,
+          "prompt": "plant",
+          "luminance": 53.12,
+          "area_ratio": 0.117811,
+          "fired": true,
+          "decided": 0.048142857142857154,
+          "overflow": 0.001102
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 0,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "sky": {
+            "exposure": -0.28801666666666664
+          },
+          "plant": {
+            "exposure": 0.04822857142857144
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 164.5
+    },
+    "DSC_5268_raw": {
+      "sample": "DSC_5268_raw",
+      "a_qc": "pass",
+      "b_qc": "pass",
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 连续两轮改善低于阈值",
+      "ab_compare": {
+        "de_mean": 0.0976,
+        "de_p95": 0.965,
+        "changed_ratio": 0.0985
+      },
+      "n_fires": 2,
+      "fires": [
+        {
+          "iteration": 1,
+          "prompt": "plant",
+          "luminance": 25.3,
+          "area_ratio": 0.095807,
+          "fired": true,
+          "decided": null,
+          "overflow": 0.000174
+        },
+        {
+          "iteration": 2,
+          "prompt": "plant",
+          "luminance": 26.17,
+          "area_ratio": 0.095807,
+          "fired": true,
+          "decided": 0.12771428571428572,
+          "overflow": 0.000174
+        }
+      ],
+      "guard_blocked_iterations": 0,
+      "guard_blocked": false,
+      "blocked_entries": [],
+      "dedup_nonrefire_iterations": 1,
+      "s4_plant_swallow": [],
+      "final_region_params": {
+        "regions": {
+          "plant": {
+            "exposure": 0.12522857142857144
+          }
+        },
+        "enabled": true
+      },
+      "elapsed_s": 105.7
+    }
+  }
+}

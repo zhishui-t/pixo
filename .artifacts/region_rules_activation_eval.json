@@ -1,0 +1,1356 @@
+{
+  "n_samples": 6,
+  "prompts": [
+    "sky",
+    "plant"
+  ],
+  "runs": {
+    "night_lowlight": {
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "a_elapsed_s": 65.8,
+      "b_elapsed_s": 48.7,
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "de_max": 0.0,
+        "changed_ratio": 0.0
+      },
+      "region_trigger": {
+        "n_triggered_iterations": 0,
+        "iterations": [],
+        "expected_vs_applied": {}
+      },
+      "a_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": null,
+          "plant_luminance": null,
+          "sky_reliable": false,
+          "plant_reliable": false,
+          "sky_area": 0.0,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.064697,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.064697 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.064697 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "saturation_high_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": null,
+          "plant_luminance": null,
+          "sky_reliable": false,
+          "plant_reliable": false,
+          "sky_area": 0.0,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.042345,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.042345 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.042345 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=6.1565 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": null,
+          "plant_luminance": null,
+          "sky_reliable": false,
+          "plant_reliable": false,
+          "sky_area": 0.0,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.041945,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.041945 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.041945 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800"
+          ]
+        }
+      ],
+      "b_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": null,
+          "plant_luminance": null,
+          "sky_reliable": false,
+          "plant_reliable": false,
+          "sky_area": 0.0,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.064697,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.064697 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.064697 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "saturation_high_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": null,
+          "plant_luminance": null,
+          "sky_reliable": false,
+          "plant_reliable": false,
+          "sky_area": 0.0,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.042345,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.042345 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.042345 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=6.1565 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": null,
+          "plant_luminance": null,
+          "sky_reliable": false,
+          "plant_reliable": false,
+          "sky_area": 0.0,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.041945,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.041945 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.041945 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800"
+          ]
+        }
+      ],
+      "b_final_params": {
+        "compose": {
+          "mode": "ratio",
+          "ratio": "4:3",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "rotation": 0.0,
+          "horizontal_flip": false,
+          "vertical_flip": false
+        },
+        "exposure": {
+          "mode": "auto",
+          "target_offset": -0.3
+        },
+        "tone": {
+          "highlights": -0.08
+        },
+        "colorcal": {
+          "saturation": -0.15
+        }
+      }
+    },
+    "day_normal": {
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "a_elapsed_s": 82.5,
+      "b_elapsed_s": 85.1,
+      "ab_compare": {
+        "de_mean": 1.3595,
+        "de_p95": 5.892,
+        "de_max": 7.39,
+        "changed_ratio": 0.2441
+      },
+      "region_trigger": {
+        "n_triggered_iterations": 3,
+        "iterations": [
+          {
+            "iteration": 1,
+            "fired_rules": [
+              "region_sky_exposure_001"
+            ],
+            "enabled": null,
+            "regions": null,
+            "overflow": 0.211247,
+            "sky_luminance": 250.65,
+            "plant_luminance": null
+          },
+          {
+            "iteration": 2,
+            "fired_rules": [
+              "region_sky_exposure_001"
+            ],
+            "enabled": true,
+            "regions": {
+              "sky": {
+                "exposure": -0.41775
+              }
+            },
+            "overflow": 0.059908,
+            "sky_luminance": 219.59,
+            "plant_luminance": null
+          },
+          {
+            "iteration": 3,
+            "fired_rules": [
+              "region_sky_exposure_001"
+            ],
+            "enabled": true,
+            "regions": {
+              "sky": {
+                "exposure": -0.3659833333333333
+              }
+            },
+            "overflow": 0.06003,
+            "sky_luminance": 223.27,
+            "plant_luminance": null
+          }
+        ],
+        "expected_vs_applied": {
+          "sky@it1": {
+            "luminance": 250.65,
+            "expected": -0.8355,
+            "applied": null,
+            "overflow": 0.211247,
+            "s4_suppressed": false
+          },
+          "sky@it2": {
+            "luminance": 219.59,
+            "expected": -0.732,
+            "applied": -0.4178,
+            "overflow": 0.059908,
+            "s4_suppressed": false
+          },
+          "sky@it3": {
+            "luminance": 223.27,
+            "expected": -0.7442,
+            "applied": -0.366,
+            "overflow": 0.06003,
+            "s4_suppressed": false
+          }
+        }
+      },
+      "a_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 250.65,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.230589,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.211247,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.211247 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.211247 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=4.1682 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 249.98,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.230589,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.262853,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.262853 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.262853 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 249.98,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.230589,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.262853,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.262853 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.262853 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800"
+          ]
+        }
+      ],
+      "b_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "vibrance_low_rule",
+            "region_sky_exposure_001"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 250.65,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.230589,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.211247,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.211247 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.211247 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=4.1682 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.4178"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "region_sky_exposure_001"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.41775
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 219.59,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.230589,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.059908,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.059908 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.059908 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.3660"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "region_sky_exposure_001"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.3659833333333333
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 223.27,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.230589,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.06003,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.06003 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.06003 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.3721"
+          ]
+        }
+      ],
+      "b_final_params": {
+        "compose": {
+          "mode": "ratio",
+          "ratio": "4:3",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "rotation": 0.0,
+          "horizontal_flip": false,
+          "vertical_flip": false
+        },
+        "exposure": {
+          "mode": "auto",
+          "target_offset": -0.3
+        },
+        "tone": {
+          "highlights": -0.08
+        },
+        "colorcal": {
+          "vibrance": 0.3
+        },
+        "region_adjust": {
+          "regions": {
+            "sky": {
+              "exposure": -0.3721166666666667
+            }
+          },
+          "enabled": true
+        }
+      }
+    },
+    "high_key_bright": {
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "a_elapsed_s": 53.5,
+      "b_elapsed_s": 28.2,
+      "ab_compare": {
+        "de_mean": 3.001,
+        "de_p95": 5.8768,
+        "de_max": 23.938,
+        "changed_ratio": 0.9654
+      },
+      "region_trigger": {
+        "n_triggered_iterations": 1,
+        "iterations": [
+          {
+            "iteration": 1,
+            "fired_rules": [
+              "region_sky_exposure_001"
+            ],
+            "enabled": null,
+            "regions": null,
+            "overflow": 5.8e-05,
+            "sky_luminance": 170.24,
+            "plant_luminance": null
+          }
+        ],
+        "expected_vs_applied": {
+          "sky@it1": {
+            "luminance": 170.24,
+            "expected": -0.5675,
+            "applied": null,
+            "overflow": 5.8e-05,
+            "s4_suppressed": false
+          }
+        }
+      },
+      "a_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 170.24,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.419129,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 5.8e-05,
+          "reasons": [
+            "haze_proxy=0.2553 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=4.4791 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "saturation_high_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 162.93,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.419129,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.2452 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=7.0595 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "saturation_high_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 163.05,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.419129,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 5.8e-05,
+          "reasons": [
+            "haze_proxy=0.2448 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=6.2366 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500"
+          ]
+        }
+      ],
+      "b_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule",
+            "region_sky_exposure_001"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 170.24,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.419129,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 5.8e-05,
+          "reasons": [
+            "haze_proxy=0.2553 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=4.4791 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.2837"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "saturation_high_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.28373333333333334
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 149.03,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.419129,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.2679 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=6.7141 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "dehaze_rule_030"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.28373333333333334
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 149.13,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.419129,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 5.8e-05,
+          "reasons": [
+            "haze_proxy=0.2675 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500"
+          ]
+        }
+      ],
+      "b_final_params": {
+        "compose": {
+          "mode": "ratio",
+          "ratio": "4:3",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "rotation": 0.0,
+          "horizontal_flip": false,
+          "vertical_flip": false
+        },
+        "dehaze": {
+          "strength": 0.15,
+          "enabled": true
+        },
+        "colorcal": {
+          "vibrance": 0.3,
+          "saturation": -0.15
+        },
+        "region_adjust": {
+          "regions": {
+            "sky": {
+              "exposure": -0.28373333333333334
+            }
+          },
+          "enabled": true
+        }
+      }
+    },
+    "portrait_tele": {
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 二次超标，转人工复核",
+      "a_elapsed_s": 51.9,
+      "b_elapsed_s": 54.0,
+      "ab_compare": {
+        "de_mean": 1.8031,
+        "de_p95": 4.2633,
+        "de_max": 7.484,
+        "changed_ratio": 0.5153
+      },
+      "region_trigger": {
+        "n_triggered_iterations": 3,
+        "iterations": [
+          {
+            "iteration": 1,
+            "fired_rules": [
+              "region_sky_exposure_001",
+              "region_plant_exposure_002"
+            ],
+            "enabled": null,
+            "regions": null,
+            "overflow": 0.111495,
+            "sky_luminance": 175.11,
+            "plant_luminance": 61.79
+          },
+          {
+            "iteration": 2,
+            "fired_rules": [
+              "region_sky_exposure_001",
+              "region_plant_exposure_002"
+            ],
+            "enabled": true,
+            "regions": {
+              "sky": {
+                "exposure": -0.29185
+              },
+              "plant": {
+                "exposure": 0.0
+              }
+            },
+            "overflow": 0.0,
+            "sky_luminance": 156.6,
+            "plant_luminance": 58.62
+          },
+          {
+            "iteration": 3,
+            "fired_rules": [
+              "region_sky_exposure_001",
+              "region_plant_exposure_002"
+            ],
+            "enabled": true,
+            "regions": {
+              "sky": {
+                "exposure": -0.261
+              },
+              "plant": {
+                "exposure": 0.032514285714285725
+              }
+            },
+            "overflow": 0.0,
+            "sky_luminance": 158.1,
+            "plant_luminance": 59.21
+          }
+        ],
+        "expected_vs_applied": {
+          "sky@it1": {
+            "luminance": 175.11,
+            "expected": -0.5837,
+            "applied": null,
+            "overflow": 0.111495,
+            "s4_suppressed": false
+          },
+          "plant@it1": {
+            "luminance": 61.79,
+            "expected": 0.0469,
+            "applied": null,
+            "overflow": 0.111495,
+            "s4_suppressed": false
+          },
+          "sky@it2": {
+            "luminance": 156.6,
+            "expected": -0.522,
+            "applied": -0.2918,
+            "overflow": 0.0,
+            "s4_suppressed": false
+          },
+          "plant@it2": {
+            "luminance": 58.62,
+            "expected": 0.065,
+            "applied": 0.0,
+            "overflow": 0.0,
+            "s4_suppressed": false
+          },
+          "sky@it3": {
+            "luminance": 158.1,
+            "expected": -0.527,
+            "applied": -0.261,
+            "overflow": 0.0,
+            "s4_suppressed": false
+          },
+          "plant@it3": {
+            "luminance": 59.21,
+            "expected": 0.0617,
+            "applied": 0.0325,
+            "overflow": 0.0,
+            "s4_suppressed": false
+          }
+        }
+      },
+      "a_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 175.11,
+          "plant_luminance": 61.79,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.449318,
+          "plant_area": 0.037401,
+          "preview_overflow_ratio": 0.111495,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.111495 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.111495 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=1.9299 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 171.52,
+          "plant_luminance": 58.72,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.449318,
+          "plant_area": 0.037401,
+          "preview_overflow_ratio": 0.109258,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.109258 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.109258 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=2.3114 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 171.52,
+          "plant_luminance": 58.72,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.449318,
+          "plant_area": 0.037401,
+          "preview_overflow_ratio": 0.109258,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.109258 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.109258 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=2.3114 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        }
+      ],
+      "b_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "highlight_protect_rule_002",
+            "highlight_recover_rule_033",
+            "vibrance_low_rule",
+            "region_sky_exposure_001",
+            "region_plant_exposure_002"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 175.11,
+          "plant_luminance": 61.79,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.449318,
+          "plant_area": 0.037401,
+          "preview_overflow_ratio": 0.111495,
+          "reasons": [
+            "preview_highlight_clip_estimate=0.111495 gte 0.025 -> highlight_protect_rule_002: exposure_ev -> -0.1500",
+            "preview_highlight_clip_estimate=0.111495 gte 0.025 -> highlight_recover_rule_033: tone.highlights -> -0.0800",
+            "colorfulness_proxy=1.9299 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.2918",
+            "规则 region_plant_exposure_002: region.plant.exposure -> 0.0235"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "vibrance_low_rule",
+            "region_sky_exposure_001",
+            "region_plant_exposure_002"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.29185
+              },
+              "plant": {
+                "exposure": 0.0
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 156.6,
+          "plant_luminance": 58.62,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.449318,
+          "plant_area": 0.037401,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "colorfulness_proxy=2.2376 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.2610",
+            "规则 region_plant_exposure_002: region.plant.exposure -> 0.0325"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "vibrance_low_rule",
+            "region_sky_exposure_001",
+            "region_plant_exposure_002"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.261
+              },
+              "plant": {
+                "exposure": 0.032514285714285725
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 158.1,
+          "plant_luminance": 59.21,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.449318,
+          "plant_area": 0.037401,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "colorfulness_proxy=2.2454 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.2635",
+            "规则 region_plant_exposure_002: region.plant.exposure -> 0.0308"
+          ]
+        }
+      ],
+      "b_final_params": {
+        "compose": {
+          "mode": "ratio",
+          "ratio": "4:3",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "rotation": 0.0,
+          "horizontal_flip": false,
+          "vertical_flip": false
+        },
+        "exposure": {
+          "mode": "auto",
+          "target_offset": -0.3
+        },
+        "tone": {
+          "highlights": -0.08
+        },
+        "colorcal": {
+          "vibrance": 0.3
+        },
+        "region_adjust": {
+          "regions": {
+            "sky": {
+              "exposure": -0.2635
+            },
+            "plant": {
+              "exposure": 0.030828571428571427
+            }
+          },
+          "enabled": true
+        }
+      }
+    },
+    "wide_angle": {
+      "a_reason": "FINAL_QC 二次超标，转人工复核",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "a_elapsed_s": 89.2,
+      "b_elapsed_s": 47.3,
+      "ab_compare": {
+        "de_mean": 4.8375,
+        "de_p95": 7.0813,
+        "de_max": 14.322,
+        "changed_ratio": 0.9891
+      },
+      "region_trigger": {
+        "n_triggered_iterations": 3,
+        "iterations": [
+          {
+            "iteration": 1,
+            "fired_rules": [
+              "region_sky_exposure_001"
+            ],
+            "enabled": null,
+            "regions": null,
+            "overflow": 0.002211,
+            "sky_luminance": 212.98,
+            "plant_luminance": 99.65
+          },
+          {
+            "iteration": 2,
+            "fired_rules": [
+              "region_sky_exposure_001"
+            ],
+            "enabled": true,
+            "regions": {
+              "sky": {
+                "exposure": -0.35496666666666665
+              }
+            },
+            "overflow": 0.002224,
+            "sky_luminance": 183.51,
+            "plant_luminance": 94.12
+          },
+          {
+            "iteration": 3,
+            "fired_rules": [
+              "region_sky_exposure_001"
+            ],
+            "enabled": true,
+            "regions": {
+              "sky": {
+                "exposure": -0.30585
+              }
+            },
+            "overflow": 0.002211,
+            "sky_luminance": 186.02,
+            "plant_luminance": 94.04
+          }
+        ],
+        "expected_vs_applied": {
+          "sky@it1": {
+            "luminance": 212.98,
+            "expected": -0.7099,
+            "applied": null,
+            "overflow": 0.002211,
+            "s4_suppressed": false
+          },
+          "sky@it2": {
+            "luminance": 183.51,
+            "expected": -0.6117,
+            "applied": -0.355,
+            "overflow": 0.002224,
+            "s4_suppressed": false
+          },
+          "sky@it3": {
+            "luminance": 186.02,
+            "expected": -0.6201,
+            "applied": -0.3059,
+            "overflow": 0.002211,
+            "s4_suppressed": false
+          }
+        }
+      },
+      "a_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "dehaze_rule_030"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 212.98,
+          "plant_luminance": 99.65,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.41998,
+          "plant_area": 0.038233,
+          "preview_overflow_ratio": 0.002211,
+          "reasons": [
+            "haze_proxy=0.4009 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "saturation_high_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 205.15,
+          "plant_luminance": 94.49,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.41998,
+          "plant_area": 0.038233,
+          "preview_overflow_ratio": 0.002462,
+          "reasons": [
+            "haze_proxy=0.3826 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=7.5769 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "saturation_high_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 204.78,
+          "plant_luminance": 94.36,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.41998,
+          "plant_area": 0.038233,
+          "preview_overflow_ratio": 0.002436,
+          "reasons": [
+            "haze_proxy=0.3834 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=6.6376 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500"
+          ]
+        }
+      ],
+      "b_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "region_sky_exposure_001"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 212.98,
+          "plant_luminance": 99.65,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.41998,
+          "plant_area": 0.038233,
+          "preview_overflow_ratio": 0.002211,
+          "reasons": [
+            "haze_proxy=0.4009 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.3550"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "saturation_high_rule",
+            "region_sky_exposure_001"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.35496666666666665
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 183.51,
+          "plant_luminance": 94.12,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.41998,
+          "plant_area": 0.038233,
+          "preview_overflow_ratio": 0.002224,
+          "reasons": [
+            "haze_proxy=0.4244 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=7.4655 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.3059"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "saturation_high_rule",
+            "region_sky_exposure_001"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": {
+            "regions": {
+              "sky": {
+                "exposure": -0.30585
+              }
+            },
+            "enabled": true
+          },
+          "sky_luminance": 186.02,
+          "plant_luminance": 94.04,
+          "sky_reliable": true,
+          "plant_reliable": true,
+          "sky_area": 0.41998,
+          "plant_area": 0.038233,
+          "preview_overflow_ratio": 0.002211,
+          "reasons": [
+            "haze_proxy=0.4193 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=6.6926 ge 6.13 -> saturation_high_rule: saturation.adjust -> -0.1500",
+            "规则 region_sky_exposure_001: region.sky.exposure -> -0.3100"
+          ]
+        }
+      ],
+      "b_final_params": {
+        "compose": {
+          "mode": "ratio",
+          "ratio": "4:3",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "rotation": 0.0,
+          "horizontal_flip": false,
+          "vertical_flip": false
+        },
+        "dehaze": {
+          "strength": 0.15,
+          "enabled": true
+        },
+        "region_adjust": {
+          "regions": {
+            "sky": {
+              "exposure": -0.3100333333333333
+            }
+          },
+          "enabled": true
+        },
+        "colorcal": {
+          "saturation": -0.15
+        }
+      }
+    },
+    "high_contrast": {
+      "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+      "a_elapsed_s": 30.1,
+      "b_elapsed_s": 29.6,
+      "ab_compare": {
+        "de_mean": 0.0,
+        "de_p95": 0.0,
+        "de_max": 0.0,
+        "changed_ratio": 0.0
+      },
+      "region_trigger": {
+        "n_triggered_iterations": 0,
+        "iterations": [],
+        "expected_vs_applied": {}
+      },
+      "a_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 155.72,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.995849,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.719 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=1.2891 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 148.2,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.995849,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.6732 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=1.6875 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 148.2,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.995849,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.6732 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=1.6875 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        }
+      ],
+      "b_decides": [
+        {
+          "iteration": 1,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 155.72,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.995849,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.719 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=1.2891 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 2,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 148.2,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.995849,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.6732 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=1.6875 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        },
+        {
+          "iteration": 3,
+          "rule_ids": [
+            "dehaze_rule_030",
+            "vibrance_low_rule"
+          ],
+          "decision": "adjust_and_continue",
+          "region_adjust": null,
+          "sky_luminance": 148.2,
+          "plant_luminance": null,
+          "sky_reliable": true,
+          "plant_reliable": false,
+          "sky_area": 0.995849,
+          "plant_area": 0.0,
+          "preview_overflow_ratio": 0.0,
+          "reasons": [
+            "haze_proxy=0.6732 gte 0.22 -> dehaze_rule_030: dehaze.strength -> 0.1500",
+            "colorfulness_proxy=1.6875 le 4.78 -> vibrance_low_rule: vibrance.strength -> 0.3000"
+          ]
+        }
+      ],
+      "b_final_params": {
+        "compose": {
+          "mode": "ratio",
+          "ratio": "4:3",
+          "center": [
+            0.5,
+            0.5
+          ],
+          "rotation": 0.0,
+          "horizontal_flip": false,
+          "vertical_flip": false
+        },
+        "dehaze": {
+          "strength": 0.15,
+          "enabled": true
+        },
+        "colorcal": {
+          "vibrance": 0.3
+        }
+      }
+    }
+  }
+}
