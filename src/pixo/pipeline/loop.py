@@ -30,6 +30,7 @@ import numpy as np
 
 from pixo.decide import decide, qc_rollback, register_metric_keys
 from pixo.decide.engine import _locked_params
+from pixo.pipeline.metrics import metrics_for_decide
 from pixo.pipeline.perceptual import JndConvergenceTracker, delta_e_median
 from pixo.state import PhotoStateMachine, TraceEvent
 from pixo.render.geometry.smart_crop import suggest_crop
@@ -519,36 +520,13 @@ def _compose_fingerprint(params: Mapping[str, Any]) -> str:
 
 
 def _metrics_for_decide(measurement: dict[str, Any]) -> dict[str, Any]:
-    """把完整测量报告展平为规则引擎可引用的指标 dict。"""
-    if not isinstance(measurement, dict):
-        return {}
-    global_metrics = measurement.get("global") or {}
-    regions = measurement.get("regions") or {}
-    metrics: dict[str, Any] = {
-        "mean_luminance": global_metrics.get("mean_luminance"),
-        "highlight_clip_ratio": global_metrics.get("highlight_clip_ratio"),
-        "shadow_clip_ratio": global_metrics.get("shadow_clip_ratio"),
-        "contrast": global_metrics.get("contrast"),
-        "preview_highlight_clip_estimate": global_metrics.get(
-            "preview_highlight_clip_estimate"
-        ),
-        "preview_overflow_ratio": global_metrics.get(
-            "preview_highlight_clip_estimate"
-        ),
-    }
-    for key in ("haze_proxy", "colorfulness_proxy", "tonal_range"):
-        if key in measurement:
-            metrics[key] = measurement[key]
-    for name, region in regions.items():
-        if not isinstance(region, dict):
-            continue
-        metrics[f"{name}_luminance"] = region.get("mean_luminance")
-        metrics[f"{name}_area_ratio"] = region.get("area_ratio")
-        metrics[f"{name}_highlight_clip_ratio"] = region.get(
-            "highlight_clip_ratio"
-        )
-        metrics[f"{name}_reliable"] = bool(region.get("reliable", False))
-    return metrics
+    """把完整测量报告展平为规则引擎可引用的指标 dict。
+
+    R21/F03：实现已公共化为 :func:`pixo.pipeline.metrics.metrics_for_decide`
+    （service 侧装配共用同一口径）；本函数保留为薄 wrapper，维持既有模块内
+    调用点（loop.py:1393）与可能的既有导入不破。
+    """
+    return metrics_for_decide(measurement)
 
 
 def _unreliable_regions(measurement: dict[str, Any]) -> list[str]:

@@ -409,6 +409,36 @@ class _PixoScorerAdapter:
             domain_hint=domain_hint,
         )
 
+    def __call__(
+        self,
+        image_rgb: np.ndarray,
+        masks: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, Any] | None:
+        """可调用契约（R21/F04）：``scorer(image, masks) -> dict | None``。
+
+        loop 侧（``loop.py`` 的 ``_score_aesthetic``）与构图侧
+        （``render/geometry/smart_crop.py`` 的 ``_score_scalar``）都把评分器当
+        **可调用对象**用，而本适配器此前只有 ``.score(image, meta)``
+        （批量线 batch.py:710 依赖该签名，此处不动）。
+
+        **必须返回 dict，不得返回 AestheticScore 本体**：loop 侧
+        ``float(overall)`` 位于 ``try`` 之外，dataclass 无 ``__float__``
+        ⇒ ``TypeError`` 会穿出 ``run()``（静默跳过变 HTTP 500）。
+        dict 形态同时满足 loop 的 dict 分支与 ``_score_scalar`` 的 dict 分支；
+        ``source`` / ``raw_overall`` / ``domain_hint`` 保留以维持溯源字段。
+        """
+        del masks  # 真评分器不消费掩码（同 .score 的 meta 语义）
+        s = self.score(image_rgb)
+        if s is None:  # 防御：当前 .score 不会返回 None，保持契约完整
+            return None
+        return {
+            "overall": s.overall,
+            **s.dimensions,
+            "source": s.source,
+            "raw_overall": s.raw_overall,
+            "domain_hint": s.domain_hint,
+        }
+
 
 class MockAgentSelector:
     """Agent 语义优选占位实现。
