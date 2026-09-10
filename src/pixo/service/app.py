@@ -5,6 +5,7 @@ vision/meta/render/decide/state/trace。不实现 DSH 工具插件（P2）。
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from contextlib import asynccontextmanager
@@ -12,7 +13,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 
 from .runtime import PixoServiceRuntime
 
@@ -242,6 +243,51 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
         """查询导出任务状态。"""
         try:
             return {"task": rt.export_status(task_id)}
+        except KeyError as exc:
+            raise _not_found(str(exc)) from exc
+
+    @app.post("/api/photos/{photo_id}/auto-loop", status_code=202)
+    async def api_auto_loop(photo_id: str, request: Request):
+        """提交单张闭环任务（R21 F01）：后台 202 + 轮询，或 sync=true 同步。
+
+        一次真 RAW 闭环实测 44–107s（全分辨率 FINAL_QC 渲染占 ~98%），故
+        缺省走后台任务：``202 {task_id, status, photo_id, segmenter_type}``。
+        body 可选 ``{"sync": true, "max_iterations": n}``；``sync=true`` →
+        **HTTP 200 + 与 GET /api/auto-loop/{task_id} 同构**的结果体。
+        photo 不存在 404；max_iterations 非法 400；闭环内部异常落
+        ``status=failed`` + error（异步/sync 两路都不裸抛 500）。
+        """
+        raw_body = await request.body()
+        body: Any = {}
+        if raw_body:
+            try:
+                body = json.loads(raw_body)
+            except ValueError as exc:
+                raise _bad_request(f"请求体不是合法 JSON: {exc}") from exc
+        if body is None:
+            body = {}
+        if not isinstance(body, dict):
+            raise _bad_request("请求体必须是 JSON 对象")
+        sync = bool(body.get("sync", False))
+        try:
+            result = await run_in_threadpool(
+                rt.run_auto_loop,
+                photo_id,
+                max_iterations=body.get("max_iterations"),
+                sync=sync,
+            )
+        except KeyError as exc:
+            raise _not_found(str(exc)) from exc
+        except ValueError as exc:
+            raise _bad_request(str(exc)) from exc
+        # sync=true 走 200（结果已终态）；缺省 202（后台任务 running）。
+        return JSONResponse(status_code=200 if sync else 202, content=result)
+
+    @app.get("/api/auto-loop/{task_id}")
+    def api_auto_loop_status(task_id: str) -> dict[str, Any]:
+        """查询 auto-loop 任务状态（status= running|done|failed）。"""
+        try:
+            return rt.auto_loop_status(task_id)
         except KeyError as exc:
             raise _not_found(str(exc)) from exc
 

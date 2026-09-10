@@ -11,16 +11,19 @@ import threading
 import time
 import uuid
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 import numpy as np
 
 from pixo.meta import extract
 from pixo.decide import decide
+from pixo.decide.rules import DEFAULT_RULES, load_rules
 from pixo.state import PhotoStateMachine
+from pixo.pipeline.loop import RawRenderBackend
 from pixo.render.web.export import ExportManager
 from pixo.render.web.session import RawPreviewSession
 from pixo.vision import MockSegmenter, VisionMeasure, vision_health
@@ -120,6 +123,81 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+# ---------------------------------------------------------------------------
+# R21 F01/F02：闭环（auto-loop）装配层配置与规则注入
+# ---------------------------------------------------------------------------
+
+# auto-loop 迭代数：env PIXO_LOOP_MAX_ITERATIONS 可覆盖缺省 3，硬上限 5。
+# 依据 R21 探索：单张真 RAW 闭环实测 43.95–107.4s，其中全分辨率 FINAL_QC
+# 渲染占 ~98%（probe6 73.09s），迭代数几乎不涨总时长（每轮只是 preview +
+# 测量），上限用于兜底资源占用；不实现任务级超时/取消（渲染无中断点）。
+_AUTO_LOOP_DEFAULT_ITERATIONS = 3
+_AUTO_LOOP_MAX_ITERATIONS_CAP = 5
+_AUTO_LOOP_ITERATIONS_ENV = "PIXO_LOOP_MAX_ITERATIONS"
+# 缺省 prompt 组（与 region 供给 / decide_photo 同源）。
+_AUTO_LOOP_PROMPTS = ("face", "sky", "plant")
+# F02：env PIXO_RULES ∈ {0,false,off,no}（任意大小写）关闭装配层默认规则注入。
+_RULES_DISABLED = {"0", "false", "off", "no"}
+# mock 分割器留痕标记：掩码为合成，结论不可信（exploration §5.5/风险 6.3）。
+_DEGRADED_MOCK_SEGMENTER = "mock_segmenter"
+
+
+def _auto_loop_default_iterations() -> int:
+    """auto-loop 缺省迭代数：env PIXO_LOOP_MAX_ITERATIONS 覆盖 + 硬上限裁剪。
+
+    非法值由 ``_env_int`` 回退缺省并告警；超过硬上限 5 时按上限裁剪
+    （env 是运维旋钮，不抛异常打断服务）。
+    """
+    raw = _env_int(
+        _AUTO_LOOP_ITERATIONS_ENV, _AUTO_LOOP_DEFAULT_ITERATIONS, minimum=1
+    )
+    if raw > _AUTO_LOOP_MAX_ITERATIONS_CAP:
+        _LOGGER.warning(
+            "env %s=%d 超过硬上限 %d，按上限裁剪",
+            _AUTO_LOOP_ITERATIONS_ENV, raw, _AUTO_LOOP_MAX_ITERATIONS_CAP,
+        )
+        return _AUTO_LOOP_MAX_ITERATIONS_CAP
+    return raw
+
+
+def _validate_max_iterations(value: Any) -> int:
+    """校验显式传入的 max_iterations：非整数 / bool / ≤0 / >5 → ValueError。"""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"max_iterations 必须是整数: {value!r}")
+    if value <= 0 or value > _AUTO_LOOP_MAX_ITERATIONS_CAP:
+        raise ValueError(
+            f"max_iterations 必须在 1..{_AUTO_LOOP_MAX_ITERATIONS_CAP} "
+            f"之间: {value}"
+        )
+    return value
+
+
+def _load_auto_loop_rules(
+    prompts: Sequence[str] | None = None,
+) -> list[dict[str, Any]]:
+    """F02：装配层加载内置默认规则（env PIXO_RULES=0/false/off/no 关闭）。
+
+    必须**显式**传 ``metric_keys=metric_universe(prompts)``：注册表非空时
+    ``region_rules.yaml`` 的 ``sky_luminance`` / ``plant_luminance``
+    （condition 与 formula 双引用）会抛 ``DecideError``。
+
+    库层 ``SinglePhotoLoop(rules=None)`` 缺省保持空（纯库语义）——本函数是
+    装配层注入点，不改 ``pipeline/``（dev-2 文件域）。
+    """
+    raw = os.environ.get("PIXO_RULES", "").strip().lower()
+    if raw in _RULES_DISABLED:
+        return []
+    # R21 F03 公共 API（dev-2 并行交付）：惰性 import，避免 service 模块
+    # 导入期与该文件的交付时序耦合。
+    from pixo.pipeline.metrics import metric_universe
+
+    universe = metric_universe(tuple(prompts or _AUTO_LOOP_PROMPTS))
+    rules: list[dict[str, Any]] = []
+    for path in DEFAULT_RULES:
+        rules.extend(load_rules(path, metric_keys=universe))
+    return rules
+
+
 @dataclass
 class PhotoRecord:
     """一张照片的服务端记录。"""
@@ -187,6 +265,17 @@ class PixoServiceRuntime:
         # R16 预热状态（health 暴露, 沿 scorer health_info 惯例）:
         # pending → warming → done|skipped|failed。
         self.segmenter_warmup_info: dict[str, Any] = {"status": "pending"}
+
+        # R21 F01：auto-loop 异步任务表（仿 ExportManager 先例：单 worker
+        # 串行 + 任务 dict + 锁；**不复用** ExportManager 实例，职责分离）。
+        # max_workers=1：全分辨率渲染内存开销大，串行；与「每 photo 单飞」
+        # 双保险。_auto_loop_active 记录 photo_id → running task_id。
+        self._auto_loop_tasks: dict[str, dict[str, Any]] = {}
+        self._auto_loop_active: dict[str, str] = {}
+        self._auto_loop_lock = threading.Lock()
+        self._auto_loop_executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="auto-loop"
+        )
 
         # 测量分割器：env PIXO_SEGMENTER（mock|multi），缺省 mock
         # 保持现行为（避免意外下载/加载真实模型）。
@@ -621,6 +710,16 @@ class PixoServiceRuntime:
             ),
             mask_version="mask_v0.1",
         )
+        # R21 F03：把 compute_proxy_metrics 的三代理键合并到 measurement
+        # **顶层**（与 loop.py:1352-1354 / :1730-1732 同源同层），且必须在
+        # 回写 photo.last_measurement（下一行）**之前**——否则 decide 侧
+        # haze_proxy / colorfulness_proxy / tonal_range 恒缺（成因②），
+        # color_rules / tone_clarity 的 proxy 规则永不触发。
+        from pixo.pipeline.metrics import merge_proxy_metrics
+
+        merged = merge_proxy_metrics(measurement, image)
+        if isinstance(merged, dict):
+            measurement = merged
         if photo_id is not None and photo_id in self.photos:
             self.photos[photo_id].last_measurement = measurement
         return {
@@ -631,7 +730,13 @@ class PixoServiceRuntime:
         }
 
     def decide_photo(self, photo_id: str) -> dict[str, Any]:
-        """获取照片当前状态并执行一轮 Decide（无规则时返回空调整）。"""
+        """获取照片当前状态并执行一轮 Decide（单轮语义：不迭代、不回写渲染）。
+
+        R21 F03：metrics 走公共 API ``metrics_for_decide``（展平 global /
+        regions / 顶层 proxies），并注入装配层默认规则（``PIXO_RULES=off``
+        可关）。响应**字段集合不变**，仅 ``decision.params`` 由 ``{}`` 变
+        非空（design-r21 §0 分叉1采纳 A2）。
+        """
         photo = self.get_photo(photo_id)
         sm = self.state_machines.get(photo_id)
         session_id = photo.sessions[-1] if photo.sessions else None
@@ -647,11 +752,14 @@ class PixoServiceRuntime:
             except Exception:  # noqa: BLE001
                 params = dict(getattr(session, "params", {}))
 
+        from pixo.pipeline.metrics import metrics_for_decide
+
         iteration = sm.record.iteration if sm is not None else 0
         result = decide({
-            "metrics": measurement,
+            "metrics": metrics_for_decide(measurement),
             "params": params,
             "iteration": max(1, iteration + 1),
+            "rules": _load_auto_loop_rules(_AUTO_LOOP_PROMPTS),
         })
         # 记录最近一次决策，供照片详情/后续规则读取（字段此前从不写入）。
         photo.last_decision = result
@@ -676,6 +784,286 @@ class PixoServiceRuntime:
             "iteration": sm.record.iteration if sm is not None else 0,
             "events": events,
         }
+
+    # ---- 闭环（auto-loop，R21 F01/F02）----
+
+    def run_auto_loop(
+        self,
+        photo_id: str,
+        *,
+        max_iterations: int | None = None,
+        preview_long_edge: int = 1024,
+        prompts: Sequence[str] | None = None,
+        sync: bool = False,
+    ) -> dict[str, Any]:
+        """把单张闭环（SinglePhotoLoop + RawRenderBackend）接进服务层。
+
+        装配规则（design-r21 §2.2 1~8，逐条固定）：
+        ``RawRenderBackend(photo.path, self.profile)``、
+        ``segmenter=self._segmenter``（显式，不依赖 loop 内部 mock 兜底）、
+        ``rules=_load_auto_loop_rules(prompts)``、
+        ``manual_on_unreliable=False``（库层缺省 True 会让首轮转
+        MANUAL_REVIEW，规则全不落地）、``aesthetic_scorer=None``、
+        ``targets={}``/``locked_params=[]``/``agent_suggest=False``/
+        ``enable_style_cards=False``。**不读 preview session /
+        canonical_params**——「无 session」不是错误（对齐 exploration §6.12）。
+
+        Args:
+            max_iterations: None → env PIXO_LOOP_MAX_ITERATIONS 或 3；显式
+                传入时校验 1..5，非法抛 ValueError（API → 400）。
+            preview_long_edge: preview 渲染长边（缺省 1024）。
+            prompts: 区域 prompt 组，缺省 ("face","sky","plant")。
+            sync: False → 提交后台任务，立即返回
+                ``{task_id, status:"running", photo_id, segmenter_type}``；
+                True → 阻塞至闭环结束，返回与 :meth:`auto_loop_status`
+                同构的结果（异常同样落 ``status=failed``，不裸抛）。
+
+        Returns:
+            任务视图 dict；同 photo 已有 running 任务时返回既有 task_id。
+        """
+        photo = self.get_photo(photo_id)          # KeyError → 404
+        iterations = (
+            _auto_loop_default_iterations()
+            if max_iterations is None
+            else _validate_max_iterations(max_iterations)
+        )
+        prompts_tuple = tuple(prompts or _AUTO_LOOP_PROMPTS)
+        degraded = (
+            [_DEGRADED_MOCK_SEGMENTER]
+            if self.segmenter_type == "mock" else []
+        )
+
+        with self._auto_loop_lock:
+            # 每 photo 单飞：同 photo 已有 running 任务 → 不新起，返回既有
+            # task_id（幂等，避免重复全分辨率渲染）。
+            active_id = self._auto_loop_active.get(photo_id)
+            if active_id is not None:
+                active = self._auto_loop_tasks.get(active_id)
+                if active is not None and active["status"] == "running":
+                    return self._auto_loop_submit_view(active)
+                self._auto_loop_active.pop(photo_id, None)
+
+            task_id = uuid.uuid4().hex
+            task: dict[str, Any] = {
+                "task_id": task_id,
+                "status": "running",
+                "photo_id": photo_id,
+                "segmenter_type": self.segmenter_type,
+                "degraded": degraded,
+                "state": None,
+                "iteration": 0,
+                "params": {},
+                "rule_ids": [],
+                "rule_ids_by_iteration": [],
+                "trace_event_count": 0,
+                "error": None,
+                "duration": None,
+            }
+            self._auto_loop_tasks[task_id] = task
+            self._auto_loop_active[photo_id] = task_id
+
+        if sync:
+            self._execute_auto_loop(
+                task_id, photo_id, str(photo.path), iterations,
+                int(preview_long_edge), prompts_tuple,
+            )
+            return self.auto_loop_status(task_id)
+
+        self._auto_loop_executor.submit(
+            self._execute_auto_loop,
+            task_id, photo_id, str(photo.path), iterations,
+            int(preview_long_edge), prompts_tuple,
+        )
+        return self._auto_loop_submit_view(task)
+
+    def auto_loop_status(self, task_id: str) -> dict[str, Any]:
+        """查询 auto-loop 任务状态（未知 task_id → KeyError → 404）。"""
+        with self._auto_loop_lock:
+            task = self._auto_loop_tasks.get(task_id)
+            if task is None:
+                raise KeyError(f"auto-loop 任务不存在: {task_id}")
+            return self._auto_loop_view(task)
+
+    def _auto_loop_submit_view(self, task: dict[str, Any]) -> dict[str, Any]:
+        """提交响应视图（202 缺省形态）。"""
+        view: dict[str, Any] = {
+            "task_id": task["task_id"],
+            "status": task["status"],
+            "photo_id": task["photo_id"],
+            "segmenter_type": task["segmenter_type"],
+        }
+        if task["degraded"]:
+            view["degraded"] = list(task["degraded"])
+        return view
+
+    def _auto_loop_view(self, task: dict[str, Any]) -> dict[str, Any]:
+        """GET 轮询视图（含闭环结果字段；SYNC 与 GET 同构）。"""
+        view: dict[str, Any] = {
+            "task_id": task["task_id"],
+            "status": task["status"],
+            "photo_id": task["photo_id"],
+            "segmenter_type": task["segmenter_type"],
+            "state": task["state"],
+            "iteration": task["iteration"],
+            "params": dict(task["params"]),
+            "rule_ids": list(task["rule_ids"]),
+            "rule_ids_by_iteration": [
+                {"iteration": item["iteration"],
+                 "rule_ids": list(item["rule_ids"])}
+                for item in task["rule_ids_by_iteration"]
+            ],
+            "trace_event_count": task["trace_event_count"],
+            "error": task["error"],
+            "duration": task["duration"],
+        }
+        if task["degraded"]:
+            view["degraded"] = list(task["degraded"])
+        return view
+
+    def _execute_auto_loop(
+        self,
+        task_id: str,
+        photo_id: str,
+        raw_path: str,
+        max_iterations: int,
+        preview_long_edge: int,
+        prompts: tuple[str, ...],
+    ) -> None:
+        """后台线程体：装配 SinglePhotoLoop → run → 结果落任务表。
+
+        **闭环内部异常不裸抛**：catch-all 记 ``status=failed`` +
+        ``error = 异常类型: 首行``（异步与 sync 两路一致，HTTP 层不 500）。
+        """
+        from pixo.pipeline.loop import SinglePhotoLoop
+
+        started = time.monotonic()
+        payload: dict[str, Any] | None = None
+        error: str | None = None
+        try:
+            loop = SinglePhotoLoop(
+                render_backend=RawRenderBackend(raw_path, self.profile),
+                segmenter=self._segmenter,
+                measurer=VisionMeasure(),
+                rules=_load_auto_loop_rules(prompts),
+                preview_long_edge=int(preview_long_edge),
+                max_iterations=int(max_iterations),
+                prompts=list(prompts),
+                targets={},
+                locked_params=[],
+                manual_on_unreliable=False,
+                aesthetic_scorer=None,
+                agent_suggest=False,
+                enable_style_cards=False,
+            )
+            result = loop.run(
+                photo_id, raw_path=raw_path, max_iterations=int(max_iterations)
+            )
+            # 提取（含 trace rule_ids）放在同一 try 内：任何提取异常同样
+            # 落 status=failed，不会把任务卡在 running。
+            payload = {
+                "state": result.state,
+                "iteration": result.iteration,
+                "params": dict(result.params or {}),
+                "rule_ids": self._auto_loop_rule_ids(result),
+                "rule_ids_by_iteration": (
+                    self._auto_loop_rule_ids_by_iteration(result)
+                ),
+                "trace_event_count": len(result.trace_events or []),
+            }
+        except Exception as exc:  # noqa: BLE001 - 闭环异常落任务表，不穿 HTTP
+            first_line = (str(exc).splitlines() or [""])[0]
+            error = f"{type(exc).__name__}: {first_line}"
+            _LOGGER.warning(
+                "[pixo.runtime] auto-loop 任务失败: task=%s photo=%s %s",
+                task_id, photo_id, error,
+            )
+
+        duration = round(time.monotonic() - started, 3)
+        with self._auto_loop_lock:
+            task = self._auto_loop_tasks.get(task_id)
+            if task is not None:
+                if payload is not None:
+                    task.update(status="done", error=None, duration=duration,
+                                **payload)
+                else:
+                    task.update(status="failed", error=error, duration=duration)
+                if self._auto_loop_active.get(task["photo_id"]) == task_id:
+                    self._auto_loop_active.pop(task["photo_id"], None)
+
+    @staticmethod
+    def _auto_loop_decide_events(result: Any) -> list[tuple[int, list[str]]]:
+        """按 trace 顺序取所有 ``decide`` 事件的 ``(iteration, rule_ids)``。
+
+        iteration 取 ``value["iteration"]``，缺失时回退 ``metadata["iteration"]``，
+        再缺失时回退该 decide 事件的 1 起始序号（防御，正常 loop 两条都在）。
+        """
+        events: list[tuple[int, list[str]]] = []
+        for index, event in enumerate(result.trace_events or [], start=1):
+            if not isinstance(event, dict):
+                continue
+            if event.get("event_type") != "decide":
+                continue
+            value = event.get("value")
+            value = value if isinstance(value, dict) else {}
+            ids = [str(r) for r in (value.get("rule_ids") or [])]
+            iteration = value.get("iteration")
+            if isinstance(iteration, bool) or not isinstance(iteration, int):
+                metadata = event.get("metadata")
+                iteration = (
+                    metadata.get("iteration")
+                    if isinstance(metadata, dict) else None
+                )
+            if isinstance(iteration, bool) or not isinstance(iteration, int):
+                iteration = index
+            events.append((int(iteration), ids))
+        return events
+
+    @classmethod
+    def _auto_loop_rule_ids(cls, result: Any) -> list[str]:
+        """整轮闭环实际落地过的规则 = **全部** decide 事件 rule_ids 的并集。
+
+        保持首次出现顺序、去重。
+
+        **为什么不是「最后一条」decide 事件**（R21 修订 R1，归因已经 QA 更正）：
+        闭环收敛后末轮 `decide()` 的规则**自然不命中** —— 首轮命中并写入参数后
+        指标已回到阈值内（真 RAW 实测：`saturation_high_rule` 由
+        `colorfulness_proxy` 6.19 ≥ 6.13 命中、写入 `saturation=-0.15`，末轮该
+        指标降到 5.8936 < 6.13）。末轮**照常评估规则**：`iteration >= max_iterations`
+        走的是 `last_iteration` 分支，返回 `should_stop=False`（`engine.py:977-989`
+        的 t107 off-by-one 注释：末轮规则必须跑一次）⇒ `decide()` **不短路**，
+        照常走 `_apply_rules_internal`（`engine.py:1165-1173`）后因无命中返回
+        `rule_ids=[]`。此时取「最后一条」会让真 RAW 常规路径下 `rule_ids`
+        结构性为空（tester F05 真 RAW 首跑即因此 FAILED）。
+
+        另有一条**不同的**合法空路径：`check_termination` 判停（manual_review /
+        stopped / targets_met 等）时 `decide()` 在 `engine.py:1147-1163` 短路返回
+        `rule_ids=[]`（该轮确实未应用规则）——本次真 RAW 未走该路径，且引擎
+        语义正确，本流不改 `decide/`。
+
+        注意**不是** `LoopResult.decision`——后者是 `sm.state` 字符串
+        （loop.py:1959）。
+        """
+        merged: list[str] = []
+        seen: set[str] = set()
+        for _iteration, ids in cls._auto_loop_decide_events(result):
+            for rule_id in ids:
+                if rule_id not in seen:
+                    seen.add(rule_id)
+                    merged.append(rule_id)
+        return merged
+
+    @classmethod
+    def _auto_loop_rule_ids_by_iteration(
+        cls, result: Any
+    ) -> list[dict[str, Any]]:
+        """诊断视图：每条 decide 事件 → ``{"iteration": int, "rule_ids": [...]}``。
+
+        用于区分「哪一轮命中了什么」（并集看总量、本字段看逐轮分布）。
+        """
+        return [
+            {"iteration": iteration, "rule_ids": list(ids)}
+            for iteration, ids in cls._auto_loop_decide_events(result)
+        ]
 
     # ---- 导出 ----
 
