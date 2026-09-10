@@ -321,3 +321,25 @@
     - warmth 曲线 56% 样本、曝光表 wb 轴 89% 样本落标定适用域外（垫片近似
       生效中）；属 EV 无关的覆盖缺口，量级与影响待专项评估（是否扩域
       重标定 vs 垫片精度实测）。证据 .artifacts/ev_stress_experiment.md。
+
+20. **auto-loop 与 `/decide` 缓存、`/timeline` 不联动**（记债，2026-09-10 R21 D3）：
+    `SinglePhotoLoop` 自建状态机（`pipeline/loop.py:1783`）≠ `service.state_machines`
+    （`service/runtime.py:302`）。auto-loop 结果只落任务表，**刻意不回写** `photo.last_decision`
+    与 `runtime.state_machines`——后者是引擎决策缓存，`GET /api/photos/{id}/decide` 按其 schema
+    原样透传（`app.py:287-288`），且有断言 `tests/unit/test_service_runtime_fixes.py:164-173`，
+    写入 `LoopResult` 会让该端点返回异形 `decision`（静默契约破坏）。**后果**：跑完 auto-loop 后
+    `/timeline` 仍显示 RAW_PENDING，用户可能误判"没生效"。清偿方向：共享 store，或定义显式回写契约。
+
+21. **auto-loop 无任务级超时/取消**（记债，2026-09-10 R21 D4）：渲染无中断点，单次真 RAW 闭环
+    实测 43.95–107.4s（`DSC_5236` 门禁 124s 含两次全分辨率渲染）。当前可控手段只有
+    `max_iterations`（缺省 3，env `PIXO_LOOP_MAX_ITERATIONS`，硬上限 5）+ `preview_long_edge`；
+    任务一旦启动只能等其结束，且任务表无淘汰策略、跨 photo 排队无 `queued` 态。清偿方向：
+    可取消渲染 + 任务表 TTL/队列状态。
+
+### R21 总审续排候选（未编号，待专项评估后正式入账）
+- 后台 segmenter 预热线程未持 `_segmenter_infer_lock`（与供给路径互斥面待核）；
+- `build/lib/pixo/**` 陈旧副本与 `src/` 漂移（`metrics.py` 不存在、`loop.py` 旧实现）——打包路径须确认不会误取；
+- `crop_suggestion_applicable`（注册面 `loop.py:769`）与运行期 `crop_suggestion_available`（`:1387`）命名并存，无规则引用；
+- `src/pixo/render/bench/preview_cold_baseline.json` 坏 JSON（`JSONDecodeError` line 35）且会进打包产物，全仓无消费者；
+- `render/bench/preview_v16_nef_baseline_*.json` 的 `raw` 指向已消失的 `K:\data\photo\corpus_a\raw\...`（该路 compare 本机无法复跑）；
+- `scripts/auto_real_edit.py:154,163` 扫描根为 `<corpus_root>` 占位符（不带 `--photo` 开箱不可跑）。

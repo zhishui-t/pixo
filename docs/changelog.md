@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-09-10 — 第二十一轮：闭环插电（M0）—— SinglePhotoLoop 接入服务层
+
+- **闭环生产入口（F01）**：新增 `PixoServiceRuntime.run_auto_loop()` 与
+  `POST /api/photos/{id}/auto-loop`（202 + 任务表 + 每 photo 单飞；`sync=true` 直返 200）、
+  `GET /api/auto-loop/{task_id}`；装配 `RawRenderBackend` + 显式 segmenter +
+  `manual_on_unreliable=False`（库层缺省 True 会让有不可靠区域的首轮直接转 MANUAL_REVIEW）。
+- **默认规则注入（F02）**：装配层 `_load_auto_loop_rules()` 加载 11 条 `DEFAULT_RULES`
+  （`PIXO_RULES=off/0/false/no` 可关）；库层 `SinglePhotoLoop(rules=None)` 缺省仍为空。
+- **指标口径单一来源（F03）**：新增 `pixo/pipeline/metrics.py`（`metrics_for_decide` /
+  `METRIC_KEYS` / `metric_universe` / `merge_proxy_metrics`），`loop._metrics_for_decide` 改薄
+  wrapper；service 侧 `measure_session` 顶层合并 proxies、`decide_photo` 展平并传 rules
+  （响应字段集合不变，`decision.params` 由 `{}` 变非空）。清偿服务层规则**零触发**的三因叠加
+  （没传 rules + 指标嵌套 + 无 proxies）。
+- **评分器适配器签名（F04）**：`_PixoScorerAdapter.__call__` 返回 dict，一并修好 `loop` 与
+  `smart_crop` 两个"按可调用对象"使用的契约（返回 `AestheticScore` 本体因 `float()` 在 try 外
+  会 500）。
+- **端到端门禁（F05）**：新增 `tests/regression/test_gate_auto_loop_e2e.py`（文件级 `gate` +
+  用例级 `gate_e2e` 双 marker；独立 env `PIXO_GATE_AUTOLOOP_RAW`，**不复用** `RAW_PATH` 以免
+  连带激活 30s 性能门禁）。真 RAW `DSC_5236` 跑通：`ACCEPTED` / `rule_ids=["saturation_high_rule"]` /
+  `params.colorcal.saturation=-0.15` / 与仅渲染基线像素差 56,293,263 / 高光溢出 2.59% ≤ 3%。
+- **契约修订 R1（门禁首跑拦截）**：首跑 FAILED 暴露服务层 `rule_ids` 取「最后一条 decide 事件」
+  的口径缺陷（末轮规则自然不命中时漏掉早期命中）⇒ 改为**全 trace decide 事件并集**（首现序去重）
+  并追加 `rule_ids_by_iteration`。口径纪律：`iteration>=max_iterations` 的末轮**照跑规则**
+  （`engine.py:977-989`），**不得**断言「终止轮必空」。
+- **验收**：全量 **1574 passed / 0 failed**（6 skipped / 1 xfailed；R20 红线 1533，+41 全为新增用例）；
+  F05 门禁 **2 passed**（124.06s）；金样本双路零漂移（合成 gate 7 passed + 真 RAW compare
+  24/24 逐位一致，u8_max=0/u16_max=0）。QA-checker 总审放行（0 阻塞，签章 `.r21_ok`）。
+- **新债登记**：tech_debt #20（auto-loop 不回写 `/timeline` 与 `/decide` 缓存）、
+  #21（auto-loop 无任务级超时/取消）。
+
 ## 2026-09-08 — 第二十轮：warmth 日光扩域 × style_cards 定案
 
 - **warmth 曲线 v2**（f8af5a6）：新增 2 日光结点（域 [1.10,2.3984]）——OOS-low 31 张垫片偏差
