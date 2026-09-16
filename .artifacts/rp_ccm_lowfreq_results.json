@@ -1,0 +1,40 @@
+{
+ "freq": {
+  "n_photos": 54,
+  "resid_norm_median": 0.07203694273809445,
+  "lf_frac_median": 0.3472094052861838,
+  "lf_frac_p90": 0.45724955756495916,
+  "autocorr_median": 0.7096215090356163,
+  "struct_grad_corr_median": 0.41575982562717045,
+  "lum_lowfreq_corr_median": 0.2997192337125741,
+  "radial_energy_frac": {
+   "0.0-0.1": 0.2781684262040009,
+   "0.1-0.3": 0.26231125642411746,
+   "0.3-0.6": 0.26760426450780017,
+   "0.6-1.0": 0.17741165998329664
+  }
+ },
+ "weighted_sim": {
+  "sigma_g_median_grad": 0.011186083116375289,
+  "test_baseline": {
+   "de_median": 5.345558041387299,
+   "de_p95": 16.757345804811198,
+   "resid_median": 0.07419010673345744,
+   "baseline_de_median": 5.974329238546588,
+   "baseline_de_p95": 16.441662410236017
+  },
+  "test_weighted": {
+   "de_median": 5.1441151346819725,
+   "de_p95": 18.320893115599635,
+   "resid_median": 0.07232300371976584,
+   "baseline_de_median": 5.974329238546588,
+   "baseline_de_p95": 16.441662410236017
+  },
+  "de_median_delta": -0.20144290670532694,
+  "train_lf_frac_baseline": 0.3177575594890239,
+  "train_lf_frac_weighted": 0.3269382132714404
+ },
+ "verdict": "CONCENTRATED → 建议低通加权方案",
+ "pre_registered_rule": "LF占比<0.30 且 自相关<0.5 且 |梯度相关|<0.30 且 |亮度相关|<0.30",
+ "generated": "2026-09-08 08:00:14"
+}

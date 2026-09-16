@@ -1041,6 +1041,11 @@ def qc_rollback(context: dict) -> dict:
             "reasons": [],
             "rule_ids": [],
             "unreliable_regions": list(unreliable),
+            # R22/F06 (CR-11) 多轴 QC 软告警：**原样回抄** loop 组装好的清单
+            # （阈值/口径在 loop._qc_soft_warnings 单源，engine 不判阈值）。
+            # 完全惰性键：loop 只读 decision/params/reasons，加此键不改任何
+            # 既有判定；硬门禁仍只有上面的 _QC_OVERFLOW_THRESHOLD。
+            "soft_warnings": list(context.get("soft_warnings") or []),
         }
 
     count = int(context.get("qc_rollback_count", 0) or 0)
@@ -1076,6 +1081,8 @@ def qc_rollback(context: dict) -> dict:
         "unreliable_regions": list(unreliable),
         "rollback_applied": True,
         "qc_rollback_count": count + 1,
+        # R22/F06：软告警随回退分支一并回抄（同达标分支口径，惰性键）。
+        "soft_warnings": list(context.get("soft_warnings") or []),
     }
 
 

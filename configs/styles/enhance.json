@@ -11,7 +11,7 @@
     "clarity": {"enabled": true, "strength": 0.45},
     "colorcal": {"vibrance": 0.35, "saturation": 0.12},
     "skin": {"enabled": true, "strength": 0.4},
-    "refine": {"sharpen": 0.35, "chroma_denoise": 0.8, "highlight_desat": 0.5}
+    "refine": {"enabled": true, "sharpen": 0.35, "chroma_denoise": 0.8, "highlight_desat": 0.5}
   },
   "output": {"quality": 95}
 }

@@ -80,6 +80,11 @@ class _FakeLinearCamStage(Stage):
     domain_in = DOMAIN_LINEAR_CAM
     domain_out = DOMAIN_LINEAR_CAM
 
+    def wants(self, ctx: StageContext) -> bool:
+        # 基类 wants 默认已改为 False (引擎只提供能力, 执行由 Stage 声明);
+        # 本假 Stage 的用途正是触发域校验, 必须显式声明执行。
+        return True
+
     def process(self, ctx: StageContext) -> None:
         pass
 
@@ -170,11 +175,11 @@ def test_probe_files_written(tmp_path):
 
     pipe.run(ctx, probe_dir=tmp_path)
 
-    # 实际执行链: exposure → whitebalance → compose → tone → clarity → colorcal
-    # → refine (huesat/stylize/skin 被 wants 跳过, 不落盘)
-    for fname in ("01_exposure.jpg", "02_whitebalance.jpg", "03_compose.jpg",
-                  "04_tone.jpg", "05_clarity.jpg", "06_colorcal.jpg",
-                  "07_refine.jpg"):
+    # 2026-09-14 默认中性化后的实际执行链: 只有 **whitebalance** (兼域转换
+    # linear_cam→linear_rgb) 与 **tone** (输出编码 linear→gamma) 必跑。
+    # exposure 传 mode="off"、compose 无构图请求、clarity/colorcal/refine 默认关
+    # ⇒ 均被 wants 跳过, 不落盘。
+    for fname in ("01_whitebalance.jpg", "02_tone.jpg"):
         assert (tmp_path / fname).exists(), f"缺少 probe 文件 {fname}"
 
 

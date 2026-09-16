@@ -71,6 +71,7 @@
       "enabled": false
     },
     "refine": {
+      "enabled": true,
       "sharpen": 0.35,
       "chroma_denoise": 1.0,
       "highlight_desat": 0.5

@@ -153,6 +153,31 @@ export async function patchParams(
   return mockPatchParams(patch);
 }
 
+/**
+ * R22 F04/F05 —— 应用「卡/场景装配 patch」的**严格**通道。
+ *
+ * 与 `patchParams` 的关键差别（用户偏好：失败不能静默无效）：
+ *   - **不做 mock 回退**：在线失败绝不假装成功；
+ *   - **保留后端错误**：400（参数栅栏拒绝，如未知 stage/键、数值域越界、
+ *     lut_path）原样抛 PixoApiError，UI 能显示后端 detail；
+ *   - 网络/5xx 也抛出（附离线标记），由调用方显式提示。
+ */
+export async function applyPresetPatch(
+  patch: ParamPatch,
+  source: Source,
+  sessionId: string,
+): Promise<{ generation: number; params: ParamPatch; canonical: ParamPatch }> {
+  try {
+    const result = await updateParamsRemote(sessionId, patch, source);
+    backendAvailable = true;
+    return result;
+  } catch (err) {
+    if (err instanceof PixoApiError) throw err;   // 保留 status/detail
+    backendAvailable = false;
+    throw new PixoApiError(0, `无法连接后端（未应用任何参数）：${String(err)}`);
+  }
+}
+
 export async function submitExport(
   sessionId: string,
   fmt = 'jpeg',

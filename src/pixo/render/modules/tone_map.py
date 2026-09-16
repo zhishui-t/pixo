@@ -33,6 +33,7 @@ from ..pipeline.graph import DOMAIN_LINEAR_RGB, DOMAIN_GAMMA_RGB
 from ..core.curves import (make_filmic_lut, make_base_curve_lut, apply_lut1d,
                       apply_lut1d_fast, parse_profile_curve, curve_lut_from_points)
 from ..core import calibration_store
+from ..degradation import record_degradation
 
 _LUT_CACHE = {}
 # DcpProfile 影调曲线 LUT 缓存：id(prof) 键 + **值里持 prof 强引用**。
@@ -304,16 +305,27 @@ class ToneStage(Stage):
     }
 
     def default_params(self):
-        # profile_curve 默认 False: 基座用 sRGB EOTF, ProfileToneCurve 作 Adobe look 开关
-        # (依据见模块头注释的暗部裁切实测)。
-        # brightness 默认 +0.25: 基座整体亮度 (此前标定对齐相机预览偏暗, 实测
-        # 发暗; +0.25EV 显示亮度把中位提到观感舒适区, 仍低于裁切阈值)。
+        # profile_curve 默认 False: 基座用 sRGB EOTF; ProfileToneCurve 是
+        #   **相机配置文件槽位** (Adobe look / 相机 Picture Control 的落点),
+        #   由调用方以**数据**形式注入, 不写死在代码里。
+        # brightness 默认 0.0: 旧默认 +0.25 是"对齐相机预览偏暗"打的补丁
+        #   (实测关掉它 dL 中位 −1.81 → −4.99)。补丁掩盖的是**曲线形状差**
+        #   (缺口在中段, 一个线性增益结构上补不上), 且属编辑动作 ⇒ 归零。
+        # contrast / shoulder 默认 0.0: 二者只在 use_filmic=True 分支被消费,
+        #   默认链上是**死参数**, 归零以消除"默认即观感"的假象。
         return {"profile_curve": False, "eotf": "srgb", "gamma": 2.2,
-                "brightness": 0.25, "use_filmic": False,
-                "contrast": 0.12, "toe": 0.0, "shoulder": 0.35,
+                "brightness": 0.0, "use_filmic": False,
+                "contrast": 0.0, "toe": 0.0, "shoulder": 0.0,
                 "highlight_compress_curve": None,
                 "user_curve": None,
                 "highlights": 0.0, "shadows": 0.0, "whites": 0.0, "blacks": 0.0}
+
+    def wants(self, ctx: StageContext) -> bool:
+        """**恒为 True**: 本 Stage 是 linear→gamma 的输出编码步 (**域转换**),
+        不是可选的编辑动作 —— 打开 RAW 就必须把线性场景光编到显示域。
+        显式声明而非依赖基类, 避免基类默认改 False 后输出编码被跳过。
+        """
+        return True
 
     def process(self, ctx: StageContext) -> None:
         use_filmic = bool(self.p(ctx, "use_filmic"))
@@ -331,7 +343,11 @@ class ToneStage(Stage):
             try:
                 from .._native import tone_apply_lut1d
                 return tone_apply_lut1d(img, lut)
-            except Exception:
+            except Exception as exc:
+                # F03 #8: LUT1D native 插值不可用 → apply_lut1d_fast (逐位差风险)
+                record_degradation(
+                    "render.tone_map.lut1d_native", exc,
+                    detail="LUT1D 插值回退 apply_lut1d_fast")
                 return apply_lut1d_fast(img, lut)
 
         if eotf == "lrfit":

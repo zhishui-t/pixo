@@ -1,5 +1,19 @@
 """engine.rp_ccm —— 根多项式 CCM (Root-Polynomial Colour Correction Matrix)。
 
+**当前状态：已评估并否决（2026-09-10 R22），不进运行时。**
+依据（证据文件:行）：
+  - `.artifacts/eval_rp_ccm_ab_nikon_z5_2_20260904_235522.md:14-16` —— 现行生产系数
+    （2026-09-04 commit `3fbe56d` 换成阶段二联合优化系数）B−A = +1.147 (+19.3%)、
+    p95 +0.783 (+4.9%)；`:77` 结论 B 优于 A 仅 **22/54**；
+  - `.artifacts/eval_rp_ccm_ab_nikon_z5_2_20260828_232324.md:14-16` —— 旧系数（阶段一中性
+    弱监督）B−A = −0.475 (−7.7%)、45/54；即 CR-12 原文所引证据，**已被上条复评翻转**；
+  - 转默认门槛线 `docs/OWN_PIPELINE_STAGE2_DESIGN.md:38`（median 改善 ≥15% / 无单照片
+    median 回归 >1 JND / p95 不劣化 / ≥2 相机复验）现行系数 **0/4 通过**，且第二相机语料
+    本机不可得。
+本模块与 `tests/unit/test_rp_ccm.py` **保留**，作为未来「中性语境重拟合」的基础；
+`src/` 内零运行时调用点（命中仅本文件定义/`__all__`/本 docstring）。
+详见 `docs/tech_debt.md` 条目 22 与 `docs/R21_CHANGE_REQUESTS.md` CR-12 勘误块（2026-09-10）。
+
 权威依据:
   - G. Finlayson, R. Xu, "Root-Polynomial Colour Correction", IS&T CIC23, 2015;
   - G. Finlayson, M. Mackiewicz, A. Hurlbert, "Color Correction Using

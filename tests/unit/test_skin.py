@@ -242,7 +242,9 @@ def test_skin_stage_registered_order_and_domain():
     # M-O2: color_domain 域开关。F10 第二批起缺省 oklch (重拟合椭圆 +
     # F11 意图级不劣于; 原断言钉 hsv, 翻期望非删除); hsv 路径由存量卡
     # F07 卡级钉域继续锁定。
-    assert cls().default_params() == {"enabled": True, "strength": 0.5,
+    # 2026-09-14 默认中性化: 磨皮属编辑动作 (LR 打开 DNG 不会自动磨皮),
+    # enabled 由 True 翻为 False —— 能力位保留, 由调用方触发。
+    assert cls().default_params() == {"enabled": False, "strength": 0.5,
                                       "color_domain": "oklch"}
 
 

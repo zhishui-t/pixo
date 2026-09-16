@@ -1,0 +1,483 @@
+{
+  "DSC_5243_raw": {
+    "a_qc": "escalate_2x",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "ab_u8_diff": {
+      "max": 90,
+      "changed": 0.9369
+    },
+    "b_fires": [
+      {
+        "it": 1,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 241.15,
+        "sky_area": 0.083123,
+        "plant_lum": 106.19,
+        "applied": {},
+        "overflow": 0.058084
+      },
+      {
+        "it": 2,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 186.81,
+        "sky_area": 0.083123,
+        "plant_lum": 100.9,
+        "applied": {
+          "sky": {
+            "exposure": -0.8038333333333334
+          }
+        },
+        "overflow": 0.0
+      },
+      {
+        "it": 3,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 196.63,
+        "sky_area": 0.083123,
+        "plant_lum": 95.78,
+        "applied": {
+          "sky": {
+            "exposure": -0.6227
+          }
+        },
+        "overflow": 0.0
+      }
+    ],
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6554333333333333
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5245_raw": {
+    "a_qc": "escalate_2x",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "ab_u8_diff": {
+      "max": 55,
+      "changed": 0.9973
+    },
+    "b_fires": [
+      {
+        "it": 1,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 243.24,
+        "sky_area": 0.205524,
+        "plant_lum": 90.46,
+        "applied": {},
+        "overflow": 0.117315
+      },
+      {
+        "it": 2,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 188.29,
+        "sky_area": 0.205524,
+        "plant_lum": 85.64,
+        "applied": {
+          "sky": {
+            "exposure": -0.8108000000000001
+          }
+        },
+        "overflow": 0.0
+      },
+      {
+        "it": 3,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 199.32,
+        "sky_area": 0.205524,
+        "plant_lum": 85.65,
+        "applied": {
+          "sky": {
+            "exposure": -0.6276333333333333
+          }
+        },
+        "overflow": 0.0
+      }
+    ],
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6644
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5276_raw": {
+    "a_qc": "pass",
+    "b_qc": "escalate_2x",
+    "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "b_reason": "FINAL_QC 二次超标，转人工复核",
+    "ab_u8_diff": {
+      "max": 56,
+      "changed": 0.9121
+    },
+    "b_fires": [
+      {
+        "it": 1,
+        "rules": [
+          "region_sky_exposure_001",
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 178.88,
+        "sky_area": 0.044117,
+        "plant_lum": 26.12,
+        "applied": {},
+        "overflow": 0.036061
+      },
+      {
+        "it": 2,
+        "rules": [
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 143.42,
+        "sky_area": 0.044117,
+        "plant_lum": 24.44,
+        "applied": {
+          "sky": {
+            "exposure": -0.5962666666666666
+          },
+          "plant": {
+            "exposure": 0.0
+          }
+        },
+        "overflow": 0.01628
+      },
+      {
+        "it": 3,
+        "rules": [
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 143.43,
+        "sky_area": 0.044117,
+        "plant_lum": 25.45,
+        "applied": {
+          "sky": {
+            "exposure": -0.5962666666666666
+          },
+          "plant": {
+            "exposure": 0.13017142857142858
+          }
+        },
+        "overflow": 0.01628
+      }
+    ],
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.5962666666666666
+        },
+        "plant": {
+          "exposure": 0.12728571428571428
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5277_raw": {
+    "a_qc": "pass",
+    "b_qc": "escalate_2x",
+    "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "b_reason": "FINAL_QC 二次超标，转人工复核",
+    "ab_u8_diff": {
+      "max": 84,
+      "changed": 0.9212
+    },
+    "b_fires": [
+      {
+        "it": 1,
+        "rules": [
+          "region_sky_exposure_001",
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 182.88,
+        "sky_area": 0.056473,
+        "plant_lum": 25.8,
+        "applied": {},
+        "overflow": 0.034714
+      },
+      {
+        "it": 2,
+        "rules": [
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 145.83,
+        "sky_area": 0.056473,
+        "plant_lum": 24.13,
+        "applied": {
+          "sky": {
+            "exposure": -0.6096
+          },
+          "plant": {
+            "exposure": 0.0
+          }
+        },
+        "overflow": 0.013412
+      },
+      {
+        "it": 3,
+        "rules": [
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 145.83,
+        "sky_area": 0.056473,
+        "plant_lum": 25.14,
+        "applied": {
+          "sky": {
+            "exposure": -0.6096
+          },
+          "plant": {
+            "exposure": 0.13105714285714287
+          }
+        },
+        "overflow": 0.013412
+      }
+    ],
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6096
+        },
+        "plant": {
+          "exposure": 0.12817142857142858
+        }
+      },
+      "enabled": true
+    }
+  },
+  "night_lowlight": {
+    "a_qc": "escalate_2x",
+    "b_qc": "escalate_2x",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 二次超标，转人工复核",
+    "ab_u8_diff": {
+      "max": 0,
+      "changed": 0.0
+    },
+    "b_fires": [],
+    "b_final_region": null
+  },
+  "day_normal": {
+    "a_qc": "escalate_2x",
+    "b_qc": "escalate_2x",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 二次超标，转人工复核",
+    "ab_u8_diff": {
+      "max": 50,
+      "changed": 0.2453
+    },
+    "b_fires": [
+      {
+        "it": 1,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 250.65,
+        "sky_area": 0.230589,
+        "plant_lum": null,
+        "applied": {},
+        "overflow": 0.211247
+      },
+      {
+        "it": 2,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 193.0,
+        "sky_area": 0.230589,
+        "plant_lum": null,
+        "applied": {
+          "sky": {
+            "exposure": -0.8355
+          }
+        },
+        "overflow": 0.058406
+      },
+      {
+        "it": 3,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 204.8,
+        "sky_area": 0.230589,
+        "plant_lum": null,
+        "applied": {
+          "sky": {
+            "exposure": -0.6433333333333333
+          }
+        },
+        "overflow": 0.058773
+      }
+    ],
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6826666666666668
+        }
+      },
+      "enabled": true
+    }
+  },
+  "portrait_tele": {
+    "a_qc": "escalate_2x",
+    "b_qc": "escalate_2x",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 二次超标，转人工复核",
+    "ab_u8_diff": {
+      "max": 43,
+      "changed": 0.5205
+    },
+    "b_fires": [
+      {
+        "it": 1,
+        "rules": [
+          "region_sky_exposure_001",
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 175.11,
+        "sky_area": 0.449318,
+        "plant_lum": 61.79,
+        "applied": {},
+        "overflow": 0.111495
+      },
+      {
+        "it": 2,
+        "rules": [
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 142.99,
+        "sky_area": 0.449318,
+        "plant_lum": 58.51,
+        "applied": {
+          "sky": {
+            "exposure": -0.5837
+          },
+          "plant": {
+            "exposure": 0.0
+          }
+        },
+        "overflow": 0.0
+      },
+      {
+        "it": 3,
+        "rules": [
+          "region_plant_exposure_002"
+        ],
+        "sky_lum": 142.99,
+        "sky_area": 0.449318,
+        "plant_lum": 59.11,
+        "applied": {
+          "sky": {
+            "exposure": -0.5837
+          },
+          "plant": {
+            "exposure": 0.032828571428571436
+          }
+        },
+        "overflow": 0.0
+      }
+    ],
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.5837
+        },
+        "plant": {
+          "exposure": 0.03111428571428572
+        }
+      },
+      "enabled": true
+    }
+  },
+  "wide_angle": {
+    "a_qc": "escalate_2x",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "ab_u8_diff": {
+      "max": 53,
+      "changed": 0.9891
+    },
+    "b_fires": [
+      {
+        "it": 1,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 212.98,
+        "sky_area": 0.41998,
+        "plant_lum": 99.65,
+        "applied": {},
+        "overflow": 0.002211
+      },
+      {
+        "it": 2,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 164.16,
+        "sky_area": 0.41998,
+        "plant_lum": 93.78,
+        "applied": {
+          "sky": {
+            "exposure": -0.7099333333333333
+          }
+        },
+        "overflow": 0.002224
+      },
+      {
+        "it": 3,
+        "rules": [
+          "region_sky_exposure_001"
+        ],
+        "sky_lum": 172.44,
+        "sky_area": 0.41998,
+        "plant_lum": 93.8,
+        "applied": {
+          "sky": {
+            "exposure": -0.5472
+          }
+        },
+        "overflow": 0.002211
+      }
+    ],
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.5748
+        }
+      },
+      "enabled": true
+    }
+  },
+  "high_contrast": {
+    "a_qc": "pass",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "ab_u8_diff": {
+      "max": 0,
+      "changed": 0.0
+    },
+    "b_fires": [],
+    "b_final_region": null
+  }
+}

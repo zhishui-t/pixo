@@ -32,10 +32,12 @@
       "color_domain": "hsv"
     },
     "skin": {
+      "enabled": true,
       "color_domain": "hsv"
     },
     "stylize": {},
     "refine": {
+      "enabled": true,
       "sharpen": 0.28,
       "chroma_denoise": 0.85,
       "highlight_desat": 0.45

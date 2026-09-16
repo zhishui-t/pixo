@@ -25,7 +25,8 @@ from pixo.decide.rules import DEFAULT_RULES, load_rules
 from pixo.state import PhotoStateMachine
 from pixo.pipeline.loop import RawRenderBackend
 from pixo.render.web.export import ExportManager
-from pixo.render.web.session import RawPreviewSession
+from pixo.render.web.session import (ParamValidationError, RawPreviewSession,
+                                     merge_param_patches)
 from pixo.vision import MockSegmenter, VisionMeasure, vision_health
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,6 +63,84 @@ _DETECTION_VERSIONS = {
 _REGION_SUPPLY_ENV = "PIXO_REGION_SUPPLY"
 _REGION_SUPPLY_EDGE = 512      # 分割输入渲染长边 (掩码经适配器分辨率无关)
 _REGION_PROMPTS = ("face", "sky", "plant")
+
+
+# ---------------------------------------------------------------------------
+# R22 F04/F05 —— 参数装配控制键（风格卡注入 / 场景预设）
+# ---------------------------------------------------------------------------
+# 走既有 PUT /api/sessions/{id}/params 通道的**控制键**：服务层解析后装配
+# 成普通 stage 参数再深合并（不新增端点，前端仍只用既有 patchParam 通路）。
+#   __style: 风格卡 id（configs/styles/films/*.json 文件名 stem）
+#   __scene: 场景预设 id（configs/styles/scenes.json 键集）
+_CONTROL_STYLE = "__style"
+_CONTROL_SCENE = "__scene"
+
+
+def _bad_request(message: str) -> Exception:
+    """服务层 400：HTTP 面抛 FastAPI HTTPException（app 层不拦 ValueError），
+    缺 fastapi（纯库调用方）时退 ValueError。"""
+    try:
+        from fastapi import HTTPException
+    except Exception:  # noqa: BLE001 — 库面无 fastapi 时的降级
+        return ValueError(message)
+    return HTTPException(status_code=400, detail=message)
+
+
+def _registered_stage_names() -> set[str]:
+    """已注册 Stage 名集合（栅栏派生源，与 param_schema 同源）。"""
+    from pixo.render.params import PARAM_SCHEMAS
+
+    return set(PARAM_SCHEMAS)
+
+
+def _style_card_params(style_id: str) -> dict[str, dict]:
+    """风格卡 id → 卡的 params（stage → 参数桶）；未知 id 抛 400。
+
+    卡源 = `StyleCard.from_films_dir()`（`configs/styles/films` 目录白名单）；
+    卡的 `stages` 列表同时校验：出现未注册 stage 名即 400（卡源漂移守卫）。
+    25 张卡实测全部来自 param_schema 已声明键（见 stream 报告），故本注入
+    不会被 F04 栅栏误拒。
+    """
+    from pixo.know.cards import StyleCard
+
+    cards = StyleCard.from_films_dir()
+    for card in cards:
+        if card.get("style_id") != style_id:
+            continue
+        stages = [str(s) for s in (card.get("stages") or [])]
+        unknown = sorted(set(stages) - _registered_stage_names())
+        if unknown:
+            raise _bad_request(
+                f"风格卡 '{style_id}' 声明了未注册的 stage {unknown}，拒绝注入")
+        params = card.get("params")
+        if not isinstance(params, dict):
+            raise _bad_request(f"风格卡 '{style_id}' 缺 params 节，无法注入")
+        return {k: dict(v) for k, v in params.items() if isinstance(v, dict)}
+    raise _bad_request(
+        f"未知风格卡 '{style_id}'（可用: "
+        f"{sorted(c.get('style_id') for c in cards)}）")
+
+
+def _scene_preset_params(scene_id: str) -> dict[str, dict]:
+    """场景预设 id → params 覆盖（apply_scene_preset）；未知 id / 带 LUT 抛 400。
+
+    复用 `apply_scene_preset`（进程内缓存的 `load_scene_presets`）；本函数
+    先按 `load_scene_presets()` 键集做白名单判定，避免只依赖告警回退。
+    6 个预设 `lut` 全为 null ⇒ 纯 params 覆盖（design §1 F05）。
+    """
+    from pixo.render.pipeline.scene_apply import (apply_scene_preset,
+                                                 load_scene_presets)
+
+    presets = load_scene_presets()
+    if scene_id not in presets:
+        raise _bad_request(
+            f"未知场景预设 '{scene_id}'（可用: {sorted(presets)}）")
+    params, lut = apply_scene_preset(scene_id)
+    if lut:
+        raise _bad_request(
+            f"场景预设 '{scene_id}' 携带 LUT '{lut}'，本轮不支持 LUT 注入"
+            f"（仓内无 .cube 资产）")
+    return {k: dict(v) for k, v in params.items() if isinstance(v, dict)}
 
 
 def _region_supply_enabled() -> bool:
@@ -317,8 +396,9 @@ class PixoServiceRuntime:
         photo: PhotoRecord,
         session_id: str,
     ) -> RawPreviewSession:
-        """创建真实 RawPreviewSession。"""
-        return RawPreviewSession(photo.path, self.profile, session_id=session_id)
+        """创建真实 RawPreviewSession（服务层：开启 strict 参数栅栏）。"""
+        return RawPreviewSession(photo.path, self.profile, session_id=session_id,
+                                 validate_params=True)
 
     # ---- 导入 / 照片 ----
 
@@ -484,13 +564,46 @@ class PixoServiceRuntime:
 
         响应附 `region` 状态节（M1 前端 region 控件的可用性感知）：每次
         patch 后 UI 即可感知掩码是否可用（不可用时滑杆置灰而非静默失效）。
+
+        R22 F04/F05 装配：patch 内的控制键 `__style`（风格卡 id）/`__scene`
+        （场景预设 id）在此解析为 stage 参数覆盖，再与 patch 其余内容深合并
+        （显式参数优先）。解析结果经会话栅栏校验（未知 stage/键/数值域/
+        路径类 → HTTP 400）。两个控制键同时给出视为语义冲突 → 400。
         """
         session = self.get_session(session_id)
-        generation = session.update_params(dict(patch or {}))
+        patch = dict(patch or {})
+        style_id = patch.pop(_CONTROL_STYLE, None)
+        scene_id = patch.pop(_CONTROL_SCENE, None)
+        if style_id is not None and scene_id is not None:
+            raise _bad_request(
+                f"'{_CONTROL_STYLE}' 与 '{_CONTROL_SCENE}' 不能同时提交"
+                f"（一次装配一个来源）")
+        control_traces: list[tuple[str, Any]] = []
+        if scene_id is not None:
+            scene_params = _scene_preset_params(str(scene_id))
+            patch = merge_param_patches(scene_params, patch)
+            control_traces.append((_CONTROL_SCENE, scene_id))
+        if style_id is not None:
+            card_params = _style_card_params(str(style_id))
+            patch = merge_param_patches(card_params, patch)
+            control_traces.append((_CONTROL_STYLE, style_id))
+        try:
+            generation = session.update_params(patch)
+        except ParamValidationError as exc:
+            # 栅栏拒绝 → 400（不落任何部分合并）
+            raise _bad_request(str(exc)) from exc
         photo_id = self._photo_id_for_session(session_id)
         sm = self.state_machines.get(photo_id)
         if sm is not None:
-            for key, value in (patch or {}).items():
+            for key, value in control_traces:
+                sm.add_trace(
+                    event_type="param_patch",
+                    param=str(key),
+                    value=value,
+                    new_value=value,
+                    source=source or "api",
+                )
+            for key, value in patch.items():
                 sm.add_trace(
                     event_type="param_patch",
                     param=str(key),
@@ -856,6 +969,9 @@ class PixoServiceRuntime:
                 "rule_ids": [],
                 "rule_ids_by_iteration": [],
                 "trace_event_count": 0,
+                # R22/F06：多轴 QC 软告警槽（闭环跑完由 payload 覆写；
+                # 未跑完/未跑到 FINAL_QC 时保持空列表）。
+                "soft_warnings": [],
                 "error": None,
                 "duration": None,
             }
@@ -913,6 +1029,8 @@ class PixoServiceRuntime:
                 for item in task["rule_ids_by_iteration"]
             ],
             "trace_event_count": task["trace_event_count"],
+            # R22/F06：多轴 QC 软告警（既有键一个不少、不改名；纯追加）。
+            "soft_warnings": list(task["soft_warnings"]),
             "error": task["error"],
             "duration": task["duration"],
         }
@@ -969,6 +1087,13 @@ class PixoServiceRuntime:
                     self._auto_loop_rule_ids_by_iteration(result)
                 ),
                 "trace_event_count": len(result.trace_events or []),
+                # R22/F06 多轴 QC 软告警透出（**追加**键：既有键一个不少、
+                # 不改名）。来源 = loop 把 _qc_soft_warnings 结果写进
+                # LoopResult.metadata；缺席（未跑到 FINAL_QC）时给空列表，
+                # 前端/调用方形态稳定。软告警不参与任何判定。
+                "soft_warnings": list(
+                    (result.metadata or {}).get("soft_warnings") or []
+                ),
             }
         except Exception as exc:  # noqa: BLE001 - 闭环异常落任务表，不穿 HTTP
             first_line = (str(exc).splitlines() or [""])[0]

@@ -1,0 +1,384 @@
+{
+  "oos_low": {
+    "n": 31,
+    "old_penalty": {
+      "median": 0.537,
+      "p90": 1.117,
+      "max": 2.426
+    },
+    "new_penalty": {
+      "median": 0.019,
+      "p90": 0.109,
+      "max": 0.526
+    },
+    "new_de_median": 5.287,
+    "old_de_median": 6.142,
+    "opt_de_median": 5.186,
+    "rows": [
+      {
+        "photo_id": "DSC_5269_raw",
+        "wb_B": 1.076171875,
+        "de_old_gasket": 4.572427360862704,
+        "de_opt": 4.424613877297163,
+        "de_new": 4.43156798057399
+      },
+      {
+        "photo_id": "DSC_5270_raw",
+        "wb_B": 1.076171875,
+        "de_old_gasket": 4.579093795803327,
+        "de_opt": 4.4304016011828296,
+        "de_new": 4.438944306844697
+      },
+      {
+        "photo_id": "DSC_5271_raw",
+        "wb_B": 1.068359375,
+        "de_old_gasket": 4.6716898370542825,
+        "de_opt": 4.302910831202503,
+        "de_new": 4.3214789992317515
+      },
+      {
+        "photo_id": "DSC_5272_raw",
+        "wb_B": 1.068359375,
+        "de_old_gasket": 4.724461314577984,
+        "de_opt": 4.365103457417668,
+        "de_new": 4.38103626733234
+      },
+      {
+        "photo_id": "DSC_5273_raw",
+        "wb_B": 1.068359375,
+        "de_old_gasket": 4.734776429241686,
+        "de_opt": 4.564157299842844,
+        "de_new": 4.397966843407805
+      },
+      {
+        "photo_id": "DSC_5274_raw",
+        "wb_B": 1.0703125,
+        "de_old_gasket": 4.944626170565681,
+        "de_opt": 4.787069757650716,
+        "de_new": 4.799210612710485
+      },
+      {
+        "photo_id": "DSC_5275_raw",
+        "wb_B": 1.0703125,
+        "de_old_gasket": 4.950942248384056,
+        "de_opt": 4.792771589722549,
+        "de_new": 4.80632392618377
+      },
+      {
+        "photo_id": "DSC_5276_raw",
+        "wb_B": 1.111328125,
+        "de_old_gasket": 6.307782913472977,
+        "de_opt": 5.7176313755961745,
+        "de_new": 5.788144451220324
+      },
+      {
+        "photo_id": "DSC_5277_raw",
+        "wb_B": 1.111328125,
+        "de_old_gasket": 6.2191346467118,
+        "de_opt": 5.6298208408571035,
+        "de_new": 5.699791218771742
+      },
+      {
+        "photo_id": "DSC_5278_raw",
+        "wb_B": 1.3046875,
+        "de_old_gasket": 6.142004566788787,
+        "de_opt": 5.19721413038244,
+        "de_new": 5.124018639489103
+      },
+      {
+        "photo_id": "DSC_5279_raw",
+        "wb_B": 1.3046875,
+        "de_old_gasket": 6.069268419074008,
+        "de_opt": 5.1695348844422115,
+        "de_new": 5.080256673503082
+      },
+      {
+        "photo_id": "DSC_5280_raw",
+        "wb_B": 1.19921875,
+        "de_old_gasket": 6.244842355599032,
+        "de_opt": 5.18640700759118,
+        "de_new": 5.29457683712499
+      },
+      {
+        "photo_id": "DSC_5281_raw",
+        "wb_B": 1.19921875,
+        "de_old_gasket": 6.248910193265038,
+        "de_opt": 5.194018493438672,
+        "de_new": 5.303466890297207
+      },
+      {
+        "photo_id": "DSC_5282_raw",
+        "wb_B": 1.19921875,
+        "de_old_gasket": 6.2175738332284425,
+        "de_opt": 5.179744245959312,
+        "de_new": 5.287356626352627
+      },
+      {
+        "photo_id": "DSC_5283_raw",
+        "wb_B": 1.193359375,
+        "de_old_gasket": 5.622233009370897,
+        "de_opt": 5.0514047910275535,
+        "de_new": 5.014092360770535
+      },
+      {
+        "photo_id": "DSC_5284_raw",
+        "wb_B": 1.193359375,
+        "de_old_gasket": 5.583100373516766,
+        "de_opt": 5.02313354141024,
+        "de_new": 4.991538679377831
+      },
+      {
+        "photo_id": "DSC_5285_raw",
+        "wb_B": 1.259765625,
+        "de_old_gasket": 4.389872308692468,
+        "de_opt": 3.8656961519429354,
+        "de_new": 3.891503376806105
+      },
+      {
+        "photo_id": "DSC_5286_raw",
+        "wb_B": 1.259765625,
+        "de_old_gasket": 4.4088963998369595,
+        "de_opt": 3.872349563320954,
+        "de_new": 3.887168498799955
+      },
+      {
+        "photo_id": "DSC_5287_raw",
+        "wb_B": 1.259765625,
+        "de_old_gasket": 4.405722502538826,
+        "de_opt": 3.8849144524497334,
+        "de_new": 3.914001152527427
+      },
+      {
+        "photo_id": "DSC_5288_raw",
+        "wb_B": 1.08203125,
+        "de_old_gasket": 5.767325220500029,
+        "de_opt": 5.725635465089373,
+        "de_new": 5.658415334356338
+      },
+      {
+        "photo_id": "DSC_0354_2026春节",
+        "wb_B": 1.69140625,
+        "de_old_gasket": 6.264841611969153,
+        "de_opt": 5.914486854451883,
+        "de_new": 6.440716555184433
+      },
+      {
+        "photo_id": "DSC_5240_raw",
+        "wb_B": 1.220703125,
+        "de_old_gasket": 8.584538018662606,
+        "de_opt": 8.289136345974054,
+        "de_new": 8.283434969915898
+      },
+      {
+        "photo_id": "DSC_5241_raw",
+        "wb_B": 1.2265625,
+        "de_old_gasket": 8.98550757348186,
+        "de_opt": 8.8841411143858,
+        "de_new": 8.925369093989692
+      },
+      {
+        "photo_id": "DSC_5242_raw",
+        "wb_B": 1.1875,
+        "de_old_gasket": 7.91354059313208,
+        "de_opt": 6.93871158444379,
+        "de_new": 7.196144457336701
+      },
+      {
+        "photo_id": "DSC_5243_raw",
+        "wb_B": 1.3671875,
+        "de_old_gasket": 10.085579608018692,
+        "de_opt": 8.248077184452756,
+        "de_new": 8.313721758303641
+      },
+      {
+        "photo_id": "DSC_5244_raw",
+        "wb_B": 1.408203125,
+        "de_old_gasket": 10.196718662625823,
+        "de_opt": 8.5770429308109,
+        "de_new": 8.601410797373301
+      },
+      {
+        "photo_id": "DSC_5245_raw",
+        "wb_B": 1.328125,
+        "de_old_gasket": 8.772046087994138,
+        "de_opt": 7.654658365647919,
+        "de_new": 7.735313409898793
+      },
+      {
+        "photo_id": "DSC_5250_raw",
+        "wb_B": 1.43359375,
+        "de_old_gasket": 9.64090676800558,
+        "de_opt": 7.215225559815073,
+        "de_new": 7.463412016626596
+      },
+      {
+        "photo_id": "DSC_5257_raw",
+        "wb_B": 1.072265625,
+        "de_old_gasket": 7.741863045119695,
+        "de_opt": 7.664631787445569,
+        "de_new": 7.561316649951182
+      },
+      {
+        "photo_id": "DSC_5260_raw",
+        "wb_B": 1.236328125,
+        "de_old_gasket": 6.19902382732999,
+        "de_opt": 5.661962918240142,
+        "de_new": 5.70304787921222
+      },
+      {
+        "photo_id": "DSC_5268_raw",
+        "wb_B": 1.076171875,
+        "de_old_gasket": 4.4859061554057025,
+        "de_opt": 4.336041221445375,
+        "de_new": 4.146031906928578
+      }
+    ]
+  },
+  "raw_gate_drift": {
+    "wb_as_shot_default/night_lowlight": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "wb_as_shot_default/day_normal": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "wb_as_shot_default/high_key_bright": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "wb_as_shot_default/portrait_tele": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "wb_as_shot_default/wide_angle": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "wb_as_shot_default/high_contrast": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "exposure_auto_default/night_lowlight": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "exposure_auto_default/day_normal": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "exposure_auto_default/high_key_bright": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "exposure_auto_default/portrait_tele": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "exposure_auto_default/wide_angle": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "exposure_auto_default/high_contrast": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "compose_param/night_lowlight": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "compose_param/day_normal": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "compose_param/high_key_bright": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "compose_param/portrait_tele": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "compose_param/wide_angle": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "compose_param/high_contrast": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "clarity_default/night_lowlight": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "clarity_default/day_normal": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "clarity_default/high_key_bright": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "clarity_default/portrait_tele": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "clarity_default/wide_angle": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    },
+    "clarity_default/high_contrast": {
+      "max_u8": 0,
+      "changed_ratio": 0.0,
+      "de_mean": 0.0,
+      "drift": false
+    }
+  },
+  "raw_drift_cases": 0
+}

@@ -12,6 +12,8 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
+import re
 import threading
 import uuid
 from collections import OrderedDict
@@ -30,6 +32,7 @@ from pixo.render.pipeline.runner import (finalize_gamma_output,
                                          prepare_render_ctx)
 
 from .encode import encode_image
+from ..degradation import record_degradation
 
 
 def _param_fingerprint(params: Any) -> str:
@@ -120,6 +123,179 @@ def _deep_merge(base: dict, update: dict) -> None:
             base[key] = value
 
 
+def merge_param_patches(base: Any, update: Any) -> dict:
+    """深合并两份参数 patch，返回**新 dict**（不改动入参）。
+
+    R22 F04 供服务层装配卡/场景参数用（与 `_deep_merge` 同一语义，
+    避免服务层复制一份合并实现）：`update` 覆盖 `base`，同 stage 的同名
+    键递归合并、其余键原样保留。
+    """
+    out = copy.deepcopy(dict(base or {}))
+    _deep_merge(out, dict(update or {}))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# R22 F04 —— 参数栅栏（update_params 零校验的必修）
+# ---------------------------------------------------------------------------
+
+class ParamValidationError(ValueError):
+    """参数 patch 未通过栅栏（服务层转 HTTP 400）。"""
+
+
+# 「敏感面」：路径类参数键（命名派生，非硬编码白名单）。仓内 0 个 .cube
+# 资产（design §0 P2），故 R22 一律拒绝路径类写入。
+_PATH_KEY_SUFFIXES = ("_path", "_file")
+_DRIVE_RE = re.compile(r"^[A-Za-z]:")
+
+
+def _param_schemas() -> dict:
+    """各 stage 的 param_schema（栅栏白名单的**唯一派生源**）。
+
+    从 `pixo.render.params.PARAM_SCHEMAS`（= STAGE_CLASSES 的类属性）
+    现取，不复制任何键名——Stage 增删参数键后栅栏自动跟随（design §4
+    「白名单须由 param_schema 派生」，防误拒既有前端调整参数）。
+    """
+    from pixo.render.params import PARAM_SCHEMAS
+
+    return PARAM_SCHEMAS
+
+
+def _looks_like_path(value: str) -> bool:
+    """字符串是否呈文件路径形态（拒绝任何仓外路径注入）。
+
+    只做形态判定：盘符（``C:``）/ 正反斜线 / 家目录 / 相对上跳。
+    合法的枚举字符串（``oklch``）、比例（``16:9``）、曲线 JSON 串均不命中。
+    """
+    text = str(value).strip()
+    if not text or len(text) > 4096:
+        return False
+    if text.startswith(("~", "/", "\\", "./", "../", ".\\", "..\\")):
+        return True
+    if "\\" in text or "/" in text:
+        return True
+    return bool(_DRIVE_RE.match(text))
+
+
+def _check_sensitive(stage: str, key: str, value: Any) -> None:
+    """敏感面检查（strict 与非 strict 都执行）。"""
+    name = str(key).lower()
+    if name.endswith(_PATH_KEY_SUFFIXES):
+        raise ParamValidationError(
+            f"参数 '{stage}.{key}' 属路径类参数，本轮一律拒绝（敏感面："
+            f"防路径注入；见 docs/STYLE_CARDS_USAGE.md）")
+    if isinstance(value, str) and _looks_like_path(value):
+        raise ParamValidationError(
+            f"参数 '{stage}.{key}' 的值疑似文件路径（{value!r}），"
+            f"拒绝任何路径注入（见 docs/STYLE_CARDS_USAGE.md）")
+
+
+def _check_value(stage: str, key: str, value: Any, schema: dict) -> None:
+    """类型 / 枚举 / 数值域检查（strict）。None 恒放行 = 取消该键覆盖。"""
+    if value is None:
+        return
+    typ = schema.get("type")
+    if stage == "stylize" and str(key).lower() == "lut":
+        # lut 为内存 LUT3D 实例位（JSON 面无法承载）；仓内 0 个 .cube
+        # ⇒ 本轮任何 LUT 激活都不支持，显式 400 而非渲染期 500。
+        raise ParamValidationError(
+            f"参数 '{stage}.{key}' 本轮不接受：无 LUT 资产，"
+            f"风格卡以参数注入方式应用（见 docs/STYLE_CARDS_USAGE.md）")
+    if typ in ("float", "int"):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 类型不符：{value!r} 应为 {typ}")
+        if not math.isfinite(float(value)):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 必须为有限数值：{value!r}")
+        if "min" in schema and float(value) < float(schema["min"]):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 越域：{value!r} 小于下限 {schema['min']}")
+        if "max" in schema and float(value) > float(schema["max"]):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 越域：{value!r} 大于上限 {schema['max']}")
+    elif typ == "bool":
+        if not isinstance(value, bool):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 类型不符：{value!r} 应为 bool")
+    elif typ == "str":
+        if not isinstance(value, str):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 类型不符：{value!r} 应为 str")
+    elif typ == "float_or_str":
+        # 数值 / 字符串 / 结构数组（hsl.bands）/ 曲线 dict 均放行（既有前端
+        # 语义），仅数值时套用数值域。
+        if isinstance(value, bool) or not isinstance(
+                value, (int, float, str, list, tuple, dict)):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 类型不符：{value!r} 应为数值/字符串/结构")
+        if isinstance(value, (int, float)):
+            if not math.isfinite(float(value)):
+                raise ParamValidationError(
+                    f"参数 '{stage}.{key}' 必须为有限数值：{value!r}")
+            if "min" in schema and float(value) < float(schema["min"]):
+                raise ParamValidationError(
+                    f"参数 '{stage}.{key}' 越域：{value!r} 小于下限 {schema['min']}")
+            if "max" in schema and float(value) > float(schema["max"]):
+                raise ParamValidationError(
+                    f"参数 '{stage}.{key}' 越域：{value!r} 大于上限 {schema['max']}")
+    elif typ == "dict":
+        if not isinstance(value, dict):
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 类型不符：{value!r} 应为 dict")
+    # typ == "any" / 未声明 type：仅走键存在性检查。
+    if "choices" in schema and value not in schema["choices"]:
+        raise ParamValidationError(
+            f"参数 '{stage}.{key}' 取值非法：{value!r} 不在允许值 "
+            f"{schema['choices']}")
+
+
+def validate_param_patch(patch: Any, *, strict: bool = True) -> None:
+    """R22 F04 参数栅栏：校验 patch（``{stage: {键: 值}}``）。
+
+    派生源 = 各 Stage 的 ``param_schema``（不硬编码任何键名/白名单）。
+
+    - ``strict=False``（``RawPreviewSession`` 缺省）：只查**敏感面** ——
+      路径类键（``*_path`` / ``*_file``）、路径形态的字符串值。合成 stage
+      （测试的 ``s1``/``s2``）不受影响，既有内部调用方零变化。
+    - ``strict=True``（服务层 HTTP 路径）：+ 未知 stage / 未知键 /
+      类型 / 枚举 / 数值域（NaN/Inf 亦拒）。
+
+    非法抛 :class:`ParamValidationError`（服务层映射 HTTP 400）。
+    """
+    if patch is None:
+        return
+    if not isinstance(patch, dict):
+        raise ParamValidationError(
+            f"参数 patch 必须是对象（{{stage: {{...}}}}），实际 {type(patch).__name__}")
+    schemas = _param_schemas() if strict else None
+    for stage, bucket in patch.items():
+        name = str(stage)
+        if strict and (not name or name.startswith("__")):
+            raise ParamValidationError(
+                f"未知 stage '{name}'（可用: {sorted(schemas)}；控制键由服务层解析）")
+        if strict and name not in schemas:
+            raise ParamValidationError(
+                f"未知 stage '{name}'（可用: {sorted(schemas)}）")
+        if bucket is None:
+            continue                      # None = 取消该 stage 覆盖（既有语义）
+        if not isinstance(bucket, dict):
+            if strict:
+                raise ParamValidationError(
+                    f"stage '{name}' 的参数桶必须是对象，实际 {bucket!r}")
+            _check_sensitive(name, "", bucket)
+            continue
+        for key, value in bucket.items():
+            _check_sensitive(name, str(key), value)
+            if not strict:
+                continue
+            schema = schemas[name].get(str(key))
+            if schema is None:
+                raise ParamValidationError(
+                    f"未知参数键 '{name}.{key}'（不在 {name} 的 param_schema 中）")
+            _check_value(name, str(key), value, schema)
+
+
 class RawPreviewSession:
     """单张 RAW 的预览会话缓存。"""
 
@@ -127,10 +303,15 @@ class RawPreviewSession:
                  session_id: Optional[str] = None,
                  max_stage_entries: int = 64,
                  max_encoding_entries: int = 32,
-                 max_stage_bytes: int = 512 * 1024 * 1024):
+                 max_stage_bytes: int = 512 * 1024 * 1024,
+                 validate_params: bool = False):
         self.raw_path = Path(raw_path)
         self.prof = prof
         self.params = dict(params or {})
+        # R22 F04：strict 参数栅栏开关。服务层会话工厂置 True（HTTP 面
+        # 白名单校验）；缺省 False 只保留敏感面（路径类）检查，避免误伤
+        # 直接构造会话的既有测试/内部调用方（合成 stage 名）。
+        self.validate_params = bool(validate_params)
         self.generation = 0
         self.session_id = session_id or uuid.uuid4().hex
         # F13 Route B：session 携带的区域软掩码（prompt → float 0-1 ndarray，
@@ -173,7 +354,14 @@ class RawPreviewSession:
 
     # ---- 参数 / generation ----
     def update_params(self, new_params: dict) -> int:
-        """递归合并更新参数并递增 generation，返回新 generation。"""
+        """递归合并更新参数并递增 generation，返回新 generation。
+
+        R22 F04：合并前过参数栅栏——敏感面（路径类键/路径形态值）恒检；
+        ``validate_params=True``（服务层会话）时另加未知 stage/键与数值域
+        校验。非法抛 :class:`ParamValidationError`（服务层转 HTTP 400），
+        **不落任何部分合并**（先校验后合并）。
+        """
+        validate_param_patch(new_params, strict=self.validate_params)
         with self._params_lock:
             _deep_merge(self.params, dict(new_params or {}))
             self.generation += 1
@@ -200,7 +388,13 @@ class RawPreviewSession:
             if decode_mode == "cfa_half_native":
                 try:
                     img = decode_cfa_half(raw, raw_path=self.raw_path)
-                except Exception:
+                except Exception as exc:
+                    # F03 #13: native CFA 2×2 分箱解码失败 → rawpy AHD half
+                    # (像素级解码算法切换, 预览/导出一致性风险必须可观测)
+                    record_degradation(
+                        "render.io.decode_cfa_half", exc,
+                        path=str(self.raw_path),
+                        detail="CFA native 解码失败，回退 rawpy AHD half")
                     img = None
             if img is None:
                 rgb16 = raw.postprocess(
@@ -546,4 +740,5 @@ class RawPreviewSession:
         return path
 
 
-__all__ = ["RawPreviewSession", "_param_fingerprint", "_array_fingerprint"]
+__all__ = ["RawPreviewSession", "_param_fingerprint", "_array_fingerprint",
+           "ParamValidationError", "validate_param_patch", "merge_param_patches"]

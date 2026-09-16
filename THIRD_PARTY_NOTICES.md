@@ -27,10 +27,17 @@
 > 使非 GPL 分发违约。发布前必须先行处置（重写 / git 考古核实是否仅注释表述夸大 / 隔离）。
 > 完整分析见 §6 与 `.agent-team/research/dng-sdk-review.md`（F18 高危 H1）。
 
-> **警示二：DCP 相机配置 ×6 的再分发条款未核验。**
+> **警示二：DCP 相机配置 ×6 的再分发条款未核验（R22 #3 已逐项盘点，结论＝待处置）。**
 > `resources/dcp/` 6 个 .dcp 文件名指向 RawLab（rawlab.net 社区 DCP 分发站，推测，置信度中），
 > 其再分发条款未经核验；且 `pyproject.toml [tool.setuptools.data-files]` 将 `resources/dcp/*.dcp`
 > 打包，**会随 wheel 分发**。发布前必须核验来源 profile 的再分发许可（F18 §3.3-4 同项）。
+> **R22 逐项盘点（2026-09-10，证据 `.agent-team/tmp-r22b2-dcp{,2,3}.txt`）**：6 个文件内嵌
+> **无任何** license/copyright/permission/http/CC 条款文本；`ProfileCopyright`（tag 0xC6F4）
+> 一律为生产者标签 `"RawLab fitted profile"`（本仓 DCP 写入器同值：`core/calibration.py:388`），
+> `ProfileCalibrationSignature`（0xC612）为 `"com.adobe"`（同为写入器缺省值 `:386`，**不构成
+> Adobe 血缘**）。⇒ 依文件内证据**不能判定为可发布**：须取得 RawLab 再分发许可，或替换为
+> 自产/官方 DCP 后重跑标定与门禁。**注意本项不能按「纯登记资产」从打包面移除**——DCP 本体是
+> 运行时素材（`service/runtime.py:41-46 _DEFAULT_DCP` → `:320` → `Renderer`/`load_dcp`）。
 
 > **警示三：NC 模型的 internal_development_only 门控状态。**
 > uniface（face-parsing，NC 已 web 复核）与 sapiens（CC-BY-NC-4.0 已 web 复核）两个后端
@@ -100,7 +107,7 @@ torch 注记：若未来随分发物捆绑 torch 本体，其约 120 个第三�
 | M2 | openai/clip-vit-base-patch32（aesthetic 底座） | MIT | redistribution_allowed_with_license_notice（运行时 HF 自动下载，不入仓） | https://huggingface.co/openai/clip-vit-base-patch32 | 双台账一致；HF 页面未独立复核（可信度中高） |
 | M3 | uniface-face-parsing（jonathandinu/face-parsing） | code MIT / **weights CC BY-NC-SA**（CelebAMask-HQ 派生） | **internal_development_only**，publishable=false，路由门控 `PIXO_ALLOW_RESTRICTED=1` | https://huggingface.co/jonathandinu/face-parsing | web 复核通过（2026-09-07）：model card 自述 non-commercial；NC 溯源 CelebAMask-HQ 数据集 |
 | M4 | rfdetr-seg-2xl（roboflow RF-DETR-Seg） | Apache-2.0 | redistribution_allowed_with_license_notice（rfdetr pip 包首用下载） | https://github.com/roboflow/rf-detr | 台账登记；未独立复核（可信度中高） |
-| M5 | segformer-b1-finetuned-ade-512-512（NVIDIA） | code Apache-2.0（原始）/ ADE20K 微调权重「随发布口径」 | **条目自相矛盾：publishable=false 但 status=redistribution_allowed_with_license_notice** | https://huggingface.co/nvidia/segformer-b1-finetuned-ade-512-512 | **存疑（本清单最大未决项）**：ADE20K 数据集商用条款不明确，HF license tag 未独立复核；**发布前须核验** |
+| M5 | segformer-b1-finetuned-ade-512-512（NVIDIA） | code Apache-2.0（原始）/ ADE20K 微调权重「随发布口径」 | **口径已裁决（R22 #3）**：`publishable=false`（可发布性权威字段）与 `status=usage=redistribution_allowed_with_license_notice`（**许可族档位**，两字段镜像由 `tests/unit/test_model_licenses.py::test_status_mirrors_usage` 钉死）不属同一语义 ⇒ 原「自相矛盾」表述作废、登记口径自洽 | https://huggingface.co/nvidia/segformer-b1-finetuned-ade-512-512 | **存疑（本清单最大未决项）**：ADE20K 数据集商用条款不明确，HF license tag 未独立复核；**发布前须核验**。引入第三档「待核验」usage 值需同步 `USAGE_VOCAB` 与 `multi_router` 门控语义（登记 `docs/tech_debt.md` 条目 3 遗留） |
 | M6 | facebook/sapiens-seg-0.3b（Meta） | **CC-BY-NC-4.0**（HF 页 tag；Sapiens 论文自述 CC BY-NC-SA 4.0，SA 之差——取 HF tag 并列注记） | **internal_development_only**，publishable=false，隔离文件 `src/pixo/vision/segmenters/sapiens_body.py`，路由门控同 M3 | https://huggingface.co/facebook/sapiens-seg-0.3b-torchscript | web 复核通过（2026-09-07） |
 
 **打包配置（2026-09-07 实测修正+用户决策）**：`resources/models/README.md:3`「不保存大文件
@@ -110,9 +117,12 @@ torch 注记：若未来随分发物捆绑 torch 本体，其约 120 个第三�
 通配符曾致 wheel 构建失败（任何检出可复现），2026-09-07 队长修复（显式文件列表），
 实测 310MB wheel 构建通过。MIT 分发义务由本声明承载。
 
-**台账冲突 A（待处置，本批次不改台账）**：`src/pixo/manifests/vision_models.json:14` 仍写
-aesthetic「需核验」+ 旧 `$GUANLAN_ROOT` 路径，与 `model_licenses.json` 的 MIT 定论冲突——
-前者过期，发布维护者应以 `model_licenses.json` 为准；vision_models.json 的更新属待办。
+**台账冲突 A（✅ 已校正，2026-09-10 R22 #3）**：`src/pixo/manifests/vision_models.json:14` 曾写
+aesthetic「需核验」+ 旧 `$GUANLAN_ROOT` 路径，与 `model_licenses.json` 的 MIT 定论冲突——现已对齐：
+`license = "MIT"`、`publishable = true`、`path_or_source = "resources/models/aesthetic/aesthetic_scorer.pt"`
+（`delivery = in_repo`）；`vision_models.json` 的 `updated` 同步为 2026-09-10。双台账一致性由
+`tests/unit/test_tech_debt_invariants.py::test_vision_model_path_or_source_resolution_rules` 守卫
+（`$VAR` 形态解析不了即报「待核验」，不静默通过）。
 
 gsam 相关条目已确认删除（F04 移除后全仓零残留，清单终验）。
 
@@ -158,11 +168,33 @@ native 无 DNG/Adobe 引用）。MinGW-w64 + CMake 为构建期工具不随产�
 
 | 项 | 位置 | 许可判定 |
 |---|---|---|
-| DCP 相机配置 ×6 | `resources/dcp/` | **存疑（警示二）**：RawLab 社区来源（推测，置信度中）再分发条款未核验；被 pyproject data-files 打包将随 wheel 分发 |
+| DCP 相机配置 ×6 | `resources/dcp/` | **待处置（警示二；R22 #3 逐项盘点）**：RawLab 生产者标签来源，6 文件内嵌**零许可/版权条款文本** ⇒ 不能判定为可发布；被 pyproject data-files 打包随 wheel 分发，且为**运行时素材**（服务默认 DCP）。逐项见下表 |
 | HSM→OKLCh 点云 ×1 | `configs/color/hsm_oklch_nikon_z_5_2_rawlab_lr_adobe_standard_baseline.json` | 自产数据但**血缘继承**上述 DCP（ProfileLookTable 23040 网格→2765 点采样，JSON `source_dcp` 自述）→ 同挂「发布前核验」标签 |
 | RP-CCM / skin_oklab / warmth_curve 拟合产物 | `configs/color/rp_ccm_nikon_z5_2.json`、`configs/color/skin_oklab.json`、`configs/calibration/warmth_curve.json` | 自产（本仓语料拟合），无第三方许可面 |
 | LR 预设 / 风格卡 24+2 / LUT 卡 | `configs/styles/` | 自产 JSON；仓内无 .cube 文件，运行时 LUT 目录回退指向**仓外** `guanlan/luts`（`src/pixo/render/core/lut.py:28`）——分发环境无该目录则 LUT 功能不可用（功能问题），LUT 内容若来自 guanlan 需按 §6 L-2 口径确认 |
 | 金样本数据 | `data/golden/` | 自产回归数据（Nikon 自摄语料，README 无详述，推测置信度中） |
+
+**DCP ×6 逐项盘点（R22 #3，2026-09-10；实读 IFD0 与二进制内嵌串，证据
+`.agent-team/tmp-r22b2-dcp2.txt` / `-dcp3.txt`）**：
+
+| # | 文件 | sha256[:16] | `manifest.json` 引用 | UniqueCameraModel(0xC614) | ProfileCopyright(0xC6F4) | 判定 |
+|---|------|-------------|----------------------|---------------------------|--------------------------|------|
+| 1 | `Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp` | `aefcae08e6e7bd90` | ✅ `lr_adobe_standard_v2` | `Nikon Z 5 2 RawLab LR Baseline`（与文件名不符） | `RawLab fitted profile` | **待处置** |
+| 2 | `Nikon Z 5 2 RawLab LR Baseline.dcp` | `f3a19d9a59ad9f8b` | ✅ `lr_camera_standard_v2` | `Nikon Z 5 2 RawLab LR Camera Standard Baseline`（与文件名不符） | `RawLab fitted profile` | **待处置** |
+| 3 | `Nikon Z 5 2 RawLab LR Camera Standard Baseline.dcp` | `f3a19d9a59ad9f8b` | ❌ | 同 #2 | `RawLab fitted profile` | **待处置**（与 #2 **逐字节重复**） |
+| 4 | `Nikon Z 5 2 RawLab Preview Baseline.dcp` | `b21f2149b9890f38` | ✅ `camera_preview` | `Nikon Z 5 2 RawLab Preview Baseline` | `RawLab fitted profile` | **待处置** |
+| 5 | `Nikon Z 5 2 RawLab Preview Baseline v2.dcp` | `8d9d911a90f3d8f9` | ❌ | `…Preview Baseline v2` | `RawLab fitted profile` | **待处置** |
+| 6 | `Nikon Z 5 2 RawLab Preview Baseline v3.dcp` | `9b27eb48f1ee7e67` | ❌ | `…Preview Baseline v3` | `RawLab fitted profile` | **待处置** |
+
+- **来源标注**：6 个文件内**唯一**可归属线索是文件名与内嵌标签 `RawLab`；仓内无 URL/条款/
+  授权声明（`git grep -i rawlab` 命中仅文件名引用与 `RawLab fitted profile` 标签）。NOTICES
+  原记「rawlab.net，推测置信度中」维持。
+- **许可文本核验**：6 文件 `grep -c` 于 `copyright` / `license` / `permission` / `reserved` /
+  `http` / `creativecommons` / `CC BY` **全部 0 次** ⇒ 无内嵌授权，**不可判定为可发布**。
+- **结论（可发布 / 待处置）**：**6/6 待处置**。可发布路径二选一：①取得 RawLab 再分发许可并
+  附文本；②替换为自产/官方 DCP 后重跑标定（`configs/color/*`、`skin_oklab.json`、暖度/曝光表）
+  与门禁。**不得**简单从 wheel 剔除 `resources/dcp/*.dcp`（服务默认 DCP 为运行时素材）。
+  替换属独立变更，本轮未实施，登记 `docs/tech_debt.md` 条目 3 遗留 / R23。
 
 **登记资产声明（非运行时消费）**：`resources/dcp/manifest.json` 与
 `configs/styles/lr_baseline.json`、`lr_camera_standard_baseline.json` 两张 LR 基线预设为
@@ -171,7 +203,10 @@ native 无 DNG/Adobe 引用）。MinGW-w64 + CMake 为构建期工具不随产�
 在 src/pixo 零代码引用，lr_baseline 预设不在生产风格卡体系（`know/cards.py`）与默认管线
 （`presets.py` DEFAULT_STAGES）任何加载面上，当前唯一消费者为测量脚本
 `scripts/measure_u8_precision.py`。它们不构成运行时第三方素材面；其中 DCP 文件本体的
-再分发核验义务不因此免除（仍见警示二）。
+再分发核验义务不因此免除（仍见警示二）。**R22 补正（2026-09-10）**：上述「非运行时消费」
+只对 `manifest.json` 与两张 LR 预设成立；**DCP 文件本体是运行时素材**
+（`src/pixo/service/runtime.py:41-46 _DEFAULT_DCP` → `:320` → `Renderer` → `load_dcp`），
+因此「从 wheel 打包面剔除 DCP」不是本项的合法处置路径。
 
 ## 6. 代码衍生项专节（非依赖，NOTICES 只能披露、不能化解）
 
@@ -229,11 +264,11 @@ native 无 DNG/Adobe 引用）。MinGW-w64 + CMake 为构建期工具不随产�
 | 项 | 状态 | 处置口径 |
 |---|---|---|
 | huesat RawTherapee GPL 血缘 | 高危未决（F18） | 发布前必决：核实/重写/隔离（§6.1） |
-| DCP ×6 再分发条款 | 未核验（RawLab 社区，推测置信度中） | 发布前核验；wheel 打包事实并陈（§5） |
-| segformer ADE20K 权重 | 存疑（台账自相矛盾 + 数据集条款不明） | publishable=false、发布前须核验（§3 M5） |
+| DCP ×6 再分发条款 | **待处置**（RawLab 生产者标签；6 文件内嵌零许可文本，R22 #3 逐项盘点） | 取得 RawLab 许可或替换 DCP 后重跑标定；wheel 打包事实并陈（§5）。**不可**从打包面剔除（运行时素材） |
+| segformer ADE20K 权重 | 存疑（数据集条款不明；`publishable=false` 为权威） | publishable=false、发布前须核验（§3 M5）；口径裁决已消除 `publishable`/`status` 的表面冲突 |
 | sapiens 许可 SA 差异 | HF 页 CC-BY-NC-4.0 vs 论文 CC BY-NC-SA 4.0 | 取 HF tag，已并列注记（§3 M6） |
 | ~~aesthetic_scorer.pt 位置~~ | 初版误报「在仓+随 wheel 打包」；实测：磁盘部署产物（不入 git）、曾致 wheel 构建失败（data-files 目录通配） | **已修复（2026-09-07）**：打包配置改显式文件列表，构建通过，权重不进包=既定设计 |
-| vision_models.json | 过期（「需核验」+ 旧路径） | 以 model_licenses.json 为准；台账更新待办（§3 冲突 A） |
+| vision_models.json | ✅ 已校正（2026-09-10 R22 #3） | 与 `model_licenses.json` 对齐：aesthetic = MIT / publishable=true / 仓内路径；`$GUANLAN_ROOT` 旧路径作废（§3 冲突 A） |
 | guanlan 许可性质 | 未确认（内部推断） | 内部移植披露 + 待队长确认（§6.3） |
 | clean-room 过程记录 | CLEANROOM_M1..M5 不在仓 | 补档或 git 考古后才能坐实 warp/tone/resample 主张（§6.2） |
 | Adobe DNG SDK 专利面 | SDK 许可无专利条款；DNG 规范专利许可另立可撤销 | 见 F18（本文件 §6.2）；未做专利检索 |

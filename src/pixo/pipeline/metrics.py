@@ -1,9 +1,14 @@
-"""pixo.pipeline.metrics —— 规则引擎指标口径公共 API（F03, R21）。
+"""pixo.pipeline.metrics —— 规则引擎指标口径公共 API（F03, R21；R22/F01 扩键）。
 
 本模块是「完整测量报告 → 规则引擎可引用的扁平指标」的**单一来源**：
 loop 侧（``_metrics_for_decide``）与 service 侧装配共用同一实现，消除
 「指标嵌在 measurement 的 ``global`` / ``regions`` 下、规则 condition /
 formula 取不到」这一 decide 零触发成因（task-brief 成因①）。
+
+R22/F01（CR-06）增量：把 4 层路径
+``measurement["global"]["detail"]["sharpness"][noise_ratio|detail_score]``
+展平为扁平键并加入 :data:`METRIC_KEYS`（口径见 :data:`SHARPNESS_METRIC_KEYS`
+注释：噪声/细节类指标只用导出全幅标定）。
 
 架构约束（task-brief 架构红线；exploration-r21 §6.5）：
 本模块属 ``pixo.pipeline`` 库层，**不得** import ``pixo.service``——依赖方向
@@ -34,8 +39,18 @@ REGION_METRIC_SUFFIXES: tuple[str, str, str, str] = (
     "reliable",
 )
 
-# flatten **固定键**（对齐 loop.py:783-792 注册面）：6 个 global 键 +
-# 3 个顶层代理键 + "crop_suggestion_applicable"。**不含区域键**。
+# R22/F01（CR-06）锐度/噪声展平键 —— 来源层级固定为 **4 层**：
+# ``measurement["global"]["detail"]["sharpness"][<key>]``
+# （``vision/measure.py:549-553`` 由 ``VisionMeasure.measure`` 组装；
+# ``measure_sharpness`` 产出 noise_ratio/detail_score/...）。
+# **口径**（design-r22 §2.1 裁决③）：噪声/细节类指标强分辨率依赖
+# （512 tier 下 noise_ratio 排序非单调：ISO12800 0.2837 < ISO1600 0.6680）
+# ⇒ 阈值类消费一律只用导出全幅（``final_measurement``）。
+SHARPNESS_METRIC_KEYS: tuple[str, str] = ("noise_ratio", "detail_score")
+
+# flatten **固定键**（对齐 loop.py:761-770 注册面）：6 个 global 键 +
+# 3 个顶层代理键 + "crop_suggestion_applicable" + R22/F01 的 2 个锐度键。
+# **不含区域键**。
 METRIC_KEYS: frozenset[str] = frozenset(
     {
         # measurement["global"] / 顶层测量键（metrics_for_decide 固定键）
@@ -51,6 +66,9 @@ METRIC_KEYS: frozenset[str] = frozenset(
         "tonal_range",
         # loop 上下文指标（crop 建议链）
         "crop_suggestion_applicable",
+        # R22/F01：global.detail.sharpness 4 层展平（噪声/细节）
+        "noise_ratio",
+        "detail_score",
     }
 )
 
@@ -66,6 +84,11 @@ def metrics_for_decide(measurement: Mapping[str, Any]) -> dict[str, Any]:
       （末两键同源 preview_highlight_clip_estimate）；
     - 顶层代理键 ``haze_proxy`` / ``colorfulness_proxy`` / ``tonal_range``
       —— **仅当 measurement 顶层存在时**才产出（缺省不写空键）；
+    - R22/F01 锐度/噪声键 ``noise_ratio`` / ``detail_score`` —— 取自
+      **4 层路径** ``measurement["global"]["detail"]["sharpness"]``，
+      **仅当该层存在（且含对应键）时才产出**（与代理键同款「缺省不写空键」
+      语义：规则侧「键缺席」与「值为 None」都走引擎的静默不触发，
+      exploration-r22 §2.2 #1 的缺失语义二选一取此支）；
     - 各 region 的 ``{name}_{luminance,area_ratio,highlight_clip_ratio,reliable}``
       （``reliable`` 恒为 ``bool``）。
 
@@ -87,6 +110,12 @@ def metrics_for_decide(measurement: Mapping[str, Any]) -> dict[str, Any]:
             "preview_highlight_clip_estimate"
         ),
     }
+    detail = global_metrics.get("detail")
+    sharpness = detail.get("sharpness") if isinstance(detail, Mapping) else None
+    if isinstance(sharpness, Mapping):
+        for key in SHARPNESS_METRIC_KEYS:
+            if key in sharpness:
+                metrics[key] = sharpness[key]
     for key in PROXY_METRIC_KEYS:
         if key in measurement:
             metrics[key] = measurement[key]
@@ -147,6 +176,7 @@ __all__ = [
     "METRIC_KEYS",
     "PROXY_METRIC_KEYS",
     "REGION_METRIC_SUFFIXES",
+    "SHARPNESS_METRIC_KEYS",
     "metrics_for_decide",
     "metric_universe",
     "merge_proxy_metrics",

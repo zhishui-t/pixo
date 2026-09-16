@@ -11,6 +11,7 @@ import type {
   StyleCardData,
 } from '../types';
 import {
+  applyPresetPatch as applyPresetPatchRemote,
   ensureSession,
   fetchProjects,
   fetchStyleCards,
@@ -89,6 +90,13 @@ interface AppState {
   patchParam: (patch: ParamPatch, source?: Source) => Promise<void>;
   probeSplitToneDomain: (canonical: ParamPatch | undefined) => void;
   patchProjectParam: (projectId: string, patch: ParamPatch, source?: Source) => Promise<void>;
+  /**
+   * R22 F04/F05 —— 应用「卡/场景装配 patch」（`__style` / `__scene`）。
+   *
+   * 与 patchProjectParam 的差别：走**严格** API 通道，失败**抛出不吞**
+   * （不 mock 回退、不静默无效），由 StyleAiPanel 显示后端 detail。
+   */
+  applyPresetPatch: (patch: ParamPatch, source?: Source) => Promise<void>;
   setPhotoRating: (projectId: string, photoId: string, rating: number) => void;
   setPhotoColor: (projectId: string, photoId: string, color: ColorLabel | undefined) => void;
   addMessage: (message: ChatMessage) => void;
@@ -287,6 +295,33 @@ export const useAppStore = create<AppState>((set, get) => ({
       sessionId = sid;
     }
     const result = await remotePatchParams(patch, source, sessionId);
+    get().probeSplitToneDomain(result.canonical);
+    set((state) => ({
+      params: result.params,
+      generation: result.generation,
+      paramsByProject: {
+        ...state.paramsByProject,
+        [projectId]: result.params,
+      },
+    }));
+  },
+
+  /**
+   * R22 F04/F05：应用卡/场景装配 patch（`__style` / `__scene`）。
+   * 严格通道——失败抛出，调用方（StyleAiPanel）显式提示，绝不静默无效。
+   */
+  applyPresetPatch: async (patch, source = 'user') => {
+    const projectId = get().activeProjectId;
+    let sessionId = get().sessionId;
+    if (!sessionId) {
+      const photoId = get().activePhotoId;
+      const sid = photoId && get().backend
+        ? await ensureSession(photoId)
+        : getMockSessionId();
+      if (sid !== getMockSessionId()) set({ sessionId: sid });
+      sessionId = sid;
+    }
+    const result = await applyPresetPatchRemote(patch, source, sessionId);
     get().probeSplitToneDomain(result.canonical);
     set((state) => ({
       params: result.params,

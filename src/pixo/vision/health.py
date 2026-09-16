@@ -126,6 +126,28 @@ def _multi_router_health_info() -> dict[str, Any]:
         }
 
 
+def _render_degradation_info() -> dict[str, Any]:
+    """render 侧关键路径降级汇总 (R22 F03, L2 暴露层)。
+
+    惰性 import ``pixo.render.degradation`` (该模块仅依赖标准库, 但
+    ``pixo.render.core`` 的包初始化会拉 numpy/cv2/rawpy, 故不在本模块顶层
+    import —— 与本模块「不直接 import 重依赖」的既有约定一致)。import 失败
+    (最小安装/裁剪环境) 时返回空汇总, 不影响 vision 侧任何状态。
+    """
+    try:
+        from ..render.degradation import render_degradation_report
+
+        return dict(render_degradation_report())
+    except Exception as exc:
+        return {
+            "count": 0,
+            "entries": [],
+            "version_gate_count": 0,
+            "version_gate_rejections": [],
+            "error": f"render 降级汇总不可用：{exc}",
+        }
+
+
 def vision_health(
     segmenter: Any | None = None,
 ) -> dict[str, Any]:
@@ -134,6 +156,13 @@ def vision_health(
     可通过 segmenter 参数注入测试/外部已加载的真实分割器实例
     （须提供 health_info()）；缺省以 multi_router 聚合状态作为真实
     分割栈信息。真实模型未就绪时整体返回 not_ready。
+
+    R22 F03 追加 (纯增量, 不改既有 status/ready/available 语义):
+      ``render_degraded``（list，含 source/kind/path/reason/detail/
+      exception/count/first_seen/last_seen/timestamp）、
+      ``render_degraded_count``、``render_status``（"degraded"|"ok"）、
+      ``render_version_gate_rejections``（版本门**合法拒绝**独立通道,
+      不计入 degraded, 见 render/degradation.py 判定依据）。
     """
     if segmenter is not None:
         try:
@@ -166,6 +195,18 @@ def vision_health(
     horizon_info = _safe_health(horizon_health_info)
     multi_router_info = _safe_health(_multi_router_health_info)
     overall_ready = bool(real_info.get("ready", False))
+    render_info = _render_degradation_info()
+    render_extra: dict[str, Any] = {
+        "render_degraded": list(render_info.get("entries", [])),
+        "render_degraded_count": int(render_info.get("count", 0)),
+        "render_status": "degraded" if render_info.get("count") else "ok",
+        "render_version_gate_rejections": list(
+            render_info.get("version_gate_rejections", [])),
+        "render_version_gate_count": int(
+            render_info.get("version_gate_count", 0)),
+    }
+    if render_info.get("error"):
+        render_extra["render_degraded_error"] = render_info["error"]
 
     return {
         "status": "ready" if overall_ready else "not_ready",
@@ -188,6 +229,7 @@ def vision_health(
         "multi_router": dict(multi_router_info),
         "aesthetic": dict(aesthetic_info),
         "horizon": dict(horizon_info),
+        **render_extra,
     }
 
 

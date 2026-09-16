@@ -1,25 +1,27 @@
 {
   "schema_version": "1.0",
-  "updated": "2026-09-07",
+  "updated": "2026-09-10",
   "description": "Pixo Vision 相关模型清单，仅登记不拷贝大文件。",
   "models": [
     {
       "id": "aesthetic-scorer",
       "name": "aesthetic_scorer.pt",
       "purpose": "7 维美学评分（整体/技术/构图/光影/色彩/景深/内容）",
-      "path_or_source": "$GUANLAN_ROOT/models/aesthetic_scorer.pt",
+      "path_or_source": "resources/models/aesthetic/aesthetic_scorer.pt",
+      "delivery": "in_repo",
       "size": "334 MB",
       "size_bytes": 349912662,
-      "license": "需核验（来源 rsinema/aesthetic-scorer）",
-      "publishable": false,
+      "license": "MIT",
+      "publishable": true,
       "pixo_status": "adapter_in_pixo_vision_aesthetic",
-      "notes": "已在 pixo/vision/aesthetic.py 接入；发布前需确认模型许可。"
+      "notes": "已在 pixo/vision/aesthetic.py 接入；许可定论 = MIT（HF 仓库 rsinema/aesthetic-scorer README front-matter，与仓库根 model_licenses.json 一致，2026-09-10 R22 #3 校正：原「需核验」+ 旧 $GUANLAN_ROOT 路径已作废）。权重随 wheel 分发（git 不跟踪磁盘产物），发布须附 MIT 声明。"
     },
     {
       "id": "openai-clip-vit-base-patch32",
       "name": "openai/clip-vit-base-patch32",
       "purpose": "aesthetic_scorer 的预训练 backbone",
       "path_or_source": "HuggingFace 缓存 openai/clip-vit-base-patch32",
+      "delivery": "external_hub_download",
       "size": "HuggingFace 缓存",
       "size_bytes": null,
       "license": "MIT（OpenAI CLIP）",

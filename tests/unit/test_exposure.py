@@ -330,7 +330,8 @@ def test_max_ev_clamp():
     prof = _make_profile()
     dark = _make_ctx(_neutral_image(64, 64, 1e-6), prof=prof, wb_mode="off")
     bright = _make_ctx(_neutral_image(64, 64, 100.0), prof=prof, wb_mode="off")
-    stage = ExposureStage({"max_ev": 2.5})
+    # 2026-09-14 默认中性化后 mode 缺省为 "baseline" (不做自动测光), 故显式请求 auto
+    stage = ExposureStage({"max_ev": 2.5, "mode": "auto"})
     assert stage._auto_ev(dark) > 2.5    # 未钳位前超出上限
     assert stage._auto_ev(bright) < -2.5  # 未钳位前超出下限
     stage.run(dark)

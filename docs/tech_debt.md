@@ -11,8 +11,11 @@
 - **条目 1 + 6 + 8/10b 防复活**（YOLOE 适配器与代码级引用清零、`src/render` shim 不回归、
   VibranceStage 废弃占位显式调用抛 NotImplementedError）
   → `test_cleared_items_stay_cleared`；
-- **条目 3**（model_licenses.json 登记路径与当前路径同步，无悬空）
-  → `test_model_license_registry_paths_resolve`。
+- **条目 3**（两个许可台账的登记路径与当前路径同步，无悬空 + 交付形态一致）
+  → `test_model_license_registry_paths_resolve`（`files[]` 逐项存在 + 交付形态自洽）、
+  `test_model_license_registry_guard_is_falsifiable`（负控：路径改坏必红，防断言空转）、
+  `test_vision_model_path_or_source_resolution_rules`（`path_or_source` 解析规则）、
+  `test_vision_models_guanlan_root_env_branch_is_pending`（`$VAR` 解析不了判「待核验」）。
 
 判定为**不可机器断言**的条目及理由（维持人工跟踪）：
 
@@ -21,7 +24,7 @@
 - 条目 5（历史路径残留）：条目自身声明"仅作迁移记录"，无需防复发；
 - 条目 9（高光 cap）：运行时哨兵（highlight_budget）已内建，无需重复断言；
 - 条目 11（评分器分布标定）：t98 已清偿且结论是"不可作合成图质检硬结论"——语义约定属代码评审层；
-- 条目 12（公式守卫日落）：触发前置（原生 AND/between 落地）未到；
+- 条目 12（公式守卫日落）：✅ **前置已满足、日落条款已关闭（2026-09-10 R22）**，见条目 12 正文；
 - 条目 13.1（UI 滑杆）：前端域 + spec 修订流程约束，pytest 不可达；
 - 条目 13.2（RP-CCM 罚项）：条件触发且当前无病态，"无病态"断言需数值阈值属新决策；
 - 条目 13.3/13.4（±1EV 压力实验、低频加权）：实验行动项，非断言。
@@ -80,15 +83,39 @@
      可另开低优先条目；git 历史仍含旧注释（发布快照口径，F18 处置
      选项 C 归队长/用户）。
 
-3. **第三方许可登记**（NOTICES 已建，2026-09-07 F16；仓库根 `THIRD_PARTY_NOTICES.md`）：
+3. **第三方许可登记**（✅ **R22 #3 已收口，2026-09-10**；仓库根 `THIRD_PARTY_NOTICES.md`）：
    - ~~缺少统一 `THIRD_PARTY_NOTICES.md`~~ 已建成文：素材源
      `.agent-team/research/license-inventory.md`（researcher 盘点）+ F18
      `dng-sdk-review.md`（代码血缘节）；三项发布警示（~~huesat RawTherapee GPL-3.0 衍生~~ R11 已清偿：A 轨删除,
-     2026-09-07 / DCP×6 再分发未核验 / NC 模型门控）置顶。
-   - `model_licenses.json` 与 `vision_models.json` 的过期冲突（aesthetic「需核验」
-     + 旧 `$GUANLAN_ROOT` 路径 vs MIT 定论）**仍待处置**（NOTICES §3 冲突 A 已
-     如实记录，台账更新不在 F16 范围）；segformer 条目 publishable/status 自相
-     矛盾同挂待核验。
+     2026-09-07 / DCP×6 再分发 / NC 模型门控）置顶。
+   - **aesthetic 双台账冲突（原「需核验」+ 旧 `$GUANLAN_ROOT` 路径 vs MIT 定论）已校正**：
+     `src/pixo/manifests/vision_models.json` 改为 `license=MIT` / `publishable=true` /
+     `path_or_source="resources/models/aesthetic/aesthetic_scorer.pt"` / `delivery=in_repo`，
+     与 `model_licenses.json` 对齐；两处 `delivery` 字段为 R22 新增的**交付形态显式标记**。
+   - **segformer「publishable vs status 自相矛盾」已裁决（口径级，非改语义）**：
+     `status` 与 `usage` 是**许可族档位**且互相镜像（`tests/unit/test_model_licenses.py::
+     test_status_mirrors_usage` 钉死），`publishable` 是**可发布性权威字段**；原「矛盾」表述作废。
+     引入第三档「待核验」usage 值需同步 `USAGE_VOCAB` 与 `multi_router` 门控语义（且
+     `usage` 变更会改默认路由 = 行为变更），属独立变更 ⇒ **遗留（R23 候选）**。
+   - **防复发断言的口径（R22 加固，2026-09-10）**——原断言 `tests/unit/test_tech_debt_invariants.py:96-100`
+     只查 `path`/`local_path`/`file` 三键，而根台账 6 条**全部用 `files[]`**（且仅 1 条非空）
+     ⇒ **实际检查路径数 = 0，断言空转**。现守卫**覆盖**：
+     ① `files[]` 逐项相对仓库根存在性；
+     ② 交付形态自洽（`delivery=in_repo` ⇒ `files` 非空；`files:[]` 仅限带 `delivery=external_*`
+     且 `notes` 非空的条目）+ 期望表 `_MUST_BE_IN_REPO={"aesthetic_scorer.pt"}`；
+     ③ `vision_models.json` 的 `path_or_source` 解析规则（`$VAR` 未设置 ⇒ 判「待核验」报红，
+     不静默通过）；
+     ④ 负控用例证明可证伪（临时副本改坏路径 ⇒ 生产断言必红；不触碰仓库文件）。
+     **不覆盖**：许可条款真伪/法律判断本身（人工核验，NOTICES §7 速查表）；`notes` 文案真伪。
+     ⚠️ 注意 ① 的副作用：`resources/models/aesthetic/aesthetic_scorer.pt` 是**非跟踪部署产物**
+     （`.gitignore:58`），在**不含该产物的新克隆**上该断言会红并给出提示——这是有意的显式化
+     （避免再次空转），CI 若需兼容请显式登记策略（R23 候选）。
+   - **DCP×6 再分发核验（R22 #3，A3）**：逐项盘点结论 = **6/6 待处置**（详见
+     `THIRD_PARTY_NOTICES.md §5` 的 6 行表 + 警示二）；文件内嵌**零**许可/版权条款文本，
+     `ProfileCopyright(0xC6F4)` 一律为生产者标签 `RawLab fitted profile`。**注意**：DCP 本体
+     是**运行时素材**（`service/runtime.py:41-46/320` → `Renderer` → `load_dcp`），
+     不能按「纯登记资产」从打包面剔除。处置二选一（取得许可 / 替换为自产或官方 DCP 后重跑
+     标定与门禁）= **R23 候选**，本轮只核验与登记。
 
 4. **未声明可选依赖**（已处置，2026-09-07 F17）：
    - PyYAML 实为硬依赖，已升必装：decide/engine.py 与 know/graph.py 加载 YAML
@@ -131,9 +158,15 @@
       发布约定）；新增跨包边须在所在包 JSON 顶部声明 `_requires`，
       单包先行变更会制造悬空引用。
 
-10. **色彩规则执行位占位**：
+10b. **色彩规则执行位占位**（原编号 `10.`，R22 重编号为 `10b`）：
+    - **重编号说明（2026-09-10 R22）**：本条原与上文 `10.`（跨包知识边）**重号**；本条在
+      §运行时断言映射与 `tests/unit/test_tech_debt_invariants.py` 中**一直以 `10b` 被引用**
+      （"条目 8/10b 防复活"），故补后缀而不整体后移——避免与外部引用编号（如
+      `docs/OWN_PIPELINE_REVIEW_DISPOSITION.md ③④⑤⑧`）冲突。
     - 色彩规则决策键（vibrance/saturation.adjust）已通，下游 VibranceStage 为占位，
       参数暂不产生渲染差异；实装或映射至 huesat 待排期。
+    - **现状补记**：该占位已改为**显式废弃声明**（强制调用抛 `NotImplementedError` 指引迁移
+      colorcal，见条目 8 t66），由 `test_cleared_items_stay_cleared` 防复活。
 
 11. **评分器权重部署**：
     - aesthetic_scorer.pt 就位后 make_default_scorer 自动切真模型（对照
@@ -153,9 +186,16 @@
           MockAgentSelector.select），绝对分仍禁跨域比较。
 
 
-12. **公式守卫日落条款**：
-    - 引擎原生 AND/between 落地后，新规则改用原生 condition，存量公式守卫规则
-      （clarity_flat 等）择机迁移（裁定见 t40 复审记录）。
+12. **公式守卫日落条款**（✅ **前置已满足 ⇒ 日落条款关闭，2026-09-10 R22 F10**）：
+    - **前置已落地**：引擎原生 AND（`decide/engine.py:222` 条件校验 / `:410` 求值）与原生
+      between（`:384-389`）均在位；**首例已迁移**：`decide/rules/tone_clarity_rules.yaml:36-39`
+      （注释「护栏④日落条款首例 (t60)：原 formula 带通守卫迁原生 all 条件」）。
+    - **剩余 formula 逐条复核 = 无迁移对象**（`tone_clarity_rules.yaml:29/54/66/79` 纯常数；
+      `region_rules.yaml:56/86` 线性增益；`exposure_rule_001.yaml:9` 需 `targets` 的
+      `2.2*log2(target/current)`；`crop_suggest_rule_003.yaml:10`/`highlight_protect_rule_002.yaml:10`
+      标量）——均非"带通守卫"型，故本条判**关闭**而非"择机迁移"。
+    - 安全保障在位：`engine.py:151 _enforce_formula_lint`（`:186-242` 白名单，白名单外名字直接
+      `DecideError`）——迁移期笔误可被拦。原 t40 裁定见历史档。
 
 
 13. **外部评审处置 backlog**（2026-09-04 登记，出处
@@ -336,10 +376,56 @@
     任务一旦启动只能等其结束，且任务表无淘汰策略、跨 photo 排队无 `queued` 态。清偿方向：
     可取消渲染 + 任务表 TTL/队列状态。
 
+22. **RP-CCM 运行时接入：显式否决**（结论落档，2026-09-10 R22 F07；CR-12 取"B 明确否决"）：
+    - **结论**：`apply_rp_ccm` **不进运行时**（`src/` 命中仅 `render/core/rp_ccm.py` 自身：
+      定义/`__all__`/docstring；渲染链 0 调用点），代码与单测**保留**作为未来"中性语境重拟合"的基础。
+    - **否决依据（证据已复核）**：CR-12 原文引的 `−7.7%` 出自 **2026-08-28** 旧系数报告
+      （`.artifacts/eval_rp_ccm_ab_nikon_z5_2_20260828_232324.md:14-16`，B−A `−0.475 (−7.7%)`、
+      B 优于 A `45/54`）；`configs/color/rp_ccm_nikon_z5_2.json` 于 **2026-09-04** 被 commit
+      `3fbe56d` 换成阶段二**联合优化**系数后，同脚本同语料复评 =
+      `.artifacts/eval_rp_ccm_ab_nikon_z5_2_20260904_235522.md:14-16` `+1.147 (+19.3%)`、
+      B 优于 A 仅 `22/54`（`:77`）。**转默认门槛线**（`docs/OWN_PIPELINE_STAGE2_DESIGN.md:38`：
+      median 改善 ≥15% / 无 >1JND 回归 / p95 不劣化 / ≥2 相机复验）现行系数 **0/4 通过**，
+      且第二相机语料本机不可得 ⇒ 否决。
+    - **勘误落点**：`docs/R21_CHANGE_REQUESTS.md` CR-12 条目下的「勘误（2026-09-10）」块
+      （照该文档 §0 的更正手法）；`src/pixo/render/core/rp_ccm.py` 模块 docstring 顶部同步标注。
+    - **触发复核条件**（出现即须重议）：中性语境下新 A/B median 改善 ≥15% 且 p95 不劣化；
+      或第二台相机语料入库后复验通过。备选路径与代价见 `.agent-team/design-r22.md §0.1①`
+      （换表 + 定死在线插入点 + 补 gate case + 全量回归，属独立战役）。
+
+23. **`build/lib/pixo/**` 旧副本漂移**（记债，2026-09-10 R22 F10；原 R21 续排候选 #25）：
+    - **事实**：`build/lib/pixo/render/core/skin.py` 仍是旧 OKLab 常数（`A=0.01516` /
+      `SOFT_BAND=0.25`），而 `src/pixo/render/core/skin.py` 是 R10 重拟合后的
+      `0.015127` / `0.31`（mtime 2026-09-04）；`build/lib/pixo/pipeline/loop.py` 为旧实体。
+    - **误取风险三面核查（R22 实测，均不取 build/lib）**：
+      ① **git**：`build/` 已在 `.gitignore:90` 排除，`git ls-files build` = 0 条；
+      ② **打包**：`pyproject.toml [tool.setuptools.packages.find] where=["src"]`（`:41-44`，
+      `include=["pixo*","render*"]`）⇒ `build/lib` 不在发现根，**不进 wheel/sdist**；
+      ③ **运行时/测试**：`tests/conftest.py:21-22` 把 `src` 插到 `sys.path[0]`；本机 editable
+      安装的 finder `MAPPING` 指向 **src 布局**（实测其值为已悬空的 `K:\work\project\pixo\pixo`
+      ⇒ 裸 `python -c "import pixo"` 失败，而**不会**回落到 `build/lib`）。全仓 `build/lib`
+      文案命中仅本清单。
+    - **处置口径（本轮）**：**明确排除 + 文档说明**（`.gitignore` 就地注释 + 本条）；**不删除**
+      `build/lib`（怕影响构建流程）。**清理动作登记 R23**。
+    - **遗留（同批发现）**：本机 `pip install -e .` 状态陈旧（editable finder MAPPING 指向
+      不存在的路径）⇒ 脱离 pytest 的裸导入依赖 `PYTHONPATH=src`；重新执行 `pip install -e .`
+      即修，属环境问题 ⇒ **R23**。
+
+
 ### R21 总审续排候选（未编号，待专项评估后正式入账）
+
 - 后台 segmenter 预热线程未持 `_segmenter_infer_lock`（与供给路径互斥面待核）；
-- `build/lib/pixo/**` 陈旧副本与 `src/` 漂移（`metrics.py` 不存在、`loop.py` 旧实现）——打包路径须确认不会误取；
+- ~~`build/lib/pixo/**` 陈旧副本与 `src/` 漂移~~ **已正式入账为条目 23（2026-09-10 R22）**。
 - `crop_suggestion_applicable`（注册面 `loop.py:769`）与运行期 `crop_suggestion_available`（`:1387`）命名并存，无规则引用；
 - `src/pixo/render/bench/preview_cold_baseline.json` 坏 JSON（`JSONDecodeError` line 35）且会进打包产物，全仓无消费者；
 - `render/bench/preview_v16_nef_baseline_*.json` 的 `raw` 指向已消失的 `K:\data\photo\corpus_a\raw\...`（该路 compare 本机无法复跑）；
 - `scripts/auto_real_edit.py:154,163` 扫描根为 `<corpus_root>` 占位符（不带 `--photo` 开箱不可跑）。
+
+### R23 待办候选（R22 会话登记，2026-09-10）
+
+| # | 事项 | 来源 | 性质/代价 |
+|---|------|------|-----------|
+| R23-1 | `build/lib/pixo/**` 清理评估（明确排除已落地；**删除**仅在不触及构建流程时做） | 条目 23（F10 #25） | 清理型；需先确认 `setup.py build`/打包链依赖面 |
+| R23-2 | DCP×6 处置：取得 RawLab 再分发许可，或替换为自产/官方 DCP 后重跑标定与门禁 | 条目 3（F10 #3 / A3） | 发布阻断型；替换会牵动 `configs/color/*`、`skin_oklab.json`、暖度/曝光表与金样本 |
+| R23-3 | segformer「待核验」引入第三档 `usage` 值（需同步 `USAGE_VOCAB` + `multi_router` 门控语义 = 行为变更） | 条目 3（口径裁决遗留） | 语义型；须与路由默认行为一并裁决 |
+| R23-4 | 本机 editable 安装陈旧（finder MAPPING 悬空）重装 `pip install -e .`，恢复裸导入 | 条目 23 遗留 | 环境型；`pip install -e .` 即修 |

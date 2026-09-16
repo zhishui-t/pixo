@@ -39,6 +39,12 @@ DEFAULT_RULES = [
     # + 试水系数 (原设计一半), 观察窗后复权。评估证据:
     # .artifacts/region_rules_activation_eval.md
     RULES_DIR / "region_rules.yaml",
+    # R22/F01 (CR-06) 噪声规则（**默认 enabled: false**）：阈值只在**导出
+    # 全幅**口径标定（512 preview tier 下 noise_ratio 排序非单调，实测
+    # ISO12800 0.2837 < ISO1600 0.6680）；闭环 decide 只吃 preview
+    # (preview_long_edge 缺省 1024) ⇒ 本规则闭环内不生效、生产零影响。
+    # 标定/口径证据见该 YAML 头注与 .agent-team/streams/r22-stream-1.md。
+    RULES_DIR / "noise_rules.yaml",
 ]
 
 __all__ = [

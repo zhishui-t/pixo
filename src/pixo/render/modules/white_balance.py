@@ -56,6 +56,7 @@ from ..core.color import (cam_to_linear_srgb_matrix, cct_from_wb,
                      interpolate_forward_matrix, temp_tint_to_wb)
 from ..core.calibration import DcpProfile
 from ..core import calibration_store
+from ..degradation import record_degradation
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -142,6 +143,18 @@ def _load_warm_cal(path):
     """
     doc = calibration_store.load_json(path)
     if doc is None:
+        # F03 #10a: 文件**存在**却读不出 (损坏 JSON/顶层非 object) = 真降级;
+        # 文件缺失是 calibration_store 明示的合法常态 (内置斜率模型兜底),
+        # 不记 degraded (对齐 store「缺失不告警」语义)。
+        try:
+            exists = Path(str(path)).is_file()
+        except Exception:  # pragma: no cover - path 类型异常时按缺失处理
+            exists = False
+        if exists:
+            record_degradation(
+                "render.white_balance.warmth_curve", None,
+                path=str(path), reason="calibration_unreadable",
+                detail="暖度分桶标定表损坏/顶层非 object，回退内置斜率模型")
         return None
     entry = _WARM_CAL_CACHE.get(id(doc))
     if entry is None or entry[0] is not doc:
@@ -152,7 +165,13 @@ def _load_warm_cal(path):
             if (isinstance(dom, (list, tuple)) and len(dom) == 2
                     and all(isinstance(x, Real) for x in dom) and dom[0] < dom[1]):
                 domain = (float(dom[0]), float(dom[1]))
-        except Exception:
+        except Exception as exc:
+            # F03 #10b: 标定表结点校验失败 → 回退内置斜率模型 (R20 扩域后
+            # 静默失效危害最大, 必须可观测)。
+            record_degradation(
+                "render.white_balance.warmth_curve", exc,
+                path=str(path), reason="calibration_invalid",
+                detail="暖度标定结点校验失败，回退内置斜率模型")
             curve, domain = None, None
         entry = (doc, {"curve": curve, "domain": domain})
         _WARM_CAL_CACHE[id(doc)] = entry
@@ -276,14 +295,30 @@ class WhiteBalanceStage(Stage):
     }
 
     def default_params(self):
-        return {"mode": "as_shot", "warmth": 0.9,
+        # warmth=0.0: 默认不做观感暖度校正。旧默认 0.9 是为"对齐 LR 实测渲染"
+        #   (0376: L196/a+6/b+12) 拟合出来的**观感**增益 ⇒ 属编辑动作 (LR 打开
+        #   DNG 不会额外加暖), 且是写死在代码里的常量而非可替换数据。
+        #   按 WB 蓝系数自适应的暖度仍可显式传 warmth>0, 或走
+        #   configs/calibration/warmth_curve.json 标定 (可替换数据)。
+        return {"mode": "as_shot", "warmth": 0.0,
                 "warmth_b0": None, "warmth_b1": None,
                 "warmth_r_slope": None, "warmth_g_slope": None,
                 "warmth_b_slope": None, "warmth_r_day": None,
                 "warmth_curve": None, "temp": None, "tint": None,
-                "trim": None,  # 0.9=对齐 LR 实测渲染(0376: L196/a+6/b+12)
+                "trim": None,
                 "warm_cal_file": str(DEFAULT_WARM_CAL_FILE),
                 "fallback_outside_domain": False}
+
+    def wants(self, ctx: StageContext) -> bool:
+        """**恒为 True**: 本 Stage 兼负 linear_cam → linear_rgb 的**域转换**
+        (经 DCP 色矩阵), 不是可选的编辑动作 —— 跳过它链上会停在相机域,
+        下游 tone 直接报"域不匹配"。
+
+        mode 只决定**用哪组白平衡系数**(as_shot 基线 / auto 自动 / manual
+        temp-tint / off 恒等), 不决定是否执行: as-shot 白平衡本身就是基线
+        渲染的一环 (LR 打开 DNG 就是这个状态)。
+        """
+        return True
 
     def process(self, ctx: StageContext) -> None:
         prof = ctx.prof
@@ -394,7 +429,11 @@ class WhiteBalanceStage(Stage):
         try:
             from .._native import matrix_apply3
             rgb = matrix_apply3(cam_w, m_total)
-        except Exception:
+        except Exception as exc:
+            # F03 #9: WB 矩阵 native 路径 → numpy matmul (色彩链关键)
+            record_degradation(
+                "render.white_balance.matrix_native", exc,
+                detail="WB 矩阵回退 numpy matmul")
             rgb = cam_w.reshape(-1, 3) @ m_total.T
             rgb = rgb.reshape(cam.shape)
         rgb = np.clip(rgb, 0.0, None).astype(np.float32)

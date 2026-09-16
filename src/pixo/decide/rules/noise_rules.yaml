@@ -1,0 +1,48 @@
+# R22 / F01 (CR-06) 噪声规则包 —— 噪声/细节指标入决策键宇宙后的首条阈值规则。
+#
+# 【口径 · 必读】design-r22 §2.1 裁决③：噪声/细节类指标强分辨率依赖，
+# 阈值**只在导出全幅口径标定**。实测（exploration-r22 §2.3：同一张相机 JPEG
+# 缩放到不同 long_edge 后 measure_sharpness）——
+#   512 tier 排序**非单调**：ISO12800 noise_ratio=0.2837 **小于** ISO1600
+#   0.6680；全幅才恢复正确排序（0.7416 / 0.6139 / 0.5211 / 0.4137）。
+# ⇒ **不得**用 preview 的 noise_ratio 做阈值。
+#
+# 【闭环内不生效 · 有意为之】闭环 decide 只吃 preview measurement
+# （loop.py `_run_preview_iterations` 的 measure → `_metrics_for_decide`），
+# 生产 `preview_long_edge` 缺省 **1024**（service/runtime.py 装配）。
+# 本规则阈值按**全幅**标定 ⇒ 在闭环 preview 口径下不可用，故
+# `enabled: false` 默认关（本轮不承担闭环触发职责，design-r22 §7 A6）。
+# 未来若要在闭环内触发，必须按 `preview_long_edge`(=1024) 单独标定并写明
+# tier —— 另立专项，不得直接复用本阈值。
+#
+# 【阈值标定留证】全幅内嵌相机 JPEG DSC_5236~5335 抽样 **26 张**
+# （低 ISO ≤1600 共 14 / 高 ISO ≥3200 共 12；脚本
+# `.agent-team/tmp-r22-calib.py`，逐行数据 `.agent-team/tmp-r22-calib-rows.tsv`）：
+#   noise_ratio  ALL      p50=0.5371 p75=0.6240 p90=0.6351 max=0.7473
+#                低 ISO   max=0.6114 (p90=0.5968)
+#                高 ISO   min=0.4724 p50=0.6281 p75=0.6350 max=0.7473
+#   ⇒ 阈值 **0.62** = ALL p75(0.6240) 取整下移，且 > 低 ISO 组上界(0.6114)
+#     ⇒ 低 ISO 组零误触；高 ISO 组命中中高段（≈6/12）。
+#   与 F06 软告警同源常量：loop.py `_QC_SOFT_NOISE_RATIO`（同一标定证据）。
+#
+# 【执行位交接 / 待接线】action.param 用 F02 规划的 stage 参数
+# `denoise.luminance_strength`（design-r22 §1 F02 参数名）。当前 `denoise`
+# Stage **不在** `DEFAULT_STAGES`，且 loop `_DOTTED_PARAM_REGISTRY` 无该键
+# ⇒ 即使显式开启，本轮也**无渲染执行位**（值会落成顶层 informational 键）。
+# F02（W2 super-dev）落地后由队长派单登记执行位；本轮不越域改 registry。
+- rule_id: noise_luminance_rule_040
+  enabled: false              # 默认关：生产零影响（口径与理由见头注）
+  priority: 40
+  condition:
+    metric: noise_ratio       # 4 层展平：global.detail.sharpness.noise_ratio
+    op: gte
+    value: 0.62               # 全幅实测 ALL p75=0.6240 取整下移（头注留证）
+  action:
+    param: denoise.luminance_strength
+    mode: set
+    # 超阈幅度自适应：阈值处 0.0（no-op，引擎按 noop 留痕），
+    # noise_ratio=1.0 时 ≈0.31。纯算术（无比较/布尔守卫）——
+    # 与 configs/rules 双镜像的日落条款口径兼容。
+    formula: "0.5 * (noise_ratio / 0.62 - 1.0)"
+    clamp: [0.0, 0.60]
+    conflict_policy: high_priority_wins

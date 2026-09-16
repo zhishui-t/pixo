@@ -41,6 +41,7 @@
       "saturation": -0.0
     },
     "refine": {
+      "enabled": true,
       "highlight_desat": 0.25
     }
   }

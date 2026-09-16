@@ -132,7 +132,8 @@ def test_default_params_unchanged_except_new_keys():
     d = WhiteBalanceStage().default_params()
     assert d["mode"] == "as_shot"
     assert d["temp"] is None and d["tint"] is None
-    assert d["warmth"] == 0.9
+    # 2026-09-14 默认中性化: warmth 由 0.9 归零 (观感暖度 = 编辑动作)
+    assert d["warmth"] == 0.0
     assert d["warmth_curve"] is None and d["trim"] is None
     assert set(d) >= {"mode", "warmth", "warmth_b0", "warmth_b1",
                       "warmth_r_slope", "warmth_g_slope", "warmth_b_slope",
@@ -149,7 +150,8 @@ def test_default_output_bitwise_unchanged():
     raw_wb = np.array([1.291, 1.0, 2.287], dtype=np.float32)
     ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
                        config={"stages": {"whitebalance": {
-                           "mode": "as_shot", "warm_cal_file": ""}}})
+                           "mode": "as_shot", "warmth": 0.9,
+                           "warm_cal_file": ""}}})
     ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
     WhiteBalanceStage().run(ctx)
     # 旧路径: camera_neutral_wb 之后 apply_warmth(warmth 默认 0.9)
@@ -168,7 +170,8 @@ def test_warm_cal_file_loads_knots(tmp_path):
     prof = _profile()
     ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
                        config={"stages": {"whitebalance": {
-                           "mode": "as_shot", "warm_cal_file": str(f)}}})
+                           "mode": "as_shot", "warmth": 0.9,
+                           "warm_cal_file": str(f)}}})
     ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
     WhiteBalanceStage().run(ctx)
     expected = apply_warmth(
@@ -188,7 +191,8 @@ def test_warm_cal_file_missing_or_invalid_falls_back(tmp_path):
     for wcf in ("Z:/no/such/warmth.json", str(bad)):
         ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
                            config={"stages": {"whitebalance": {
-                               "mode": "as_shot", "warm_cal_file": wcf}}})
+                               "mode": "as_shot", "warmth": 0.9,
+                               "warm_cal_file": wcf}}})
         ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32),
                       DOMAIN_LINEAR_CAM)
         WhiteBalanceStage().run(ctx)
@@ -209,7 +213,7 @@ def test_warm_cal_domain_hint_and_fallback(tmp_path, caplog):
     curved = apply_warmth(raw_wb, prof, 0.9, {"curve": knots})
 
     def run(extra):
-        cfg = {"mode": "as_shot", "warm_cal_file": str(f)}
+        cfg = {"mode": "as_shot", "warmth": 0.9, "warm_cal_file": str(f)}
         cfg.update(extra)
         ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
                            config={"stages": {"whitebalance": cfg}})
@@ -240,7 +244,8 @@ def test_explicit_warmth_curve_overrides_cal_file(tmp_path):
     prof = _profile()
     ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
                        config={"stages": {"whitebalance": {
-                           "mode": "as_shot", "warm_cal_file": str(f),
+                           "mode": "as_shot", "warmth": 0.9,
+                           "warm_cal_file": str(f),
                            "warmth_curve": explicit}}})
     ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
     WhiteBalanceStage().run(ctx)

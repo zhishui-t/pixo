@@ -9,6 +9,7 @@
       "files": [
         "resources/models/aesthetic/aesthetic_scorer.pt"
       ],
+      "delivery": "in_repo",
       "usage": "redistribution_allowed_with_license_notice",
       "notes": "HF repo license:mit(README front-matter 同)。333.7MB state_dict，213键=backbone(CLIP ViT-B/32 vision tower)+7个Linear(768->1)评分头，与 pixo/vision/aesthetic.py::_Scorer 键名形状逐一对应。PARA 数据集微调。发布需附 MIT 声明。",
       "status": "redistribution_allowed_with_license_notice"
@@ -19,8 +20,9 @@
       "license": "MIT",
       "publishable": true,
       "files": [],
+      "delivery": "external_hub_download",
       "usage": "redistribution_allowed_with_license_notice",
-      "notes": "CLIP backbone，首次运行经 transformers 自动下载(~605MB，HF 缓存 ~/.cache/huggingface)；作为 aesthetic_scorer 底座仅推理使用。",
+      "notes": "CLIP backbone，首次运行经 transformers 自动下载(~605MB，HF 缓存 ~/.cache/huggingface)；作为 aesthetic_scorer 底座仅推理使用；权重不入仓（files: [] 为事实登记，见 THIRD_PARTY_NOTICES §3 M2）。",
       "status": "redistribution_allowed_with_license_notice"
     },
     {
@@ -29,8 +31,9 @@
       "license": "code MIT / weights CC BY-NC-SA(CelebAMask-HQ 派生)",
       "publishable": false,
       "files": [],
+      "delivery": "external_hub_download",
       "usage": "internal_development_only",
-      "notes": "t90 UniFace 位实现：SegFormer 头部解析，权重非商业仅内部研发；产品化需替换或取得商业授权。torch/transformers 限 src/pixo/vision/segmenters/uniface_face.py 内懒 import。multi_router 默认按本条 usage 门控：仅 PIXO_ALLOW_RESTRICTED=1 时注册进路由。",
+      "notes": "t90 UniFace 位实现：SegFormer 头部解析，权重非商业仅内部研发；产品化需替换或取得商业授权。torch/transformers 限 src/pixo/vision/segmenters/uniface_face.py 内懒 import。multi_router 默认按本条 usage 门控：仅 PIXO_ALLOW_RESTRICTED=1 时注册进路由。权重经 transformers 首次运行自动下载（HF 缓存），非仓内文件。",
       "status": "internal_development_only"
     },
     {
@@ -39,8 +42,9 @@
       "license": "Apache-2.0",
       "publishable": true,
       "files": [],
+      "delivery": "external_pip_download",
       "usage": "redistribution_allowed_with_license_notice",
-      "notes": "t90 person/subject 后端；权重经 rfdetr pip 包首用自动下载。",
+      "notes": "t90 person/subject 后端；权重经 rfdetr pip 包首用自动下载，不入仓（files: [] 为事实登记）。",
       "status": "redistribution_allowed_with_license_notice"
     },
     {
@@ -49,8 +53,9 @@
       "license": "code Apache-2.0(原始) / ADE20K 微调权重随发布口径",
       "publishable": false,
       "files": [],
+      "delivery": "external_hub_download",
       "usage": "redistribution_allowed_with_license_notice",
-      "notes": "t90 sky/plant/mountain/tree/grass 场景后端；transformers 首用自动下载。",
+      "notes": "t90 sky/plant/mountain/tree/grass 场景后端；transformers 首用自动下载，权重不入仓。**publishable/status 口径裁决（R22 #3）**：本台账 status 与 usage 同为「许可族档位」并镜像（tests/unit/test_model_licenses.py::test_status_mirrors_usage 钉死），**不代表已核验可发布**；可发布性以 publishable=false 为权威——ADE20K 微调权重商用条款未核验（THIRD_PARTY_NOTICES §3 M5 / §7）。为「待核验」引入第三档 usage 值需同步 USAGE_VOCAB 与 multi_router 门控语义，属独立变更（登记 docs/tech_debt.md 条目 3 遗留）。",
       "status": "redistribution_allowed_with_license_notice"
     },
     {
@@ -59,9 +64,10 @@
       "license": "CC-BY-NC-4.0 (Sapiens2 License 口径)",
       "publishable": false,
       "files": [],
+      "delivery": "external_hub_download",
       "usage": "internal_development_only",
       "isolation_file": "src/pixo/vision/segmenters/sapiens_body.py",
-      "notes": "t91 部位解析(hair/skin/clothes/body)：开源项目可用；商用分发需替换或隔离（NC 特性，区别于 MIT/Apache 可分发后端）。torch/transformers 仅限 src/pixo/vision/segmenters/sapiens_body.py 内懒 import。任务书 Sapiens-0.4B 为系列约称，默认权重 facebook/sapiens-seg-0.3b，PIXO_SAPIENS_MODEL 可覆写。multi_router 默认按本条 usage 门控：仅 PIXO_ALLOW_RESTRICTED=1 时注册进路由。",
+      "notes": "t91 部位解析(hair/skin/clothes/body)：开源项目可用；商用分发需替换或隔离（NC 特性，区别于 MIT/Apache 可分发后端）。torch/transformers 仅限 src/pixo/vision/segmenters/sapiens_body.py 内懒 import。任务书 Sapiens-0.4B 为系列约称，默认权重 facebook/sapiens-seg-0.3b，PIXO_SAPIENS_MODEL 可覆写。multi_router 默认按本条 usage 门控：仅 PIXO_ALLOW_RESTRICTED=1 时注册进路由。权重经 transformers 首次运行自动下载（HF 缓存），非仓内文件。",
       "status": "internal_development_only"
     }
   ]

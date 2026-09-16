@@ -184,7 +184,7 @@
         3
       ],
       "dtype": "float32",
-      "sha256": "b24870a246e436600f747b02358e813144a248ae469e282b8b5deb3a237ea2c1"
+      "sha256": "2958102ad87d11f97e0c8f650bd104c0d8c227524e5f83efcc1bbbecc64171e5"
     },
     "card_portra_400": {
       "file": "card_portra_400.npy",
@@ -194,7 +194,7 @@
         3
       ],
       "dtype": "float32",
-      "sha256": "31020c06e5ca41ff53e8808c6564f03ac2da6774ca897a3197150d96b3f9ee8c"
+      "sha256": "eb3e14d3305ba3b93e8de3403ae00f54d8e8de5756488431ff878e116e909386"
     },
     "region_adjust": {
       "file": "region_adjust.npy",
@@ -204,9 +204,9 @@
         3
       ],
       "dtype": "float32",
-      "sha256": "dd5106011acc168ec8e56d7d5bb829fd83bdf12af0a70b55db898979f83d7f40"
+      "sha256": "7be7b89801f5fbdd0e92a4c28e785284b8a47fc916ebd6b4b8d9472f85fc1215"
     }
   },
   "generator": "tests/regression/goldens/generate_gate_goldens.py",
-  "reviewer": "t38 tester-1 (2026-09-04 标定敏感 case 批次: +exposure_cal_auto/+warmth_cal_auto, 关闭 t36 §5 门禁缺口——gate 金样本对四个标定表零敏感; 两 case 分别触达正式曝光表 [ExposureStage._auto_ev 完整链: med 探针→med 主键+wb_B 邻域二次插值] 与正式 warmth 分桶曲线 [_load_warm_cal→apply_warmth 曲线分支], 换表敏感性实证: calib_prev 旧表 vs 现行新表输出 hash 均不同 [exposure 同进程须清 _cached_table 后再验, 生成器独立进程无此问题]; 前置 15 case 重算零漂移 [旧 .npy 字节不变]; manifest 数量守卫 15→17 同步; rp_ccm 运行时未接线 [src 零调用点], 无从触达, 接线后补 case —— 见 .artifacts/gate_calibration_coverage.md) | F10 批次(2026-09-07): default_dispatch v1(fb733245)->v2 oklch 缺省快照, 队长单点重生成, card_portra_400/region_adjust 及其余 18 条零漂移(F07 卡级钉域 A1 兑现) | R10 批次(2026-09-07): 第二批切换(skin+colorcal 缺省翻 oklch)——default_dispatch v3 + region_adjust 基线随缺省链重生成(队长单点); film_pro_400h 补 skin 钉域保持逐位 | R12 批次(2026-09-07): +skin_oklch_softband 软边带探针(qa .r10b_ok 观察窗清偿——R10 重拟合改半轴+软带, skin/skin_oklch 饱和肤色 case 输出零变化盲区; 探针沿固定色相双射线扫 C, 过渡带 16 行掩码梯度可观测; 既有 20 feature 重算零漂移), 初代基线 dev-1 生成; qa 复核通过(r12 收口门禁, 2026-09-07): 软带敏感性独立实证 [SKIN_OKLAB_SOFT_BAND 0.31→0.25 显式传参路径探针掩码 1024px 变化, R10 原盲区确认关闭] + 21 features --check 零漂 + skin_oklch_softband.npy sha256 与 manifest 一致 | R20 批次(2026-09-08): warmth 日光段扩域(移除域外垫片系统性过暖)——default_dispatch/card_portra_400 随域重生成(队长单点); region_adjust 随垫片端点变化同批重生成(域外桩 0.96 外推语义变化, 预期连带); 域内插值逐位不变(2001点证明)"
+  "reviewer": "t38 tester-1 (2026-09-04 标定敏感 case 批次: +exposure_cal_auto/+warmth_cal_auto, 关闭 t36 §5 门禁缺口——gate 金样本对四个标定表零敏感; 两 case 分别触达正式曝光表 [ExposureStage._auto_ev 完整链: med 探针→med 主键+wb_B 邻域二次插值] 与正式 warmth 分桶曲线 [_load_warm_cal→apply_warmth 曲线分支], 换表敏感性实证: calib_prev 旧表 vs 现行新表输出 hash 均不同 [exposure 同进程须清 _cached_table 后再验, 生成器独立进程无此问题]; 前置 15 case 重算零漂移 [旧 .npy 字节不变]; manifest 数量守卫 15→17 同步; rp_ccm 运行时未接线 [src 零调用点], 无从触达, 接线后补 case —— 见 .artifacts/gate_calibration_coverage.md) | F10 批次(2026-09-07): default_dispatch v1(fb733245)->v2 oklch 缺省快照, 队长单点重生成, card_portra_400/region_adjust 及其余 18 条零漂移(F07 卡级钉域 A1 兑现) | R10 批次(2026-09-07): 第二批切换(skin+colorcal 缺省翻 oklch)——default_dispatch v3 + region_adjust 基线随缺省链重生成(队长单点); film_pro_400h 补 skin 钉域保持逐位 | R12 批次(2026-09-07): +skin_oklch_softband 软边带探针(qa .r10b_ok 观察窗清偿——R10 重拟合改半轴+软带, skin/skin_oklch 饱和肤色 case 输出零变化盲区; 探针沿固定色相双射线扫 C, 过渡带 16 行掩码梯度可观测; 既有 20 feature 重算零漂移), 初代基线 dev-1 生成; qa 复核通过(r12 收口门禁, 2026-09-07): 软带敏感性独立实证 [SKIN_OKLAB_SOFT_BAND 0.31→0.25 显式传参路径探针掩码 1024px 变化, R10 原盲区确认关闭] + 21 features --check 零漂 + skin_oklch_softband.npy sha256 与 manifest 一致 | R20 批次(2026-09-08): warmth 日光段扩域(移除域外垫片系统性过暖)——default_dispatch/card_portra_400 随域重生成(队长单点); region_adjust 随垫片端点变化同批重生成(域外桩 0.96 外推语义变化, 预期连带); 域内插值逐位不变(2001点证明) | R23 批次(2026-09-14): 引擎基线中性化 —— 依据「引擎只提供能力, 不负责使用能力」责权原则, 全 stage default_params 归中性 + graph.py 基类 wants() return False (原 return True 为无条件执行), 生产缺省链收敛为 3 步(whitebalance/tone 域转换恒跑 + exposure mode=baseline)。金样本随缺省链重生成: 3/21 变化 —— default_dispatch(契约即「观测缺省翻转」, skin/colorcal 缺省翻转被本 case 捕获, 预期变化)、card_portra_400 与 region_adjust(走 build_default_pipeline 全默认链, 随 tone/exposure/WB 基线变化连带); 其余 18 features 逐位不变(仅 3 个 .npy 字节变化, cmp 逐一实证)。旧基线备份: .artifacts/gate_goldens_backup_r23/。**待队长复核签字** —— 不得与实现改动静默合入(生成器 docstring 约定)。"
 }

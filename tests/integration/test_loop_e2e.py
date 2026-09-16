@@ -39,12 +39,18 @@ def _dark_image() -> np.ndarray:
     return img
 
 
-def _bright_image() -> np.ndarray:
-    """高亮度合成图，用于触发 FINAL_QC 回退/人工。
+# 溢出的**唯一来源**显式由用例自己给出（不再依赖 tone 默认值）。
+# R23: tone.brightness 已按引擎责权原则中性化归零（引擎不得自发提亮），
+# 故任何 < 1.0 的输入若只靠默认链都不会裁切 —— 本用例必须自带增益。
+_OVERFLOW_PARAMS = {"tone": {"brightness": 0.5}}   # 0.92 × 2^0.5 ≈ 1.30 ⇒ 必然裁切
 
-    2026-08: 取值 0.8 依赖 tone 默认 brightness=0.5 才溢出; 该默认已按
-    标定回归为 0.25 (0.8×2^0.25≈0.95 不裁切)。改用 0.92 —— 无论该默认
-    在合理标定范围内如何变化都必然溢出, 测试意图不再绑定引擎默认值。
+
+def _bright_image() -> np.ndarray:
+    """高亮度合成图 + 显式提亮参数，用于触发 FINAL_QC 回退/人工。
+
+    历史（2026-08）：取值 0.8 依赖 tone 默认 brightness=0.5 才溢出。带参数的
+    写法（`_OVERFLOW_PARAMS`）把「溢出」这件事从引擎默认值解耦到用例自身 ——
+    无论引擎默认如何标定，本用例的输入都必然裁切，测试意图稳定。
     """
     return np.full((64, 64, 3), 0.92, dtype=np.float32)
 
@@ -66,7 +72,10 @@ def test_single_photo_loop_accepted_with_three_preview_iterations():
     result = loop.run(
         "pic_accept",
         image_rgb=_dark_image(),
-        compose_params={"mode": "free", "x": 8, "y": 8, "width": 32, "height": 32},
+        # R22 F09: 本用例的 x/y/width/height 是 legacy **像素**语义（64×64 画布上
+        # 取 32×32 窗），须显式声明 coord="px"；缺省 "norm" 会按全幅相对解释。
+        compose_params={"mode": "free", "x": 8, "y": 8, "width": 32, "height": 32,
+                        "coord": "px"},
     )
 
     assert result.state == "ACCEPTED"
@@ -106,7 +115,11 @@ def test_mask_computed_once_and_reused_for_later_previews_and_full():
 
 
 def test_qc_overflow_rolls_back_once_then_manual_review():
-    """高光溢出先回退一次 Exposure -0.15EV，二次超标转 MANUAL_REVIEW。"""
+    """高光溢出先回退一次 Exposure -0.15EV，二次超标转 MANUAL_REVIEW。
+
+    溢出由 `_OVERFLOW_PARAMS` 显式制造（0.92×2^0.5≈1.30），与引擎默认值无关；
+    回退 -0.15EV 后 1.30×2^-0.15≈1.17 仍 >1 ⇒ 二次超标。
+    """
     loop = SinglePhotoLoop(
         render_backend=SyntheticRenderBackend(_bright_image()),
         segmenter=MockSegmenter(),
@@ -114,7 +127,8 @@ def test_qc_overflow_rolls_back_once_then_manual_review():
         preview_long_edge=64,
         prompts=["face", "sky", "plant"],
     )
-    result = loop.run("pic_qc", image_rgb=_bright_image())
+    result = loop.run("pic_qc", image_rgb=_bright_image(),
+                      params=_OVERFLOW_PARAMS)
 
     assert result.state == "MANUAL_REVIEW"
     assert result.qc_rollback_count == 1

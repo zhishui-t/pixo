@@ -107,7 +107,10 @@ export function AdjustmentsPanel() {
             <SliderParam label="阴影" stage="tone" param="shadows" value={value('tone', 'shadows', 0.1)} min={-1} max={1} step={0.01} onPatch={patch} />
             <SliderParam label="色温" stage="whitebalance" param="temp" value={value('whitebalance', 'temp', 5200)} min={1000} max={50000} step={50} unit="K" onPatch={patch} />
             <SliderParam label="色调" stage="whitebalance" param="tint" value={value('whitebalance', 'tint', 0)} min={-150} max={150} step={1} onPatch={patch} />
-            <SliderParam label="清晰度" stage="clarity" param="strength" value={value('clarity', 'strength', 0.1)} min={-1} max={1} step={0.01} onPatch={patch} />
+            {/* R22 F04：滑杆域对齐后端 schema（clarity.strength 域 0..1）——
+                原先 min=-1 的值在 Stage 内被 `s <= 0.0: return` 静默吃掉
+                （负值 = 无操作），且 F04 参数栅栏会以 400 拒绝域外值。 */}
+            <SliderParam label="清晰度" stage="clarity" param="strength" value={value('clarity', 'strength', 0.1)} min={0} max={1} step={0.01} onPatch={patch} />
 
             {/* t91：skin 掩码就绪时磨皮限定皮肤区域（精准磨皮）；hair 掩码为人像抠图预留通道。 */}
             <SliderParam label="皮肤磨皮" stage="skin" param="strength" value={value('skin', 'strength', 0.4)} min={0} max={1} step={0.01} onPatch={patch} />

@@ -185,6 +185,7 @@
       ]
     },
     "refine": {
+      "enabled": true,
       "highlight_desat": 0.25,
       "warm_sat_curve": [
         [

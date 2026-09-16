@@ -71,6 +71,7 @@
       "color_domain": "hsv"
     },
     "refine": {
+      "enabled": true,
       "sharpen": 0.4,
       "chroma_denoise": 0.8,
       "highlight_desat": 0.25

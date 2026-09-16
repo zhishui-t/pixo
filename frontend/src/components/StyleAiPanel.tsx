@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Badge, Button, Card, Divider, Group, ScrollArea, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Badge, Button, Card, Divider, Group, ScrollArea, Stack, Text, TextInput } from '@mantine/core';
 import { Check, ChevronDown, MessageCircle, Send, Sparkles, Wand2, X } from 'lucide-react';
 import { fetchStyleDetail } from '../api';
-import type { StyleCardDetail } from '../types';
+import { SCENE_PRESETS } from '../constants/scenePresets';
+import type { ParamPatch, StyleCardDetail } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { DESIGN_TOKENS as T } from '../theme/tokens';
 
@@ -16,12 +17,36 @@ const accentA = (alpha: number): string => hexToRgba(T.accent, alpha);
 export function StyleAiPanel() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const styleCards = useAppStore((s) => s.styleCards);
+  const applyPresetPatch = useAppStore((s) => s.applyPresetPatch);
 
   // t60 接线：点击卡选中 → 拉完整卡（GET /api/styles/{id}）展开详情；
   // 离线（后端不可达）时详情显示占位说明。
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<StyleCardDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  // R22 F04：应用态/错误态必须显式（用户偏好：失败不能静默无效）。
+  const [applying, setApplying] = useState<string | null>(null);
+  const [applied, setApplied] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+
+  /**
+   * 应用装配 patch（`__scene` 场景预设 / `__style` 风格卡）。
+   * 服务层按 id 取预设/卡参数深合并；失败（400 栅栏拒绝、离线）显式提示。
+   */
+  const applyPatch = async (key: string, patch: ParamPatch, label: string) => {
+    setApplying(key);
+    setApplyError(null);
+    setApplied(null);
+    try {
+      await applyPresetPatch(patch, 'preset');
+      setApplied(label);
+    } catch (err) {
+      setApplied(null);
+      setApplyError(`${label} 应用失败：${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setApplying(null);
+    }
+  };
 
   const toggleCard = (styleId: string) => {
     if (selectedId === styleId) {
@@ -69,57 +94,112 @@ export function StyleAiPanel() {
   };
 
   return (
-    <Stack gap="xl" p={4}>
-      <Card radius="lg" p="md" style={{ background: T.panel, border: `1px solid ${T.hairline}`, boxShadow: T.shadowMd }}>
+    <Stack gap="lg" p={4}>
+      {applyError && (
+        <Alert
+          color="red"
+          variant="light"
+          title="应用失败"
+          withCloseButton
+          onClose={() => setApplyError(null)}
+          data-testid="style-apply-error"
+        >
+          <Text size="xs">{applyError}</Text>
+        </Alert>
+      )}
+      {applied && !applyError && (
+        <Text size="xs" c="dark.2" data-testid="style-applied">
+          <Check size={12} style={{ verticalAlign: -2 }} /> 已应用：{applied}
+        </Text>
+      )}
+
+      <Card radius="md" p="md" style={{ background: T.panel, border: `1px solid ${T.hairline}` }}>
         <Group justify="space-between" mb="sm">
           <Text fw={700}>风格卡片</Text>
           <Wand2 size={16} color={T.accent} />
         </Group>
-        <Stack gap="sm">
+
+        {/* R22 F05：场景预设（6 个）置风格选择器上方，紧凑 chip，不用大卡片。
+            预设为叠加式覆盖：只写自己声明的参数键，不重置其它调整。 */}
+        <Text size="xs" fw={700} c="dark.2" mb={6}
+              style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          场景预设
+        </Text>
+        <Group gap={6} mb={4}>
+          {SCENE_PRESETS.map((scene) => (
+            <Button
+              key={scene.id}
+              size="compact-xs"
+              variant={applied === scene.label ? 'filled' : 'default'}
+              title={scene.hint}
+              loading={applying === `scene:${scene.id}`}
+              disabled={applying !== null}
+              onClick={() => void applyPatch(`scene:${scene.id}`, { __scene: scene.id }, scene.label)}
+              data-testid={`scene-${scene.id}`}
+            >
+              {scene.label}
+            </Button>
+          ))}
+        </Group>
+        <Text size="xs" c="dark.3" mb="md">
+          预设叠加生效（不清空其它调整），所选 id 与后端 configs/styles/scenes.json 一一对应。
+        </Text>
+
+        <Stack gap={4}>
           {families.map(([family, cards]) => (
-            <Stack key={family} gap="sm">
-              <Text size="xs" fw={700} c="dark.2" style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            <Stack key={family} gap={4}>
+              <Text size="xs" fw={700} c="dark.2" mt={4}
+                    style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 {family}
               </Text>
               {cards.map((card) => {
                 const selected = card.styleId === selectedId;
                 return (
-                  <Card
+                  <div
                     key={card.styleId}
-                    radius="md"
-                    padding="sm"
-                    onClick={() => toggleCard(card.styleId)}
+                    data-testid={`style-row-${card.styleId}`}
                     style={{
-                      cursor: 'pointer',
-                      background: `linear-gradient(135deg, ${accentA(selected ? 0.22 : 0.10)}, ${T.overlay})`,
-                      border: `1px solid ${accentA(selected ? 0.45 : 0.18)}`,
+                      border: `1px solid ${selected ? accentA(0.45) : T.hairline}`,
+                      borderRadius: 8,
+                      padding: '6px 8px',
+                      background: selected ? T.overlay : 'transparent',
                     }}
                   >
-                    <Group justify="space-between" wrap="nowrap">
-                      <Text fw={600}>{card.name}</Text>
-                      <Group gap={4} wrap="nowrap">
-                        {card.year != null && (
-                          <Badge variant="light" color="gray" size="xs">{card.year}</Badge>
-                        )}
-                        <Badge variant="light" color="accent">风格</Badge>
-                        <ChevronDown
-                          size={14}
-                          color={T.accent}
-                          style={{ transform: selected ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
-                        />
-                      </Group>
-                    </Group>
-                    <Text size="xs" c="dark.2" mt={4}>{card.description}</Text>
-                    <Group gap={4} mt={6}>
-                      {card.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" size="xs" color="gray">{tag}</Badge>
-                      ))}
+                    <Group justify="space-between" wrap="nowrap" gap={6}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => toggleCard(card.styleId)}
+                        onKeyDown={(e) => e.key === 'Enter' && toggleCard(card.styleId)}
+                        style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
+                      >
+                        <Group gap={6} wrap="nowrap">
+                          <Text fw={600} size="sm" truncate>{card.name}</Text>
+                          {card.year != null && (
+                            <Badge variant="light" color="gray" size="xs">{card.year}</Badge>
+                          )}
+                          <ChevronDown size={12} color={T.accent} />
+                        </Group>
+                      </div>
+                      <Button
+                        size="compact-xs"
+                        variant={applied === card.name ? 'filled' : 'light'}
+                        loading={applying === `style:${card.styleId}`}
+                        disabled={applying !== null}
+                        onClick={() => void applyPatch(
+                          `style:${card.styleId}`, { __style: card.styleId }, card.name)}
+                        data-testid={`apply-${card.styleId}`}
+                      >
+                        应用
+                      </Button>
                     </Group>
                     {selected && (
-                      <Stack gap={4} mt="sm">
+                      <Stack gap={2} mt={6}>
                         {detailLoading && <Text size="xs" c="dark.3">加载完整卡…</Text>}
                         {!detailLoading && !detail && (
-                          <Text size="xs" c="dark.3">离线模式：启动后端查看完整卡（stages/params）。</Text>
+                          <Text size="xs" c="dark.3">
+                            离线模式：启动后端查看完整卡（stages/params）；离线时「应用」会显式报错。
+                          </Text>
                         )}
                         {detail && (
                           <>
@@ -131,7 +211,7 @@ export function StyleAiPanel() {
                         )}
                       </Stack>
                     )}
-                  </Card>
+                  </div>
                 );
               })}
             </Stack>

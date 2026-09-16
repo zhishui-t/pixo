@@ -45,6 +45,7 @@ import numpy as np
 from ..pipeline.graph import Stage, StageContext, DOMAIN_LINEAR_CAM, register_stage
 from ..core.curves import curve_anchor_target
 from ..core import calibration_store
+from ..degradation import record_degradation
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -382,13 +383,28 @@ class ExposureStage(Stage):
     }
 
     def default_params(self):
-        return {"mode": "auto", "target": None, "target_offset": _load_target_offset(),
+        # mode="baseline": LR As Shot 忠实模式 (仅应用 DCP BaselineExposureOffset
+        #   + 有界标定曲线), **不做自动测光**。旧默认 "auto" 会按画面中位亮度反推
+        #   EV ⇒ 属"自动定参数" = 编辑动作 (LR 打开 DNG 不会自动改曝光);
+        #   手动 EV 仍可显式传数值, 自动测光由调用方显式传 mode="auto" 请求。
+        # subject_mode="full": 主体框测光依赖 face_boxes/subject_boxes, 而生产链
+        #   只注入 camera_wb ⇒ 旧默认 "box" 是静默回退的死门控; 改 "full" 让默认
+        #   值与实际生效路径一致, 需要主体测光时由调用方注入框并改回 "box"。
+        return {"mode": "baseline", "target": None, "target_offset": _load_target_offset(),
                 "clip_p": 98.0, "highlight_budget": 0.02,
                 "max_ev": 2.5, "rolloff_knee": 0.9,
-                "vignette": 0.0, "subject_mode": "box",
+                "vignette": 0.0, "subject_mode": "full",
                 "baseline_ev_curve": None, "baseline_scene_ev": None,
                 "low_key_keep": 0.15, "low_key_range": 2.0,
                 "low_key_knee": 1.5}
+
+    def wants(self, ctx: StageContext) -> bool:
+        """仅 mode="off" 跳过; baseline/auto/手动 EV 均需执行。
+
+        baseline 是**基线渲染**的一环 (DCP BaselineExposureOffset), 不是编辑动作;
+        "auto" (自动测光) 与手动数值则是调用方显式请求的编辑动作。
+        """
+        return self.p(ctx, "mode") != "off"
 
     def process(self, ctx: StageContext) -> None:
         mode = self.p(ctx, "mode")
@@ -458,7 +474,11 @@ class ExposureStage(Stage):
             from .._native import exposure_apply
             img = exposure_apply(img, ev=ev, rolloff_knee=rolloff_knee,
                                  vignette=vignette)
-        except Exception:
+        except Exception as exc:
+            # F03 #7: 曝光链 (所有照片必经) native 内核不可用 → 纯 Python 回退
+            record_degradation(
+                "render.exposure.native", exc,
+                detail="曝光链回退 vignette + 2^ev + soft_highlight_rolloff")
             if vignette > 0.0:
                 img = _vignette_lift_linear(img, vignette)
             if ev != 0.0:

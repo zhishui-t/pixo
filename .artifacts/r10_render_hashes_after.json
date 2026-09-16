@@ -1,0 +1,301 @@
+{
+  "agfa_vista_200": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "ab29bb3546ec3edb56a630a9b261287f4420fefd9f75a3163a5dbf5a6808167f",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "cinestill_50d": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "2062671cb1b60dfeafafbe74f654173a7274cf11dc13e0560459ee9d2f314bea",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "film_pro_400h": {
+    "pinned_hsv_stages": [
+      "colorcal"
+    ],
+    "sha256_float32": "246a68d8cffd23f679a92714d777d7423a7274d2f1b4d87122a91e8473f2efe4",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_acros_100": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "19c3067ed5f6d92ed0259db35a45b67d4ae3de39eb94a26fa971e016f20f186d",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_astia": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "1d55c9cf0455078e722e1763bb01a3bc57efff53bc9730f431b51e66edc76b23",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_classic_chrome": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "f526c16dcb3f940eec6429998b60f186f49c8a5f0030610748bff121207219a4",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_community_lab_scan": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "6c39aa2b8ccab18fb68c68833b378189e67de5f003c4593690cf07911a2bdaa4",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_pro_neg_hia": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "ec6fe6c513616fa15f85d6c7eea0e2290c4e2c1475d724e3acda7c488bc5657a",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_pro_neg_std": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "23a132a5b044fe2c75871d0599d7f9100d6147c1c2a940fe1071b62a17fab89e",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_provia_100f": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "c565c9efa2cd2318783fbf85c0700086a2597133068a750b2aa2edff8f0109f0",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_provia_400x": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "8d76ebac65cf7a80580c4c194907055f148a2eef41c108f766c1f8f91c02632f",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_reala_100": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "033d2e75013c4ca4fb63abd3e60bb8d8e38d54f7a600fb97ea2ffa1c6775c734",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "fujifilm_velvia_50": {
+    "pinned_hsv_stages": [
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "64a7e44fb2d5f1fc1fc0fbecd7e8c1f84ce259f6c8519e793c532d5e097b06e5",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_colorplus_200": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "5aa98c26dcfa59cac1373790f15452d88402c7f5a5fc6cf27b262619321834fe",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_e100": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "8f6aa417fe300eefa9baa187d918c700903a85f7fd73da81c6c25512d6ba4c85",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_ektar_100": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "947c8a580504b67e213f2f5314fe5da0895684f4da484b57448b727a83f4ecd9",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_gold_200": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "82277bc9e9ccd3915d866a1c22ed155688f02f2dcede1e1feabdd1957f01a689",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_portra_160": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "b888d7b36830836828e6170b7209a2cf4d2f7e457c0fea0681fe85da8aecc6f1",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_portra_160nc": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "230a47c792720099a38e9b4bae5ae794b589aa9e059ed3c68d12e0f184b5d57c",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_portra_400": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "56303610c9bd72cb06d4021b2baf6a8124d16040afbbd247a16e5c3ca1f686f2",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_portra_400nc": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "aea45994b18dc57382a6e542e651d4b58a9b55bf3bc5c94e18c7004d0d172235",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_portra_800": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "585a3c774023a6ec2186e1b6ed4ef1c0a3f2c1aa096d928a3a411692b2e2b9c7",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  },
+  "kodak_ultramax_400": {
+    "pinned_hsv_stages": [
+      "hsl",
+      "split_tone",
+      "skin",
+      "colorcal"
+    ],
+    "sha256_float32": "a2d9cc7ccb8d6f4ab83d8bfda1f1c586b97aa75afa09b9721e22fc9685ee9c81",
+    "shape": [
+      96,
+      128,
+      3
+    ]
+  }
+}

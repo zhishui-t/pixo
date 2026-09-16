@@ -1,0 +1,142 @@
+{
+  "DSC_5276_raw": {
+    "a_qc": "pass",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "plant_fires": [],
+    "sky_fire_iterations": 1,
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.5962666666666666
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5277_raw": {
+    "a_qc": "pass",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "plant_fires": [],
+    "sky_fire_iterations": 1,
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6096
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5241_raw": {
+    "a_qc": "pass",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "plant_fires": [
+      {
+        "it": 2,
+        "overflow": 0.0,
+        "decided": null
+      },
+      {
+        "it": 3,
+        "overflow": 0.0,
+        "decided": 0.06011428571428571
+      }
+    ],
+    "sky_fire_iterations": 3,
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6145666666666667
+        },
+        "plant": {
+          "exposure": 0.05742857142857143
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5240_raw": {
+    "a_qc": "pass",
+    "b_qc": "pass",
+    "a_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "b_reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (3)",
+    "plant_fires": [
+      {
+        "it": 2,
+        "overflow": 0.0,
+        "decided": null
+      },
+      {
+        "it": 3,
+        "overflow": 0.0,
+        "decided": 0.02142857142857143
+      }
+    ],
+    "sky_fire_iterations": 3,
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6366999999999999
+        },
+        "plant": {
+          "exposure": 0.020200000000000003
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5280_raw": {
+    "a_qc": "escalate_2x",
+    "b_qc": "escalate_2x",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 二次超标，转人工复核",
+    "plant_fires": [
+      {
+        "it": 1,
+        "overflow": 0.004196,
+        "decided": null
+      },
+      {
+        "it": 2,
+        "overflow": 0.004196,
+        "decided": 0.12785714285714286
+      },
+      {
+        "it": 3,
+        "overflow": 0.004196,
+        "decided": 0.12497142857142857
+      }
+    ],
+    "sky_fire_iterations": 0,
+    "b_final_region": {
+      "regions": {
+        "plant": {
+          "exposure": 0.12497142857142857
+        }
+      },
+      "enabled": true
+    }
+  },
+  "DSC_5288_raw": {
+    "a_qc": "escalate_2x",
+    "b_qc": "escalate_2x",
+    "a_reason": "FINAL_QC 二次超标，转人工复核",
+    "b_reason": "FINAL_QC 二次超标，转人工复核",
+    "plant_fires": [],
+    "sky_fire_iterations": 3,
+    "b_final_region": {
+      "regions": {
+        "sky": {
+          "exposure": -0.6908333333333333
+        }
+      },
+      "enabled": true
+    }
+  }
+}

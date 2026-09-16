@@ -39,6 +39,7 @@
     },
     "stylize": {},
     "refine": {
+      "enabled": true,
       "sharpen": 0.28,
       "chroma_denoise": 0.8,
       "highlight_desat": 0.55

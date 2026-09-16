@@ -88,3 +88,10 @@ src/pixo/.graphify/
 .agent-team/
 .zcode/
 build/
+# build/ 排除说明 (R22 docs/tech_debt.md 条目 23, F10 #25):
+# setuptools build/lib/pixo 是构建中间产物 (旧副本, 与 src/ 漂移), 非发布源.
+# git 已排除; 打包 packages.find where="src" 不含它; 运行时拉 src (tests/conftest.py:21-22).
+# 明确排除 + 文档说明, 不删除 (build 流程可能依赖).
+
+# WorkBuddy 本地会话状态（同 .agent-team/ .zcode/ 口径）
+.workbuddy/

@@ -20,6 +20,7 @@ import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_GAMMA_RGB
+from ..degradation import record_degradation
 
 _RGB_WEIGHTS = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 
@@ -169,6 +170,7 @@ class RefineStage(Stage):
     name = "refine"
 
     param_schema = {
+        "enabled": {"type": "bool"},
         "highlight_desat": {"type": "float", "min": 0.0, "max": 1.0},
         "sharpen": {"type": "float", "min": 0.0, "max": 1.0},
         "chroma_denoise": {"type": "float", "min": 0.0, "max": 5.0},
@@ -178,10 +180,20 @@ class RefineStage(Stage):
     }
 
     def default_params(self):
-        # sharpen 默认 0.35: 基座质感 (此前 0.25 偏软, "没质感"反馈)。
-        return {"highlight_desat": 0.6, "sharpen": 0.35, "chroma_denoise": 0.8,
+        # enabled=False: 精修 (锐化 / 色度降噪 / 高光去饱和) 是**编辑动作**, 不在
+        #   "打开 RAW"的基线里 (LR 打开 DNG 不会自动加锐/降噪/去饱和)。
+        #   旧实现**连 enabled 键都没有** ⇒ `{"refine": {"enabled": false}}` 不
+        #   生效, 只能靠把三个强度逐一置 0 才关得掉, 属配置陷阱 (现在补上键)。
+        # sharpen 0.35 / highlight_desat 0.6 / chroma_denoise 0.8 保留为
+        #   **能力参数** (调用方 enabled=True 时使用的缺省强度)。
+        return {"enabled": False,
+                "highlight_desat": 0.6, "sharpen": 0.35, "chroma_denoise": 0.8,
                 "warm_sat_curve": None, "warm_sat_spot": None,
                 "warm_hue_curve": None}
+
+    def wants(self, ctx: StageContext) -> bool:
+        """仅 enabled=True 时执行 (默认关; 精修属编辑动作)。"""
+        return bool(self.p(ctx, "enabled", False))
 
     def process(self, ctx: StageContext) -> None:
         img = np.clip(ctx.image, 0.0, 1.0).astype(np.float32)
@@ -204,13 +216,21 @@ class RefineStage(Stage):
                                    refine_apply as _native_apply)
             if _native_available():
                 native = True
-        except Exception:
+        except Exception as exc:
+            # F03 #2: native 导入/可用性探测失败 → 整条 refine 退纯 Python
+            record_degradation(
+                "render.refine.native_import", exc,
+                detail="refine 全链回退纯 Python 实现 (~慢数倍)")
             native = False
 
         if native:
             try:
                 sat_protect = _native_sat(img)
-            except Exception:
+            except Exception as exc:
+                # F03 #3: sat_protect 子步骤退纯 Python
+                record_degradation(
+                    "render.refine.sat_protect_native", exc,
+                    detail="sat_protection 回退纯 Python 实现")
                 native = False
                 sat_protect = self._sat_protection(img)
         else:
@@ -221,7 +241,11 @@ class RefineStage(Stage):
             if native:
                 try:
                     img = _native_sharpen(img, gray, sat_protect, blur, sh)
-                except Exception:
+                except Exception as exc:
+                    # F03 #4: sharpen 子步骤退纯 Python
+                    record_degradation(
+                        "render.refine.sharpen_native", exc,
+                        detail="sharpen 回退纯 Python 实现")
                     native = False
                     img = self._sharpen_gray(img, sh, gray, sat_protect)
             else:
@@ -244,7 +268,12 @@ class RefineStage(Stage):
                     else:
                         img = _native_chroma(img, gray, sat_protect, blur_up,
                                              gray_blur, cd)
-                except Exception:
+                except Exception as exc:
+                    # F03 #5: chroma(+highlight fused) 子步骤退纯 Python
+                    record_degradation(
+                        "render.refine.chroma_native", exc,
+                        detail="chroma(+highlight fused) 回退纯 Python "
+                               "_chroma_denoise_small")
                     native = False
                     img = self._chroma_denoise_small(img, cd, gray, sat_protect)
             else:
@@ -255,7 +284,11 @@ class RefineStage(Stage):
                     if cd <= 0.0:
                         img = _native_highlight(img, gray, sat_protect, hd)
                     # cd>0 时已在上面的 fused 调用中完成 highlight
-                except Exception:
+                except Exception as exc:
+                    # F03 #6: highlight 子步骤退纯 Python
+                    record_degradation(
+                        "render.refine.highlight_native", exc,
+                        detail="highlight 回退纯 Python 实现")
                     native = False
                     img = self._highlight_desat(img, hd, gray, sat_protect)
             else:

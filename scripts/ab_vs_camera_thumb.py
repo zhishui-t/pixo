@@ -11,6 +11,13 @@ from pixo.render.api import Renderer  # noqa: E402
 
 
 def cam_thumb(p: Path) -> np.ndarray:
+    """RAW 内嵌预览 → 与 pixo 渲染画布同构的朝向 (传感器画布)。
+
+    注意 (2026-09-14 修正): NEF 内嵌缩略图**已是显示态**, 不能再套 EXIF 教科书
+    旋转表, 否则 48.4% 的竖拍样本会被转成 180° 反相 (逐像素 ΔE 虚高 2.8x)。
+    pixo render_preview_full 输出传感器尺寸画布, 故此处须把缩略图**逆旋**回去。
+    映射表与实证依据同 scripts/fit_rp_ccm.py:100-106 (np.rot90 的 k 参数)。
+    """
     with rawpy.imread(str(p)) as raw:
         t = raw.extract_thumb()
         if t.format == rawpy.ThumbFormat.JPEG:
@@ -23,10 +30,9 @@ def cam_thumb(p: Path) -> np.ndarray:
         o = int((ex(p)["capture"].get("orientation") or 1))
     except Exception:
         o = 1
-    rot = {3: cv2.ROTATE_180, 6: cv2.ROTATE_90_CLOCKWISE,
-           8: cv2.ROTATE_90_COUNTERCLOCKWISE}
-    if o in rot:
-        rgb = cv2.rotate(rgb, rot[o])
+    k = {3: 2, 6: 1, 8: -1}.get(o, 0)
+    if k:
+        rgb = np.ascontiguousarray(np.rot90(rgb, k))
     return rgb
 
 

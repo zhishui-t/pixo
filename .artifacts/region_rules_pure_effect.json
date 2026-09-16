@@ -1,0 +1,77 @@
+{
+  "day_normal": {
+    "region_params": {
+      "regions": {
+        "sky": {
+          "exposure": -0.3721166666666667
+        }
+      },
+      "enabled": true
+    },
+    "mask_coverage": {
+      "sky": 0.2681,
+      "plant": 0.0
+    },
+    "de_mean": 1.5872,
+    "de_p95": 5.9082,
+    "de_max": 6.122,
+    "changed_ratio_u8": 0.2816
+  },
+  "high_key_bright": {
+    "region_params": {
+      "regions": {
+        "sky": {
+          "exposure": -0.28373333333333334
+        }
+      },
+      "enabled": true
+    },
+    "mask_coverage": {
+      "sky": 0.4172,
+      "plant": 0.0
+    },
+    "de_mean": 1.8496,
+    "de_p95": 4.5683,
+    "de_max": 4.956,
+    "changed_ratio_u8": 0.426
+  },
+  "portrait_tele": {
+    "region_params": {
+      "regions": {
+        "sky": {
+          "exposure": -0.2635
+        },
+        "plant": {
+          "exposure": 0.030828571428571427
+        }
+      },
+      "enabled": true
+    },
+    "mask_coverage": {
+      "sky": 0.4059,
+      "plant": 0.0694
+    },
+    "de_mean": 1.4825,
+    "de_p95": 4.2173,
+    "de_max": 5.872,
+    "changed_ratio_u8": 0.4629
+  },
+  "wide_angle": {
+    "region_params": {
+      "regions": {
+        "sky": {
+          "exposure": -0.3100333333333333
+        }
+      },
+      "enabled": true
+    },
+    "mask_coverage": {
+      "sky": 0.4208,
+      "plant": 0.0372
+    },
+    "de_mean": 2.0523,
+    "de_p95": 5.0121,
+    "de_max": 5.56,
+    "changed_ratio_u8": 0.4292
+  }
+}

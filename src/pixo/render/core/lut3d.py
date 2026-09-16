@@ -26,6 +26,8 @@ from typing import Union
 
 import numpy as np
 
+from ..degradation import record_degradation
+
 
 def tetrahedral_interp(data: np.ndarray, pos: np.ndarray) -> np.ndarray:
     """四面体插值 (Kasson 1993), numpy 向量化实现。
@@ -183,8 +185,11 @@ class LUT3D:
                     img, self.data, domain_min=self.domain_min,
                     domain_max=self.domain_max, shaper=self.shaper,
                     strength=strength)
-        except Exception:
-            pass  # native 不可用/失败 → numpy 回退 (同式, 慢但正确)
+        except Exception as exc:
+            # F03 #12: 原为 `pass` (连变量都不记) → 结构化降级记录后走 numpy 回退
+            record_degradation(
+                "render.lut3d.native", exc,
+                detail="LUT3D native 内核不可用，回退 numpy lookup (慢 ~8×)")
         out = self.lookup(img)
         if strength < 1.0:
             out = img * (1.0 - strength) + out * strength

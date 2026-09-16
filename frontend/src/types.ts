@@ -272,6 +272,18 @@ export interface ParamPatch {
    * 回读含 decide 规则/卡建议写入的值（用户可见规则做了什么）。
    */
   region_adjust?: { regions?: Record<string, RegionAdjustment> };
+  /**
+   * R22 F04 —— 风格卡注入控制键：服务层按 style_id 取
+   * `configs/styles/films/<id>.json` 的 params 并深合并进会话参数
+   * （不是 LUT；仓内 0 个 .cube）。未知 id → 400。
+   */
+  __style?: string;
+  /**
+   * R22 F05 —— 场景预设控制键：服务层经 apply_scene_preset 展开
+   * `configs/styles/scenes.json` 的 6 个预设之一（纯 params 覆盖）。
+   * 未知 id / 与 __style 同时提交 → 400。
+   */
+  __scene?: string;
 }
 
 // ---------- 前端本地概念（暂无后端端点） ----------

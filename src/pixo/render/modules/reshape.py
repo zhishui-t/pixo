@@ -21,6 +21,7 @@ from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_GAMMA_RGB
 from ..core.enhance import clarity as _clarity
 from ..core.enhance import dehaze as _dehaze
+from ..degradation import record_degradation
 
 
 @register_stage("dehaze", order=45,
@@ -58,8 +59,11 @@ class DehazeStage(Stage):
 class ClarityStage(Stage):
     """清晰度/局部对比 (中频带通增强, engine.enhance.clarity)。
 
-    基座默认开启 (enabled=True, strength=0.3): "质感"是基础画质属性而非风格;
-    默认管线已包含本 Stage (DEFAULT_STAGES)。dehaze 仍默认关 (仅真雾照片用)。
+    基座默认**关闭** (enabled=False): 清晰度是局部对比/质感增强, 属**编辑动作**,
+    不在"打开 RAW"的基线里 (LR 打开 DNG 不会自动加清晰度); 旧默认 True+0.3 让
+    默认链自发改纹理 (n=10 消融: 改动像素 median 93.3%), 且预览走"降采样→上采样"
+    与导出行为不等价。本 Stage 仍在 DEFAULT_STAGES 中 (能力位), 由调用方
+    enabled=True 触发。dehaze 同样默认关 (仅真雾照片用)。
     """
 
     param_schema = {
@@ -68,7 +72,7 @@ class ClarityStage(Stage):
     }
 
     def default_params(self):
-        return {"enabled": True, "strength": 0.3}
+        return {"enabled": False, "strength": 0.3}
 
     def wants(self, ctx: StageContext) -> bool:
         return bool(self.p(ctx, "enabled", False))
@@ -101,7 +105,11 @@ class ClarityStage(Stage):
                 small_blur = cv2.GaussianBlur(g, (0, 0), 0.8)
                 large_blur = cv2.GaussianBlur(g, (0, 0), 3.0)
                 out_small = clarity_apply(small, s, g, small_blur, large_blur)
-            except Exception:
+            except Exception as exc:
+                # F03 #1: native clarity 静默回退纯 Python (仅预览 + 降采样路径)
+                record_degradation(
+                    "render.reshape.clarity_native", exc,
+                    detail="预览 clarity 回退纯 Python _clarity")
                 out_small = _clarity(small, strength=s)
             out = cv2.resize(out_small, (w, h), interpolation=cv2.INTER_LINEAR)
         else:

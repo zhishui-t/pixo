@@ -2,7 +2,7 @@
   "portrait": {
     "params": {
       "tone": {"contrast": 0.08},
-      "refine": {"sharpen": 0.2},
+      "refine": {"enabled": true, "sharpen": 0.2},
       "skin": {"enabled": true, "strength": 0.5}
     },
     "lut": null

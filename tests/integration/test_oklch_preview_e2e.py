@@ -14,7 +14,8 @@ test_preview_session.py 既有惯例打桩（合成彩色图 + 常量 camera_wb�
 覆盖:
   - oklch patch（hsl/split_tone color_domain）经 params→canonical→image
     全链往返，渲染无错且出图随域切换变化;
-  - 非法 color_domain 经接口可见地失败（Stage 校验 → 400）;
+  - 非法 color_domain 经接口可见地失败（R22 F04 起：PUT /params 参数栅栏
+    派生自 param_schema → 直接 400；渲染期 Stage 校验为第二道兜底）;
   - oklch_demo 胶片卡整卡 params 走同一通道渲染无错（盲点 A1 收口）。
 """
 from __future__ import annotations
@@ -154,12 +155,25 @@ def test_oklch_patch_roundtrip_via_preview_api(client, tmp_path):
 
 
 def test_invalid_color_domain_fails_visibly(client, tmp_path):
-    """非法域值：update_params 不拦截（无键过滤），渲染期 Stage 校验 → 400。"""
+    """非法域值经接口可见地失败：R22 F04 起在 PUT /params 处即 400。
+
+    R22 前契约 = 「update_params 不拦截（无键过滤），非法值流到渲染期由
+    Stage 校验 → 400」（本用例原实现）。design-r22 §5 风险行把
+    `update_params` 零校验列为 **F04 必修**，§2.3 明确「stage 名 + 参数键 +
+    数值域由 param_schema 派生，越界一律 400」⇒ 非法枚举现在被参数栅栏
+    在入口拒绝（渲染期 Stage 校验仍作为第二道兜底）。
+    """
     sid, _ = _make_session(client, tmp_path)
-    _put_params(client, sid, {"hsl": {"enabled": True, "color_domain": "lab"}})
-    resp = client.get(f"/api/sessions/{sid}/image?long_edge=128&fmt=jpeg&gen=1")
-    assert resp.status_code == 400
+    resp = client.put(
+        f"/api/sessions/{sid}/params",
+        json={"hsl": {"enabled": True, "color_domain": "lab"},
+              "__source": "e2e_t21_oklch"})
+    assert resp.status_code == 400, resp.text
     assert "color_domain" in resp.text
+    # 栅栏拒绝不落任何部分合并：generation 未推进、canonical 不含该键
+    canon = client.get(f"/api/sessions/{sid}/canonical").json()
+    assert canon["generation"] == 0
+    assert canon["canonical"]["hsl"]["color_domain"] != "lab"
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,12 @@ def _make_img(h=48, w=64, seed=20260820):
 
 
 def _run_compose(img, **params):
+    # R22 F09: ComposeStage 缺省 coord="norm"（全幅相对 [0,1]），而本文件所有
+    # free 矩形用例的 x/y/width/height 都是**本画布像素**（legacy 语义，如
+    # `x=7,y=5,width=20,height=15` 直取 48×64 画布上的 20×15 窗）。按 F09 契约
+    # 「legacy 调用方须显式声明 coord」在此统一声明一次，避免逐调用点重复；
+    # coord 仅对 mode="free" 生效，ratio/auto_level 用例不受影响。
+    params.setdefault("coord", "px")
     ctx = StageContext("x.NEF", config={"stages": {"compose": params}})
     ctx.set_image(img.copy(), DOMAIN_LINEAR_RGB)
     ComposeStage().run(ctx)

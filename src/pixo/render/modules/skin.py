@@ -4,7 +4,7 @@
 (colorcal 内已用同一椭圆掩码) 之后、风格化 LUT 之前做边缘保持磨皮。
 
 参数:
-  enabled       是否启用 (默认 True)
+  enabled       是否启用 (默认 False — 磨皮属**编辑动作**, 由调用方触发)
   strength      磨皮强度 0..1 (默认 0.5)
   color_domain  肤色掩码域: "hsv"(旧 cv2-Lab 椭圆) |
                 "oklch" (core.skin 拟合 OKLab 椭圆, 设计 §3; colorcal 的
@@ -21,8 +21,9 @@
       磨皮一直误作用于无人像默认链渲染; 真人像肤色占比实测 ≤40%)。
     scene=="portrait" 显式分类时不设上限 (分类意图优先)。
 
-默认管线 (pipeline.DEFAULT_STAGES) 不包含本 Stage; 由 portrait 预设 / 显式
-config["stages"] 加入后接入, 无需改 Pipeline/core。
+本 Stage **在**默认管线 (pipeline.DEFAULT_STAGES) 里, 但默认 `enabled=False`
+⇒ 默认链上恒等 (能力位保留, 不执行)。由 portrait 预设 / 显式 config["stages"]
+或 enabled=True (+ 注入 scene) 触发, 无需改 Pipeline/core。
 """
 from __future__ import annotations
 
@@ -78,7 +79,12 @@ class SkinStage(Stage):
     }
 
     def default_params(self):
-        return {"enabled": True, "strength": 0.5, "color_domain": "oklch"}
+        # enabled=False: 磨皮是**编辑动作** (LR 打开 DNG 不会自动磨皮)。本 Stage
+        #   在默认链里**没有任何 scene 状态注入** ⇒ 旧默认 True 让所有未分类图
+        #   一律走进"猜掩码"门控: n=64 实测 84.4% 照片被改 >10% 像素, 改动像素
+        #   median 43.99%, 且热图显示磨的是"所有暖色"而非人脸。
+        #   能力保留: 由调用方 enabled=True (+ 注入 scene/face_boxes) 触发。
+        return {"enabled": False, "strength": 0.5, "color_domain": "oklch"}
 
     def wants(self, ctx: StageContext) -> bool:
         if not bool(self.p(ctx, "enabled", True)):

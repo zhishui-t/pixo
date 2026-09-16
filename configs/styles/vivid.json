@@ -7,7 +7,7 @@
     "huesat": {"enabled": false},
     "colorcal": {"saturation": 0.15},
     "stylize": {},
-    "refine": {"sharpen": 0.35}
+    "refine": {"enabled": true, "sharpen": 0.35}
   },
   "output": {"quality": 95}
 }

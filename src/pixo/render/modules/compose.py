@@ -11,7 +11,11 @@ vision/mask 几何与最终画面保持一致。
   rotation        旋转角度 (°)，通过 cv2.warpAffine + INTER_LANCZOS4 实现
   horizontal_flip 水平翻转
   vertical_flip   垂直翻转
-  x / y / width / height  自由裁剪矩形 (像素, mode=free)
+  x / y / width / height  自由裁剪矩形 (mode=free; 坐标系由 coord 决定)
+  coord           free 矩形坐标系:
+                    "norm" (Stage 缺省, R22 F09) = **全幅相对** [0,1]，跨分辨率一致；
+                    "px"   (legacy, deprecated)    = 本画布像素，跨 tier 取景不同。
+                  纯函数 compute_crop_rect 缺省仍为 "px"（公开 API 行为不变）。
 
 实现约束:
   - 纯整数裁剪/翻转走 numpy 切片 / np.flip，禁止插值，必须逐位一致。
@@ -22,6 +26,7 @@ vision/mask 几何与最终画面保持一致。
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Sequence
 
 import cv2
@@ -33,6 +38,40 @@ from ..pipeline.graph import DOMAIN_LINEAR_RGB
 _BORDER_MODE = cv2.BORDER_REFLECT_101
 _BORDER_NAME = "reflect101"
 _INTERPOLATION = cv2.INTER_LANCZOS4
+
+_LOGGER = logging.getLogger(__name__)
+
+# R22 F09: legacy px 告警去重（模块级，warn-once；纯函数不记日志——每渲染
+# 会被调用两次（渲染线 + 掩码 shape 预测线），放那里会双打）。
+_PX_DEPRECATED_WARNED = False
+# 疑似 legacy px 参数被按全幅相对解释（>1 量级）——同样 warn-once。
+_NORM_SUSPECT_WARNED = False
+
+
+def _warn_coord_legacy(coord: str,
+                       vals: tuple[float, float, float, float]) -> None:
+    """R22 F09 坐标语义告警（只记日志，**不改变任何行为**）。
+
+    - ``coord == "px"``: legacy 像素语义已 deprecated（跨分辨率相对取景不同）。
+    - 否则若四值存在 ``|v| > 1``: 疑似 legacy px 矩形被按全幅相对解释
+      （design §2.4 / R22 侦察 §6.3 的 silent re-interpretation 风险观测面）。
+      默认参数四值全 0，不会误报。
+    """
+    global _PX_DEPRECATED_WARNED, _NORM_SUSPECT_WARNED
+    if str(coord) == "px":
+        if not _PX_DEPRECATED_WARNED:
+            _PX_DEPRECATED_WARNED = True
+            _LOGGER.warning(
+                '[pixo.compose] compose.coord="px" 为 legacy 像素语义（同一'
+                '参数跨分辨率相对取景不同, tech_debt #17）；新参数请用 '
+                'coord="norm"（全幅相对 0..1）')
+        return
+    if not _NORM_SUSPECT_WARNED and any(abs(float(v)) > 1.0 for v in vals):
+        _NORM_SUSPECT_WARNED = True
+        _LOGGER.warning(
+            "[pixo.compose] compose.coord 为 %r 但 free 矩形 %s 存在 |值|>1："
+            "疑似 legacy px 参数被按全幅相对解释（取景将与旧版不同）",
+            str(coord), tuple(vals))
 
 
 def parse_ratio(ratio: float | str | None) -> float | None:
@@ -64,14 +103,31 @@ def compute_crop_rect(h: int, w: int, mode: str,
                       ratio: float | str | None = None,
                       center: Sequence[float] = (0.5, 0.5),
                       x: float = 0.0, y: float = 0.0,
-                      width: float = 0.0, height: float = 0.0
+                      width: float = 0.0, height: float = 0.0,
+                      coord: str = "px"
                       ) -> tuple[int, int, int, int]:
     """计算裁剪矩形 (x, y, width, height)。
 
-    - mode=free: 使用 x/y/width/height 像素矩形，越界自动裁剪到图像内。
+    - mode=free: 使用 x/y/width/height 矩形；``coord="px"``（缺省 = legacy）
+      按**本画布像素**解释，``coord="norm"`` 按**全幅相对 [0,1]** 解释。
+      两者都越界自动裁剪到图像内。归一化分支只把参数换算到本画布像素，
+      随后走**同一条** px 代码路径 ⇒ 同一归一化参数在不同 tier 的相对裁剪
+      窗一致（R22 F09 / tech_debt #17 清偿）。
     - mode=ratio: 以最大内接指定宽高比的矩形、围绕 center 定位。
     - mode=auto_level: 当前无 horizon 检测强改; 返回全幅 (仅旋转可生效)。
+
+    R22 F09 落点说明：``coord`` 缺省保持 ``"px"`` ⇒ 公开 API 与所有未显式
+    传参的调用方逐位不变；新语义只由 ``ComposeStage.default_params`` 的
+    ``"norm"`` 进入生产链（掩码 shape 预测线 region_masks 同源调用本函数）。
     """
+    if mode == "free" and str(coord) == "norm":
+        # None 早退必须在缩放之前（None * w 会抛 TypeError）
+        if width is None or height is None:
+            return 0, 0, w, h
+        x = float(x) * w
+        y = float(y) * h
+        width = float(width) * w
+        height = float(height) * h
     if mode == "free":
         if width is None or height is None or width <= 0 or height <= 0:
             return 0, 0, w, h
@@ -212,12 +268,20 @@ class ComposeStage(Stage):
         "y": {"type": "float"},
         "width": {"type": "float"},
         "height": {"type": "float"},
+        # R22 F09: free 矩形坐标系开关（"norm" = 全幅相对 [0,1]；
+        # "px" = legacy 本画布像素，保留一个版本 + deprecated 告警）。
+        # 登记此键同时让 HTTP 参数栅栏（session.validate_param_patch 由
+        # param_schema 派生）放行 coord 并校验枚举。
+        "coord": {"type": "str", "choices": ["norm", "px"]},
         # auto_level: 地平线置信度门限 (低于则回退恒等, 不动构图)
         "min_confidence": {"type": "float", "min": 0.0, "max": 1.0},
     }
 
     def default_params(self) -> dict[str, Any]:
         # 默认不改变画面: free + 全幅 + 无旋转/翻转。
+        # R22 F09: coord="norm" 是**新语义的唯一缺省入口**（纯函数
+        # compute_crop_rect 的缺省仍是 "px"，公开 API 行为不变）；
+        # width=height=0 在两种 coord 下都命中全幅哨兵 ⇒ 默认路径逐位不变。
         return {
             "mode": "free",
             "ratio": None,
@@ -229,8 +293,32 @@ class ComposeStage(Stage):
             "y": 0.0,
             "width": 0.0,
             "height": 0.0,
+            "coord": "norm",
             "min_confidence": AUTO_LEVEL_DEFAULT_MIN_CONFIDENCE,
         }
+
+    def wants(self, ctx: StageContext) -> bool:
+        """只在**显式请求**了构图改动时执行 (默认全幅恒等 ⇒ 不执行)。
+
+        引擎不自动裁切/自动摆平: 只有 mode="ratio"/"auto_level", 或显式的
+        rotation / flip / 矩形 / 非默认原点才算调用方意图。
+        min_confidence 只是 auto_level 的门限, 本身不构成执行理由。
+        """
+        mode = str(self.p(ctx, "mode", "free") or "free")
+        if mode in ("ratio", "auto_level"):
+            return True
+        if float(self.p(ctx, "rotation", 0.0) or 0.0) != 0.0:
+            return True
+        if (bool(self.p(ctx, "horizontal_flip", False))
+                or bool(self.p(ctx, "vertical_flip", False))):
+            return True
+        if (float(self.p(ctx, "width", 0.0) or 0.0) > 0.0
+                or float(self.p(ctx, "height", 0.0) or 0.0) > 0.0):
+            return True
+        if (float(self.p(ctx, "x", 0.0) or 0.0) != 0.0
+                or float(self.p(ctx, "y", 0.0) or 0.0) != 0.0):
+            return True
+        return False
 
     def process(self, ctx: StageContext) -> None:
         img = ctx.image
@@ -239,6 +327,8 @@ class ComposeStage(Stage):
         h, w = img.shape[:2]
 
         mode = self.p(ctx, "mode", "free")
+        # R22 F09: free 矩形坐标系（Stage 缺省 "norm" = 全幅相对 [0,1]）。
+        coord = str(self.p(ctx, "coord", "norm") or "norm")
         rotation = float(self.p(ctx, "rotation", 0.0) or 0.0)
         horizontal_flip = bool(self.p(ctx, "horizontal_flip", False))
         vertical_flip = bool(self.p(ctx, "vertical_flip", False))
@@ -265,15 +355,23 @@ class ComposeStage(Stage):
                 "auto_level_confidence_value": round(float(conf), 4),
             }
 
+        rect_x = float(self.p(ctx, "x", 0.0) or 0.0)
+        rect_y = float(self.p(ctx, "y", 0.0) or 0.0)
+        rect_w = float(self.p(ctx, "width", 0.0) or 0.0)
+        rect_h = float(self.p(ctx, "height", 0.0) or 0.0)
+        if mode == "free":
+            _warn_coord_legacy(coord, (rect_x, rect_y, rect_w, rect_h))
+
         x0, y0, cw, ch = compute_crop_rect(
             h, w,
             mode=mode,
             ratio=self.p(ctx, "ratio", None),
             center=self.p(ctx, "center", [0.5, 0.5]),
-            x=float(self.p(ctx, "x", 0.0) or 0.0),
-            y=float(self.p(ctx, "y", 0.0) or 0.0),
-            width=float(self.p(ctx, "width", 0.0) or 0.0),
-            height=float(self.p(ctx, "height", 0.0) or 0.0),
+            x=rect_x,
+            y=rect_y,
+            width=rect_w,
+            height=rect_h,
+            coord=coord,
         )
 
         out = img[y0:y0 + ch, x0:x0 + cw]
@@ -294,6 +392,8 @@ class ComposeStage(Stage):
                      else [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
         geom = {
             "mode": mode,
+            # R22 F09: 坐标系自描述（free 矩形是 norm 还是 px）
+            "coord": coord,
             "original_size": [h, w],
             "final_size": [final_h, final_w],
             "crop_rect": {"x": x0, "y": y0, "width": cw, "height": ch},

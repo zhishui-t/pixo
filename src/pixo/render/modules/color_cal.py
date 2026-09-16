@@ -32,6 +32,7 @@ import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_GAMMA_RGB
+from ..degradation import classify_native_failure, record_degradation
 
 _NEUTRAL_CENTERS = np.array([8, 32, 72, 128, 184, 224, 248], dtype=np.float32)
 
@@ -286,6 +287,28 @@ class ColorCalStage(Stage):
             raise ValueError(f"[colorcal] skin_trim 越界: {v!r}, 允许 [-24,24]")
         return da, db
 
+    def wants(self, ctx: StageContext) -> bool:
+        """只在调用方**显式请求**了色彩校准时执行 (默认全中性 ⇒ 不执行)。
+
+        默认 (sat/vib/hue/neutral_* = 0、各曲线与窗口全 None) 是恒等, 但旧实现
+        无 wants ⇒ 基类默认 True 会连带走进 `_neutral_curves` 的
+        **每机 CCT 中性轴自动标定**路径 (按场景 CCT 选曲线) —— 那是"自动定
+        参数", 属编辑动作, 归调用方: 需要时显式给 neutral_a_curve/neutral_b_curve
+        或 neutral_mode="adaptive", 而不是打开 RAW 就自动做。
+        """
+        for key in ("saturation", "vibrance", "hue", "neutral_a", "neutral_b"):
+            v = self.p(ctx, key, None)
+            if v is not None and float(v) != 0.0:
+                return True
+        # neutral_mode 缺省 "static"; 显式改成 adaptive 即"请求自动中性校准"
+        if str(self.p(ctx, "neutral_mode", "static") or "static") not in ("off", "static"):
+            return True
+        for key in ("neutral_a_curve", "neutral_b_curve", "skin_trim",
+                    "scene_trim", "scene_skin_trim", "scene_hue"):
+            if self.p(ctx, key, None) is not None:
+                return True
+        return False
+
     def process(self, ctx: StageContext) -> None:
         sat = float(self.p(ctx, "saturation"))
         vib = float(self.p(ctx, "vibrance"))
@@ -415,7 +438,16 @@ class ColorCalStage(Stage):
                         out = np.clip(out, 0.0, 1.0)
                     ctx.set_image(out, DOMAIN_GAMMA_RGB)
                     native_ok = True
-            except Exception:
+            except Exception as exc:
+                # F03 #11: native F32 内核不可用 → 纯 Python float Lab 域。
+                # **版本门拒绝不算 degraded**: DLL < 1.6.0 时 oklch 内核主动抛
+                # RuntimeError (设计好的分层回退), classify_native_failure 把它
+                # 归入 version_gate → 只进独立通道, 不产生误告警。
+                record_degradation(
+                    "render.color_cal.native_f32", exc,
+                    reason=classify_native_failure(exc),
+                    detail=f"colorcal {domain} 域 native F32 内核不可用，"
+                           f"回退纯 Python float Lab 域实现")
                 native_ok = False
 
             if not native_ok:

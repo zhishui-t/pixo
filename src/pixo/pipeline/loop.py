@@ -539,6 +539,154 @@ def _unreliable_regions(measurement: dict[str, Any]) -> list[str]:
     ]
 
 
+# ---------------------------------------------------------------------------
+# R22/F06 (CR-11)：多轴 QC 软告警（**非门禁**）
+# ---------------------------------------------------------------------------
+# 硬门禁**唯一**：``engine._QC_OVERFLOW_THRESHOLD``（highlight_clip_ratio
+# ≤ 0.03）。下面这组阈值只产出 ``soft_warnings``（qc 返回 dict →
+# ``LoopResult.metadata`` → service auto-loop payload），**不参与**任何
+# ACCEPT/REJECT 判定（design-r22 §4 QC(F06) 判据）。
+#
+# 口径（design-r22 §2.1 裁决③）：噪声/细节类指标**一律导出全幅**
+# （本函数只读 ``final_measurement``，即 render_full 全分辨率测量）；
+# 512 preview tier 下 noise_ratio 排序非单调（ISO12800 0.2837 < ISO1600
+# 0.6680，exploration-r22 §2.3）⇒ preview tier 不得用于阈值。
+#
+# 阈值标定证据（全幅内嵌相机 JPEG DSC_5236~5335 抽样 **26 张** = 低 ISO ≤1600
+# 共 14 + 高 ISO ≥3200 共 12；脚本 ``.agent-team/tmp-r22-calib.py``，逐行数据
+# ``.agent-team/tmp-r22-calib-rows.tsv``，分位表见
+# ``.agent-team/streams/r22-stream-1.md``「自测证据」节）：
+#   - noise_ratio（全幅）：ALL p50=0.5371 / p75=0.6240 / p90=0.6351 /
+#     max=0.7473；低 ISO max=0.6114；高 ISO min=0.4724 / p50=0.6281 /
+#     max=0.7473 ⇒ 取 **0.62**（= ALL p75 取整下移，且 > 低 ISO 上界
+#     0.6114 ⇒ 14 张低 ISO 零误触，命中高 ISO 中高段 ≈6/12）。
+#     **不是** 512 preview 口径阈值（该 tier 排序非单调）。
+#   - detail_score（全幅）：ALL p10=1.4000 / min=0.81 ⇒ 取 **1.2**（p10 取整
+#     下移，「细节偏低/可能脱焦」提示；命中 2/26：DSC_5240=1.20、DSC_5241=0.81）。
+#   - colorfulness_proxy：沿用 color_rules 既有锚点（p25=4.78 / p75=6.13，
+#     来源 docs/metrics/proxy_distribution.md，12 样张 512 tier **生产渲染**）
+#     —— 色彩代理为归一化比值型，design §2.1 的全幅收窄只约束噪声/细节类；
+#     内嵌相机 JPEG 样本（6.80~10.50）属另一 tier，不作色彩轴锚点。
+_QC_SOFT_NOISE_RATIO = 0.62
+_QC_SOFT_DETAIL_SCORE = 1.2
+_QC_SOFT_COLORFULNESS_LOW = 4.78
+_QC_SOFT_COLORFULNESS_HIGH = 6.13
+
+
+def _soft_float(value: Any) -> float | None:
+    """软告警用的数值取值：非法/缺失/布尔一律 None（不产生告警）。"""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None  # NaN -> None
+
+
+def _qc_soft_warnings(full_measurement: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """组装多轴 QC 软告警（清晰度 / 噪声 / 色彩）——**纯观测**。
+
+    输入 = FINAL_QC 的 ``final_measurement``（全幅；含
+    ``global.detail.sharpness`` 的 noise_ratio/detail_score 与顶层
+    colorfulness_proxy 代理键）。输出 = JSON 友好 dict 列表，每项自带
+    ``axis/metric/op/value/threshold/tier/gate/message``，便于 service
+    payload 与前端直接消费。
+
+    无数据/键缺席 → 该轴不产出（静默；与引擎「缺失指标不触发」同向）。
+    本函数**不得**被判定分支消费（loop 判定只读 decision/params/reasons）。
+    """
+    out: list[dict[str, Any]] = []
+    if not isinstance(full_measurement, Mapping):
+        return out
+    global_metrics = full_measurement.get("global")
+    global_metrics = global_metrics if isinstance(global_metrics, Mapping) else {}
+    detail = global_metrics.get("detail")
+    detail = detail if isinstance(detail, Mapping) else {}
+    sharpness = detail.get("sharpness")
+    sharpness = sharpness if isinstance(sharpness, Mapping) else {}
+
+    noise = _soft_float(sharpness.get("noise_ratio"))
+    if noise is not None and noise >= _QC_SOFT_NOISE_RATIO:
+        out.append({
+            "axis": "noise",
+            "metric": "noise_ratio",
+            "op": ">=",
+            "value": noise,
+            "threshold": _QC_SOFT_NOISE_RATIO,
+            "tier": "full_export",
+            "gate": "soft",
+            "message": (
+                f"噪声偏高: noise_ratio={noise:.4f} ≥ "
+                f"{_QC_SOFT_NOISE_RATIO}（全幅口径；软告警不改判定）"
+            ),
+        })
+
+    detail_score = _soft_float(sharpness.get("detail_score"))
+    if detail_score is not None and detail_score <= _QC_SOFT_DETAIL_SCORE:
+        out.append({
+            "axis": "sharpness",
+            "metric": "detail_score",
+            "op": "<=",
+            "value": detail_score,
+            "threshold": _QC_SOFT_DETAIL_SCORE,
+            "tier": "full_export",
+            "gate": "soft",
+            "message": (
+                f"细节偏低: detail_score={detail_score:.2f} ≤ "
+                f"{_QC_SOFT_DETAIL_SCORE}（可能脱焦/糊；软告警不改判定）"
+            ),
+        })
+
+    motion = detail.get("motion_blur")
+    if isinstance(motion, Mapping) and motion.get("has_motion_blur") is True:
+        strength = _soft_float(motion.get("strength"))
+        out.append({
+            "axis": "sharpness",
+            "metric": "motion_blur.strength",
+            "op": ">",
+            "value": strength,
+            "threshold": 0.35,          # measure_motion_blur 内置判定门
+            "tier": "full_export",
+            "gate": "soft",
+            "message": "检出疑似运动模糊（软告警不改判定）",
+        })
+
+    colorful = _soft_float(full_measurement.get("colorfulness_proxy"))
+    if colorful is not None:
+        if colorful <= _QC_SOFT_COLORFULNESS_LOW:
+            out.append({
+                "axis": "color",
+                "metric": "colorfulness_proxy",
+                "op": "<=",
+                "value": colorful,
+                "threshold": _QC_SOFT_COLORFULNESS_LOW,
+                "tier": "full_export",
+                "gate": "soft",
+                "message": (
+                    f"色彩偏淡: colorfulness_proxy={colorful:.4f} ≤ "
+                    f"{_QC_SOFT_COLORFULNESS_LOW}（参考全幅语料分布尾部；"
+                    f"软告警不改判定）"
+                ),
+            })
+        elif colorful >= _QC_SOFT_COLORFULNESS_HIGH:
+            out.append({
+                "axis": "color",
+                "metric": "colorfulness_proxy",
+                "op": ">=",
+                "value": colorful,
+                "threshold": _QC_SOFT_COLORFULNESS_HIGH,
+                "tier": "full_export",
+                "gate": "soft",
+                "message": (
+                    f"色彩偏艳: colorfulness_proxy={colorful:.4f} ≥ "
+                    f"{_QC_SOFT_COLORFULNESS_HIGH}（参考全幅语料分布尾部；"
+                    f"软告警不改判定）"
+                ),
+            })
+    return out
+
+
 def _flatten_decide_params(
     params: dict[str, Any],
     *,
@@ -767,6 +915,11 @@ class SinglePhotoLoop:
             "haze_proxy", "colorfulness_proxy", "tonal_range",
             # loop 上下文指标 (crop 建议链)
             "crop_suggestion_applicable",
+            # R22/F01 (CR-06): measurement["global"]["detail"]["sharpness"]
+            # 4 层展平键 —— 与 pixo.pipeline.metrics.METRIC_KEYS 同源口径
+            # （noise_ratio/detail_score）。注册面 = 公式 lint 白名单，
+            # 规则 YAML 的 condition/formula 引用它们才不会加载期 DecideError。
+            "noise_ratio", "detail_score",
         })
         # 区域 flatten 键 (<prompt>_{luminance,area_ratio,highlight_clip_ratio,
         # reliable})，region.* 规则的引用面 —— 按本 loop 的 prompts 注册
@@ -1719,20 +1872,34 @@ class SinglePhotoLoop:
         full_measurement: dict[str, Any],
         params: dict[str, Any],
     ) -> dict[str, Any]:
-        """判定 FINAL_QC 是否需要回退/人工。"""
+        """判定 FINAL_QC 是否需要回退/人工（+ R22/F06 多轴软告警）。
+
+        软告警在**本方法内组装**（阈值单源 = 模块常量 ``_QC_SOFT_*``），
+        随 ``qc_context`` 进 :func:`qc_rollback`，由引擎**原样回抄**进返回
+        dict；本方法不改任何判定输入（硬门禁仍只有 ``highlight_clip_ratio``
+        ≤ ``engine._QC_OVERFLOW_THRESHOLD``，判定分支一行未动）。
+        """
         qc_ratio = float(
             (full_measurement.get("global") or {}).get(
                 "highlight_clip_ratio", 0.0
             )
         )
+        soft_warnings = _qc_soft_warnings(full_measurement)
         qc_context = {
             "params": _flatten_decide_params(params),
             "qc_overflow_ratio": qc_ratio,
             "qc_rollback_count": sm.record.qc_rollback_count,
             "unreliable_regions": _unreliable_regions(full_measurement),
             "locked_params": self.locked_params,
+            # R22/F06：多轴软告警（清晰度/噪声/色彩），全幅口径、纯观测。
+            "soft_warnings": soft_warnings,
         }
-        return qc_rollback(qc_context)
+        qc = qc_rollback(qc_context)
+        # 引擎只在「达标 / 回退」两个分支回抄 soft_warnings（design-r22 §1
+        # F06）；manual_review 分支用同一份清单补齐（**不重算**），保证
+        # 人工复核路径也不丢多轴信息。setdefault 只补键，不改既有字段。
+        qc.setdefault("soft_warnings", list(soft_warnings))
+        return qc
 
     def run(
         self,
@@ -1819,6 +1986,9 @@ class SinglePhotoLoop:
             sm, backend, photo_id, params_after, masks_cache
         )
         qc = self._qc_outcome(sm, full_measurement, params_after)
+        # R22/F06：软告警随结果元数据落库（service payload 由此透出）；
+        # 纯追加键，不影响下面任何判定分支。
+        metadata["soft_warnings"] = list(qc.get("soft_warnings") or [])
 
         if qc.get("decision") == "rollback":
             rolled_params = _apply_decide_params(
@@ -1849,6 +2019,8 @@ class SinglePhotoLoop:
                 sm, backend, photo_id, rolled_params, masks_cache
             )
             qc2 = self._qc_outcome(sm, full_measurement, rolled_params)
+            # 第二次 QC（回退后重测）的软告警覆盖前值（对齐最终测量口径）。
+            metadata["soft_warnings"] = list(qc2.get("soft_warnings") or [])
             if qc2.get("decision") == "manual_review" or (
                 qc2.get("decision") == "rollback"
             ):

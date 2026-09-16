@@ -72,6 +72,7 @@
       "strength": 0.35
     },
     "refine": {
+      "enabled": true,
       "sharpen": 0.3,
       "chroma_denoise": 1.0,
       "highlight_desat": 0.55

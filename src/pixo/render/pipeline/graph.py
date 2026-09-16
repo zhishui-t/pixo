@@ -51,7 +51,19 @@ class Stage(ABC):
         return {}
 
     def wants(self, ctx: StageContext) -> bool:
-        return True
+        """本 Stage 是否需要执行 —— 引擎只提供能力, 执行由调用方声明。
+
+        基类默认 **False**: 未声明 wants 的 Stage 一律不执行。
+        与旧实现 (`return True`, 不覆盖即无条件执行) 相反 —— 「是否执行」
+        这个决策的默认值必须是「否」, 否则默认链会在用户从未触发的情况下
+        自动施加编辑动作 (实测六处: 曝光测光 / 暖度 / 提亮 / 清晰度 / 磨皮 /
+        精修), 违背「引擎 = LR 本体, 只提供能力集合」的责权边界。
+
+        需要执行请显式覆盖:
+          - 编辑动作 → 查"是否 enabled / 是否有显式参数请求";
+          - **域转换**步 (如 tone 的 linear→gamma 输出编码) → 直接 `return True`。
+        """
+        return False
 
     @abstractmethod
     def process(self, ctx: StageContext) -> None:
