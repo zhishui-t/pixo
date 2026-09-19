@@ -1,5 +1,132 @@
 # Changelog
 
+## 2026-09-19 — 第二十八轮：decode_raw gamma 原生 bug 修复（export 主线回归线性域）+ recipe 泛化性三问
+
+- **重大修复：`decode_raw` 的"线性"输出自带 rawpy 缺省 gamma=(2.222, 4.5)**
+  （rawlab 迁移起的原生 bug，git 历史从未钉过 gamma）。export 主线
+  （`_render_full_quality`→`decode_raw`）长期在 gamma 污染域跑
+  WB×矩阵→EOTF **双重编码**；受影响面含标定流 `render_file`、`run_file`
+  回退解码、preview native 回退（后者修复后与 native 域一致，顺带消掉
+  静默分叉）。**为何一直没暴露**：全部 F01/参照/审计探针跑 preview tier
+  （native 解码线），export 侧门禁为自参照口径，两条解码线从未被逐像素
+  对比——R28 Q1 第一次对比即撞上（export recipe 臂 A 24.86 vs preview 3.82）。
+  **修复** = postprocess 显式 `gamma=(1.0,1.0)`（io.py）+ 契约守卫单测
+  `test_decode_raw_pins_unit_gamma`。修复后 export recipe A 中位 **24.86→4.43**
+  （preview 3.82, dA -0.61）⇒ **R24 recipe 跨 tier 成立**；残余 tier 逐像素
+  ΔE（中位 9.78）= AHD vs CFA 分箱去马赛克纹理差，系统差已消。
+- **recipe v2（按 WB 段细分）数据性关闭**（R18 先例）：n=47 残差结构分析，
+  wb_B 三分位桶 A 中位 [3.52, 4.93, 3.39]（非单调），ρ(A, wb_B)=0.061 ≈
+  无相关——残差是逐片噪声级，无可细分结构；未来观感反馈指向具体场景时按
+  R19→R20 条件触发路径重启。
+- **R24 复合 LUT 热路径耗时等价实证**：composed 0.072s vs 曲线基 0.069s
+  （同 RAW 预热 5 次中位）——预构单条 LUT 单次 gather 策略无耗时回退；
+  recipe 臂 +0.02s（gains 全图乘本体开销，非默认链）。
+- **验收**：金样本/gate **零漂移**（gate 主线走 native 解码不受影响，
+  84 passed 实证）；全量 **1706 passed / 0 failed** + 守卫单测。
+  **语义变化面**：所有 `decode_raw` 路径输出回到真线性（修复前偏暗），
+  以旧导出为基准的外部对照需重造。
+- **详见**：`.artifacts/R28_recipe_generalization.md`（含建议后续：preview↔export
+  线性域一致性门禁，防两条解码线再静默分叉）。
+
+## 2026-09-19 — 第二十七轮：风格卡复合语义审计 + 资产缺陷清偿（R24 §3 验证收口）
+
+- **审计结论**（`.artifacts/_r27_style_card_audit.py`，n=24 真机，7 卡各用自己
+  DCP 钉扎+全量参数 vs 相机 JPEG）：R24 复合修复后 **7 张 profile_curve 卡全部
+  健康**（A 5.97~19.19、cc 0.96-0.98、端点无病理），无需重标定；
+  **preview_baseline_v3 是最强相机目标卡**（A=5.97，版本演化 v1 8.21 → v2 13.43
+  → v3 5.97）；VR recipe 参照臂 3.59 仍最强但与卡用途不同（全局拟合 vs 多阶段
+  联合标定），**不做卡内改造**（换影调来源会作废既有标定）。
+- **资产缺陷两处**：① preview_baseline 的 dcp 钉扎为失效绝对路径（双层 pixo
+  目录不存在）——**已修**为仓库相对路径（1 行）；② `LR Camera Standard
+  Baseline.dcp` 与 `LR Baseline.dcp` **字节相同**（md5 5a23f967eeec）⇒
+  lr_camera_standard_baseline 卡输出恒等于 lr_baseline——**tech_debt #24 入账**
+  （重出 DCP 需 LR 管线，数据侧待办；期间两卡结论视为同一臂）。
+- **lr_* 卡绝对判分数据阻断**（truth=LR 导出，本机无）——vs 相机数字仅作相对
+  参照，如实记录不臆断。
+- **验收**：渲染代码零改动；styles/regression/auto-loop 相关 **139 passed**。
+- **详见**：`.artifacts/R27_style_card_audit.md`。
+
+## 2026-09-19 — 第二十六轮：auto-loop 债 #20/#21 清偿 + 全量基线清绿
+
+- **#20 回写契约**（✅ 清偿关闭）：`runtime._write_back_auto_loop` 在任务成功终局显式回写——
+  ① service 状态机停在 RAW_PENDING 时按 loop 转移序列**重放**（`/timeline` 与 `photo.state`
+  反映全程轨迹与终态；重跑只补 `auto_loop_summary` 防非法转移）；② 非状态事件原样
+  `add_trace`（`source="auto_loop"` 可区分）；③ `photo.last_decision` 写 **decide 引擎同形**
+  dict + `source/task_id/state` 扩展键（decide_photo 路径既有断言不受影响；cancelled/failed
+  不回写防半态污染；回写失败任务翻 failed 可见）。跑完 auto-loop 后 `/timeline` 不再
+  停留 RAW_PENDING。
+- **#21 任务治理**（✅ 清偿关闭，协作粒度 = 迭代边界）：`SinglePhotoLoop.run(stop_check=...)`
+  三边界询问（preview 迭代前/每轮迭代头/FINAL_QC 渲染前）；任务生命周期
+  **queued→running→done|failed|cancelled**（提交即 queued，单飞口径含 queued）；
+  `POST /api/auto-loop/{task_id}/cancel`（queued 即刻终态/running 协作标记/终态幂等）；
+  截止时间 env `PIXO_AUTO_LOOP_TIMEOUT_S`（缺省 0 不设限）超限落 failed+timeout；
+  任务表终态 TTL（env `PIXO_AUTO_LOOP_TASK_TTL_S` 缺省 1800s）+ 容量上限 200；视图追加
+  生命周期时间戳 + cancel_requested（纯追加键）。
+- **基线清绿**：在册遗留 `test_llm_shadow::test_shadow_threshold_configurable_flips_verdict`
+  清偿——trace 的 scores 字典面向可读性 round 6 位，测试改用 abs=1e-6 容差对齐该契约
+  （R23 §7 登记，纯断言精度问题）。全量自此 **0 failed**。
+- **验收**：auto-loop 专项 **27 passed**（20 既有 + 7 新增：回写×2 / queued+running 取消 /
+  截止 timeout / TTL 淘汰 / cancel HTTP / 生命周期时间戳）；既有 queued 语义适配 2 处
+  （提交视图取自活 dict 存在 queued/running 竞态，断言改为集合）；全量结果见
+  `.artifacts/_r26_full_suite.xml`。
+- **详见**：`.artifacts/R26_auto_loop_governance.md`（含 tech_debt 台账 #20/#21 关闭条目）。
+
+## 2026-09-19 — 第二十五轮：Tier-1 准度根因定案 + 直方图 API（R23 F02）
+
+- **Tier-1 引擎准度疑云定案（非缺陷）**（`.artifacts/_r25_tier1_probe.py`，n=24
+  两臂实证）：R24 测得的 -0.66EV 系统尺度差，根因 = 当前 DCP
+  **BaselineExposureOffset（-0.6228EV）**——中性链 `exposure mode="baseline"`
+  （R23"打开 RAW = LR 打开 DNG"语义）乘进输出而 libraw 参照不乘；**扣除后残差
+  ev_med median -0.024EV / p90 +0.06EV**（矩阵/去马赛克级）⇒ 引擎纯解码与独立
+  中性实现一致到 1.7%。Tier-1 尺子口径修正为**扣除基线曝光后对比**
+  （`docs/metrics/r24_recipe_tone_fit.md` 同步）；R23 §5.1 单张 -0.44EV 同此根因。
+- **直方图 API（R23 §6 在册 ❌ 能力补齐）**：`vision/measure.compute_histogram`
+  （BT.709 luma + RGB 计数，256 桶 0-255，复刻 compute_proxy_metrics 输入契约）→
+  `GET /api/sessions/{id}/histogram?gen=&bins=`（照 measurements 模板：gen 过期
+  404、渲染失败不抛 5xx）→ 前端 AdjustmentsPanel 真直方图（替换 t8 硬编码占位柱，
+  按 generation 刷新、离线/失败回退占位；`npm run build` 含 tsc 通过）。
+  **不进 decide 规则**（数组不入 metric_universe，规则只吃标量）。
+- **两路径曝光语义差异记录在案**：DNG 复刻路径 `exposure_ramp`（core/tone.py）
+  负 EV 钳零（clean-room 设计，欠曝交给影调曲线）vs 生产链 `ExposureStage`
+  负 EV 全量乘——有意差异，防未来误判为 bug。
+- **验收**：渲染链零改动（gate 金样本零漂移天然满足）；新增测试 5 项全绿；
+  全量结果见 `.artifacts/_r25_full_suite.xml`（基线同 R24：唯一失败 =
+  在册遗留 `test_llm_shadow`）。
+- **详见**：`.artifacts/R25_tier1_and_histogram.md`。
+
+## 2026-09-19 — 第二十四轮：profile_curve 槽位域修复 × recipe v1（R23 两个深层问题清偿）
+
+- **域假设实证先行**（`.artifacts/_r24_compose_probe.py`，n=24 真机探针，改码前跑）：
+  DCP ProfileToneCurve 是 Adobe 管线的 **linear→linear 场景曲线**（施于输出编码前），
+  不是完整 linear→gamma 映射。V6 复合（EOTF∘curve）对比 V1 旧行为（曲线替代编码）：
+  **A 36.37→13.58 / cc 0.89→0.97**；且比 V0 中性链（28.65）好一倍——曲线形状正是
+  R23 §5.1 所述基座影调缺口的主体。
+- **生产修复**：`tone_map._get_profile_lut(prof, eotf, gamma)` 返回**复合 LUT**
+  `base∘curve`（16384 级预构单次 gather，native/ABI 不动）；缓存键升级
+  `(id(prof), eotf, gamma)`（旧单键跨 eotf 张冠李戴）。**默认链逐位零漂移**
+  （gate 21 features 实证）；7 张风格卡（lr_*/preview_*/acr_standard，开
+  `profile_curve: true`）输出变化为语义修复预期后果（暗部不再塌陷：our_p05 1→13，
+  白点 200→229）。
+- **锚定同源**：`curves.curve_anchor_target(prof, eotf, gamma)` 改复合语义（新增
+  `srgb_decode`/`base_curve_decode`；先基座解码得目标线性值再反查曲线）；
+  `exposure._auto_ev` 经 `ctx.params_for("tone")` 与 tone 层实际配置同源
+  （profile_curve 开才咨询曲线）。无曲线 srgb 锚 0.18→0.1778（精确解码，Δ0.017EV）。
+- **lrfit 可观测 + 悬空收口**：标定缺失回退记
+  `record_degradation("render.tone_map.lrfit_calibration_missing")`（R23 探针
+  V5==V0 之谜防复发）；迁移中被删的 `tools/fit_lr_tone_v2.py`（git a9c1ddf）找回
+  改造为 `render/tools/fit_tone_curve.py`。
+- **recipe v1 接线**：新增 `eotf="recipe"`（v3 同构 gains+共享曲线，目标=相机内嵌
+  JPEG）；**默认链不动**（R23 中性纪律）。拟合（84 train / 36 holdout，4053 张语料
+  采样）：**留出集 A_med=4.33**（train 4.08 无过拟合；对比旧默认全链 4.60、
+  V0 中性 28.65），dL=-0.8 亚 JND，白点 p995 233.5（相机 248）。标定入包
+  `src/pixo/render/recipe_tone_curve.json`（pyproject package-data 同步）。
+- **两分参照集**（`.artifacts/_r24_two_tier_ref.py`，R23 §5.1 裁定落地）：Tier 1
+  引擎准度 = 中性链线性 vs libraw 线性（相机 WB/关自动亮度/gamma=1）；Tier 2
+  recipe 匹配 = 各影调变体 vs 相机 JPEG。F01 尺子参照不再混装两种责任。
+- **验收**：全量 **1691+ passed**（唯一余留 `test_llm_shadow` 为 R23 §7 在册既有
+  遗留，非本轮）；gate 金样本零漂移；新增/翻转测试 12 项全绿。
+- **详见**：`.artifacts/R24_profile_curve_compose.md`。
+
 ## 2026-09-10 — 第二十一轮：闭环插电（M0）—— SinglePhotoLoop 接入服务层
 
 - **闭环生产入口（F01）**：新增 `PixoServiceRuntime.run_auto_loop()` 与
