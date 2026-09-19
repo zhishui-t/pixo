@@ -1,0 +1,367 @@
+{
+ "raw_dir": "K:\\data\\photo\\0711\\raw",
+ "nef_total": 765,
+ "parse_failed": 0,
+ "iso_hist": [
+  [
+   100,
+   8
+  ],
+  [
+   110,
+   3
+  ],
+  [
+   125,
+   202
+  ],
+  [
+   140,
+   1
+  ],
+  [
+   160,
+   2
+  ],
+  [
+   180,
+   1
+  ],
+  [
+   200,
+   102
+  ],
+  [
+   220,
+   4
+  ],
+  [
+   250,
+   6
+  ],
+  [
+   280,
+   5
+  ],
+  [
+   320,
+   240
+  ],
+  [
+   360,
+   8
+  ],
+  [
+   400,
+   4
+  ],
+  [
+   450,
+   11
+  ],
+  [
+   500,
+   5
+  ],
+  [
+   560,
+   11
+  ],
+  [
+   640,
+   16
+  ],
+  [
+   800,
+   99
+  ],
+  [
+   1000,
+   1
+  ],
+  [
+   1600,
+   4
+  ],
+  [
+   3200,
+   12
+  ],
+  [
+   5000,
+   5
+  ],
+  [
+   6400,
+   11
+  ],
+  [
+   8000,
+   2
+  ],
+  [
+   12800,
+   2
+  ]
+ ],
+ "iso_ge_1600": 36,
+ "iso_ge_3200": 32,
+ "iso_ge_3200_files": [
+  {
+   "file": "DSC_5314.NEF",
+   "iso": 12800,
+   "shutter": "1/60",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5315.NEF",
+   "iso": 12800,
+   "shutter": "1/60",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5278.NEF",
+   "iso": 8000,
+   "shutter": "1/160",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5279.NEF",
+   "iso": 8000,
+   "shutter": "1/160",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5290.NEF",
+   "iso": 6400,
+   "shutter": "1/20",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5291.NEF",
+   "iso": 6400,
+   "shutter": "1/20",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5292.NEF",
+   "iso": 6400,
+   "shutter": "1/800",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5293.NEF",
+   "iso": 6400,
+   "shutter": "1/800",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5294.NEF",
+   "iso": 6400,
+   "shutter": "1/640",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5295.NEF",
+   "iso": 6400,
+   "shutter": "1/800",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5309.NEF",
+   "iso": 6400,
+   "shutter": "1/100",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5310.NEF",
+   "iso": 6400,
+   "shutter": "1/100",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5311.NEF",
+   "iso": 6400,
+   "shutter": "1/20",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5312.NEF",
+   "iso": 6400,
+   "shutter": "1/20",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5313.NEF",
+   "iso": 6400,
+   "shutter": "1/25",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5280.NEF",
+   "iso": 5000,
+   "shutter": "1/125",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5281.NEF",
+   "iso": 5000,
+   "shutter": "1/125",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5282.NEF",
+   "iso": 5000,
+   "shutter": "1/125",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5283.NEF",
+   "iso": 5000,
+   "shutter": "1/100",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5284.NEF",
+   "iso": 5000,
+   "shutter": "1/100",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5258.NEF",
+   "iso": 3200,
+   "shutter": "1/400",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5259.NEF",
+   "iso": 3200,
+   "shutter": "1/400",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5260.NEF",
+   "iso": 3200,
+   "shutter": "1/640",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5261.NEF",
+   "iso": 3200,
+   "shutter": "1/640",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5262.NEF",
+   "iso": 3200,
+   "shutter": "1/640",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5263.NEF",
+   "iso": 3200,
+   "shutter": "1/640",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5264.NEF",
+   "iso": 3200,
+   "shutter": "1/640",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5285.NEF",
+   "iso": 3200,
+   "shutter": "1/125",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5286.NEF",
+   "iso": 3200,
+   "shutter": "1/125",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5287.NEF",
+   "iso": 3200,
+   "shutter": "1/125",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5288.NEF",
+   "iso": 3200,
+   "shutter": "1/15",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  },
+  {
+   "file": "DSC_5289.NEF",
+   "iso": 3200,
+   "shutter": "1/15",
+   "fnumber": "14/5",
+   "program": "Aperture Priority",
+   "model": null
+  }
+ ]
+}

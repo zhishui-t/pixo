@@ -1,0 +1,403 @@
+{
+ "raw": "DSC_5314.NEF",
+ "raw2": "DSC_5278.NEF",
+ "bilateral": {
+  "d": 7,
+  "sigma_color": 0.06,
+  "sigma_space": 3.0
+ },
+ "guided": {
+  "r": 8,
+  "eps": 0.0025
+ },
+ "operators": [],
+ "tiers": {
+  "512": {
+   "shape": [
+    341,
+    512,
+    3
+   ],
+   "baseline": {
+    "laplacian_raw": 80.48,
+    "laplacian_denoised": 58.19,
+    "noise_ratio": 0.277,
+    "fft_high_ratio": 0.5291,
+    "detail_score": 58.19
+   },
+   "timing_ms": {
+    "bilateral": 9.89,
+    "guided": 15.51,
+    "gaussian_ref": 5.85
+   },
+   "variants": {
+    "bilateral|preserve=0.0": {
+     "laplacian_raw": 92.22,
+     "laplacian_denoised": 75.04,
+     "noise_ratio": 0.1863,
+     "fft_high_ratio": 0.5401,
+     "detail_score": 75.04,
+     "noise_ratio_drop_pct": 32.74,
+     "detail_score_drop_pct": -28.96
+    },
+    "bilateral|preserve=0.25": {
+     "laplacian_raw": 87.39,
+     "laplacian_denoised": 70.27,
+     "noise_ratio": 0.196,
+     "fft_high_ratio": 0.5357,
+     "detail_score": 70.27,
+     "noise_ratio_drop_pct": 29.24,
+     "detail_score_drop_pct": -20.76
+    },
+    "bilateral|preserve=0.5": {
+     "laplacian_raw": 83.64,
+     "laplacian_denoised": 65.89,
+     "noise_ratio": 0.2122,
+     "fft_high_ratio": 0.5322,
+     "detail_score": 65.89,
+     "noise_ratio_drop_pct": 23.39,
+     "detail_score_drop_pct": -13.23
+    },
+    "guided|preserve=0.0": {
+     "laplacian_raw": 65.83,
+     "laplacian_denoised": 50.89,
+     "noise_ratio": 0.2269,
+     "fft_high_ratio": 0.5168,
+     "detail_score": 50.89,
+     "noise_ratio_drop_pct": 18.09,
+     "detail_score_drop_pct": 12.55
+    },
+    "guided|preserve=0.25": {
+     "laplacian_raw": 68.57,
+     "laplacian_denoised": 52.35,
+     "noise_ratio": 0.2365,
+     "fft_high_ratio": 0.5193,
+     "detail_score": 52.35,
+     "noise_ratio_drop_pct": 14.62,
+     "detail_score_drop_pct": 10.04
+    },
+    "guided|preserve=0.5": {
+     "laplacian_raw": 72.12,
+     "laplacian_denoised": 54.16,
+     "noise_ratio": 0.2491,
+     "fft_high_ratio": 0.5224,
+     "detail_score": 54.16,
+     "noise_ratio_drop_pct": 10.07,
+     "detail_score_drop_pct": 6.93
+    },
+    "gaussian_ref|preserve=0.0": {
+     "laplacian_raw": 6.18,
+     "laplacian_denoised": 5.39,
+     "noise_ratio": 0.1275,
+     "fft_high_ratio": 0.3011,
+     "detail_score": 5.39,
+     "noise_ratio_drop_pct": 53.97,
+     "detail_score_drop_pct": 90.74
+    },
+    "gaussian_ref|preserve=0.25": {
+     "laplacian_raw": 12.12,
+     "laplacian_denoised": 10.28,
+     "noise_ratio": 0.1522,
+     "fft_high_ratio": 0.3647,
+     "detail_score": 10.28,
+     "noise_ratio_drop_pct": 45.05,
+     "detail_score_drop_pct": 82.33
+    },
+    "gaussian_ref|preserve=0.5": {
+     "laplacian_raw": 26.51,
+     "laplacian_denoised": 20.89,
+     "noise_ratio": 0.212,
+     "fft_high_ratio": 0.4317,
+     "detail_score": 20.89,
+     "noise_ratio_drop_pct": 23.47,
+     "detail_score_drop_pct": 64.1
+    }
+   }
+  },
+  "1024": {
+   "shape": [
+    682,
+    1024,
+    3
+   ],
+   "baseline": {
+    "laplacian_raw": 38.32,
+    "laplacian_denoised": 18.47,
+    "noise_ratio": 0.5181,
+    "fft_high_ratio": 0.6415,
+    "detail_score": 18.47
+   },
+   "timing_ms": {
+    "bilateral": 22.9,
+    "guided": 56.27,
+    "gaussian_ref": 20.42
+   },
+   "variants": {
+    "bilateral|preserve=0.0": {
+     "laplacian_raw": 27.64,
+     "laplacian_denoised": 22.58,
+     "noise_ratio": 0.1829,
+     "fft_high_ratio": 0.6284,
+     "detail_score": 22.58,
+     "noise_ratio_drop_pct": 64.7,
+     "detail_score_drop_pct": -22.25
+    },
+    "bilateral|preserve=0.25": {
+     "laplacian_raw": 27.28,
+     "laplacian_denoised": 21.36,
+     "noise_ratio": 0.2172,
+     "fft_high_ratio": 0.6273,
+     "detail_score": 21.36,
+     "noise_ratio_drop_pct": 58.08,
+     "detail_score_drop_pct": -15.65
+    },
+    "bilateral|preserve=0.5": {
+     "laplacian_raw": 29.0,
+     "laplacian_denoised": 20.28,
+     "noise_ratio": 0.3008,
+     "fft_high_ratio": 0.6297,
+     "detail_score": 20.28,
+     "noise_ratio_drop_pct": 41.94,
+     "detail_score_drop_pct": -9.8
+    },
+    "guided|preserve=0.0": {
+     "laplacian_raw": 21.35,
+     "laplacian_denoised": 16.23,
+     "noise_ratio": 0.2401,
+     "fft_high_ratio": 0.6124,
+     "detail_score": 16.23,
+     "noise_ratio_drop_pct": 53.66,
+     "detail_score_drop_pct": 12.13
+    },
+    "guided|preserve=0.25": {
+     "laplacian_raw": 23.28,
+     "laplacian_denoised": 16.7,
+     "noise_ratio": 0.2827,
+     "fft_high_ratio": 0.6168,
+     "detail_score": 16.7,
+     "noise_ratio_drop_pct": 45.44,
+     "detail_score_drop_pct": 9.58
+    },
+    "guided|preserve=0.5": {
+     "laplacian_raw": 26.93,
+     "laplacian_denoised": 17.21,
+     "noise_ratio": 0.3608,
+     "fft_high_ratio": 0.6239,
+     "detail_score": 17.21,
+     "noise_ratio_drop_pct": 30.36,
+     "detail_score_drop_pct": 6.82
+    },
+    "gaussian_ref|preserve=0.0": {
+     "laplacian_raw": 5.15,
+     "laplacian_denoised": 3.02,
+     "noise_ratio": 0.4143,
+     "fft_high_ratio": 0.4717,
+     "detail_score": 3.02,
+     "noise_ratio_drop_pct": 20.03,
+     "detail_score_drop_pct": 83.65
+    },
+    "gaussian_ref|preserve=0.25": {
+     "laplacian_raw": 7.58,
+     "laplacian_denoised": 4.38,
+     "noise_ratio": 0.4217,
+     "fft_high_ratio": 0.5134,
+     "detail_score": 4.38,
+     "noise_ratio_drop_pct": 18.61,
+     "detail_score_drop_pct": 76.29
+    },
+    "gaussian_ref|preserve=0.5": {
+     "laplacian_raw": 14.01,
+     "laplacian_denoised": 7.4,
+     "noise_ratio": 0.4716,
+     "fft_high_ratio": 0.5625,
+     "detail_score": 7.4,
+     "noise_ratio_drop_pct": 8.98,
+     "detail_score_drop_pct": 59.94
+    }
+   }
+  },
+  "full": {
+   "shape": [
+    4040,
+    6064,
+    3
+   ],
+   "baseline": {
+    "laplacian_raw": 216.96,
+    "laplacian_denoised": 6.5,
+    "noise_ratio": 0.97,
+    "fft_high_ratio": 0.9374,
+    "detail_score": 6.5
+   },
+   "timing_ms": {
+    "bilateral": 774.47,
+    "guided": 2328.36,
+    "gaussian_ref": 529.47
+   },
+   "variants": {
+    "bilateral|preserve=0.0": {
+     "laplacian_raw": 8.41,
+     "laplacian_denoised": 2.18,
+     "noise_ratio": 0.741,
+     "fft_high_ratio": 0.8295,
+     "detail_score": 2.18,
+     "noise_ratio_drop_pct": 23.61,
+     "detail_score_drop_pct": 66.46
+    },
+    "bilateral|preserve=0.25": {
+     "laplacian_raw": 28.3,
+     "laplacian_denoised": 2.67,
+     "noise_ratio": 0.9058,
+     "fft_high_ratio": 0.8743,
+     "detail_score": 2.67,
+     "noise_ratio_drop_pct": 6.62,
+     "detail_score_drop_pct": 58.92
+    },
+    "bilateral|preserve=0.5": {
+     "laplacian_raw": 69.93,
+     "laplacian_denoised": 3.53,
+     "noise_ratio": 0.9495,
+     "fft_high_ratio": 0.9052,
+     "detail_score": 3.53,
+     "noise_ratio_drop_pct": 2.11,
+     "detail_score_drop_pct": 45.69
+    },
+    "guided|preserve=0.0": {
+     "laplacian_raw": 10.65,
+     "laplacian_denoised": 1.58,
+     "noise_ratio": 0.8515,
+     "fft_high_ratio": 0.8279,
+     "detail_score": 1.58,
+     "noise_ratio_drop_pct": 12.22,
+     "detail_score_drop_pct": 75.69
+    },
+    "guided|preserve=0.25": {
+     "laplacian_raw": 32.91,
+     "laplacian_denoised": 2.32,
+     "noise_ratio": 0.9295,
+     "fft_high_ratio": 0.8746,
+     "detail_score": 2.32,
+     "noise_ratio_drop_pct": 4.18,
+     "detail_score_drop_pct": 64.31
+    },
+    "guided|preserve=0.5": {
+     "laplacian_raw": 75.0,
+     "laplacian_denoised": 3.35,
+     "noise_ratio": 0.9553,
+     "fft_high_ratio": 0.9053,
+     "detail_score": 3.35,
+     "noise_ratio_drop_pct": 1.52,
+     "detail_score_drop_pct": 48.46
+    },
+    "gaussian_ref|preserve=0.0": {
+     "laplacian_raw": 4.14,
+     "laplacian_denoised": 1.31,
+     "noise_ratio": 0.6824,
+     "fft_high_ratio": 0.79,
+     "detail_score": 1.31,
+     "noise_ratio_drop_pct": 29.65,
+     "detail_score_drop_pct": 79.85
+    },
+    "gaussian_ref|preserve=0.25": {
+     "laplacian_raw": 17.91,
+     "laplacian_denoised": 1.88,
+     "noise_ratio": 0.8952,
+     "fft_high_ratio": 0.8535,
+     "detail_score": 1.88,
+     "noise_ratio_drop_pct": 7.71,
+     "detail_score_drop_pct": 71.08
+    },
+    "gaussian_ref|preserve=0.5": {
+     "laplacian_raw": 58.21,
+     "laplacian_denoised": 2.93,
+     "noise_ratio": 0.9498,
+     "fft_high_ratio": 0.8979,
+     "detail_score": 2.93,
+     "noise_ratio_drop_pct": 2.08,
+     "detail_score_drop_pct": 54.92
+    }
+   }
+  }
+ },
+ "decode_full_ms": 3052.0,
+ "full_shape": [
+  4040,
+  6064,
+  3
+ ],
+ "second_image_1024": {
+  "shape": [
+   682,
+   1024,
+   3
+  ],
+  "baseline": {
+   "laplacian_raw": 52.96,
+   "laplacian_denoised": 29.74,
+   "noise_ratio": 0.4384,
+   "fft_high_ratio": 0.7185,
+   "detail_score": 29.74
+  },
+  "timing_ms": {
+   "bilateral": 27.81,
+   "guided": 55.54,
+   "gaussian_ref": 16.49
+  },
+  "variants": {
+   "bilateral|preserve=0.0": {
+    "laplacian_raw": 51.37,
+    "laplacian_denoised": 38.56,
+    "noise_ratio": 0.2495,
+    "fft_high_ratio": 0.7151,
+    "detail_score": 38.56,
+    "noise_ratio_drop_pct": 43.09,
+    "detail_score_drop_pct": -29.66
+   },
+   "bilateral|preserve=0.25": {
+    "laplacian_raw": 49.42,
+    "laplacian_denoised": 36.01,
+    "noise_ratio": 0.2714,
+    "fft_high_ratio": 0.7136,
+    "detail_score": 36.01,
+    "noise_ratio_drop_pct": 38.09,
+    "detail_score_drop_pct": -21.08
+   },
+   "guided|preserve=0.0": {
+    "laplacian_raw": 37.32,
+    "laplacian_denoised": 25.36,
+    "noise_ratio": 0.3205,
+    "fft_high_ratio": 0.6976,
+    "detail_score": 25.36,
+    "noise_ratio_drop_pct": 26.89,
+    "detail_score_drop_pct": 14.73
+   },
+   "guided|preserve=0.25": {
+    "laplacian_raw": 39.66,
+    "laplacian_denoised": 26.23,
+    "noise_ratio": 0.3385,
+    "fft_high_ratio": 0.7013,
+    "detail_score": 26.23,
+    "noise_ratio_drop_pct": 22.79,
+    "detail_score_drop_pct": 11.8
+   },
+   "gaussian_ref|preserve=0.0": {
+    "laplacian_raw": 4.54,
+    "laplacian_denoised": 2.87,
+    "noise_ratio": 0.3672,
+    "fft_high_ratio": 0.5129,
+    "detail_score": 2.87,
+    "noise_ratio_drop_pct": 16.24,
+    "detail_score_drop_pct": 90.35
+   },
+   "gaussian_ref|preserve=0.25": {
+    "laplacian_raw": 8.0,
+    "laplacian_denoised": 5.23,
+    "noise_ratio": 0.3468,
+    "fft_high_ratio": 0.5719,
+    "detail_score": 5.23,
+    "noise_ratio_drop_pct": 20.89,
+    "detail_score_drop_pct": 82.41
+   }
+  }
+ }
+}

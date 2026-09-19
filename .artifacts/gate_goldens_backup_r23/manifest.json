@@ -1,0 +1,212 @@
+{
+  "schema": "render-gate-synth-v1",
+  "features": {
+    "exposure": {
+      "file": "exposure.npy",
+      "shape": [
+        256,
+        1,
+        1
+      ],
+      "dtype": "float32",
+      "sha256": "d303f0b567e1294c5e153275c4f8f906844cfe1e66e74439ec728d36d095f66e"
+    },
+    "whitebalance": {
+      "file": "whitebalance.npy",
+      "shape": [
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "d0911aa65566c35978c8851adde76a19a892b496c77ae8ca1883e2b22bc78d1c"
+    },
+    "curves": {
+      "file": "curves.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "84befa2f48c9ccb7d81194512af9955358ac4d97079bce6660f0bacc0447eb88"
+    },
+    "huesat": {
+      "file": "huesat.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "1c76b1ae974d4d92a3e511b1cfede05fc4ffab9dca70684f69bc58e74c5c4e7b"
+    },
+    "clarity": {
+      "file": "clarity.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "7c2069b4e6626c1a05908f8374a1a6f0d13b50f251515aaa0475340030012c68"
+    },
+    "colorcal": {
+      "file": "colorcal.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "b693944e27170886577bace72d42420a361ebbbf6cee03703d9b82a43f9cbea1"
+    },
+    "calibration": {
+      "file": "calibration.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "4fc570363bddf0a5ce47de51b49b9d41236757781ae9c7cab800e644a08b28ce"
+    },
+    "hsl": {
+      "file": "hsl.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "80ec082da1316017b7c2738c389b4c1cd069d6d716d70a472804f5839290b187"
+    },
+    "hsl_oklch": {
+      "file": "hsl_oklch.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "0d3e12d06c8530f93420eb3acf46b4bf7da4f30ac76e7424ee0bfe55064fa9a4"
+    },
+    "split_tone": {
+      "file": "split_tone.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "3fb18d447bb66bcebc0224c626f89341a78cf4b2a2d586d108cd5d4e6bd390d8"
+    },
+    "split_tone_oklab": {
+      "file": "split_tone_oklab.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "a43bf001826282852b0e4e4115f553d9820dfcda301fc6674e7ef655644be9dd"
+    },
+    "skin": {
+      "file": "skin.npy",
+      "shape": [
+        64,
+        64
+      ],
+      "dtype": "float32",
+      "sha256": "3899bdffe42461a6928e923bc331e293076c28a2cfb5ab343ea78c887730f1d9"
+    },
+    "skin_oklch": {
+      "file": "skin_oklch.npy",
+      "shape": [
+        64,
+        64
+      ],
+      "dtype": "float32",
+      "sha256": "3899bdffe42461a6928e923bc331e293076c28a2cfb5ab343ea78c887730f1d9"
+    },
+    "skin_oklch_softband": {
+      "file": "skin_oklch_softband.npy",
+      "shape": [
+        64,
+        64
+      ],
+      "dtype": "float32",
+      "sha256": "3ced8201bc6fdf69585bfe4d8c4221b84a401425b17c49a2d1a9b87a59cd9f89"
+    },
+    "stylize": {
+      "file": "stylize.npy",
+      "shape": [
+        8,
+        8,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "a7791b5e1a1bc933835cb850bc65d304b23650495917c93505b86db36322f641"
+    },
+    "refine": {
+      "file": "refine.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "e2f5aa6eb36b8ae348a44cb4ba2d36066446393a9b312ab52e5351c253ec6826"
+    },
+    "exposure_cal_auto": {
+      "file": "exposure_cal_auto.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "afefa19fc85b4ccec783f88fdc71a1cf75c920b8216579f37460f26ec5e5f344"
+    },
+    "warmth_cal_auto": {
+      "file": "warmth_cal_auto.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "5a95845cf64cca536cb6d2591d48b6e0e21144d557abcdb82fa0086c07bf4039"
+    },
+    "default_dispatch": {
+      "file": "default_dispatch.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "b24870a246e436600f747b02358e813144a248ae469e282b8b5deb3a237ea2c1"
+    },
+    "card_portra_400": {
+      "file": "card_portra_400.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "31020c06e5ca41ff53e8808c6564f03ac2da6774ca897a3197150d96b3f9ee8c"
+    },
+    "region_adjust": {
+      "file": "region_adjust.npy",
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "dtype": "float32",
+      "sha256": "dd5106011acc168ec8e56d7d5bb829fd83bdf12af0a70b55db898979f83d7f40"
+    }
+  },
+  "generator": "tests/regression/goldens/generate_gate_goldens.py",
+  "reviewer": "t38 tester-1 (2026-09-04 标定敏感 case 批次: +exposure_cal_auto/+warmth_cal_auto, 关闭 t36 §5 门禁缺口——gate 金样本对四个标定表零敏感; 两 case 分别触达正式曝光表 [ExposureStage._auto_ev 完整链: med 探针→med 主键+wb_B 邻域二次插值] 与正式 warmth 分桶曲线 [_load_warm_cal→apply_warmth 曲线分支], 换表敏感性实证: calib_prev 旧表 vs 现行新表输出 hash 均不同 [exposure 同进程须清 _cached_table 后再验, 生成器独立进程无此问题]; 前置 15 case 重算零漂移 [旧 .npy 字节不变]; manifest 数量守卫 15→17 同步; rp_ccm 运行时未接线 [src 零调用点], 无从触达, 接线后补 case —— 见 .artifacts/gate_calibration_coverage.md) | F10 批次(2026-09-07): default_dispatch v1(fb733245)->v2 oklch 缺省快照, 队长单点重生成, card_portra_400/region_adjust 及其余 18 条零漂移(F07 卡级钉域 A1 兑现) | R10 批次(2026-09-07): 第二批切换(skin+colorcal 缺省翻 oklch)——default_dispatch v3 + region_adjust 基线随缺省链重生成(队长单点); film_pro_400h 补 skin 钉域保持逐位 | R12 批次(2026-09-07): +skin_oklch_softband 软边带探针(qa .r10b_ok 观察窗清偿——R10 重拟合改半轴+软带, skin/skin_oklch 饱和肤色 case 输出零变化盲区; 探针沿固定色相双射线扫 C, 过渡带 16 行掩码梯度可观测; 既有 20 feature 重算零漂移), 初代基线 dev-1 生成; qa 复核通过(r12 收口门禁, 2026-09-07): 软带敏感性独立实证 [SKIN_OKLAB_SOFT_BAND 0.31→0.25 显式传参路径探针掩码 1024px 变化, R10 原盲区确认关闭] + 21 features --check 零漂 + skin_oklch_softband.npy sha256 与 manifest 一致 | R20 批次(2026-09-08): warmth 日光段扩域(移除域外垫片系统性过暖)——default_dispatch/card_portra_400 随域重生成(队长单点); region_adjust 随垫片端点变化同批重生成(域外桩 0.96 外推语义变化, 预期连带); 域内插值逐位不变(2001点证明)"
+}

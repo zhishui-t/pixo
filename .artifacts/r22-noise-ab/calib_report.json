@@ -1,0 +1,167 @@
+{
+ "config": {
+  "design": "design-r22 §2.2/§4/§7 A16（解耦三轴）",
+  "tier": "导出全幅 rawpy postprocess 全分辨率",
+  "decode": "rawpy postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8, gamma=(2.222,4.5))",
+  "luma": "Rec709 [0.2126,0.7152,0.0722] @ (u8/255)",
+  "grad": "Sobel ksize=3 on luma01 -> hypot(gx,gy)",
+  "region_q": {
+   "low_pct": 30.0,
+   "high_pct": 70.0,
+   "fixed_by": "未去噪参考"
+  },
+  "morph": "MORPH_OPEN ones(3,3) iter=1 (仅平坦区)",
+  "lap": "cv2.Laplacian(luma01, CV_32F, ksize=3)",
+  "noise_axis": "median(|L_flat - median(L_flat)|)/1.4826  ↓>=30%",
+  "detail_axis": "median(|L_tex - median(L_tex)|)  ↓<=10%",
+  "fidelity_axis": "median CIEDE2000(Lab(ref), Lab(out)) <= +0.5 JND (=1.15 dE00)",
+  "de_stride_screening": 4,
+  "de_full_pixel_for_frontier": true,
+  "bilateral": {
+   "d": 7,
+   "sigma_space": 3.0,
+   "sigma_color_set": [
+    0.02,
+    0.04
+   ],
+   "strength_map": "sigma_color = 0.24*luminance_strength (临时映射；spike 选定 σc=0.06 ⇒ strength=0.25)"
+  },
+  "guided": {
+   "r": 8,
+   "eps_set": [
+    0.001
+   ]
+  },
+  "detail_preserve_set": [
+   0.0
+  ],
+  "jnd_delta_e": 2.3
+ },
+ "samples": [
+  {
+   "file": "DSC_5314.NEF",
+   "iso": 12800,
+   "how": "saved",
+   "shape": [
+    4040,
+    6064,
+    3
+   ],
+   "decode_saved_ms": null,
+   "decode_vs_saved_maxdiff": 0,
+   "region": {
+    "flat_px": 1741657,
+    "tex_px": 7349570,
+    "p30": 0.05062725059688092,
+    "p70": 0.10581228882074356
+   },
+   "baseline": {
+    "sigma_noise": 0.023006753156530252,
+    "detail_tex": 0.11762013286352158
+   },
+   "rows": [
+    {
+     "op": "bilateral",
+     "params": {
+      "sigma_color": 0.02
+     },
+     "strength": 0.083,
+     "detail_preserve": 0.0,
+     "op_ms": 914.4,
+     "sigma_noise": 0.003002,
+     "detail_tex": 0.061232,
+     "noise_drop_pct": 86.95,
+     "detail_drop_pct": 47.94,
+     "de_median_stride": 0.3336,
+     "axis1_noise_ok": true,
+     "axis2_detail_ok": false,
+     "axis3_de_ok": true,
+     "all3_ok": false
+    },
+    {
+     "op": "bilateral",
+     "params": {
+      "sigma_color": 0.04
+     },
+     "strength": 0.167,
+     "detail_preserve": 0.0,
+     "op_ms": 1164.3,
+     "sigma_noise": 0.002385,
+     "detail_tex": 0.023803,
+     "noise_drop_pct": 89.63,
+     "detail_drop_pct": 79.76,
+     "de_median_stride": 0.4816,
+     "axis1_noise_ok": true,
+     "axis2_detail_ok": false,
+     "axis3_de_ok": true,
+     "all3_ok": false
+    },
+    {
+     "op": "guided",
+     "params": {
+      "eps": 0.001
+     },
+     "strength": null,
+     "detail_preserve": 0.0,
+     "op_ms": 5162.8,
+     "sigma_noise": 0.00143,
+     "detail_tex": 0.03179,
+     "noise_drop_pct": 93.78,
+     "detail_drop_pct": 72.97,
+     "de_median_stride": 0.4588,
+     "axis1_noise_ok": true,
+     "axis2_detail_ok": false,
+     "axis3_de_ok": true,
+     "all3_ok": false,
+     "de_median_full": 0.4556
+    }
+   ],
+   "frontier_full_de": [
+    {
+     "op": "guided",
+     "params": {
+      "eps": 0.001
+     },
+     "detail_preserve": 0.0,
+     "noise_drop_pct": 93.78,
+     "detail_drop_pct": 72.97,
+     "de_median_full": 0.4556
+    }
+   ]
+  }
+ ],
+ "aggregate": [
+  {
+   "combo": "bilateral|{\"sigma_color\": 0.02}|p=0.0",
+   "n": 1,
+   "noise_drop_median": 86.95,
+   "detail_drop_median": 47.94,
+   "de_median_stride_median": 0.3336,
+   "n_all3_ok": 0,
+   "n_axis2_ok": 0,
+   "max_noise_drop_within_detail10_median": null
+  },
+  {
+   "combo": "bilateral|{\"sigma_color\": 0.04}|p=0.0",
+   "n": 1,
+   "noise_drop_median": 89.63,
+   "detail_drop_median": 79.76,
+   "de_median_stride_median": 0.4816,
+   "n_all3_ok": 0,
+   "n_axis2_ok": 0,
+   "max_noise_drop_within_detail10_median": null
+  },
+  {
+   "combo": "guided|{\"eps\": 0.001}|p=0.0",
+   "n": 1,
+   "noise_drop_median": 93.78,
+   "detail_drop_median": 72.97,
+   "de_median_stride_median": 0.4588,
+   "n_all3_ok": 0,
+   "n_axis2_ok": 0,
+   "max_noise_drop_within_detail10_median": null
+  }
+ ],
+ "any_all3_ok": false,
+ "frontier_max_noise_at_detail_le10": null
+}

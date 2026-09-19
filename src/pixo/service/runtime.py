@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -347,6 +348,36 @@ def _auto_loop_task_ttl_s() -> float:
         return _AUTO_LOOP_TTL_DEFAULT
 
 
+# R30 B2 默认打开观感文件（北极星: 打开照片≈LR; 数据注入, 引擎默认不动）
+_DEFAULT_LOOK_FILE = Path(__file__).resolve().parents[3] / "configs" / "styles" / "default_look.json"
+_DEFAULT_LOOK_ENV = "PIXO_DEFAULT_LOOK"
+_default_look_cache: dict | None = None
+
+
+def _load_default_look() -> dict:
+    """默认打开观感 params（进程内缓存; env=off 回 {}; 文件缺失回 {} + warning）。
+
+    只在会话工厂消费（打开照片的初始 params）; auto-loop 自建闭环不受影响。
+    """
+    global _default_look_cache
+    if _default_look_cache is not None:
+        return dict(_default_look_cache)
+    raw = os.environ.get(_DEFAULT_LOOK_ENV, "").strip()
+    if raw.lower() in ("off", "0", "false", "no"):
+        _default_look_cache = {}
+        return {}
+    path = Path(raw) if raw else _DEFAULT_LOOK_FILE
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        params = doc.get("params") if isinstance(doc, dict) else None
+        _default_look_cache = dict(params) if isinstance(params, dict) else {}
+    except Exception as exc:  # noqa: BLE001 - 观感缺失不阻断打开照片
+        _LOGGER.warning("[pixo.runtime] 默认观感加载失败(回中性): %s (%s)",
+                        path, exc)
+        _default_look_cache = {}
+    return dict(_default_look_cache)
+
+
 # R26 tech_debt #20：状态机转移类事件（重放判定用，machine._auto_event_type 全集）
 _AUTO_LOOP_TRANSITION_EVENTS = frozenset({
     "STATE_CHANGE", "AGENT_ESCALATED", "FINAL_QC_ACCEPT",
@@ -473,8 +504,17 @@ class PixoServiceRuntime:
         photo: PhotoRecord,
         session_id: str,
     ) -> RawPreviewSession:
-        """创建真实 RawPreviewSession（服务层：开启 strict 参数栅栏）。"""
-        return RawPreviewSession(photo.path, self.profile, session_id=session_id,
+        """创建真实 RawPreviewSession（服务层：开启 strict 参数栅栏）。
+
+        R30 B2 默认打开观感：新会话初始 params 注入 default_look.json
+        （北极星"打开照片≈LR"；数据注入, 引擎各 Stage 默认值不动）。
+        用户 patch 经既有 _deep_merge 深合并覆盖（改任一键/关闭任一 stage）。
+        env PIXO_DEFAULT_LOOK：'off' 回中性（R23 行为）；非空路径覆盖文件；
+        文件缺失/非法回中性 + warning（不阻断打开照片）。
+        """
+        return RawPreviewSession(photo.path, self.profile,
+                                 params=_load_default_look(),
+                                 session_id=session_id,
                                  validate_params=True)
 
     # ---- 导入 / 照片 ----

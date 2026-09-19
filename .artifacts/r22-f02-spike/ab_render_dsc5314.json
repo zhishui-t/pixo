@@ -1,0 +1,211 @@
+{
+ "tag": "dsc5314",
+ "nef": "K:\\data\\photo\\0711\\raw\\DSC_5314.NEF",
+ "render_s": 65.7,
+ "shape": [
+  4040,
+  6064,
+  3
+ ],
+ "baseline": {
+  "laplacian_raw": 6483.87,
+  "laplacian_denoised": 179.33,
+  "noise_ratio": 0.9723,
+  "fft_high_ratio": 0.9831,
+  "detail_score": 179.33
+ },
+ "variants": [
+  {
+   "op": "bilateral d=7 sc=0.10 ss=4",
+   "preserve": 0.0,
+   "time_ms": 873.0,
+   "laplacian_raw": 3020.65,
+   "laplacian_denoised": 95.08,
+   "noise_ratio": 0.9685,
+   "fft_high_ratio": 0.9762,
+   "detail_score": 95.08,
+   "noise_drop_pct": 0.39,
+   "detail_drop_pct": 46.98
+  },
+  {
+   "op": "bilateral d=7 sc=0.10 ss=4",
+   "preserve": 0.25,
+   "time_ms": 873.0,
+   "laplacian_raw": 3713.4,
+   "laplacian_denoised": 112.0,
+   "noise_ratio": 0.9698,
+   "fft_high_ratio": 0.9783,
+   "detail_score": 112.0,
+   "noise_drop_pct": 0.26,
+   "detail_drop_pct": 37.55
+  },
+  {
+   "op": "bilateral d=7 sc=0.10 ss=4",
+   "preserve": 0.5,
+   "time_ms": 873.0,
+   "laplacian_raw": 4521.56,
+   "laplacian_denoised": 131.62,
+   "noise_ratio": 0.9709,
+   "fft_high_ratio": 0.9802,
+   "detail_score": 131.62,
+   "noise_drop_pct": 0.14,
+   "detail_drop_pct": 26.6
+  },
+  {
+   "op": "bilateral d=7 sc=0.10 ss=4",
+   "preserve": 0.75,
+   "time_ms": 873.0,
+   "laplacian_raw": 5445.1,
+   "laplacian_denoised": 153.99,
+   "noise_ratio": 0.9717,
+   "fft_high_ratio": 0.9817,
+   "detail_score": 153.99,
+   "noise_drop_pct": 0.06,
+   "detail_drop_pct": 14.13
+  },
+  {
+   "op": "bilateral d=9 sc=0.16 ss=6",
+   "preserve": 0.0,
+   "time_ms": 1774.0,
+   "laplacian_raw": 1247.43,
+   "laplacian_denoised": 40.24,
+   "noise_ratio": 0.9677,
+   "fft_high_ratio": 0.9641,
+   "detail_score": 40.24,
+   "noise_drop_pct": 0.47,
+   "detail_drop_pct": 77.56
+  },
+  {
+   "op": "bilateral d=9 sc=0.16 ss=6",
+   "preserve": 0.25,
+   "time_ms": 1774.0,
+   "laplacian_raw": 2134.45,
+   "laplacian_denoised": 64.53,
+   "noise_ratio": 0.9698,
+   "fft_high_ratio": 0.9718,
+   "detail_score": 64.53,
+   "noise_drop_pct": 0.26,
+   "detail_drop_pct": 64.02
+  },
+  {
+   "op": "bilateral d=9 sc=0.16 ss=6",
+   "preserve": 0.5,
+   "time_ms": 1774.0,
+   "laplacian_raw": 3302.89,
+   "laplacian_denoised": 95.75,
+   "noise_ratio": 0.971,
+   "fft_high_ratio": 0.9769,
+   "detail_score": 95.75,
+   "noise_drop_pct": 0.13,
+   "detail_drop_pct": 46.61
+  },
+  {
+   "op": "bilateral d=9 sc=0.16 ss=6",
+   "preserve": 0.75,
+   "time_ms": 1774.0,
+   "laplacian_raw": 4752.78,
+   "laplacian_denoised": 133.97,
+   "noise_ratio": 0.9718,
+   "fft_high_ratio": 0.9805,
+   "detail_score": 133.97,
+   "noise_drop_pct": 0.05,
+   "detail_drop_pct": 25.29
+  },
+  {
+   "op": "guided r=16 eps=0.04",
+   "preserve": 0.0,
+   "time_ms": 2193.0,
+   "laplacian_raw": 679.97,
+   "laplacian_denoised": 20.25,
+   "noise_ratio": 0.9702,
+   "fft_high_ratio": 0.9511,
+   "detail_score": 20.25,
+   "noise_drop_pct": 0.22,
+   "detail_drop_pct": 88.71
+  },
+  {
+   "op": "guided r=16 eps=0.04",
+   "preserve": 0.25,
+   "time_ms": 2193.0,
+   "laplacian_raw": 1555.6,
+   "laplacian_denoised": 43.98,
+   "noise_ratio": 0.9717,
+   "fft_high_ratio": 0.9668,
+   "detail_score": 43.98,
+   "noise_drop_pct": 0.06,
+   "detail_drop_pct": 75.48
+  },
+  {
+   "op": "guided r=16 eps=0.04",
+   "preserve": 0.5,
+   "time_ms": 2193.0,
+   "laplacian_raw": 2814.86,
+   "laplacian_denoised": 78.35,
+   "noise_ratio": 0.9722,
+   "fft_high_ratio": 0.9749,
+   "detail_score": 78.35,
+   "noise_drop_pct": 0.01,
+   "detail_drop_pct": 56.31
+  },
+  {
+   "op": "guided r=16 eps=0.04",
+   "preserve": 0.75,
+   "time_ms": 2193.0,
+   "laplacian_raw": 4457.68,
+   "laplacian_denoised": 123.45,
+   "noise_ratio": 0.9723,
+   "fft_high_ratio": 0.9798,
+   "detail_score": 123.45,
+   "noise_drop_pct": 0.0,
+   "detail_drop_pct": 31.16
+  },
+  {
+   "op": "gaussian sigma=2 (仅对照)",
+   "preserve": 0.0,
+   "time_ms": 105.2,
+   "laplacian_raw": 65.11,
+   "laplacian_denoised": 7.27,
+   "noise_ratio": 0.8883,
+   "fft_high_ratio": 0.9001,
+   "detail_score": 7.27,
+   "noise_drop_pct": 8.64,
+   "detail_drop_pct": 95.95
+  },
+  {
+   "op": "gaussian sigma=2 (仅对照)",
+   "preserve": 0.25,
+   "time_ms": 105.2,
+   "laplacian_raw": 589.82,
+   "laplacian_denoised": 24.07,
+   "noise_ratio": 0.9592,
+   "fft_high_ratio": 0.9527,
+   "detail_score": 24.07,
+   "noise_drop_pct": 1.35,
+   "detail_drop_pct": 86.58
+  },
+  {
+   "op": "gaussian sigma=2 (仅对照)",
+   "preserve": 0.5,
+   "time_ms": 105.2,
+   "laplacian_raw": 1834.43,
+   "laplacian_denoised": 58.55,
+   "noise_ratio": 0.9681,
+   "fft_high_ratio": 0.9704,
+   "detail_score": 58.55,
+   "noise_drop_pct": 0.43,
+   "detail_drop_pct": 67.35
+  },
+  {
+   "op": "gaussian sigma=2 (仅对照)",
+   "preserve": 0.75,
+   "time_ms": 105.2,
+   "laplacian_raw": 3799.19,
+   "laplacian_denoised": 110.24,
+   "noise_ratio": 0.971,
+   "fft_high_ratio": 0.9785,
+   "detail_score": 110.24,
+   "noise_drop_pct": 0.13,
+   "detail_drop_pct": 38.53
+  }
+ ]
+}

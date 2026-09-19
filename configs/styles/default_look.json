@@ -1,0 +1,29 @@
+{
+  "_note": "R30 默认打开观感 (北极星: 打开照片≈LR)。来源=lr_adobe_standard_baseline 卡 (2026-08 LR 标定 + R29 暖度域清偿 + R24 复合语义修复后的锚点验证形态); env PIXO_DEFAULT_LOOK=off 可回中性 (R23 行为)。",
+  "params": {
+    "exposure": {
+      "mode": "baseline",
+      "vignette": 0.18
+    },
+    "whitebalance": {
+      "mode": "as_shot"
+    },
+    "huesat": {
+      "enabled": false
+    },
+    "tone": {
+      "profile_curve": true,
+      "eotf": "srgb",
+      "brightness": 0.0
+    },
+    "colorcal": {
+      "neutral_mode": "off",
+      "saturation": -0.06,
+      "skin_protect": 0.0
+    },
+    "refine": {
+      "enabled": true,
+      "highlight_desat": 0.25
+    }
+  }
+}

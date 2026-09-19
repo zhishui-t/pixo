@@ -1,0 +1,371 @@
+{
+ "baseline": {
+  "laplacian_raw": 216.96,
+  "laplacian_denoised": 6.5,
+  "noise_ratio": 0.97,
+  "fft_high_ratio": 0.9374,
+  "detail_score": 6.5
+ },
+ "rows": [
+  {
+   "op": "bilateral d=5 sc=0.08 ss=3.0",
+   "preserve": 0.0,
+   "time_ms": 131.7,
+   "noise_ratio": 0.7257,
+   "noise_drop_pct": 25.19,
+   "detail_score": 2.44,
+   "detail_drop_pct": 62.46,
+   "fft_high_ratio": 0.8442
+  },
+  {
+   "op": "bilateral d=5 sc=0.08 ss=3.0",
+   "preserve": 0.25,
+   "time_ms": 131.7,
+   "noise_ratio": 0.8774,
+   "noise_drop_pct": 9.55,
+   "detail_score": 2.91,
+   "detail_drop_pct": 55.23,
+   "fft_high_ratio": 0.8774
+  },
+  {
+   "op": "bilateral d=5 sc=0.08 ss=3.0",
+   "preserve": 0.5,
+   "time_ms": 131.7,
+   "noise_ratio": 0.9414,
+   "noise_drop_pct": 2.95,
+   "detail_score": 3.73,
+   "detail_drop_pct": 42.62,
+   "fft_high_ratio": 0.9065
+  },
+  {
+   "op": "bilateral d=7 sc=0.1 ss=4.0",
+   "preserve": 0.0,
+   "time_ms": 454.1,
+   "noise_ratio": 0.6759,
+   "noise_drop_pct": 30.32,
+   "detail_score": 2.05,
+   "detail_drop_pct": 68.46,
+   "fft_high_ratio": 0.8179
+  },
+  {
+   "op": "bilateral d=7 sc=0.1 ss=4.0",
+   "preserve": 0.25,
+   "time_ms": 454.1,
+   "noise_ratio": 0.8877,
+   "noise_drop_pct": 8.48,
+   "detail_score": 2.47,
+   "detail_drop_pct": 62.0,
+   "fft_high_ratio": 0.864
+  },
+  {
+   "op": "bilateral d=7 sc=0.1 ss=4.0",
+   "preserve": 0.5,
+   "time_ms": 454.1,
+   "noise_ratio": 0.9465,
+   "noise_drop_pct": 2.42,
+   "detail_score": 3.35,
+   "detail_drop_pct": 48.46,
+   "fft_high_ratio": 0.9013
+  },
+  {
+   "op": "bilateral d=9 sc=0.12 ss=5.0",
+   "preserve": 0.0,
+   "time_ms": 767.5,
+   "noise_ratio": 0.6652,
+   "noise_drop_pct": 31.42,
+   "detail_score": 1.86,
+   "detail_drop_pct": 71.38,
+   "fft_high_ratio": 0.8085
+  },
+  {
+   "op": "bilateral d=9 sc=0.12 ss=5.0",
+   "preserve": 0.25,
+   "time_ms": 767.5,
+   "noise_ratio": 0.889,
+   "noise_drop_pct": 8.35,
+   "detail_score": 2.33,
+   "detail_drop_pct": 64.15,
+   "fft_high_ratio": 0.8591
+  },
+  {
+   "op": "bilateral d=9 sc=0.12 ss=5.0",
+   "preserve": 0.5,
+   "time_ms": 767.5,
+   "noise_ratio": 0.9473,
+   "noise_drop_pct": 2.34,
+   "detail_score": 3.24,
+   "detail_drop_pct": 50.15,
+   "fft_high_ratio": 0.8994
+  },
+  {
+   "op": "bilateral d=9 sc=0.16 ss=6.0",
+   "preserve": 0.0,
+   "time_ms": 695.6,
+   "noise_ratio": 0.6674,
+   "noise_drop_pct": 31.2,
+   "detail_score": 1.78,
+   "detail_drop_pct": 72.62,
+   "fft_high_ratio": 0.8062
+  },
+  {
+   "op": "bilateral d=9 sc=0.16 ss=6.0",
+   "preserve": 0.25,
+   "time_ms": 695.6,
+   "noise_ratio": 0.8871,
+   "noise_drop_pct": 8.55,
+   "detail_score": 2.25,
+   "detail_drop_pct": 65.38,
+   "fft_high_ratio": 0.8564
+  },
+  {
+   "op": "bilateral d=9 sc=0.16 ss=6.0",
+   "preserve": 0.5,
+   "time_ms": 695.6,
+   "noise_ratio": 0.9473,
+   "noise_drop_pct": 2.34,
+   "detail_score": 3.18,
+   "detail_drop_pct": 51.08,
+   "fft_high_ratio": 0.8984
+  },
+  {
+   "op": "bilateral d=11 sc=0.2 ss=6.0",
+   "preserve": 0.0,
+   "time_ms": 1597.0,
+   "noise_ratio": 0.6762,
+   "noise_drop_pct": 30.29,
+   "detail_score": 1.6,
+   "detail_drop_pct": 75.38,
+   "fft_high_ratio": 0.799
+  },
+  {
+   "op": "bilateral d=11 sc=0.2 ss=6.0",
+   "preserve": 0.25,
+   "time_ms": 1597.0,
+   "noise_ratio": 0.8895,
+   "noise_drop_pct": 8.3,
+   "detail_score": 2.11,
+   "detail_drop_pct": 67.54,
+   "fft_high_ratio": 0.8536
+  },
+  {
+   "op": "bilateral d=11 sc=0.2 ss=6.0",
+   "preserve": 0.5,
+   "time_ms": 1597.0,
+   "noise_ratio": 0.948,
+   "noise_drop_pct": 2.27,
+   "detail_score": 3.09,
+   "detail_drop_pct": 52.46,
+   "fft_high_ratio": 0.8974
+  },
+  {
+   "op": "bilateral d=13 sc=0.25 ss=8.0",
+   "preserve": 0.0,
+   "time_ms": 1706.9,
+   "noise_ratio": 0.6995,
+   "noise_drop_pct": 27.89,
+   "detail_score": 1.41,
+   "detail_drop_pct": 78.31,
+   "fft_high_ratio": 0.7934
+  },
+  {
+   "op": "bilateral d=13 sc=0.25 ss=8.0",
+   "preserve": 0.25,
+   "time_ms": 1706.9,
+   "noise_ratio": 0.8966,
+   "noise_drop_pct": 7.57,
+   "detail_score": 1.93,
+   "detail_drop_pct": 70.31,
+   "fft_high_ratio": 0.8512
+  },
+  {
+   "op": "bilateral d=13 sc=0.25 ss=8.0",
+   "preserve": 0.5,
+   "time_ms": 1706.9,
+   "noise_ratio": 0.9497,
+   "noise_drop_pct": 2.09,
+   "detail_score": 2.97,
+   "detail_drop_pct": 54.31,
+   "fft_high_ratio": 0.8966
+  },
+  {
+   "op": "bilateral d=15 sc=0.3 ss=10.0",
+   "preserve": 0.0,
+   "time_ms": 1793.8,
+   "noise_ratio": 0.719,
+   "noise_drop_pct": 25.88,
+   "detail_score": 1.26,
+   "detail_drop_pct": 80.62,
+   "fft_high_ratio": 0.788
+  },
+  {
+   "op": "bilateral d=15 sc=0.3 ss=10.0",
+   "preserve": 0.25,
+   "time_ms": 1793.8,
+   "noise_ratio": 0.9002,
+   "noise_drop_pct": 7.2,
+   "detail_score": 1.83,
+   "detail_drop_pct": 71.85,
+   "fft_high_ratio": 0.8492
+  },
+  {
+   "op": "bilateral d=15 sc=0.3 ss=10.0",
+   "preserve": 0.5,
+   "time_ms": 1793.8,
+   "noise_ratio": 0.9504,
+   "noise_drop_pct": 2.02,
+   "detail_score": 2.91,
+   "detail_drop_pct": 55.23,
+   "fft_high_ratio": 0.896
+  },
+  {
+   "op": "guided r=8 eps=0.0025",
+   "preserve": 0.0,
+   "time_ms": 2637.4,
+   "noise_ratio": 0.8515,
+   "noise_drop_pct": 12.22,
+   "detail_score": 1.58,
+   "detail_drop_pct": 75.69,
+   "fft_high_ratio": 0.8279
+  },
+  {
+   "op": "guided r=8 eps=0.0025",
+   "preserve": 0.25,
+   "time_ms": 2637.4,
+   "noise_ratio": 0.9295,
+   "noise_drop_pct": 4.18,
+   "detail_score": 2.32,
+   "detail_drop_pct": 64.31,
+   "fft_high_ratio": 0.8746
+  },
+  {
+   "op": "guided r=8 eps=0.0025",
+   "preserve": 0.5,
+   "time_ms": 2637.4,
+   "noise_ratio": 0.9553,
+   "noise_drop_pct": 1.52,
+   "detail_score": 3.35,
+   "detail_drop_pct": 48.46,
+   "fft_high_ratio": 0.9053
+  },
+  {
+   "op": "guided r=8 eps=0.01",
+   "preserve": 0.0,
+   "time_ms": 1561.4,
+   "noise_ratio": 0.7634,
+   "noise_drop_pct": 21.3,
+   "detail_score": 1.27,
+   "detail_drop_pct": 80.46,
+   "fft_high_ratio": 0.7958
+  },
+  {
+   "op": "guided r=8 eps=0.01",
+   "preserve": 0.25,
+   "time_ms": 1561.4,
+   "noise_ratio": 0.9108,
+   "noise_drop_pct": 6.1,
+   "detail_score": 1.97,
+   "detail_drop_pct": 69.69,
+   "fft_high_ratio": 0.8573
+  },
+  {
+   "op": "guided r=8 eps=0.01",
+   "preserve": 0.5,
+   "time_ms": 1561.4,
+   "noise_ratio": 0.9518,
+   "noise_drop_pct": 1.88,
+   "detail_score": 3.04,
+   "detail_drop_pct": 53.23,
+   "fft_high_ratio": 0.8989
+  },
+  {
+   "op": "guided r=12 eps=0.01",
+   "preserve": 0.0,
+   "time_ms": 1583.1,
+   "noise_ratio": 0.7858,
+   "noise_drop_pct": 18.99,
+   "detail_score": 1.28,
+   "detail_drop_pct": 80.31,
+   "fft_high_ratio": 0.7998
+  },
+  {
+   "op": "guided r=12 eps=0.01",
+   "preserve": 0.25,
+   "time_ms": 1583.1,
+   "noise_ratio": 0.9136,
+   "noise_drop_pct": 5.81,
+   "detail_score": 1.98,
+   "detail_drop_pct": 69.54,
+   "fft_high_ratio": 0.8587
+  },
+  {
+   "op": "guided r=12 eps=0.01",
+   "preserve": 0.5,
+   "time_ms": 1583.1,
+   "noise_ratio": 0.9523,
+   "noise_drop_pct": 1.82,
+   "detail_score": 3.05,
+   "detail_drop_pct": 53.08,
+   "fft_high_ratio": 0.8994
+  },
+  {
+   "op": "guided r=16 eps=0.04",
+   "preserve": 0.0,
+   "time_ms": 1626.9,
+   "noise_ratio": 0.7751,
+   "noise_drop_pct": 20.09,
+   "detail_score": 1.07,
+   "detail_drop_pct": 83.54,
+   "fft_high_ratio": 0.7788
+  },
+  {
+   "op": "guided r=16 eps=0.04",
+   "preserve": 0.25,
+   "time_ms": 1626.9,
+   "noise_ratio": 0.9103,
+   "noise_drop_pct": 6.15,
+   "detail_score": 1.75,
+   "detail_drop_pct": 73.08,
+   "fft_high_ratio": 0.849
+  },
+  {
+   "op": "guided r=16 eps=0.04",
+   "preserve": 0.5,
+   "time_ms": 1626.9,
+   "noise_ratio": 0.9522,
+   "noise_drop_pct": 1.84,
+   "detail_score": 2.87,
+   "detail_drop_pct": 55.85,
+   "fft_high_ratio": 0.8965
+  },
+  {
+   "op": "guided r=24 eps=0.09",
+   "preserve": 0.0,
+   "time_ms": 1737.5,
+   "noise_ratio": 0.7896,
+   "noise_drop_pct": 18.6,
+   "detail_score": 0.95,
+   "detail_drop_pct": 85.38,
+   "fft_high_ratio": 0.7672
+  },
+  {
+   "op": "guided r=24 eps=0.09",
+   "preserve": 0.25,
+   "time_ms": 1737.5,
+   "noise_ratio": 0.9135,
+   "noise_drop_pct": 5.82,
+   "detail_score": 1.64,
+   "detail_drop_pct": 74.77,
+   "fft_high_ratio": 0.8461
+  },
+  {
+   "op": "guided r=24 eps=0.09",
+   "preserve": 0.5,
+   "time_ms": 1737.5,
+   "noise_ratio": 0.9532,
+   "noise_drop_pct": 1.73,
+   "detail_score": 2.78,
+   "detail_drop_pct": 57.23,
+   "fft_high_ratio": 0.8964
+  }
+ ]
+}

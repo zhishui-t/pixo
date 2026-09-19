@@ -195,3 +195,57 @@ def test_create_photo_unrestricted_without_data_root(tmp_path):
     rt = _make_runtime(tmp_path)
     photo = rt.create_photo(_make_raw(tmp_path))  # tmp_path 本身不在任何白名单
     assert photo.photo_id in rt.photos
+
+
+# ---------------------------------------------------------------------------
+# R30 B2: 默认打开观感注入 (北极星: 打开照片≈LR)
+# ---------------------------------------------------------------------------
+
+def test_default_look_loaded_and_env_off(monkeypatch):
+    """default_look.json 注入新会话; PIXO_DEFAULT_LOOK=off 回中性; 非法文件回中性。"""
+    from pixo.service import runtime as rt_mod
+
+    monkeypatch.delenv("PIXO_DEFAULT_LOOK", raising=False)
+    rt_mod._default_look_cache = None
+    look = rt_mod._load_default_look()
+    assert look.get("tone", {}).get("profile_curve") is True
+    assert look.get("whitebalance", {}).get("mode") == "as_shot"
+
+    monkeypatch.setenv("PIXO_DEFAULT_LOOK", "off")
+    rt_mod._default_look_cache = None
+    assert rt_mod._load_default_look() == {}
+
+    # 非法文件: 回中性 + 不抛
+    import pathlib, json as _json
+    p = pathlib.Path(rt_mod._DEFAULT_LOOK_FILE).parent / "_bad_look.json"
+    p.write_text("{not json", encoding="utf-8")
+    try:
+        monkeypatch.setenv("PIXO_DEFAULT_LOOK", str(p))
+        rt_mod._default_look_cache = None
+        assert rt_mod._load_default_look() == {}
+    finally:
+        p.unlink(missing_ok=True)
+        rt_mod._default_look_cache = None
+
+
+def test_default_session_factory_injects_look(monkeypatch, tmp_path):
+    """真实会话工厂: 新会话 params 含观感键 (strict 栅栏放行)。"""
+    from pixo.service import runtime as rt_mod
+    from pixo.service.runtime import PhotoRecord, _now_iso
+
+    monkeypatch.delenv("PIXO_DEFAULT_LOOK", raising=False)
+    rt_mod._default_look_cache = None
+    rt = rt_mod.PixoServiceRuntime(
+        profile=object(), work_dir=tmp_path / "exports",
+        session_factory=None)  # 强制真实工厂
+    photo = PhotoRecord(photo_id="p1", path=tmp_path / "x.nef",
+                        metadata={}, created_at=_now_iso(), sessions=[],
+                        last_measurement={}, last_decision={})
+    (tmp_path / "x.nef").write_bytes(b"fake")
+    session = rt._default_session_factory(photo, "s1")
+    try:
+        assert session.params.get("tone", {}).get("profile_curve") is True
+        assert "whitebalance" in session.params
+    finally:
+        session.close()
+        rt_mod._default_look_cache = None

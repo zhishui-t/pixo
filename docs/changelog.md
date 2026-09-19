@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-19 — 第三十轮：DNG 复刻线退役 + "色彩不准"定案与默认打开观感接线
+
+- **A. DNG 复刻线退役**（队长裁决）：OWN PIPELINE 换底后刻意保留的"回退保险"
+  已成测试还绿着的死代码（生产链零触碰/工具零调用/tone_table 断供 3/3）。
+  删除 pipeline/base.py、core/tone.py（srgb_* 迁 curves 向量化）、
+  color_transform.py、render/adjustments 占位包、io.py stage3 段、core/warp.py、
+  api.py 旧标定流（calibrate/render/render_file/render_adjusted + 四 dataclass）、
+  dng_camera_cache.json、4 处测试；scripts 5 处 import 迁 curves；calib torch
+  代理 srgb_decode_t 表插值改解析式。**保留 DCP 解析**（路线图明文永远保留）。
+  净删 1100+ 行；全量 1678 passed / 0 failed。
+- **B1 "色彩不准"三轴定案**（n=24 vs 相机）：色度轴全准（±2，印证 R29 锚点）；
+  **病灶=亮度轴**——默认打开暗 83.5 L（1/3 量程），即"又暗又灰"观感主体。
+  lr观感臂 ΔL −40.5 vs 相机 ≈ LR-相机已知亮度差 ⇒ **lr观感 ≈ LR**。
+- **B2 默认打开观感接线**（北极星"打开照片≈LR"落地）：新会话初始 params 注入
+  `configs/styles/default_look.json`（lr_adobe 卡 R29 清偿后形态）；env
+  `PIXO_DEFAULT_LOOK=off` 回中性；用户 patch 深合并覆盖；引擎 Stage 默认不动
+  （R23 纪律保持）；auto-loop 不受影响。全量 **1680 passed**。
+- **遗留**：前端 enabled 接线断点（清晰度/HSL/锐化等 UI 调了没效果的收尾）。
+- **详见**：`.artifacts/R30_dng_replica_retirement.md`。
+
 ## 2026-09-19 — 第二十九轮：lr_* 卡暖度域清偿（LR 双锚点复验驱动的旧底补偿退役）
 
 - **"拟合准不准"的裁定（LR 域）**：用 white_balance.py 冻存的双 LR 锚点
