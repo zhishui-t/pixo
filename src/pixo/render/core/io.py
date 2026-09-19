@@ -151,6 +151,13 @@ def decode_raw(raw_path: Union[str, Path], half_size: bool = False,
         half_size=half_size,
         user_wb=[1.0, 1.0, 1.0, 1.0],
         demosaic_algorithm=algo,
+        # R28: 必须显式钉 gamma=(1,1)。rawpy 缺省 gamma=(2.222, 4.5) 会把
+        # 一条 dcraw 曲线烘进"线性"输出 ⇒ export 主线 (_render_full_quality
+        # → 本函数) 长期在 gamma 污染域上跑 WB×矩阵→EOTF 双重编码
+        # (实测 DSC_5236 half 解码 median 0.064 vs 真线性 0.013-0.014,
+        # 与 preview 主线 decode_cfa_half 输出差 ΔE 21-41)。实证:
+        # .artifacts/_r28_recipe_generalization.py Q1 + R28 报告。
+        gamma=(1.0, 1.0),
     )
     img = rgb16.astype(np.float32) / 65535.0
     return img, raw

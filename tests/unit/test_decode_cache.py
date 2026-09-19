@@ -114,3 +114,47 @@ def test_single_oversized_entry_kept(monkeypatch):
     io._decode_cache_put(cache, ("big",), big)
     assert len(cache) == 1 and ("big",) in cache
 
+
+
+# ---------------------------------------------------------------------------
+# R28: decode_raw 线性域契约守卫 (gamma 污染原生 bug 的防回归)
+# ---------------------------------------------------------------------------
+
+def test_decode_raw_pins_unit_gamma(monkeypatch, tmp_path):
+    """decode_raw 的 postprocess 必须显式 gamma=(1,1)。
+
+    历史缺陷 (R28): rawpy 缺省 gamma=(2.222, 4.5) 把 dcraw 曲线烘进
+    "线性"输出 ⇒ export 主线在 gamma 污染域跑 WB×矩阵→EOTF 双重编码
+    (实测与 preview 主线 decode_cfa_half 差 ΔE 21-41)。本用例钉死契约。
+    """
+    import numpy as np
+    from pixo.render.core import io as io_mod
+
+    captured: dict = {}
+
+    class _FakeSizes:
+        width, height = 4, 4
+
+    class _FakeRaw:
+        sizes = _FakeSizes()
+
+        def postprocess(self, **kwargs):
+            captured.update(kwargs)
+            return np.full((4, 4, 3), 30000, dtype=np.uint16)
+
+        def close(self):
+            pass
+
+    def _fake_imread(_path):
+        return _FakeRaw()
+
+    monkeypatch.setattr(io_mod.rawpy, "imread", staticmethod(_fake_imread))
+    f = tmp_path / "x.nef"
+    f.write_bytes(b"fake")
+    img, raw = io_mod.decode_raw(str(f))
+    raw.close()
+    # 线性域契约: 单位 gamma + 无自动亮度 + 原始色彩空间 (不许默认值溜回)
+    assert captured.get("gamma") == (1.0, 1.0)
+    assert captured.get("no_auto_bright") is True
+    assert captured.get("output_color") == io_mod.rawpy.ColorSpace.raw
+    assert img.dtype == np.float32 and img.shape == (4, 4, 3)
