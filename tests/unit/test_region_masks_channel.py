@@ -241,7 +241,10 @@ class _FakeCompose:
             center=cp.get("center", [0.5, 0.5]),
             x=float(cp.get("x", 0.0) or 0.0), y=float(cp.get("y", 0.0) or 0.0),
             width=float(cp.get("width", 0.0) or 0.0),
-            height=float(cp.get("height", 0.0) or 0.0))
+            height=float(cp.get("height", 0.0) or 0.0),
+            # R22 F09: 伪 stage 也必须透传 coord，与真 ComposeStage 及
+            # region_masks._post_compose_shape 三线同源（设计 §2.3 点名要求）。
+            coord=str(cp.get("coord", "norm") or "norm"))
         ctx.image = ctx.image[y0:y0 + ch, x0:x0 + cw].copy()
 
 
@@ -631,42 +634,57 @@ def test_loop_single_iteration_final_qc_still_injects():
 
 
 # ---------------------------------------------------------------------------
-# 6) I-2 记债钉现状 (M1 评审): free 像素矩形跨分辨率几何失配
+# 6) I-2 / tech_debt #17 —— **已清偿** (R22 F09), 按契约有意翻转
 # ---------------------------------------------------------------------------
 
-def test_free_px_rect_cross_resolution_geometry_mismatch_recorded():
-    """I-2 / tech_debt #17 —— 现状行为钉死 (已知记录, 非正确性断言)。
+def test_free_rect_relative_window_consistent_across_resolutions():
+    """I-2 / tech_debt #17 —— 相对语义下的**几何一致**断言（契约翻转）。
 
-    free 模式 x/y/width/height 为全画布**像素**矩形: 同一 px-rect 在两个
-    渲染分辨率下相对裁剪窗不同 (本例 x0 占比 50% vs 25%)。掩码适配只做
-    shape 对齐不做坐标重映射 → 两线消费帧 shape 相同 (px-rect 裁出同尺寸
-    窗) 时, 适配器给出**逐位相同**的掩码 —— 同一掩码坐标在两线对应不同
-    场景内容, 区域效果落点错位 (tech_debt #17 登记的失配)。
+    原用例（`..._mismatch_recorded`）钉的是失配现状：free 模式 x/y/width/
+    height 为全画布**像素**矩形 ⇒ 同一 px-rect 在两个渲染分辨率下相对裁剪
+    窗不同（x0 占比 50% vs 25%），而掩码适配只做 shape 对齐不重映射 ⇒ 两线
+    消费帧 shape 相同、掩码**逐位相同**但对应不同场景内容。
+    其 docstring 契约写明：坐标归一化清偿本债后，本用例应**有意翻转重写**
+    （断言两线掩码不同/几何一致），**不得静默通过** —— 即本用例。
 
-    契约: 未来 compose px→相对坐标归一化或适配器坐标重映射清偿本债时,
-    本用例应**有意翻转重写** (断言两线掩码不同/几何一致), 不得静默通过。
+    R22 F09 把 free 矩形语义改为**全幅相对**（coord Stage 缺省 "norm"）后，
+    同一参数在两 tier 取得**相同相对裁剪窗** ⇒ 本用例改钉该不变量，并显式
+    断言两线**不再逐位相同**（旧失配基线的可观测面消失），使本用例对
+    coord 语义保持判别力。
     """
     from pixo.render.modules.compose import compute_crop_rect
 
-    compose = {"mode": "free", "x": 50.0, "y": 0.0, "width": 50.0,
-               "height": 50.0}
-    # 两线: preview tier (100×50 帧) 与导出 (200×100 帧), 同 px-rect 参数
+    def _rel(rect, h, w):
+        x0, y0, cw, ch = rect
+        return (x0 / w, y0 / h, cw / w, ch / h)
+
+    # 相对语义（norm，生产缺省）: 右半幅、全高
+    compose_norm = {"mode": "free", "x": 0.5, "y": 0.0, "width": 0.5,
+                    "height": 1.0}
+    # 两线: preview tier (100×50 帧) 与导出 (200×100 帧), 同参数
     line_a = adapt_region_masks({"sky": _top_band_mask(50, 100)},
-                                (50, 100), compose)
+                                (50, 100), compose_norm)
     line_b = adapt_region_masks({"sky": _top_band_mask(100, 200)},
-                                (100, 200), compose)
-    # 现状: px-rect 尺寸与入参分辨率解耦 → 两线消费帧 shape 相同,
-    # 掩码被同构 resize → 逐位相同 (失配的可观测面)
-    assert line_a["sky"].shape == line_b["sky"].shape == (50, 50)
-    assert np.array_equal(line_a["sky"], line_b["sky"]), (
-        "若本断言失败, 说明适配器/compose 已做坐标重映射 —— "
-        "tech_debt #17 可能已清偿, 请翻转重写本用例")
-    # 而两线真实相对裁剪窗不同 (同一掩码坐标 ≠ 同一场景内容)
-    ra = compute_crop_rect(50, 100, "free", x=50.0, y=0.0,
-                           width=50.0, height=50.0)
-    rb = compute_crop_rect(100, 200, "free", x=50.0, y=0.0,
-                           width=50.0, height=50.0)
-    rel_a = ra[0] / 100.0
-    rel_b = rb[0] / 200.0
-    assert abs(rel_a - 0.5) < 1e-6 and abs(rel_b - 0.25) < 1e-6
-    assert rel_a != rel_b
+                                (100, 200), compose_norm)
+    # 1) 消费帧 shape 按分辨率等比（旧基线: 两侧同为 50×50）
+    assert line_a["sky"].shape == (50, 50)
+    assert line_b["sky"].shape == (100, 100)
+    # 2) 防静默通过: 两线**不再**逐位相同
+    assert line_a["sky"].shape != line_b["sky"].shape
+
+    # 3) #17 清偿的不变量: 同一参数在两 tier 的相对裁剪窗一致
+    ra = _rel(compute_crop_rect(50, 100, "free", x=0.5, y=0.0,
+                                width=0.5, height=1.0, coord="norm"), 50, 100)
+    rb = _rel(compute_crop_rect(100, 200, "free", x=0.5, y=0.0,
+                                width=0.5, height=1.0, coord="norm"), 100, 200)
+    for a, b in zip(ra, rb):
+        assert abs(a - b) <= 0.02, f"相对裁剪窗不一致: {ra} vs {rb}"
+
+    # 4) 判别力对照: 显式 coord="px"（legacy）下旧失配仍可复现
+    #    ⇒ 证明本用例确实对 coord 语义敏感, 而非恒真。
+    pa = _rel(compute_crop_rect(50, 100, "free", x=50.0, y=0.0,
+                                width=50.0, height=50.0, coord="px"), 50, 100)
+    pb = _rel(compute_crop_rect(100, 200, "free", x=50.0, y=0.0,
+                                width=50.0, height=50.0, coord="px"), 100, 200)
+    assert abs(pa[0] - 0.5) < 1e-6 and abs(pb[0] - 0.25) < 1e-6
+    assert pa[0] != pb[0], "px 路径应保留跨分辨率失配（legacy 语义未变）"

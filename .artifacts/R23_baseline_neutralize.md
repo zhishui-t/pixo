@@ -192,13 +192,26 @@ hsl ✗  split_tone ✗  skin ✗  region_adjust ✗  stylize ✗  refine ✗
 
 ## 7. 回归收口（2026-09-14 完成）
 
-**全量结果**：`tests/unit + tests/regression + tests/integration` = **1697 项收集 / 2 failed**，
-2 项**均为既有遗留、与本轮无关**（已逐条定向复现确认）：
+**全量结果**：`tests/unit + tests/regression + tests/integration` = **1697 项**（用 `--junitxml` 取结构化结果，
+因 pytest 的文本汇总段在本机被临时目录清理打断）：
+
+| 范围 | 用例 | 失败 | 跳过 |
+|---|---:|---:|---:|
+| `tests/unit` | 1460 | **1** | 4 |
+| `tests/regression` + `tests/integration` | 237 | **0** | 3 |
+
+**唯一可复现失败 = 既有遗留、与 R23/F09 均无关**：
 
 | 失败项 | 归属 | 成因 |
 |---|---|---|
 | `tests/unit/test_llm_shadow.py::test_shadow_threshold_configurable_flips_verdict` | 既有 | `pipeline/loop.py:1355` 把分数 `round(x,6)`，测试拿 `0.5*abs(current)` 比，差 5e-7 > 默认容差 1.6e-7（纯断言精度） |
-| `tests/integration/test_segmenter_warmup.py::test_warmup_absorbs_cold_start_and_nonblocking` | 既有·环境 | `huggingface.co` 网络 `[SSL: UNEXPECTED_EOF_WHILE_READING]`，segformer 模型拉不下来 |
+
+另：`tests/integration/test_segmenter_warmup.py::test_warmup_absorbs_cold_start_and_nonblocking`
+在一次全量跑中因 `huggingface.co` 网络 `[SSL: UNEXPECTED_EOF_WHILE_READING]` 失败，
+**隔离复跑通过** ⇒ 判定为**网络 flaky**，非真实缺陷。
+
+跳过 3 项均为需真 RAW 的 gate 用例（`test_gate_auto_loop_e2e` /
+`test_gate_e2e_ab` / `test_gate_e2e_perf`），unit 侧 4 项跳过为既有条件跳过。
 
 ### 7.1 本轮自身引发的 5 项失败已全部修完
 
@@ -222,26 +235,34 @@ hsl ✗  split_tone ✗  skin ✗  region_adjust ✗  stylize ✗  refine ✗
 - ⚠️ 生成器 `build_manifest()` 把 `reviewer` **硬写 `"pending"`**，会覆盖历史批次史 ⇒
   已用 `.artifacts/_r23_manifest_reviewer.py` 从备份取回历史再追加 R23 批次记录（**待队长复核签字**）。
 
-## 8. 待队长裁决（本轮发现，未擅动）
+## 8. R22 F09 归一化收口（队长裁决后执行）
 
-### 8.1 ⚠️ R22 F09 掩码预测线**未透传 `coord`** ⇒ 两线静默分叉（真缺陷）
+> 裁决：① 掩码线缺陷 → **「修（含翻转用例）」**；② `compose.coord` 缺省 → **「保持 `norm`（F09 原设计）」**。
+> 全文独立记录 `.artifacts/r22_f09_coord_completion.md`。
 
-`region_masks.py:_post_compose_shape` 调 `compute_crop_rect` 时**不传 `coord`** ⇒ 落纯函数缺省
-`"px"`；而渲染线 `ComposeStage.process` 是 `self.p(ctx,"coord","norm")` ⇒ **渲染按相对解释、掩码按像素解释**。
+### 8.1 掩码预测线未透传 `coord`（已修）
+`region_masks._post_compose_shape` 调 `compute_crop_rect` **不传 `coord`** ⇒ 落纯函数缺省 `"px"`，
+而渲染线是 `"norm"` ⇒ **静默分叉**。F09 §2.3 原文要求透传，**未做**。
+→ 已补 `coord=str(cp.get("coord","norm") or "norm")`。
 
-- F09 设计文档 §2.3 **明确要求**此处 `coord=cp.get("coord","norm")`，否则「编译期无感、运行时静默分叉」
-  —— 该同步**未做**。
-- 触发条件：调用方传 `compose_params={"mode":"free","x":…,"width":…}` 且不声明 `coord`（**即 loop 公开 API 的常见写法**）。
-- 修法（1 行）+ 连带：`test_region_masks_channel.py::test_free_px_rect_cross_resolution_geometry_mismatch_recorded`
-  是 F09 标注的「**有意翻转**」用例（docstring 自述"未来坐标归一化清偿时本用例应有意翻转重写，不得静默通过"）。
-- **未擅动**：`region_masks.py` 在 F09 文件域内，`design-r22.md` §3 对该域标注「**冻结**，越界报队长」。
+### 8.2 `adopt_crop` 写回 px 但不声明 `coord` ⇒ 采纳后输出 1×1（新发现，已修）
+`loop.py` adopt_crop 段经 `rect_norm_to_px` 转"全幅像素"写回、**不设 `coord`** ⇒ 被按相对值解释。
+**探针实测**（源 64×64、建议 `[0.1,0.1,0.9,0.9]`）：修复前 `final_image.shape=(1,1,3)` → 修复后 `(51,51,3)`。
+→ 已改为直接落 `norm` 四元组 + 显式 `"coord":"norm"`（`crop_suggestion["rect"]` 本就是归一化值）。
+**盲区已补**：`test_e2e_crop_adoption_drops_region_masks` 原只断言 `mode=="free"`，现补几何断言。
 
-### 8.2 `compose.coord` 缺省 `"norm"` 是**静默语义变更**
+### 8.3 测试同步（F09 §2.4/§3 已列但未执行）
+`test_gate_compose.py`（3 项）、`test_loop_e2e.py:69`、`test_crop_wiring.py`（2 项硬断言）、
+`test_region_masks_channel.py`（**F09 标注的「有意翻转」用例**，已按 docstring 契约翻转为
+「两 tier 相对裁剪窗一致」+ 保留 px 判别力对照）。
+统一口径：**legacy px 调用方须显式声明 `coord="px"`**；采纳/写回线一律落 `norm`。
 
-纯函数缺省 `"px"`（公开 API 不变），但 `ComposeStage.default_params` 缺省 `"norm"` ⇒
-**任何仍传 px 矩形、不声明 `coord` 的调用方，取景会变**（默认路径 `width=height=0` 逐位不变，故无自测暴露）。
-`compose.py:71` 有 warn-once 告警但**不阻止**行为。
-选项：(a) 保持 `"norm"` + 要求所有调用方显式声明；(b) Stage 缺省回退 `"px"`（与纯函数对齐，零风险）。
+### 8.4 `compose.coord` 缺省保持 `"norm"`（队长裁定）
+纯函数缺省仍 `"px"`（公开 API 不变）；仓内持久化 px 矩形 ≈ 0 处（F09 侦察 P5）。
+⇒ 仓外调用方若传 px 矩形且不声明 `coord`，取景会变；`compose.py:71` warn-once 兜底。
+
+**验证**：`test_crop_wiring` + `test_decide_region_wiring` + `test_region_masks_channel` +
+`test_compose_autolevel` + `test_gate_compose` + `test_loop_e2e` = **82 passed**。
 
 ## 9. 遗留 / 下一步
 

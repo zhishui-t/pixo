@@ -57,6 +57,11 @@ def _post_compose_shape(shape: tuple[int, int],
         y=float(cp.get("y", 0.0) or 0.0),
         width=float(cp.get("width", 0.0) or 0.0),
         height=float(cp.get("height", 0.0) or 0.0),
+        # R22 F09: 必须与渲染线 (ComposeStage.process) 透传**同一个** coord，
+        # 否则本线落纯函数缺省 "px"、渲染线取 stage 缺省 "norm" ⇒ 编译期无感、
+        # 运行时静默分叉（掩码消费帧与实际裁剪窗错位）。缺省对齐 stage 的
+        # "norm"（纯函数缺省 "px" 只服务于公开 API 兼容，不适用于生产链）。
+        coord=str(cp.get("coord", "norm") or "norm"),
     )
     return ch, cw
 

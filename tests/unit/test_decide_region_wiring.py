@@ -581,6 +581,19 @@ def test_e2e_crop_adoption_drops_region_masks(monkeypatch, caplog):
 
     # crop 确实被采纳 (compose 变化的前提成立)
     assert result.params.get("compose", {}).get("mode") == "free"
+    # R22 F09 / R23 补盲区: 采纳后写回的矩形必须在**几何上真的生效**。
+    # 原用例只断言 mode, 因此 "写回 px 值 + coord 缺省 norm" 的取景退化
+    # （输出 1×1, 见 .artifacts/_r23_adopt_crop_probe.py）长期不可见。
+    from pixo.render.modules.compose import compute_crop_rect
+
+    cp = result.params["compose"]
+    assert cp.get("coord") == "norm", "采纳后必须显式声明 norm 语义"
+    h, w = _sky_image().shape[:2]
+    rect = compute_crop_rect(h, w, "free", x=cp["x"], y=cp["y"],
+                             width=cp["width"], height=cp["height"],
+                             coord=cp["coord"])
+    # 建议 [0.1, 0.1, 0.9, 0.9] → 64×64 上的中 80% 区域
+    assert rect == (6, 6, 51, 51), f"裁剪矩形退化: {rect}"
     # 渲染序列: 首轮 (分割前, 无掩码) → 次轮 (旧构图掩码本应注入)
     assert len(backend.rendered_extras) >= 2
     assert "region_masks" not in backend.rendered_extras[0]

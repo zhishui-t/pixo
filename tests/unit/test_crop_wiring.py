@@ -155,7 +155,15 @@ def test_rect_converters_roundtrip():
 
 
 def test_adoption_boundary_single_conversion_point(monkeypatch):
-    """规则旗标 -> 采纳边界一次归一化->像素，compose 参数正确落盘。"""
+    """规则旗标 -> 采纳边界以**归一化**自由矩形落盘（B1 / R22 F09）。
+
+    **语义翻转**（R23 补）：采纳边界不再做「归一化→像素」换算，而是把
+    ``suggest_crop`` 的归一化矩形以 ``coord="norm"`` 原样落盘。旧行为在
+    ``coord`` 缺省翻为 "norm" 后，像素值（以真全幅为基准，如 64）被按
+    **相对值**解释 ⇒ 取景退化（探针实测输出 1×1：
+    ``.artifacts/_r23_adopt_crop_probe.py``）；且同一 px 值在预览帧与导出
+    帧的相对窗不同（tech_debt #17）。归一化后跨 tier 一致。
+    """
     fixed_rect = [0.25, 0.25, 0.75, 0.75]
     fixed_cands = [{"rect": tuple(fixed_rect), "ratio": "original",
                     "score": 0.9, "parts": {}}]
@@ -172,10 +180,10 @@ def test_adoption_boundary_single_conversion_point(monkeypatch):
     assert "crop_adopted" in types
     compose = result.params.get("compose")
     assert compose is not None and compose["mode"] == "free"
-    expect = rect_norm_to_px(fixed_rect, 64, 64)
-    assert (compose["x"], compose["y"],
-            compose["width"], compose["height"]) == (
-        expect[0], expect[1], expect[2] - expect[0], expect[3] - expect[1])
+    assert compose.get("coord") == "norm", "采纳后必须显式声明 norm 语义"
+    assert (compose["x"], compose["y"]) == (0.25, 0.25)
+    assert (compose["width"], compose["height"]) == (
+        pytest.approx(0.5), pytest.approx(0.5))
     # 门控旗标不得泄漏进渲染参数
     flat_keys = set(result.params)
     assert "compose.apply_suggestion" not in flat_keys
@@ -201,12 +209,13 @@ def test_adoption_merges_and_preserves_auto_level_rotation(monkeypatch):
     compose = result.params.get("compose") or {}
     # 用户既有字段保留（尤其 auto_level 的 rotation 结果）
     assert compose.get("rotation") == pytest.approx(-3.5)
-    # 建议矩形生效：mode 切 free，四元组=采纳边界单点换算
+    # 建议矩形生效：mode 切 free，四元组 = 建议的**归一化**值
+    # （B1 / R22 F09：不再经 rect_norm_to_px 换算，见本文件上一用例）
     assert compose.get("mode") == "free"
-    expect = rect_norm_to_px(fixed_rect, 64, 64)
-    assert (compose["x"], compose["y"]) == (expect[0], expect[1])
+    assert compose.get("coord") == "norm"
+    assert (compose["x"], compose["y"]) == (0.25, 0.25)
     assert (compose["width"], compose["height"]) == (
-        expect[2] - expect[0], expect[3] - expect[1])
+        pytest.approx(0.5), pytest.approx(0.5))
     types = _trace_types(result)
     assert "crop_adopted" in types
 

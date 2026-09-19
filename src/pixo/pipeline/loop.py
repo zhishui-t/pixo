@@ -1769,12 +1769,16 @@ class SinglePhotoLoop:
             flat_before = _flatten_decide_params(params)
             params = _apply_decide_params(params, decided_params)
             if adopt_crop:
-                fw, fh = self._full_canvas_size(
-                    backend, preview_img.shape[1], preview_img.shape[0]
-                )
-                x0, y0, x1, y1 = rect_norm_to_px(
-                    crop_suggestion["rect"], fw, fh
-                )
+                # R22 F09: 归一化矩形**直接**以 norm 语义写回（B1 全幅归一化）。
+                # 旧写法经 ``rect_norm_to_px`` 转成"全幅像素"再写，
+                # 在 ``coord`` 缺省翻为 "norm" 后这些像素值被按**相对值**
+                # 解释 ⇒ 取景退化（探针实测输出 1×1：
+                # ``.artifacts/_r23_adopt_crop_probe.py``）。且 px 值以真全幅
+                # （如 6048）为基准，预览帧（如 1024）下相对窗不同 —— 正是
+                # tech_debt #17 的跨分辨率失配。归一化后两 tier 一致。
+                # ``crop_suggestion["rect"]`` 本就是 [x0,y0,x1,y1] ∈ [0,1]。
+                nx0, ny0, nx1, ny1 = (float(v)
+                                      for v in crop_suggestion["rect"])
                 # 合并而非整体覆盖：保留用户既有字段（rotation/horizontal_flip
                 # 等，尤其 auto_level 的 rotation 结果），仅以建议矩形四元组
                 # 覆盖；mode 切 free 使矩形生效（见类 docstring 契约）。
@@ -1786,10 +1790,11 @@ class SinglePhotoLoop:
                 params["compose"] = {
                     **prev_compose,
                     "mode": "free",
-                    "x": x0,
-                    "y": y0,
-                    "width": max(1, x1 - x0),
-                    "height": max(1, y1 - y0),
+                    "coord": "norm",
+                    "x": nx0,
+                    "y": ny0,
+                    "width": max(1e-6, nx1 - nx0),
+                    "height": max(1e-6, ny1 - ny0),
                 }
                 self._add_trace(
                     sm,
