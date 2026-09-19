@@ -153,8 +153,11 @@ def test_shadow_threshold_configurable_flips_verdict(monkeypatch):
     r2 = reject_loop.run("thr_high", image_rgb=_img())
     rej = _shadow_events(r2, "llm_shadow_reject")
     assert rej, "rel_gain=0.5 应翻转为拒绝"
+    # scores 面向 trace 已 round 6 位 (loop.py scores 字典) ⇒ 从舍入后的
+    # current 重推 threshold 须容忍 5e-7 级舍入差 (默认容差 1.6e-7 会误红,
+    # R23 §7 在册遗留, 本轮清偿)
     assert rej[0]["metadata"]["scores"]["threshold"] == pytest.approx(
-        0.5 * abs(rej[0]["metadata"]["scores"]["current"]))
+        0.5 * abs(rej[0]["metadata"]["scores"]["current"]), abs=1e-6)
 
     # 绝对下限形态（+0.05σ 类）：min_gain 拉高同样翻转
     abs_loop = _make_loop(_bright_pref_scorer, agent_suggest=True,

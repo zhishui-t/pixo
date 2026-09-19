@@ -362,19 +362,40 @@
       生效中）；属 EV 无关的覆盖缺口，量级与影响待专项评估（是否扩域
       重标定 vs 垫片精度实测）。证据 .artifacts/ev_stress_experiment.md。
 
-20. **auto-loop 与 `/decide` 缓存、`/timeline` 不联动**（记债，2026-09-10 R21 D3）：
-    `SinglePhotoLoop` 自建状态机（`pipeline/loop.py:1783`）≠ `service.state_machines`
-    （`service/runtime.py:302`）。auto-loop 结果只落任务表，**刻意不回写** `photo.last_decision`
-    与 `runtime.state_machines`——后者是引擎决策缓存，`GET /api/photos/{id}/decide` 按其 schema
-    原样透传（`app.py:287-288`），且有断言 `tests/unit/test_service_runtime_fixes.py:164-173`，
-    写入 `LoopResult` 会让该端点返回异形 `decision`（静默契约破坏）。**后果**：跑完 auto-loop 后
-    `/timeline` 仍显示 RAW_PENDING，用户可能误判"没生效"。清偿方向：共享 store，或定义显式回写契约。
+20. **auto-loop 与 `/decide` 缓存、`/timeline` 不联动**（✅ **已清偿关闭，2026-09-19 R26**）：
+    - 历史脉络（记债 2026-09-10 R21 D3）：`SinglePhotoLoop` 自建状态机（`pipeline/loop.py:1783`）≠
+      `service.state_machines`。auto-loop 结果只落任务表，**刻意不回写** `photo.last_decision` 与
+      `runtime.state_machines`——后者是引擎决策缓存，`GET /api/photos/{id}/decide` 按其 schema
+      原样透传，且有断言 `tests/unit/test_service_runtime_fixes.py:164-173`，写入 `LoopResult`
+      会让该端点返回异形 `decision`（静默契约破坏）。**后果**：跑完 auto-loop 后
+      `/timeline` 仍显示 RAW_PENDING，用户可能误判"没生效"。
+    - **清偿（R26，取"显式回写契约"方向）**：`runtime._write_back_auto_loop` 在任务
+      成功终局（done；cancelled/failed 不回写防半态污染）做三件事——① service SM 停在
+      RAW_PENDING 时按 loop 转移事件序列**重放**（timeline/`photo.state` 反映全程轨迹与
+      终态；已离开 RAW_PENDING 的重跑只补 `auto_loop_summary` 不重放，防非法转移）；
+      ② 非状态事件原样 `add_trace`（`source="auto_loop"` 与用户编辑轨迹可区分）；
+      ③ `photo.last_decision` 写 **decide 引擎同形** dict（decision/params/reasons/rule_ids/
+      unreliable_regions/last_iteration + 扩展键 source/task_id/state，`decision`=loop 终态、
+      消费方按 `source` 分派词汇表）——decide_photo 路径既有断言不受影响。回写失败
+      可见（任务翻 failed + `write_back_failed:`）。测试
+      `tests/integration/test_auto_loop_api.py::test_auto_loop_writeback_*` ×2。
 
-21. **auto-loop 无任务级超时/取消**（记债，2026-09-10 R21 D4）：渲染无中断点，单次真 RAW 闭环
-    实测 43.95–107.4s（`DSC_5236` 门禁 124s 含两次全分辨率渲染）。当前可控手段只有
-    `max_iterations`（缺省 3，env `PIXO_LOOP_MAX_ITERATIONS`，硬上限 5）+ `preview_long_edge`；
-    任务一旦启动只能等其结束，且任务表无淘汰策略、跨 photo 排队无 `queued` 态。清偿方向：
-    可取消渲染 + 任务表 TTL/队列状态。
+21. **auto-loop 无任务级超时/取消**（✅ **已清偿关闭，2026-09-19 R26**）：
+    - 历史脉络（记债 2026-09-10 R21 D4）：渲染无中断点，单次真 RAW 闭环实测 43.95–107.4s
+      （`DSC_5236` 门禁 124s 含两次全分辨率渲染）。可控手段只有 `max_iterations`
+      （缺省 3，env `PIXO_LOOP_MAX_ITERATIONS`，硬上限 5）+ `preview_long_edge`；任务一旦
+      启动只能等其结束，且任务表无淘汰策略、跨 photo 排队无 `queued` 态。
+    - **清偿（R26，协作粒度 = 迭代边界；渲染本体仍无中断点——诚实边界）**：
+      ① `SinglePhotoLoop.run(stop_check=...)` 三边界询问（preview 迭代前 / 每轮迭代头 /
+      FINAL_QC 全分辨率渲染前），真值即以当前状态早退（metadata.stopped/stop_reason）；
+      ② 任务生命周期 queued→running→done|failed|cancelled（提交即 queued，单飞口径含 queued）；
+      ③ `POST /api/auto-loop/{task_id}/cancel`：queued 即刻终态、running 置协作标记、
+      终态幂等；④ 截止时间 env `PIXO_AUTO_LOOP_TIMEOUT_S`（0=不设限，缺省保持 R21 行为）
+      超限落 failed+timeout；⑤ 任务表治理：终态 TTL（env `PIXO_AUTO_LOOP_TASK_TTL_S`，
+      缺省 1800s、下限 60）+ 容量上限 200（最老先淘汰），提交时惰性清理；
+      ⑥ 视图追加 created_at/started_at/finished_at/cancel_requested（纯追加键）。
+      测试 `test_auto_loop_cancel_queued_and_running` / `..._deadline_marks_timeout` /
+      `..._ttl_prunes_finished_tasks` / `..._cancel_http_endpoint` / `..._lifecycle_timestamps`。
 
 22. **RP-CCM 运行时接入：显式否决**（结论落档，2026-09-10 R22 F07；CR-12 取"B 明确否决"）：
     - **结论**：`apply_rp_ccm` **不进运行时**（`src/` 命中仅 `render/core/rp_ccm.py` 自身：

@@ -209,7 +209,8 @@ def _now_iso() -> str:
 # auto-loop 迭代数：env PIXO_LOOP_MAX_ITERATIONS 可覆盖缺省 3，硬上限 5。
 # 依据 R21 探索：单张真 RAW 闭环实测 43.95–107.4s，其中全分辨率 FINAL_QC
 # 渲染占 ~98%（probe6 73.09s），迭代数几乎不涨总时长（每轮只是 preview +
-# 测量），上限用于兜底资源占用；不实现任务级超时/取消（渲染无中断点）。
+# 测量），上限用于兜底资源占用。R26 #21：任务级取消/截止已补（协作粒度 =
+# 迭代边界，见 _AutoLoopControl；渲染本体仍无中断点）。
 _AUTO_LOOP_DEFAULT_ITERATIONS = 3
 _AUTO_LOOP_MAX_ITERATIONS_CAP = 5
 _AUTO_LOOP_ITERATIONS_ENV = "PIXO_LOOP_MAX_ITERATIONS"
@@ -275,6 +276,82 @@ def _load_auto_loop_rules(
     for path in DEFAULT_RULES:
         rules.extend(load_rules(path, metric_keys=universe))
     return rules
+
+
+# ---------------------------------------------------------------------------
+# R26 tech_debt #21 清偿：任务级协作控制（取消 + 截止）与任务表治理
+# ---------------------------------------------------------------------------
+
+# auto-loop 单任务截止时间（秒）：env PIXO_AUTO_LOOP_TIMEOUT_S，0=不设限
+# （缺省保持 R21 行为）。截止粒度 = loop 的迭代边界（渲染本体无中断点）。
+_AUTO_LOOP_TIMEOUT_ENV = "PIXO_AUTO_LOOP_TIMEOUT_S"
+# 终态任务 TTL（秒）：env PIXO_AUTO_LOOP_TASK_TTL_S（下限 60 防误配成 0 秒淘汰）。
+_AUTO_LOOP_TTL_ENV = "PIXO_AUTO_LOOP_TASK_TTL_S"
+_AUTO_LOOP_TTL_DEFAULT = 1800.0
+# 终态任务保留容量上限（超出按 finished 时间淘汰最老；活跃任务不受影响）。
+_AUTO_LOOP_TASK_CAP = 200
+# 任务终态集合（视图/取消/TTL 判定共用）。
+_AUTO_LOOP_TERMINAL = frozenset({"done", "failed", "cancelled"})
+
+
+class _AutoLoopControl:
+    """auto-loop 任务级协作控制（tech_debt #21）。
+
+    渲染无中断点 ⇒ 控制**只能**在 loop 的三个迭代边界生效
+    （``SinglePhotoLoop.run(stop_check=...)``）；deadline_s ≤ 0 表示不设截止。
+    should_stop 返回停止原因（"cancelled" / "deadline_exceeded"）或 None。
+    """
+
+    def __init__(self, deadline_s: float = 0.0) -> None:
+        self._cancelled = threading.Event()
+        deadline = float(deadline_s or 0.0)
+        self._deadline = (
+            time.monotonic() + deadline if deadline > 0.0 else None
+        )
+
+    def cancel(self) -> None:
+        self._cancelled.set()
+
+    @property
+    def cancelled(self) -> bool:
+        return self._cancelled.is_set()
+
+    def timed_out(self) -> bool:
+        return self._deadline is not None and time.monotonic() > self._deadline
+
+    def should_stop(self) -> str | None:
+        if self.cancelled:
+            return "cancelled"
+        if self.timed_out():
+            return "deadline_exceeded"
+        return None
+
+
+def _auto_loop_timeout_s() -> float:
+    """env PIXO_AUTO_LOOP_TIMEOUT_S → 截止秒数（非法回退 0=不设限）。"""
+    raw = os.environ.get(_AUTO_LOOP_TIMEOUT_ENV, "").strip()
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        _LOGGER.warning("env %s=%r 非法，回退缺省 0（不设截止）",
+                        _AUTO_LOOP_TIMEOUT_ENV, raw)
+        return 0.0
+
+
+def _auto_loop_task_ttl_s() -> float:
+    """env PIXO_AUTO_LOOP_TASK_TTL_S → 终态任务 TTL 秒数（下限 60）。"""
+    raw = os.environ.get(_AUTO_LOOP_TTL_ENV, "").strip()
+    try:
+        return max(60.0, float(raw))
+    except ValueError:
+        return _AUTO_LOOP_TTL_DEFAULT
+
+
+# R26 tech_debt #20：状态机转移类事件（重放判定用，machine._auto_event_type 全集）
+_AUTO_LOOP_TRANSITION_EVENTS = frozenset({
+    "STATE_CHANGE", "AGENT_ESCALATED", "FINAL_QC_ACCEPT",
+    "FINAL_QC_REJECT", "QC_ROLLBACK",
+})
 
 
 @dataclass
@@ -985,14 +1062,19 @@ class PixoServiceRuntime:
             active_id = self._auto_loop_active.get(photo_id)
             if active_id is not None:
                 active = self._auto_loop_tasks.get(active_id)
-                if active is not None and active["status"] == "running":
+                # R26 #21：单飞口径含 queued（单 worker FIFO，排队任务同样
+                # 占住该 photo 的"在途"名额，防重复提交）。
+                if active is not None and active["status"] in ("queued", "running"):
                     return self._auto_loop_submit_view(active)
                 self._auto_loop_active.pop(photo_id, None)
 
+            self._prune_auto_loop_tasks()
             task_id = uuid.uuid4().hex
             task: dict[str, Any] = {
                 "task_id": task_id,
-                "status": "running",
+                # R26 #21：提交即 queued，worker 领取时转 running（单 worker
+                # FIFO 下旧口径"提交即 running"会虚报执行态）。
+                "status": "queued",
                 "photo_id": photo_id,
                 "segmenter_type": self.segmenter_type,
                 "degraded": degraded,
@@ -1007,21 +1089,30 @@ class PixoServiceRuntime:
                 "soft_warnings": [],
                 "error": None,
                 "duration": None,
+                # R26 #21：任务表治理/审计三时间戳（iso；_finished_ts 供 TTL）
+                "created_at": _now_iso(),
+                "started_at": None,
+                "finished_at": None,
+                "cancel_requested": False,
+                # 内部键（视图不透出）：协作控制句柄 + 终态 epoch
+                "_control": _AutoLoopControl(_auto_loop_timeout_s()),
+                "_finished_ts": None,
             }
             self._auto_loop_tasks[task_id] = task
             self._auto_loop_active[photo_id] = task_id
+            control: _AutoLoopControl = task["_control"]
 
         if sync:
             self._execute_auto_loop(
                 task_id, photo_id, str(photo.path), iterations,
-                int(preview_long_edge), prompts_tuple,
+                int(preview_long_edge), prompts_tuple, control,
             )
             return self.auto_loop_status(task_id)
 
         self._auto_loop_executor.submit(
             self._execute_auto_loop,
             task_id, photo_id, str(photo.path), iterations,
-            int(preview_long_edge), prompts_tuple,
+            int(preview_long_edge), prompts_tuple, control,
         )
         return self._auto_loop_submit_view(task)
 
@@ -1032,6 +1123,66 @@ class PixoServiceRuntime:
             if task is None:
                 raise KeyError(f"auto-loop 任务不存在: {task_id}")
             return self._auto_loop_view(task)
+
+    def cancel_auto_loop(self, task_id: str) -> dict[str, Any]:
+        """R26 #21：请求取消 auto-loop 任务（协作粒度 = loop 迭代边界）。
+
+        - 终态任务：幂等返回当前状态（cancel_requested=False）；
+        - queued：直接落 cancelled（worker 领取时跳过）；
+        - running：置取消标记，loop 在最近迭代边界停止（返回 cancelling
+          语义，任务终态以 GET 轮询为准）。
+        """
+        with self._auto_loop_lock:
+            task = self._auto_loop_tasks.get(task_id)
+            if task is None:
+                raise KeyError(f"auto-loop 任务不存在: {task_id}")
+            if task["status"] in _AUTO_LOOP_TERMINAL:
+                return {"task_id": task_id, "status": task["status"],
+                        "cancel_requested": False}
+            task["cancel_requested"] = True
+            control = task.get("_control")
+            if control is not None:
+                control.cancel()
+            if task["status"] == "queued":
+                task.update(status="cancelled", finished_at=_now_iso(),
+                            _finished_ts=time.time(), duration=0.0)
+                if self._auto_loop_active.get(task["photo_id"]) == task_id:
+                    self._auto_loop_active.pop(task["photo_id"], None)
+                return {"task_id": task_id, "status": "cancelled",
+                        "cancel_requested": True}
+            return {"task_id": task_id, "status": "cancelling",
+                    "cancel_requested": True,
+                    "note": "已在最近迭代边界生效，终态以 GET 轮询为准"}
+
+    def _prune_auto_loop_tasks(self) -> None:
+        """R26 #21：终态任务治理（TTL + 容量上限；调用方持锁）。
+
+        活跃（queued/running）任务永不淘汰；TTL 按 finished 时间计，
+        容量超限时按最老优先淘汰。防任务表"只增不减"（#21 原文）。
+        """
+        now = time.time()
+        ttl = _auto_loop_task_ttl_s()
+        dead: list[tuple[float, str]] = []  # (finished_ts, task_id)
+        alive_finished = 0
+        for key, t in self._auto_loop_tasks.items():
+            if t["status"] not in _AUTO_LOOP_TERMINAL:
+                continue
+            ts = t.get("_finished_ts")
+            if ts is not None and (now - ts) > ttl:
+                dead.append((ts, key))
+                continue
+            alive_finished += 1
+        if alive_finished > _AUTO_LOOP_TASK_CAP:
+            ordered = sorted(
+                (t.get("_finished_ts") or 0.0, key)
+                for key, t in self._auto_loop_tasks.items()
+                if t["status"] in _AUTO_LOOP_TERMINAL
+                and key not in {k for _, k in dead}
+            )
+            for _, key in ordered[: alive_finished - _AUTO_LOOP_TASK_CAP]:
+                dead.append((0.0, key))
+        for _, key in dead:
+            self._auto_loop_tasks.pop(key, None)
 
     def _auto_loop_submit_view(self, task: dict[str, Any]) -> dict[str, Any]:
         """提交响应视图（202 缺省形态）。"""
@@ -1066,6 +1217,11 @@ class PixoServiceRuntime:
             "soft_warnings": list(task["soft_warnings"]),
             "error": task["error"],
             "duration": task["duration"],
+            # R26 #21：治理/审计时间戳 + 取消标记（纯追加键）。
+            "created_at": task.get("created_at"),
+            "started_at": task.get("started_at"),
+            "finished_at": task.get("finished_at"),
+            "cancel_requested": bool(task.get("cancel_requested")),
         }
         if task["degraded"]:
             view["degraded"] = list(task["degraded"])
@@ -1079,17 +1235,35 @@ class PixoServiceRuntime:
         max_iterations: int,
         preview_long_edge: int,
         prompts: tuple[str, ...],
+        control: _AutoLoopControl | None = None,
     ) -> None:
         """后台线程体：装配 SinglePhotoLoop → run → 结果落任务表。
 
         **闭环内部异常不裸抛**：catch-all 记 ``status=failed`` +
         ``error = 异常类型: 首行``（异步与 sync 两路一致，HTTP 层不 500）。
+        R26 #21：worker 领取时 queued→running；stop_check 协作停止落
+        cancelled（用户取消）或 failed+timeout（截止超限）。
+        R26 #20：成功终局（done）显式回写服务层（状态机重放 + trace 导入
+        + last_decision 合成，见 _write_back_auto_loop）。
         """
         from pixo.pipeline.loop import SinglePhotoLoop
+
+        with self._auto_loop_lock:
+            task = self._auto_loop_tasks.get(task_id)
+            if task is None:
+                return
+            if task["status"] == "cancelled":
+                # 排队期间被取消：worker 直接跳过（终态已落）
+                if self._auto_loop_active.get(photo_id) == task_id:
+                    self._auto_loop_active.pop(photo_id, None)
+                return
+            task.update(status="running", started_at=_now_iso())
 
         started = time.monotonic()
         payload: dict[str, Any] | None = None
         error: str | None = None
+        stopped_reason: str | None = None
+        result: Any = None
         try:
             loop = SinglePhotoLoop(
                 render_backend=RawRenderBackend(raw_path, self.profile),
@@ -1107,8 +1281,11 @@ class PixoServiceRuntime:
                 enable_style_cards=False,
             )
             result = loop.run(
-                photo_id, raw_path=raw_path, max_iterations=int(max_iterations)
+                photo_id, raw_path=raw_path, max_iterations=int(max_iterations),
+                stop_check=control.should_stop if control is not None else None,
             )
+            stopped_reason = (result.metadata or {}).get("stop_reason") \
+                if (result.metadata or {}).get("stopped") else None
             # 提取（含 trace rule_ids）放在同一 try 内：任何提取异常同样
             # 落 status=failed，不会把任务卡在 running。
             payload = {
@@ -1127,6 +1304,8 @@ class PixoServiceRuntime:
                 "soft_warnings": list(
                     (result.metadata or {}).get("soft_warnings") or []
                 ),
+                # R26 #20：回写 last_decision 的 reasons 用（同形 decide 输出）
+                "reason": result.reason,
             }
         except Exception as exc:  # noqa: BLE001 - 闭环异常落任务表，不穿 HTTP
             first_line = (str(exc).splitlines() or [""])[0]
@@ -1140,13 +1319,128 @@ class PixoServiceRuntime:
         with self._auto_loop_lock:
             task = self._auto_loop_tasks.get(task_id)
             if task is not None:
-                if payload is not None:
+                if payload is not None and stopped_reason == "cancelled":
+                    task.update(status="cancelled", error=None,
+                                duration=duration, finished_at=_now_iso(),
+                                _finished_ts=time.time(), **payload)
+                elif payload is not None and stopped_reason is not None:
+                    task.update(status="failed",
+                                error="timeout: 截止时间在迭代边界超限",
+                                duration=duration, finished_at=_now_iso(),
+                                _finished_ts=time.time(), **payload)
+                elif payload is not None:
                     task.update(status="done", error=None, duration=duration,
-                                **payload)
+                                finished_at=_now_iso(),
+                                _finished_ts=time.time(), **payload)
                 else:
-                    task.update(status="failed", error=error, duration=duration)
+                    task.update(status="failed", error=error, duration=duration,
+                                finished_at=_now_iso(),
+                                _finished_ts=time.time())
                 if self._auto_loop_active.get(task["photo_id"]) == task_id:
                     self._auto_loop_active.pop(task["photo_id"], None)
+
+        # R26 #20：成功终局才回写（cancelled/failed 的部分结果不进缓存，
+        # 防半态污染 /timeline 与 /decide）。
+        if payload is not None and stopped_reason is None:
+            try:
+                self._write_back_auto_loop(
+                    photo_id, task_id, payload, result.trace_events or []
+                )
+            except Exception as exc:  # noqa: BLE001 - 回写失败要可见，不静默
+                _LOGGER.exception(
+                    "[pixo.runtime] auto-loop 回写失败: task=%s photo=%s",
+                    task_id, photo_id,
+                )
+                with self._auto_loop_lock:
+                    t = self._auto_loop_tasks.get(task_id)
+                    if t is not None and t["status"] == "done":
+                        t.update(status="failed",
+                                 error=f"write_back_failed: "
+                                       f"{type(exc).__name__}: "
+                                       f"{(str(exc).splitlines() or [''])[0]}")
+
+    def _write_back_auto_loop(
+        self,
+        photo_id: str,
+        task_id: str,
+        payload: dict[str, Any],
+        trace_events: list[dict[str, Any]],
+    ) -> None:
+        """R26 tech_debt #20 清偿：auto-loop 成功终局**显式**回写服务层。
+
+        三件事（契约）：
+        ① **状态机重放**：service SM 停在 RAW_PENDING（创建后从未流转）时，
+           按 loop 的转移事件序列重放 ⇒ ``/timeline`` 与 ``photo.state``
+           反映全程轨迹与终态（重放用 transition 自带轨迹落痕，时戳为重放
+           时刻；loop 原始历史仍完整保留在任务 payload 的 trace 里）。
+           SM 已离开 RAW_PENDING（重跑）则**不重放**（防非法转移），仅补
+           一条 ``auto_loop_summary`` 事件 + 同步终态字段。
+        ② **非状态事件导入**：decide/measure/param 等事件原样 add_trace，
+           ``source="auto_loop"``（与用户编辑轨迹可区分）。
+        ③ **last_decision 合成**：decide 引擎同形 dict（decision/params/
+           reasons/rule_ids/unreliable_regions/last_iteration + 扩展键
+           source/task_id/state），``GET /decide`` 原样透传。
+        """
+        sm = self.state_machines.get(photo_id)
+        replayed = False
+        if sm is not None:
+            if sm.state == "RAW_PENDING":
+                for event in trace_events:
+                    if not isinstance(event, dict):
+                        continue
+                    event_type = event.get("event_type", "")
+                    if event_type in _AUTO_LOOP_TRANSITION_EVENTS:
+                        sm.transition(
+                            str(event.get("new_value")),
+                            reason=str(event.get("reason") or ""),
+                        )
+                    else:
+                        sm.add_trace(
+                            event_type=event_type,
+                            reason=str(event.get("reason") or ""),
+                            source="auto_loop",
+                            param=event.get("param"),
+                            value=event.get("value"),
+                            old_value=event.get("old_value"),
+                            new_value=event.get("new_value"),
+                            rule_id=str(event.get("rule_id") or ""),
+                            formula=str(event.get("formula") or ""),
+                            iteration=int(event.get("iteration") or 0),
+                            metadata=dict(event.get("metadata") or {}),
+                        )
+                # 同步终态字段（iteration/params 不在转移事件里，直接对齐）
+                sm.record.iteration = int(payload["iteration"])
+                sm.record.current_params = dict(payload["params"])
+                replayed = True
+            else:
+                sm.add_trace(
+                    event_type="auto_loop_summary",
+                    reason="auto-loop 完成（SM 已离开 RAW_PENDING，不重放转移）",
+                    source="auto_loop",
+                    new_value=payload["state"],
+                    iteration=int(payload["iteration"]),
+                    metadata={"task_id": task_id,
+                              "rule_ids": list(payload["rule_ids"])},
+                )
+                sm.record.iteration = int(payload["iteration"])
+                sm.record.current_params = dict(payload["params"])
+
+        photo = self.photos.get(photo_id)
+        if photo is not None:
+            photo.last_decision = {
+                # decision 语义 = loop 终态（ACCEPTED/MANUAL_REVIEW），与
+                # decide 引擎单轮动作词（adjust_and_continue…）不同词汇表，
+                # 用 source="auto_loop" 显式区分（消费方按 source 分派）。
+                "decision": payload["state"],
+                "params": dict(payload["params"]),
+                "reasons": [payload["reason"]],
+                "rule_ids": list(payload["rule_ids"]),
+                "unreliable_regions": [],
+                "last_iteration": int(payload["iteration"]),
+                "source": "auto_loop",
+                "task_id": task_id,
+                "state": payload["state"],
+            }
 
     @staticmethod
     def _auto_loop_decide_events(result: Any) -> list[tuple[int, list[str]]]:

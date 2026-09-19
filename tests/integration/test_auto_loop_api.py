@@ -173,7 +173,7 @@ def _wait_task(rt: PixoServiceRuntime, task_id: str, timeout: float = 30.0):
     status = rt.auto_loop_status(task_id)
     while time.monotonic() < deadline:
         status = rt.auto_loop_status(task_id)
-        if status["status"] in ("done", "failed"):
+        if status["status"] in ("done", "failed", "cancelled"):
             return status
         time.sleep(0.02)
     raise AssertionError(f"auto-loop 任务未在 {timeout}s 内终结: {status}")
@@ -187,7 +187,7 @@ def _poll_client(client: TestClient, task_id: str, timeout: float = 30.0):
         resp = client.get(f"/api/auto-loop/{task_id}")
         assert resp.status_code == 200
         task = resp.json()
-        if task["status"] in ("done", "failed"):
+        if task["status"] in ("done", "failed", "cancelled"):
             return task
         time.sleep(0.02)
     raise AssertionError(f"auto-loop HTTP 任务未在 {timeout}s 内终结: {task}")
@@ -240,7 +240,9 @@ def test_run_auto_loop_async_ok_and_single_flight(tmp_path, monkeypatch):
     first = rt.run_auto_loop(
         photo.photo_id, max_iterations=2, preview_long_edge=64
     )
-    assert first["status"] == "running"
+    # R26 #21：提交即 queued，worker 领取转 running —— 提交视图取自活 dict，
+    # 两者皆合法（确定性断言见 test_auto_loop_cancel_queued_and_running）
+    assert first["status"] in ("queued", "running")
     assert first["photo_id"] == photo.photo_id
     assert first["segmenter_type"] == "mock"
     assert first["degraded"] == ["mock_segmenter"]  # mock 掩码留痕
@@ -486,7 +488,8 @@ def test_auto_loop_http_post_202_then_get_done(client, monkeypatch, raw_file):
     assert resp.status_code == 202
     body = resp.json()
     assert set(body) >= {"task_id", "status", "photo_id", "segmenter_type"}
-    assert body["status"] == "running"
+    # R26 #21：提交即 queued（worker 领取转 running；提交视图存在竞态）
+    assert body["status"] in ("queued", "running")
     assert body["photo_id"] == photo_id
     assert body["segmenter_type"] == "mock"
     assert body["degraded"] == ["mock_segmenter"]
@@ -595,3 +598,198 @@ def test_measure_session_merges_proxy_metrics_at_top_level(client, raw_file):
     assert "global" in measurement
     assert "regions" in measurement
     assert measurement["mask_version"] == "mask_v0.1"
+
+
+# ---------------------------------------------------------------------------
+# R26 tech_debt #20/#21：回写契约 + 任务治理（queued/取消/截止/TTL）
+# ---------------------------------------------------------------------------
+
+def test_auto_loop_writeback_updates_timeline_and_decide_cache(
+        runtime, tmp_path, monkeypatch):
+    """#20：done 后显式回写——SM 重放轨迹 + trace 导入 + last_decision 合成。"""
+    monkeypatch.setattr(runtime_mod, "RawRenderBackend", _fake_backend_factory())
+    photo = runtime.create_photo(_make_raw(tmp_path, "DSC_0100.nef"))
+
+    result = runtime.run_auto_loop(
+        photo.photo_id, max_iterations=2, preview_long_edge=64, sync=True
+    )
+    assert result["status"] == "done", result["error"]
+
+    # ① SM 重放：photo state == loop 终态；timeline 有重放轨迹与导入事件
+    pd = runtime.photo_dict(photo.photo_id)
+    assert pd["state"] == result["state"]
+    tl = runtime.timeline(photo.photo_id)
+    types = [e["event_type"] for e in tl["events"]]
+    assert "STATE_CHANGE" in types, "timeline 缺重放的状态转移轨迹"
+    assert "decide" in types, "timeline 缺导入的 decide 事件"
+    assert any(e.get("source") == "auto_loop" for e in tl["events"])
+    assert tl["iteration"] == result["iteration"]
+
+    # ③ last_decision 合成：decide 同形 + source/task_id 扩展键；GET /decide 透传
+    photo_after = runtime.get_photo(photo.photo_id)
+    dec = photo_after.last_decision
+    assert dec["source"] == "auto_loop"
+    assert dec["task_id"] == result["task_id"]
+    assert dec["decision"] == result["state"]
+    assert dec["rule_ids"] == result["rule_ids"]
+    assert dec["params"] == result["params"]
+    assert isinstance(dec["reasons"], list) and dec["reasons"]
+
+    with TestClient(create_app(runtime)) as client:
+        resp = client.get(f"/api/photos/{photo.photo_id}/decide")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["state"] == result["state"]
+        assert body["decision"]["source"] == "auto_loop"
+        assert body["decision"]["task_id"] == result["task_id"]
+
+
+def test_auto_loop_rerun_does_not_replay_transitions(
+        runtime, tmp_path, monkeypatch):
+    """#20 边界：SM 已离开 RAW_PENDING（重跑）不重放（防非法转移），仍写缓存。"""
+    monkeypatch.setattr(runtime_mod, "RawRenderBackend", _fake_backend_factory())
+    photo = runtime.create_photo(_make_raw(tmp_path, "DSC_0101.nef"))
+    r1 = runtime.run_auto_loop(
+        photo.photo_id, max_iterations=2, preview_long_edge=64, sync=True
+    )
+    assert r1["status"] == "done"
+    sm_state_after_first = runtime.timeline(photo.photo_id)["state"]
+
+    r2 = runtime.run_auto_loop(
+        photo.photo_id, max_iterations=2, preview_long_edge=64, sync=True
+    )
+    assert r2["status"] == "done", r2["error"]
+    tl = runtime.timeline(photo.photo_id)
+    # 不重放：状态仍为合法终态（而非从 RAW_PENDING 硬掰回中间态再走一遍）
+    assert tl["state"] in ("ACCEPTED", "MANUAL_REVIEW")
+    assert tl["state"] == sm_state_after_first or tl["state"] == r2["state"]
+    types = [e["event_type"] for e in tl["events"]]
+    assert "auto_loop_summary" in types, "重跑应补 auto_loop_summary 而非重放"
+    # last_decision 仍更新到第二次任务
+    dec = runtime.get_photo(photo.photo_id).last_decision
+    assert dec["task_id"] == r2["task_id"]
+
+
+def _wait_status(rt, task_id, want, timeout: float = 10.0):
+    deadline = time.monotonic() + timeout
+    status = rt.auto_loop_status(task_id)
+    while time.monotonic() < deadline:
+        status = rt.auto_loop_status(task_id)
+        if status["status"] == want:
+            return status
+        time.sleep(0.02)
+    raise AssertionError(f"任务未进入 {want}: {status['status']}")
+
+
+def test_auto_loop_cancel_queued_and_running(runtime, tmp_path, monkeypatch):
+    """#21：单 worker 下第二个任务确定性 queued；queued 即刻取消、running
+    在迭代边界协作停止；cancelled 不回写 decide 缓存。"""
+    gate = threading.Event()
+    monkeypatch.setattr(
+        runtime_mod, "RawRenderBackend", _fake_backend_factory(gate)
+    )
+    p1 = runtime.create_photo(_make_raw(tmp_path, "DSC_0102.nef"))
+    p2 = runtime.create_photo(_make_raw(tmp_path, "DSC_0103.nef"))
+
+    t1 = runtime.run_auto_loop(p1.photo_id, max_iterations=2, preview_long_edge=64)
+    _wait_status(runtime, t1["task_id"], "running")   # worker 占住（闸门阻塞）
+    t2 = runtime.run_auto_loop(p2.photo_id, max_iterations=2, preview_long_edge=64)
+    assert t2["status"] == "queued", "单 worker FIFO 下第二任务应确定性排队"
+
+    # queued 取消：立即终态，worker 领取时跳过
+    resp = runtime.cancel_auto_loop(t2["task_id"])
+    assert resp["status"] == "cancelled" and resp["cancel_requested"] is True
+    assert runtime.auto_loop_status(t2["task_id"])["status"] == "cancelled"
+
+    # running 取消：协作标记 → 放行闸门后于迭代边界停止
+    resp1 = runtime.cancel_auto_loop(t1["task_id"])
+    assert resp1["cancel_requested"] is True
+    gate.set()
+    task1 = _wait_task(runtime, t1["task_id"])
+    assert task1["status"] == "cancelled"
+    assert task1["duration"] is not None
+
+    # cancelled 部分结果不回写缓存（防半态污染 /decide）
+    assert runtime.get_photo(p1.photo_id).last_decision == {}
+    assert runtime.get_photo(p2.photo_id).last_decision == {}
+
+    # 终态幂等：再取消返回原状态且 cancel_requested=False
+    again = runtime.cancel_auto_loop(t1["task_id"])
+    assert again["status"] == "cancelled" and again["cancel_requested"] is False
+
+
+def test_auto_loop_deadline_marks_timeout(runtime, tmp_path, monkeypatch):
+    """#21：PIXO_AUTO_LOOP_TIMEOUT_S 截止 → 边界停止落 failed+timeout。"""
+    monkeypatch.setenv("PIXO_AUTO_LOOP_TIMEOUT_S", "0.000001")
+    monkeypatch.setattr(runtime_mod, "RawRenderBackend", _fake_backend_factory())
+    photo = runtime.create_photo(_make_raw(tmp_path, "DSC_0104.nef"))
+    task = _wait_task(runtime, runtime.run_auto_loop(
+        photo.photo_id, max_iterations=2, preview_long_edge=64)["task_id"])
+    assert task["status"] == "failed"
+    assert task["error"] and task["error"].startswith("timeout:")
+    # 截止停止同样不回写
+    assert runtime.get_photo(photo.photo_id).last_decision == {}
+
+
+def test_auto_loop_ttl_prunes_finished_tasks(runtime, tmp_path, monkeypatch):
+    """#21：TTL 到期的终态任务在下一次提交时被淘汰（只增不减的债清偿）。"""
+    monkeypatch.setattr(runtime_mod, "RawRenderBackend", _fake_backend_factory())
+    p1 = runtime.create_photo(_make_raw(tmp_path, "DSC_0105.nef"))
+    r1 = runtime.run_auto_loop(
+        p1.photo_id, max_iterations=1, preview_long_edge=64, sync=True)
+    assert r1["status"] == "done"
+    # 手动把终态时间戳拨到 TTL 之外（env 下限 60s，不走等待）
+    with runtime._auto_loop_lock:
+        runtime._auto_loop_tasks[r1["task_id"]]["_finished_ts"] = \
+            time.time() - 99999.0
+
+    p2 = runtime.create_photo(_make_raw(tmp_path, "DSC_0106.nef"))
+    runtime.run_auto_loop(p2.photo_id, max_iterations=1,
+                          preview_long_edge=64, sync=True)
+    with pytest.raises(KeyError):
+        runtime.auto_loop_status(r1["task_id"])
+
+
+def test_auto_loop_cancel_http_endpoint(client, monkeypatch, raw_file):
+    """#21：POST /api/auto-loop/{id}/cancel —— running→cancelling、终态幂等、
+    未知 404；轮询终态 cancelled。"""
+    gate = threading.Event()
+    monkeypatch.setattr(
+        runtime_mod, "RawRenderBackend", _fake_backend_factory(gate)
+    )
+    photo_id = _create_photo(client, raw_file)
+    submit = client.post(
+        f"/api/photos/{photo_id}/auto-loop", json={"max_iterations": 2}
+    ).json()
+    # 等 worker 领取（running）再取消，路径确定
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline:
+        if client.get(f"/api/auto-loop/{submit['task_id']}").json()["status"] \
+                == "running":
+            break
+        time.sleep(0.02)
+
+    resp = client.post(f"/api/auto-loop/{submit['task_id']}/cancel")
+    assert resp.status_code == 200
+    assert resp.json()["cancel_requested"] is True
+    gate.set()
+    task = _poll_client(client, submit["task_id"])
+    assert task["status"] == "cancelled"
+
+    # 终态幂等 + 未知任务 404
+    again = client.post(f"/api/auto-loop/{submit['task_id']}/cancel").json()
+    assert again["cancel_requested"] is False
+    assert client.post("/api/auto-loop/no-such/cancel").status_code == 404
+
+
+
+
+def test_auto_loop_view_has_lifecycle_timestamps(runtime, tmp_path, monkeypatch):
+    """#21: GET 视图含 created_at/started_at/finished_at + cancel_requested。"""
+    monkeypatch.setattr(runtime_mod, "RawRenderBackend", _fake_backend_factory())
+    photo = runtime.create_photo(_make_raw(tmp_path, "DSC_0107.nef"))
+    result = runtime.run_auto_loop(
+        photo.photo_id, max_iterations=1, preview_long_edge=64, sync=True)
+    assert result["status"] == "done"
+    assert result["created_at"] and result["started_at"] and result["finished_at"]
+    assert result["cancel_requested"] is False

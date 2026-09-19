@@ -307,9 +307,21 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
 
     @app.get("/api/auto-loop/{task_id}")
     def api_auto_loop_status(task_id: str) -> dict[str, Any]:
-        """查询 auto-loop 任务状态（status= running|done|failed）。"""
+        """查询 auto-loop 任务状态（status= queued|running|done|failed|cancelled）。"""
         try:
             return rt.auto_loop_status(task_id)
+        except KeyError as exc:
+            raise _not_found(str(exc)) from exc
+
+    @app.post("/api/auto-loop/{task_id}/cancel")
+    def api_auto_loop_cancel(task_id: str) -> dict[str, Any]:
+        """R26 #21：请求取消 auto-loop 任务（协作粒度 = loop 迭代边界）。
+
+        queued 直接落 cancelled；running 置标记、最近迭代边界生效；
+        终态幂等返回（cancel_requested=False）。
+        """
+        try:
+            return rt.cancel_auto_loop(task_id)
         except KeyError as exc:
             raise _not_found(str(exc)) from exc
 

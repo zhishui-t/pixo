@@ -1383,8 +1383,13 @@ class SinglePhotoLoop:
         start_params: dict[str, Any],
         metadata: dict[str, Any],
         max_iterations: int,
+        stop_check: Any = None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, np.ndarray] | None, str | None]:
-        """执行 preview 迭代，返回 (params, measurements, masks_cache, stop_reason)。"""
+        """执行 preview 迭代，返回 (params, measurements, masks_cache, stop_reason)。
+
+        stop_check (R26 #21 边界②)：每轮迭代头询问；真值 ⇒ 立即停在第
+        当前状态（metadata.stopped/stop_reason 由调用方 run 读取后早退）。
+        """
         params = copy.deepcopy(start_params)
         measurements: list[dict[str, Any]] = []
         masks_cache: dict[str, np.ndarray] | None = None
@@ -1403,6 +1408,14 @@ class SinglePhotoLoop:
         perceptual_converged = False
 
         for iteration in range(1, max_iterations + 1):
+            # R26 #21 边界②：每轮迭代头询问协作停止（取消/截止）
+            if stop_check is not None:
+                reason = stop_check()
+                if reason:
+                    metadata["stopped"] = True
+                    metadata["stop_reason"] = str(reason)
+                    stop_reason = str(reason)
+                    return params, measurements, masks_cache, stop_reason
             # 状态推进：每次迭代对应一个可前进的 State 阶段。
             if sm.state == "BASE_RENDERED":
                 sm.transition(
@@ -1919,8 +1932,15 @@ class SinglePhotoLoop:
         params: dict[str, Any] | None = None,
         agent_decision: str = "agree",
         max_iterations: int | None = None,
+        stop_check: Any = None,
     ) -> LoopResult:
-        """执行单张闭环，返回 LoopResult。"""
+        """执行单张闭环，返回 LoopResult。
+
+        stop_check (R26 tech_debt #21)：协作停止钩子，Callable[[], str|None]。
+        在三个边界被询问——preview 迭代前、每轮迭代头、FINAL_QC 全分辨率
+        渲染前；返回真值（停止原因）即**立即**以当前状态早退（渲染本体无
+        中断点，边界是诚实粒度），结果 metadata 携带 stopped/stop_reason。
+        """
         if image_rgb is None and image is not None:
             image_rgb = image
         if meta is None and metadata is not None:
@@ -1972,11 +1992,31 @@ class SinglePhotoLoop:
                 reason=reason,
             )
 
+        # R26 #21 边界①：进入 preview 迭代前
+        if stop_check is not None:
+            stop_reason = stop_check()
+            if stop_reason:
+                metadata["stopped"] = True
+                metadata["stop_reason"] = str(stop_reason)
+                return self._result(
+                    sm, photo_id, loop_params, [], None, None,
+                    metadata, None, agent_decision=agent_decision,
+                    reason=f"stop_check: {stop_reason}",
+                )
+
         params_after, preview_measurements, masks_cache, preview_stop_reason = (
             self._run_preview_iterations(
-                sm, backend, photo_id, loop_params, metadata, max_iter
+                sm, backend, photo_id, loop_params, metadata, max_iter,
+                stop_check=stop_check,
             )
         )
+        # R26 #21：迭代边界被停止（非收敛停机）⇒ 以当前状态早退
+        if metadata.get("stopped"):
+            return self._result(
+                sm, photo_id, params_after, preview_measurements,
+                None, None, metadata, None, agent_decision=agent_decision,
+                reason=f"stop_check: {metadata.get('stop_reason')}",
+            )
 
         if sm.state == "MANUAL_REVIEW":
             return self._result(
@@ -1984,6 +2024,18 @@ class SinglePhotoLoop:
                 None, None, metadata, None, agent_decision=agent_decision,
                 reason="Decide/分割异常转入人工复核",
             )
+
+        # R26 #21 边界③：FINAL_QC 全分辨率渲染前（最贵一步）
+        if stop_check is not None:
+            stop_reason = stop_check()
+            if stop_reason:
+                metadata["stopped"] = True
+                metadata["stop_reason"] = str(stop_reason)
+                return self._result(
+                    sm, photo_id, params_after, preview_measurements,
+                    None, None, metadata, None, agent_decision=agent_decision,
+                    reason=f"stop_check: {stop_reason}",
+                )
 
         self._fast_forward_to_final_qc(sm)
 
