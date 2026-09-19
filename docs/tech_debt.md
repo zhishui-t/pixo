@@ -432,6 +432,20 @@
       不存在的路径）⇒ 脱离 pytest 的裸导入依赖 `PYTHONPATH=src`；重新执行 `pip install -e .`
       即修，属环境问题 ⇒ **R23**。
 
+24. **`LR Camera Standard Baseline.dcp` 与 `LR Baseline.dcp` 字节相同**（记债，2026-09-19 R27）：
+    - **事实**：两文件 md5 一致（`5a23f967eeec`，R27 实测）⇒ 风格卡
+      `lr_camera_standard_baseline` 输出与 `lr_baseline` **恒等**（R27 审计 n=23：
+      A/B/C_raw 逐项相同），而 manifest（resources/dcp/manifest.json）将其登记为独立
+      目标 `lr_camera_standard_v2`（camera_profile "Camera Standard v2"，truth=
+      lr_corpus_camera_standard）。疑似 DCP 导出批次把同一导出写了两份。
+    - **后果**：lr_camera_standard 卡声称的 Camera Standard v2 观感实际未被资产代表，
+      以它为基准的对照/标定结论失真（当前仓内无此类在跑消费，风险潜伏）。
+    - **清偿方向**：用 RawLab LR 导出管线重出 Camera Standard v2 的 DCP（本机无该
+      管线，数据侧待办）；期间引用两卡结论时应视为同一臂。R27 审计顺带修复：
+      `preview_baseline` 卡的 dcp 钉扎是失效绝对路径（双层 pixo 目录，R27 已改仓库
+      相对路径）；7 张 profile_curve 卡在 R24 复合语义下全部健康（A 5.97~19.19、
+      cc 0.96-0.98，详见 `.artifacts/R27_style_card_audit.md`）。
+
 
 ### R21 总审续排候选（未编号，待专项评估后正式入账）
 

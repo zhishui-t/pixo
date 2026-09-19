@@ -1,5 +1,5 @@
 {
-  "dcp": "K:\\work\\project\\pixo\\pixo\\resources\\dcp\\Nikon Z 5 2 RawLab Preview Baseline.dcp",
+  "dcp": "resources/dcp/Nikon Z 5 2 RawLab Preview Baseline.dcp",
   "stages": [
     "exposure",
     "whitebalance",
