@@ -133,6 +133,28 @@ export interface MeasurementsResult {
   error?: string;
 }
 
+/** 直方图计数（R25 F02：BT.709 luma + RGB 三通道，256 桶 0-255 值域）。 */
+export interface HistogramCounts {
+  lum: number[];
+  r: number[];
+  g: number[];
+  b: number[];
+}
+
+export interface HistogramData {
+  bins: number;
+  pixels: number;
+  counts: HistogramCounts;
+}
+
+/** GET /api/sessions/{id}/histogram 响应（runtime.histogram_session）。 */
+export interface HistogramResult {
+  session_id: string;
+  generation: number;
+  histogram: HistogramData | null;
+  error?: string;
+}
+
 /**
  * 区域掩码状态（R14，dev-2 状态 API 契约：available + prompts + 原因；
  * 端点以其实施为准——前端经 api 层适配位接入，本类型为唯一消费面）。

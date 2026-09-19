@@ -3,7 +3,7 @@ import { Accordion, Paper, Text, Badge } from '@mantine/core';
 import { DESIGN_TOKENS } from '../theme/tokens';
 import { SectionLabel } from './SectionLabel';
 import { useAppStore } from '../store/useAppStore';
-import { health } from '../api';
+import { fetchHistogram, health } from '../api';
 import { SliderParam } from './SliderParam';
 import { DomainToggle } from './DomainToggle';
 import { HslBandRow } from './HslBandRow';
@@ -13,7 +13,21 @@ import { RegionSection } from './RegionSection';
 import type { ColorDomain, ParamPatch } from '../types';
 import { buildBandFieldPatch, readColorDomain, readHslBands } from './hslBands';
 
+/** 直方图占位（R25 F02 前 = 唯一数据源；现在仅离线/请求失败时回退）。 */
 const HISTOGRAM = [12, 28, 45, 62, 90, 120, 96, 70, 48, 32, 18, 10, 6];
+
+/** 256 桶 luma 计数 → 64 柱展示条（每 4 桶求和、按最大值归一到 4..60px）。 */
+function lumCountsToBars(lum: number[]): number[] {
+  const group = Math.max(1, Math.ceil(lum.length / 64));
+  const bars: number[] = [];
+  for (let i = 0; i < lum.length; i += group) {
+    let sum = 0;
+    for (let j = i; j < Math.min(i + group, lum.length); j += 1) sum += lum[j];
+    bars.push(sum);
+  }
+  const max = Math.max(...bars, 1);
+  return bars.map((v) => Math.max(4, Math.round((v / max) * 60)));
+}
 
 /**
  * t8 色彩编辑域双轨（UI_OKLCH_SPEC）：hsl / split_tone 面板按
@@ -25,6 +39,25 @@ const HISTOGRAM = [12, 28, 45, 62, 90, 120, 96, 70, 48, 32, 18, 10, 6];
 export function AdjustmentsPanel() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const params = useAppStore((s) => s.paramsByProject[s.activeProjectId] ?? {});
+  // R25 F02：真直方图——按当前会话 generation 拉取（与预览图同一 gen 键，
+  // 调参 → generation+1 → 直方图随之刷新）；离线/失败回退占位柱。
+  const sessionId = useAppStore((s) => s.sessionId);
+  const generation = useAppStore((s) => s.generation);
+  const [histBars, setHistBars] = useState<number[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (!sessionId) {
+      setHistBars(null);
+      return undefined;
+    }
+    fetchHistogram(sessionId, generation).then((h) => {
+      if (!alive) return;
+      setHistBars(h && h.counts?.lum?.length ? lumCountsToBars(h.counts.lum) : null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [sessionId, generation]);
   // t91：skin 掩码路由能力信号（后端 /api/health 的 segmenter 节）。
   const skinMaskReady = useAppStore((s) => s.skinMaskReady);
   const setSkinMaskReady = useAppStore((s) => s.setSkinMaskReady);
@@ -80,7 +113,7 @@ export function AdjustmentsPanel() {
       <Text fw={700} mb="sm">调整</Text>
 
       <Paper radius="md" p="xs" mb="sm" withBorder style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 64 }}>
-        {HISTOGRAM.map((h, i) => (
+        {(histBars ?? HISTOGRAM).map((h, i) => (
           <div key={i} style={{ flex: 1, height: h, background: 'var(--mantine-color-indigo-4)', borderRadius: 1 }} />
         ))}
       </Paper>

@@ -842,6 +842,39 @@ class PixoServiceRuntime:
             "measurement": measurement,
         }
 
+    def histogram_session(
+        self,
+        session_id: str,
+        long_edge: int = 1024,
+        bins: int = 256,
+    ) -> dict[str, Any]:
+        """对当前会话渲染预览并计算直方图（R25 F02，R23 §6 能力补齐）。
+
+        与 measure_session 同错误语义：渲染失败不抛 5xx，返回 error 标记。
+        直方图数组本体不进 measurement/decide（规则引擎只吃标量，见
+        pipeline/metrics.py）；本方法仅供工作台反馈环（/histogram 端点）。
+        """
+        from pixo.vision.measure import compute_histogram
+
+        session = self.get_session(session_id)
+        try:
+            image = session.render(long_edge=int(long_edge))
+        except Exception:  # noqa: BLE001 - 直方图不应让 API 因渲染失败而中断
+            image = None
+        if image is None:
+            return {
+                "session_id": session_id,
+                "generation": session.generation,
+                "histogram": None,
+                "error": "render_failed",
+            }
+        hist = compute_histogram(image, bins=int(bins))
+        return {
+            "session_id": session_id,
+            "generation": session.generation,
+            "histogram": hist,
+        }
+
     def decide_photo(self, photo_id: str) -> dict[str, Any]:
         """获取照片当前状态并执行一轮 Decide（单轮语义：不迭代、不回写渲染）。
 

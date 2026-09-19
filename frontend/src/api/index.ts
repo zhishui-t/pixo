@@ -1,5 +1,6 @@
 import type {
   HealthInfo,
+  HistogramData,
   ParamPatch,
   RegionMaskStatus,
   Photo,
@@ -13,6 +14,7 @@ import {
   createSession as createSessionRemote,
   getExportStatus as getExportStatusRemote,
   getHealth as getHealthRemote,
+  getHistogram as getHistogramRemote,
   getRegionMasks as getRegionMasksRemote,
   PixoApiError,
   getStyle as getStyleRemote,
@@ -235,6 +237,28 @@ export function getOriginalSource(sessionId: string): string {
 /** 原图加载失败（在线契约端点 404 / 网络错误）时的本地占位，与离线模式同源。 */
 export function getMockOriginalSource(): string {
   return mockPreviewDataUrl(0, false);
+}
+
+/**
+ * R25 F02：按当前 generation 拉会话直方图。
+ *
+ * 三态返回（与 getOriginalSource 的"不闪断"策略同族）：
+ *  - 后端在线且成功 → HistogramData（luma + RGB 计数）；
+ *  - 离线（backendAvailable === false）/ 请求失败 / gen 过期 404 → null，
+ *    调用方（AdjustmentsPanel）回退占位形态，不阻塞 UI。
+ * backendAvailable 全局信号不被本函数修改（直方图单点失败 ≠ 后端不在线）。
+ */
+export async function fetchHistogram(
+  sessionId: string,
+  generation: number,
+): Promise<HistogramData | null> {
+  if (backendAvailable === false) return null;
+  try {
+    const result = await getHistogramRemote(sessionId, generation);
+    return result.histogram;
+  } catch {
+    return null;
+  }
 }
 
 export function getMockCandidateList(): Array<{ path: string; name: string; size: number }> {

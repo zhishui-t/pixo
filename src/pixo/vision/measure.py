@@ -164,6 +164,48 @@ def compute_proxy_metrics(image_rgb: np.ndarray) -> dict[str, float]:
     }
 
 
+def compute_histogram(image_rgb: np.ndarray, bins: int = 256) -> dict:
+    """直方图测量（R25 F02，R23 §6 在册能力补齐）。
+
+    BT.709 luma + RGB 三通道计数直方图，供工作台 UI 与测量报告消费
+    （数组本体不进 decide 规则——规则引擎只吃标量，见 pipeline/metrics.py）。
+
+    输入契约与 compute_proxy_metrics 一致：uint8 / 0-1 浮点 RGB；
+    None / 非三通道 / 空图返回空 dict（调用方据此不写缺省键）。
+
+    输出：
+      {"bins": bins, "pixels": N,
+       "counts": {"lum": [...], "r": [...], "g": [...], "b": [...]}}
+    口径：0-255 值域均匀分桶（bins=256 即每 1 级一桶，编辑器直方图惯例，
+    末桶含右端点 255）；luma 经 _luminance（BT.709, 0-255 域）后同尺度分桶。
+    """
+    if image_rgb is None:
+        return {}
+    arr = np.asarray(image_rgb)
+    if arr.ndim != 3 or arr.shape[2] < 3 or arr.size == 0:
+        return {}
+    if not 2 <= int(bins) <= 1024:
+        raise ValueError(f"bins 须在 [2, 1024]，实际 {bins}")
+    rgb = _to_float_rgb(arr)  # 0-255 浮点、nan 防御、4ch 截断
+    edges = np.linspace(0.0, 255.0, int(bins) + 1)
+
+    def _hist(values: np.ndarray) -> list[int]:
+        counts, _ = np.histogram(np.clip(values, 0.0, 255.0), bins=edges)
+        return [int(c) for c in counts]
+
+    lum = _luminance(rgb)
+    return {
+        "bins": int(bins),
+        "pixels": int(lum.size),
+        "counts": {
+            "lum": _hist(lum),
+            "r": _hist(rgb[..., 0]),
+            "g": _hist(rgb[..., 1]),
+            "b": _hist(rgb[..., 2]),
+        },
+    }
+
+
 def measure_global(image_rgb: np.ndarray) -> dict[str, float]:
     """计算全图测量指标。
 
@@ -584,6 +626,7 @@ class VisionMeasure:
 __all__ = [
     "VisionMeasure",
     "compute_proxy_metrics",
+    "compute_histogram",
     "measure_global",
     "measure_region",
     "measure_zone_exposure",

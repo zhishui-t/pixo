@@ -212,6 +212,28 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
             )
         return rt.measure_session(session_id)
 
+    @app.get("/api/sessions/{session_id}/histogram")
+    def api_histogram(
+        session_id: str,
+        gen: int | None = Query(default=None),
+        long_edge: int = Query(default=1024, ge=64, le=4096),
+        bins: int = Query(default=256, ge=2, le=1024),
+    ) -> dict[str, Any]:
+        """返回当前 generation 预览的直方图（R25 F02：luma + RGB 计数）。
+
+        工作台反馈环专用（调参后按 gen 刷新）；渲染失败返回
+        histogram=None + error（与 measurements 端点同语义）。
+        """
+        try:
+            session = rt.get_session(session_id)
+        except KeyError as exc:
+            raise _not_found(str(exc)) from exc
+        if gen is not None and gen != session.generation:
+            raise _not_found(
+                f"generation 已过期: 请求={gen}, 当前={session.generation}"
+            )
+        return rt.histogram_session(session_id, long_edge=long_edge, bins=bins)
+
     @app.post("/api/sessions/{session_id}/exports", status_code=202)
     async def api_submit_export(
         session_id: str,

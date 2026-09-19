@@ -7,6 +7,7 @@ import type {
   ExportSubmission,
   ExportTask,
   HealthInfo,
+  HistogramResult,
   MeasurementsResult,
   ParamPatch,
   RegionMaskStatus,
@@ -103,6 +104,26 @@ export function getMeasurements(
   const query = gen !== undefined ? `?gen=${gen}` : '';
   return request<MeasurementsResult>(
     `/api/sessions/${sessionId}/measurements${query}`,
+  );
+}
+
+/**
+ * GET /api/sessions/{session_id}/histogram（R25 F02）
+ *
+ * 调参反馈环数据入口：按当前 generation 拉 luma+RGB 计数直方图；
+ * gen 过期返回 404（PixoApiError），由调用方决定重试/忽略。
+ */
+export function getHistogram(
+  sessionId: string,
+  gen?: number,
+  bins?: number,
+): Promise<HistogramResult> {
+  const params = new URLSearchParams();
+  if (gen !== undefined) params.set('gen', String(gen));
+  if (bins !== undefined) params.set('bins', String(bins));
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  return request<HistogramResult>(
+    `/api/sessions/${sessionId}/histogram${query}`,
   );
 }
 

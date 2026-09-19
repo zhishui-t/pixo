@@ -167,6 +167,37 @@ def test_image_generation_mismatch_return_404(client: TestClient,
     assert resp.status_code == 404
 
 
+def test_histogram_endpoint(client: TestClient, raw_file: Path):
+    """R25 F02: histogram 端点返回 luma+RGB 计数；gen 过期 404（同 measurements）。"""
+    photo_id = _create_photo(client, raw_file)
+    session_id = _create_session(client, photo_id)
+
+    resp = client.get(f"/api/sessions/{session_id}/histogram")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["session_id"] == session_id
+    hist = body["histogram"]
+    # FakeSession.render 是 16x16 全黑 u8 ⇒ 首桶全计数
+    assert hist["bins"] == 256 and hist["pixels"] == 16 * 16
+    counts = hist["counts"]
+    assert counts["lum"][0] == 256 and sum(counts["r"]) == 256
+    assert len(counts["b"]) == 256
+
+    # 自定义 bins 生效
+    resp4 = client.get(f"/api/sessions/{session_id}/histogram?bins=4")
+    assert resp4.status_code == 200
+    h4 = resp4.json()["histogram"]
+    assert h4["bins"] == 4 and sum(h4["counts"]["g"]) == 256
+
+    # gen 过期 404（与 image/measurements 同口径）
+    resp_old = client.get(f"/api/sessions/{session_id}/histogram?gen=99")
+    assert resp_old.status_code == 404
+
+    # 未知会话 404
+    resp_404 = client.get("/api/sessions/nope/histogram")
+    assert resp_404.status_code == 404
+
+
 def test_timeline_and_decide(client: TestClient, raw_file: Path):
     """timeline 返回状态与 trace；POST decide 返回决策结构。"""
     photo_id = _create_photo(client, raw_file)
