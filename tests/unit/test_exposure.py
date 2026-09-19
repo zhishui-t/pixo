@@ -20,7 +20,8 @@ import pytest
 
 from pixo.render.core.calibration import DcpProfile
 from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM
-from pixo.render.core.curves import apply_lut1d, curve_anchor_target, make_power_lut
+from pixo.render.core.curves import (apply_lut1d, curve_anchor_target,
+                                     make_power_lut, make_srgb_eotf_lut)
 from pixo.render.modules.exposure import (
     ExposureStage,
     _baseline_curve_ev,
@@ -125,10 +126,13 @@ def test_rolloff_continuity_at_knee():
 # ---------------------------------------------------------------------------
 
 def test_anchor_midgray_maps_to_117():
-    anchor = curve_anchor_target(None)          # 回退 log2(0.18)
-    lin = 2.0 ** anchor
-    assert abs(lin - 0.18) < 1e-6
-    gamma = apply_lut1d(np.array([lin], dtype=np.float32), make_power_lut(2.2, 4096))
+    # R24 复合语义: 无曲线 ⇒ 锚点 = 基座解码(中灰显示值)。
+    # power22 下精确回 0.18; srgb 精确解码 ≈0.1778 (117/255 的线性值)
+    anchor22 = curve_anchor_target(None, eotf="power22")
+    assert abs(2.0 ** anchor22 - 0.18) < 1e-6
+    lin = 2.0 ** curve_anchor_target(None)
+    gamma = apply_lut1d(np.array([lin], dtype=np.float32),
+                        make_srgb_eotf_lut(4096))
     assert abs(float(gamma[0]) * 255.0 - 117.0) < 1.0
 
 

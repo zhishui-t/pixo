@@ -46,6 +46,8 @@ exclude = ["render.tests*", "pixo.render.tests*"]
 [tool.setuptools.package-data]
 "pixo.render" = [
     "bench/*.json",
+    "lr_tone_curve.json",
+    "recipe_tone_curve.json",
     "_native/*.dll",
     "_native/*.so",
 ]

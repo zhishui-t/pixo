@@ -1,22 +1,28 @@
 """Stage tone (order=30) —— 影调 (linear_rgb → gamma_rgb)。
 
-基座影调 = sRGB EOTF 曲线基 (DCP ProfileToneCurve 默认关闭, 保留为 Adobe look 开关):
+基座影调 = sRGB 曲线基 (DCP ProfileToneCurve 默认关闭, 保留为 Adobe look 开关):
   - profile_curve=False (默认): 用精确 sRGB EOTF 曲线基 (或纯 1/2.2 幂, 参数 eotf)。
-  - profile_curve=True: 用 DCP ProfileToneCurve 影调曲线 LUT (Adobe look, 可选);
+  - profile_curve=True: **复合** DCP ProfileToneCurve —— Adobe 管线里该曲线是
+    linear→linear 的场景曲线、施于输出编码**之前**, 故此处为 base_lut∘curve_lut
+    (曲线输出仍为线性值, 再走 EOTF), 而非用曲线整条替代编码 (R24 修复);
     无曲线时回退曲线基。
   - use_filmic=True: 用 filmic 影调重塑曲线 (Phase 1.5 增强层, 默认不用)。
 
-默认关闭 ProfileToneCurve 的实测依据 (2026-08-16 A/B, 6 张 NEF vs 相机预览):
-  DCP ProfileToneCurve 的强黑色趾部 (x=0.01 → y=0.0043) 使我方暗部裁切 5-7%,
-  而相机预览自身 lo_clip 仅 0~1.9% (机内曲线温和, 不压暗部)。换 sRGB EOTF 基座
-  曲线 (profile_curve=False) 后: lo_clip 0.13~0.71%、hi_clip 0.4~0.75%、
-  d_a 从 +2.33 改善到 +0.17 —— 与相机预览明显更接近。
+profile_curve 默认 False 的纪律依据:
+  2026-08-16 A/B (6 张 NEF vs 相机预览) 时槽位还是"曲线替代编码"的坏实现
+  (暗部 5-7% 裁切); R23 引擎基线中性化把"打开 RAW 即施加观感"定为越权,
+  ProfileToneCurve 是**相机配置文件槽位** (Adobe look / Picture Control 落点),
+  由调用方以**数据**形式注入, 不写死在代码里。R24 复合修复后 (n=24 探针):
+  A 28.65(V0 中性)→13.58 / cc 0.96→0.97, 曲线形状正确但"默认开"仍属编辑
+  动作, 维持默认关。实证: .artifacts/_r24_compose_probe.py。
 
 RGB 三通道共用同一条亮度曲线 ⇒ 中性灰在任何亮度层级保持中性。
 
 参数:
   profile_curve  使用 DCP ProfileToneCurve (默认 False; True = Adobe look)
-  eotf           曲线基编码: 'srgb'(默认, 精确 sRGB EOTF) | 'power22'
+  eotf           影调来源: 'srgb'(默认, 精确 sRGB EOTF) | 'power22' (纯幂) |
+                 'lrfit' (LR 标定) | 'recipe' (相机 thumb 拟合标定, R24;
+                 二者读包内 v3 JSON, 缺失回退 sRGB 曲线基并记降级)
   gamma          eotf='power22' 的幂 / filmic 基础 (默认 2.2)
   brightness     显示亮度增益 (EV, 线性域预乘, 每机校准常量)
   use_filmic     Phase 1.5 filmic 曲线 (默认 False, 优先于 profile_curve)
@@ -36,63 +42,82 @@ from ..core import calibration_store
 from ..degradation import record_degradation
 
 _LUT_CACHE = {}
-# DcpProfile 影调曲线 LUT 缓存：id(prof) 键 + **值里持 prof 强引用**。
-# 不能用 WeakKeyDictionary——DcpProfile 是 @dataclass(默认生成 __eq__) 不可哈希；
-# 也不能裸 id() 键——prof 被 GC 后 id 可能被新对象复用，导致张冠李戴的曲线
-# (原实现的潜在缺陷)。强引用钉住 prof ⇒ 条目存活期内 id 不可能复用；
-# 每条目仅 (prof 引用 + 16K float LUT)，profile 实例有限，泄漏可忽略。
-_PROFILE_CACHE: dict[int, tuple] = {}
+# DcpProfile 影调曲线复合 LUT 缓存：(id(prof), eotf, gamma) 键 + **值里持
+# prof 强引用**。不能用 WeakKeyDictionary——DcpProfile 是 @dataclass(默认生成
+# __eq__) 不可哈希；也不能裸 id() 键——prof 被 GC 后 id 可能被新对象复用，导致
+# 张冠李戴的曲线 (原实现的潜在缺陷)。强引用钉住 prof ⇒ 条目存活期内 id 不可能
+# 复用；每条目仅 (prof 引用 + 16K float LUT)，profile 实例有限，泄漏可忽略。
+_PROFILE_CACHE: dict[tuple, tuple] = {}
 _LRFIT_CACHE = None
+# R24 recipe 标定缓存 (v3 同构: gains + 共享曲线; 目标=相机内嵌 JPEG,
+# 由 tools/fit_tone_curve.py 拟合)。与 _LRFIT_CACHE 分立保持既有
+# monkeypatch 形态 (元组) 不变。
+_RECIPE_CACHE = None
 _N_FAST = 16384  # 热路径 LUT 级数 (最近邻, 量化误差 <1/32768 不可感知)
 # LR 标定文件 (包内资源, 默认不存在): 文件 I/O/缓存统一走
 # core.calibration_store —— 缺失时由 store 负缓存 (旧实现每次调用都
 # p.exists() stat 探测), 存在时按 (mtime_ns, size) 失效重读。
 _LR_CAL_FILE = Path(__file__).resolve().parent.parent / "lr_tone_curve.json"
+# recipe 标定文件 (包内资源, 默认不存在; fit_tone_curve.py 产出)
+_RECIPE_CAL_FILE = Path(__file__).resolve().parent.parent / "recipe_tone_curve.json"
 
 
 def _reset_caches() -> None:
-    """测试隔离钩子: 还原影调 LUT / lrfit 标定缓存并重置 calibration_store。
+    """测试隔离钩子: 还原影调 LUT / lrfit·recipe 标定缓存并重置 calibration_store。
 
-    _PROFILE_CACHE 不清: 键为 DcpProfile 实例 (强引用防 id 复用的修复保持
-    不动), 与文件标定加载无关, 条目跨 reset 恒有效。
+    _PROFILE_CACHE 不清: 键为 (id(prof), eotf, gamma) 且值持 prof 强引用
+    (防 id 复用的修复保持不动), 与文件标定加载无关, 条目跨 reset 恒有效。
     """
-    global _LRFIT_CACHE
+    global _LRFIT_CACHE, _RECIPE_CACHE
     _LRFIT_CACHE = None
+    _RECIPE_CACHE = None
     _LUT_CACHE.clear()
     calibration_store.reset()
 
 
-def _get_lrfit():
-    """LR 标定 v3: (gains[3], 共享曲线 LUT) float32 0..1; 文件缺失 → None。
+def _load_fit_doc(cal_file: Path):
+    """v3 标定文档 → (gains[3], 共享曲线 LUT); 缺失/无效 → None。
 
-    render/lr_tone_curve.json 格式:
-      {"version": 3, "gains": [r,g,b], "curve": [1024 点 0..255]}
-    语义 (tools/fit_lr_tone_v2.py 拟合):
-      - gains: 线性域逐通道增益, 吸收 LR 与我们的全局色差 (亮度标度+WB/色调方向);
-      - curve: 一条共享影调曲线 (v1 三通道曲线的均值, 已去除单张照片的
-        WB 烘焙), 三通道同曲线 → 中性像素任意层级保持中性。
+    格式: {"version": 3|4, "gains": [r,g,b], "curve": [1024 点 0..255]}
+    语义 (tools/fit_tone_curve.py 拟合, rawlab v4 工具 R24 找回改造):
+      - gains: 线性域逐通道增益, 吸收目标与我们的全局色差 (亮度标度+WB/色调方向);
+      - curve: 一条共享影调曲线, 三通道同曲线 → 中性像素任意层级保持中性。
     历史教训 (2026-08): v1 逐通道 CDF 曲线把拟合照片的白平衡烘焙进曲线,
       换一张照片 (5236) 就整体发蓝 (用户报"一黄一蓝, RGB 标反?"), 实为
       逐通道直方图匹配的跨图缺陷, 不是通道标反。
     文件读取走 core.calibration_store (负缓存: 缺失不再每次 stat);
     解析/防呆逻辑与迁移前逐行一致。
     """
+    doc = calibration_store.load_json(cal_file)
+    if doc is None:
+        return None
+    try:
+        gains = np.asarray(doc.get("gains", [1.0, 1.0, 1.0]),
+                           dtype=np.float32)
+        curve = np.asarray(doc["curve"], dtype=np.float64) / 255.0
+        # 防呆: 曲线退化 (如 0..1 误存又除 255) 时直接判无效
+        if float(curve.max()) >= 0.1:
+            grid = np.linspace(0.0, 1.0, _N_FAST, dtype=np.float64)
+            lut = np.interp(grid, np.linspace(0.0, 1.0, len(curve)),
+                            curve).astype(np.float32)
+            return (gains, lut)
+    except Exception:
+        return None
+    return None
+
+
+def _get_tone_fit(kind: str):
+    """lrfit / recipe 标定 (v3 同构); kind='lrfit' 读 LR 标定文件,
+    'recipe' 读相机 thumb 拟合标定 (R24); 文件缺失 → None。
+    两缓存分立 ⇒ 既有 _LRFIT_CACHE 元组 monkeypatch 形态不变。"""
+    if kind == "recipe":
+        global _RECIPE_CACHE
+        if _RECIPE_CACHE is None:
+            _RECIPE_CACHE = _load_fit_doc(_RECIPE_CAL_FILE)
+        return _RECIPE_CACHE
     global _LRFIT_CACHE
     if _LRFIT_CACHE is None:
-        doc = calibration_store.load_json(_LR_CAL_FILE)
-        if doc is not None:
-            try:
-                gains = np.asarray(doc.get("gains", [1.0, 1.0, 1.0]),
-                                   dtype=np.float32)
-                curve = np.asarray(doc["curve"], dtype=np.float64) / 255.0
-                # 防呆: 曲线退化 (如 0..1 误存又除 255) 时直接判无效
-                if float(curve.max()) >= 0.1:
-                    grid = np.linspace(0.0, 1.0, _N_FAST, dtype=np.float64)
-                    lut = np.interp(grid, np.linspace(0.0, 1.0, len(curve)),
-                                    curve).astype(np.float32)
-                    _LRFIT_CACHE = (gains, lut)
-            except Exception:
-                _LRFIT_CACHE = None
+        _LRFIT_CACHE = _load_fit_doc(_LR_CAL_FILE)
     return _LRFIT_CACHE
 
 
@@ -114,18 +139,35 @@ def _get_base_lut(eotf: str, gamma: float) -> np.ndarray:
     return lut
 
 
-def _get_profile_lut(prof) -> np.ndarray | None:
-    """DCP 影调曲线 LUT (缓存; 无曲线返回 None)。"""
+def _get_profile_lut(prof, eotf: str = "srgb",
+                     gamma: float = 2.2) -> np.ndarray | None:
+    """DCP 影调曲线**复合** LUT (缓存; 无曲线返回 None)。
+
+    R24: ProfileToneCurve 是 Adobe 管线里的 **linear→linear** 场景曲线
+    (施于输出编码之前), 不是完整的 linear→gamma 映射 —— 返回
+    base_lut ∘ profile_lut (曲线输出作为线性值再走 EOTF)。旧实现
+    用曲线整条替代编码 ⇒ 逐像素结构错位 (n=24 探针: A 36.37→13.58,
+    cc 0.89→0.97, .artifacts/_r24_compose_probe.py)。
+    复合预构为单条 16384 级 LUT ⇒ 热路径仍单次 gather, native 不变。
+    """
     if prof is None:
         return None
-    entry = _PROFILE_CACHE.get(id(prof))
+    key = (id(prof), str(eotf), round(float(gamma), 3))
+    entry = _PROFILE_CACHE.get(key)
     if entry is None:
         parsed = parse_profile_curve(getattr(prof, "profile_tone_curve", None))
-        lut = curve_lut_from_points(*parsed, _N_FAST) if parsed else None
+        if parsed:
+            prof_lut = curve_lut_from_points(*parsed, _N_FAST)
+            # 复合 (base∘profile): apply_lut1d 线性插值, 单调性由
+            # "profile 非降 + base 递增" 的复合构造保证; 白→白契约
+            # (曲线两端点 0→0/1→1 + base 端点) 随之保持。
+            lut = apply_lut1d(prof_lut, _get_base_lut(str(eotf), float(gamma)))
+        else:
+            lut = None
         # 值持 (prof, lut) 强引用：防 prof 释放后 id 被新 profile 复用
         # (DcpProfile 不可哈希，无法用 WeakKeyDictionary)。
         entry = (prof, lut)
-        _PROFILE_CACHE[id(prof)] = entry
+        _PROFILE_CACHE[key] = entry
     return entry[1]
 
 
@@ -287,7 +329,8 @@ class ToneStage(Stage):
 
     param_schema = {
         "profile_curve": {"type": "bool"},
-        "eotf": {"type": "str", "choices": ["srgb", "power22", "lrfit"]},
+        "eotf": {"type": "str",
+                 "choices": ["srgb", "power22", "lrfit", "recipe"]},
         "gamma": {"type": "float", "min": 1.0, "max": 4.0},
         "brightness": {"type": "float"},
         "use_filmic": {"type": "bool"},
@@ -350,24 +393,33 @@ class ToneStage(Stage):
                     detail="LUT1D 插值回退 apply_lut1d_fast")
                 return apply_lut1d_fast(img, lut)
 
-        if eotf == "lrfit":
-            # LR 标定影调 (v3, tools/fit_lr_tone_v2.py): 线性增益 + 共享曲线。
-            # 增益吸收全局色差, 曲线只做影调 —— 中性像素保持中性, 且可跨图
+        if eotf in ("lrfit", "recipe"):
+            # 标定影调 (v3: 线性增益 + 共享曲线, tools/fit_tone_curve.py):
+            # gains 吸收全局色差, 曲线只做影调 —— 中性像素保持中性, 且可跨图
             # 泛化 (v1 逐通道曲线会把单张照片的 WB 烘焙进曲线, 跨图发蓝)。
-            # 注意: 曲线已含 LR 的亮度锚定, 此处不再乘 brightness。
-            lrfit = _get_lrfit()
-            if lrfit is not None:
-                gains, lut = lrfit
-                # E2 修复: 六键 (Highlights/Shadows/Whites/Blacks) 在 lrfit 分支
+            # 注意: 曲线已含目标的亮度锚定, 此处不再乘 brightness。
+            fit = _get_tone_fit(eotf)
+            if fit is not None:
+                gains, lut = fit
+                # E2 修复: 六键 (Highlights/Shadows/Whites/Blacks) 在标定分支
                 # 同样生效 —— 基于六键结果乘 gains; 仍不乘 brightness
-                # (注释语义保持: 曲线已含 LR 的亮度锚定)。
+                # (注释语义保持: 曲线已含目标的亮度锚定)。
                 x6 = _apply_sixkey(ctx.image.astype(np.float32), ctx, self)
                 xc = np.clip(x6 * gains, 0.0, 1.0)
-                y = np.empty_like(xc)
-                for c in range(3):
-                    y[..., c] = _apply_lut(xc[..., c], lut)
+                # 共享曲线 ⇒ 整图单次 _apply_lut (native 需 (H,W,3);
+                # 旧逐通道 2D 调用会触发 lut1d_native 降级回退, R24 实跑暴露)
+                y = _apply_lut(xc, lut)
                 profile_used = False
             else:
+                # R24: 标定缺失的静默回退改可观测 —— 旧行为请求 lrfit 却
+                # 无声落 sRGB 曲线基 (R23 探针 V5==V0 逐位相同之谜)。
+                cal_file = _LR_CAL_FILE if eotf == "lrfit" else _RECIPE_CAL_FILE
+                record_degradation(
+                    f"render.tone_map.{eotf}_calibration_missing", None,
+                    path=str(cal_file),
+                    reason="calibration_missing",
+                    detail="标定文件缺失 → 回退 sRGB 曲线基",
+                    kind="fallback")
                 y = _apply_lut(x, _get_base_lut("srgb", gamma))
                 profile_used = False
         elif use_filmic:
@@ -376,7 +428,8 @@ class ToneStage(Stage):
             y = _apply_lut(x, lut)
             profile_used = False
         elif use_profile:
-            profile_lut = _get_profile_lut(ctx.prof)
+            # R24: 复合 LUT (base∘curve), eotf/gamma 与曲线基分支同源
+            profile_lut = _get_profile_lut(ctx.prof, eotf, gamma)
             if profile_lut is not None:
                 y = _apply_lut(x, profile_lut)
                 profile_used = True

@@ -229,7 +229,8 @@ def test_wb_loader_matches_direct_read(tmp_path):
 
 
 def test_tone_lrfit_matches_direct_read(tmp_path, monkeypatch):
-    """tone_map._get_lrfit 与直接读文件 + 旧公式 (gains, lut) 逐元素一致。"""
+    """tone_map._get_tone_fit('lrfit') 与直接读文件 + 旧公式 (gains, lut)
+    逐元素一致 (R24 重构: lrfit/recipe 共用 _load_fit_doc 加载器)。"""
     import pixo.render.modules.tone_map as tone_mod
     curve = [round(v * 255) for v in np.linspace(0.0, 1.0, 1024)]
     gains = [1.01, 1.0, 0.99]
@@ -238,7 +239,7 @@ def test_tone_lrfit_matches_direct_read(tmp_path, monkeypatch):
                  encoding="utf-8")
     monkeypatch.setattr(tone_mod, "_LR_CAL_FILE", f)
     tone_mod._reset_caches()
-    got = tone_mod._get_lrfit()
+    got = tone_mod._get_tone_fit("lrfit")
     assert got is not None
     # 旧公式复算 (迁移前 _get_lrfit 内联逻辑)
     c = np.asarray(curve, dtype=np.float64) / 255.0
@@ -246,11 +247,16 @@ def test_tone_lrfit_matches_direct_read(tmp_path, monkeypatch):
     lut = np.interp(grid, np.linspace(0.0, 1.0, len(c)), c).astype(np.float32)
     assert np.allclose(got[0], np.asarray(gains, dtype=np.float32))
     assert np.array_equal(got[1], lut)
+    # recipe 槽同加载器: 同一份数据喂 recipe 文件 ⇒ 同结果
+    monkeypatch.setattr(tone_mod, "_RECIPE_CAL_FILE", f)
+    tone_mod._reset_caches()
+    got_r = tone_mod._get_tone_fit("recipe")
+    assert got_r is not None and np.array_equal(got_r[1], lut)
     # 缺失文件 → None (负缓存: 重复调用不 stat)
     monkeypatch.setattr(tone_mod, "_LR_CAL_FILE", tmp_path / "missing.json")
     tone_mod._reset_caches()
-    assert tone_mod._get_lrfit() is None
-    assert tone_mod._get_lrfit() is None
+    assert tone_mod._get_tone_fit("lrfit") is None
+    assert tone_mod._get_tone_fit("lrfit") is None
 
 
 # --- 模块 _reset_caches 钩子 ---------------------------------------------------

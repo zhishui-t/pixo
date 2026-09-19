@@ -2,8 +2,9 @@
 
 旧管线教训: 对比度 S 曲线、gamma、高光回拉各自为政 + 校准表打架。
 这里统一为:
-  - **基座影调 = DCP ProfileToneCurve** (相机标定曲线, 见 curve_lut_from_points)。
-  - 无 DCP 曲线时回退**曲线基**: 精确 sRGB EOTF (默认) 或纯 1/2.2 幂 (eotf 参数)。
+  - **基座影调 = 曲线基**: 精确 sRGB EOTF (默认) 或纯 1/2.2 幂 (eotf 参数)。
+  - DCP ProfileToneCurve 为可选 Adobe look (tone_map._get_profile_lut):
+    **linear→linear** 场景曲线, 与曲线基**复合**使用 (base∘curve, R24)。
   - filmic 作为 Phase 1.5 影调重塑层保留 (make_filmic_lut, 默认不用)。
 """
 from __future__ import annotations
@@ -19,6 +20,17 @@ MID_GRAY_GAMMA = float(0.18 ** (1.0 / 2.2))
 def srgb_encode(x: np.ndarray) -> np.ndarray:
     x = np.clip(x, 0.0, None)
     return np.where(x <= 0.0031308, 12.92 * x, 1.055 * np.power(x, 1.0 / 2.4) - 0.055)
+
+
+def srgb_decode(y: float) -> float:
+    """sRGB EOTF 逆 (gamma → 线性), 标量。0.4587(≈117/255) → ≈0.178。"""
+    y = float(y)
+    if y <= 0.0:
+        return 0.0
+    if y <= 0.04045:
+        return y / 12.92
+    y = min(y, 1.0)
+    return ((y + 0.055) / 1.055) ** 2.4
 
 
 def make_srgb_eotf_lut(n: int = 4096) -> np.ndarray:
@@ -153,25 +165,43 @@ def curve_inv_y(xs: np.ndarray, ys: np.ndarray, y: float) -> float:
     return x
 
 
-def curve_anchor_target(prof) -> float:
-    """曝光锚点: 令影调曲线输出中灰 (MID_GRAY_GAMMA≈0.459→gamma 117) 的线性输入值 → log2。
+def base_curve_decode(y: float, eotf: str = "srgb", gamma: float = 2.2) -> float:
+    """曲线基逆映射 (gamma → 线性), 标量; 语义与 make_base_curve_lut 对偶。
 
-    无 DCP 曲线时回退 log2(0.18) (曲线基把 0.18 编到 ≈0.459/0.461 → ≈117)。
+    eotf='power22'  y^gamma (gamma=2.2 时 MID_GRAY_GAMMA^2.2 = 0.18 精确回位)
+    其它 (含 'srgb')  精确 sRGB EOTF 逆 (0.4587 → ≈0.178)
     """
+    if eotf == "power22":
+        return float(np.clip(y, 0.0, 1.0)) ** float(gamma)
+    return srgb_decode(y)
+
+
+def curve_anchor_target(prof, eotf: str = "srgb", gamma: float = 2.2) -> float:
+    """曝光锚点: 令**复合影调**输出中灰 (MID_GRAY_GAMMA≈0.459→gamma 117)
+    的线性输入值 → log2。
+
+    R24 复合语义 (与 tone_map._get_profile_lut 同源): ProfileToneCurve 是
+    linear→linear 场景曲线、之后走基座编码, 即总变换 = base∘curve —— 锚点
+    反查分两步: 先解码基座得目标线性值 t (power22=0.18; srgb≈0.178),
+    再反查曲线 x = curve⁻¹(t)。旧语义把曲线当完整编码直接反查
+    curve⁻¹(0.459), 随 profile_curve 槽位一并废弃。
+    无 DCP 曲线 (或 prof=None) ⇔ 恒等曲线 ⇒ 锚点 = log2(t)。
+    """
+    t = base_curve_decode(MID_GRAY_GAMMA, eotf=eotf, gamma=gamma)
     parsed = parse_profile_curve(getattr(prof, "profile_tone_curve", None)) \
         if prof is not None else None
     if parsed is None:
-        return float(np.log2(0.18))
+        return float(np.log2(t))
     xs, ys = parsed
-    x = curve_inv_y(xs, ys, MID_GRAY_GAMMA)
+    x = curve_inv_y(xs, ys, t)
     x = float(np.clip(x, 0.02, 0.9))
     return float(np.log2(x))
 
 __all__ = [
     "MID_GRAY_GAMMA",
-    "srgb_encode", "make_srgb_eotf_lut", "make_power_lut",
-    "make_base_curve_lut", "make_filmic_lut", "apply_lut1d",
-    "apply_lut1d_fast", "apply_gamma_power", "gray_luma",
+    "srgb_encode", "srgb_decode", "make_srgb_eotf_lut", "make_power_lut",
+    "make_base_curve_lut", "base_curve_decode", "make_filmic_lut",
+    "apply_lut1d", "apply_lut1d_fast", "apply_gamma_power", "gray_luma",
     "parse_profile_curve", "curve_lut_from_points", "curve_inv_y",
     "curve_anchor_target",
 ]

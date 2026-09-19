@@ -502,23 +502,29 @@ def test_profile_cache_strong_ref_prevents_id_reuse(monkeypatch):
     monkeypatch.setattr(tone_map, "parse_profile_curve", counting_parse)
 
     prof = _fake_prof()
-    lut1 = tone_map._get_profile_lut(prof)
+    lut1 = tone_map._get_profile_lut(prof, "srgb", 2.2)
     assert lut1 is not None
-    lut1_again = tone_map._get_profile_lut(prof)
+    lut1_again = tone_map._get_profile_lut(prof, "srgb", 2.2)
     assert lut1_again is lut1          # 命中缓存
     assert len(parsed) == 1            # 只解析一次
+
+    # R24: 同 prof 不同 (eotf, gamma) 是独立条目 (复合 LUT 依赖编码基);
+    # 曲线本体不复用 ⇒ 每个变体首访各解析一次 (125 点解析为微秒级)
+    lut_pow = tone_map._get_profile_lut(prof, "power22", 2.2)
+    assert lut_pow is not None and lut_pow is not lut1
+    assert len(parsed) == 2
 
     # 缓存值持 prof 强引用：del 后条目仍钉住对象，id 不可能被复用
     prof_id = id(prof)
     del prof
-    entry = tone_map._PROFILE_CACHE[prof_id]
+    entry = tone_map._PROFILE_CACHE[(prof_id, "srgb", 2.2)]
     assert entry[0] is not None and entry[1] is lut1
 
     # 无曲线 profile：None 也被缓存（不重复解析）
     prof2 = _fake_prof(curve=False)
     assert tone_map._get_profile_lut(prof2) is None
     assert tone_map._get_profile_lut(prof2) is None
-    assert len(parsed) == 2
+    assert len(parsed) == 3            # srgb + power22 变体 + 本条无曲线各一次
 
 
 # ---------------------------------------------------------------------------

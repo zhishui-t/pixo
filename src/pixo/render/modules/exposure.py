@@ -6,14 +6,16 @@
     变换 (与 whitebalance Stage 共享 engine.color.cam_to_xyz, 消除旧
     build_probe_matrix 的重复矩阵合成), 在该域 log2 中位定标 —— 一次到位,
     无迭代、无场景拟合表。
-  - 锚点 = 令影调曲线输出中灰 (≈gamma 117) 的线性输入 (curve_anchor_target)。
+  - 锚点 = 令**复合影调** (ProfileToneCurve∘曲线基编码, 与 tone 层同源)
+    输出中灰 (≈gamma 117) 的线性输入 (curve_anchor_target, R24)。
   - 基线曝光偏移 (DCP BaselineExposureOffset) 与每机 target_offset 常量计入。
   - 高光保护软滚降: EV 上限保证 clip_p 分位不越白电平 (裁切预算 100-clip_p %),
     叠加 soft_highlight_rolloff 肩部承接 —— 高光平滑滚降而非硬裁。
 
 参数:
-  mode           "auto"(默认) | "off" | ev 数值
-  target         显式锚点 log2 (None = 由 DCP 曲线反推)
+  mode           "baseline"(R23 后默认, 仅 DCP BaselineExposureOffset) |
+                 "auto"(探针中位锚定) | "off" | ev 数值
+  target         显式锚点 log2 (None = 由复合影调反推, 与 tone 层配置同源)
   target_offset  每机校准偏移 (EV, 单个常量)
   clip_p         高光保护分位 (默认 98 → 裁切预算 2%)
   highlight_budget 高光裁切预算 τ (默认 0.02): 允许进肩部/白区的探针比例,
@@ -524,9 +526,20 @@ class ExposureStage(Stage):
             region = y[max(0, y0):min(h, y1), max(0, x0):min(w, x1)]
         src = region if region is not None and region.size > 64 else y
         logy = np.log2(np.maximum(src, 1e-6))
-        # 锚点: 由 DCP 影调曲线反推 (曲线输出中灰 ≈117 对应的线性输入)
+        # 锚点: 由**复合影调**反推 (R24): tone 层实际基座 = 曲线基 EOTF,
+        # profile_curve 开启时 ProfileToneCurve 以 linear→linear 场景曲线
+        # 参与**复合** (base∘curve) —— 锚点反查须同源, eotf/gamma 取 tone
+        # 层覆盖 (缺省与 ToneStage.default_params 一致: srgb/2.2/曲线关;
+        # 'lrfit'/'recipe' 无解码定义, 与 tone 回退一致按 srgb 处理)。
         explicit = self.p(ctx, "target", None)
-        anchor = float(explicit) if explicit is not None else curve_anchor_target(ctx.prof)
+        if explicit is not None:
+            anchor = float(explicit)
+        else:
+            tone_p = ctx.params_for("tone")
+            anchor = curve_anchor_target(
+                ctx.prof if bool(tone_p.get("profile_curve")) else None,
+                eotf=str(tone_p.get("eotf") or "srgb"),
+                gamma=float(tone_p.get("gamma") or 2.2))
         offset = float(self.p(ctx, "target_offset"))
         target = anchor
         ev = target - float(np.median(logy))

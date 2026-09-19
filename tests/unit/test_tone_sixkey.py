@@ -217,3 +217,19 @@ def test_lrfit_branch_skips_brightness(monkeypatch):
     tone_map.ToneStage({"eotf": "lrfit", "brightness": 0.0}).run(ref)
     assert np.allclose(ctx.image, ref.image, atol=2e-3), (
         "lrfit 分支不应乘 brightness (曲线已含 LR 亮度锚定)")
+
+
+def test_recipe_branch_dispatch(monkeypatch):
+    """R24: eotf='recipe' 派发到 _RECIPE_CACHE (gains×线性 → 共享曲线),
+    与 lrfit 同数学 —— 注入 (0.9 增益 + 恒等曲线) 验证施加链本体。"""
+    from pixo.render.modules import tone_map
+
+    lut = np.linspace(0.0, 1.0, 256, dtype=np.float32)   # 恒等曲线
+    gains = np.array([0.9, 1.0, 1.0], dtype=np.float32)
+    monkeypatch.setattr(tone_map, "_RECIPE_CACHE", (gains, lut))
+
+    img = _ramp_img()
+    out = _run(img, {"eotf": "recipe"})                   # 六键全 0, brightness 0
+    expected = np.clip(img * gains, 0.0, 1.0)
+    # 恒等曲线经 LUT (16384 级最近邻) 回放, 容忍量化
+    assert float(np.abs(out - expected).max()) <= 2e-3

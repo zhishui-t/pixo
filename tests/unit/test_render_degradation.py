@@ -131,6 +131,39 @@ def test_native_unavailable_is_degraded_not_version_gate():
 
 
 # ---------------------------------------------------------------------------
+# ①b R24: tone lrfit 标定缺失的静默回退 → 可观测降级
+# ---------------------------------------------------------------------------
+
+def test_tone_lrfit_missing_file_records_degradation():
+    """eotf=lrfit 且 lr_tone_curve.json 缺失 → 回退 sRGB 曲线基 + degraded 条目。
+
+    旧行为: 请求 lrfit 却无声回退 (R23 探针 V5==V0 逐位相同之谜的根源)。
+    """
+    import numpy as np
+    from pixo.render.modules.tone_map import ToneStage, _LR_CAL_FILE
+    from pixo.render.pipeline.graph import DOMAIN_LINEAR_RGB, StageContext
+
+    assert not _LR_CAL_FILE.exists(), "仓内无 lr_tone_curve.json 是本用例前提"
+    x = np.linspace(0.0, 1.0, 64, dtype=np.float32)
+    img = np.repeat(np.repeat(x[None, :, None], 8, axis=0), 3, axis=2)
+    ctx = StageContext("t.nef", prof=None, config={})
+    ctx.set_image(img, DOMAIN_LINEAR_RGB)
+    ToneStage({"eotf": "lrfit", "brightness": 0.0}).run(ctx)
+
+    assert ctx.state["tone_eotf"] == "lrfit"
+    entries = deg.render_degraded_entries()
+    src = "render.tone_map.lrfit_calibration_missing"
+    assert src in _sources(entries), "lrfit 标定缺失必须留下降级条目"
+    e = entries[_sources(entries).index(src)]
+    assert e["kind"] == "fallback"
+    assert e["path"] == str(_LR_CAL_FILE)
+    # 输出口径 = sRGB 曲线基 (回退行为本身不变, 只是从静默变可观测)
+    from pixo.render.core.curves import apply_lut1d_fast, make_srgb_eotf_lut
+    expected = apply_lut1d_fast(img, make_srgb_eotf_lut(16384))
+    assert float(np.abs(ctx.image - expected).max()) < 1e-5
+
+
+# ---------------------------------------------------------------------------
 # ② 正向验收靶子: 写坏标定表副本 → degraded 条目 + health 暴露
 # ---------------------------------------------------------------------------
 

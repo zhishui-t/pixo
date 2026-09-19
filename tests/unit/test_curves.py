@@ -26,6 +26,7 @@ from pixo.render.core.curves import (
     make_power_lut,
     make_srgb_eotf_lut,
     parse_profile_curve,
+    srgb_decode,
     srgb_encode,
 )
 
@@ -160,28 +161,36 @@ def test_mid_gray_gamma_is_117():
 
 
 def test_curve_anchor_target_fallback():
-    assert abs(curve_anchor_target(None) - np.log2(0.18)) < 1e-9
+    # R24 复合语义: 无曲线 = 恒等曲线 ⇒ 锚点 = log2(基座解码(中灰显示值))。
+    # power22 下 MID_GRAY_GAMMA^2.2 = 0.18 精确回位; srgb 精确解码 ≈0.1778。
+    assert abs(curve_anchor_target(None, eotf="power22") - np.log2(0.18)) < 1e-9
+    assert abs(curve_anchor_target(None)
+               - np.log2(srgb_decode(MID_GRAY_GAMMA))) < 1e-12
 
 
 def test_curve_anchor_target_power_curve():
-    # 曲线恰为 x^(1/2.2) → curve(0.18)=MID_GRAY_GAMMA, 反演锚点 = log2(0.18)
+    # R24 复合语义: 总变换 = base∘curve ⇒ 锚点满足 curve(x) = 基座解码(中灰)。
+    # 曲线 x^(1/2.2) + power22 基: curve(x)=0.18 ⇒ x = 0.18^2.2
+    # (旧语义直接反查 curve⁻¹(0.459) 得 0.18, 随槽位域错误一并废弃)
     xs = np.linspace(0.0, 1.0, 4097)
     ys = np.power(xs, 1.0 / 2.2)
     prof = _curve_profile(xs, ys)
-    anchor = curve_anchor_target(prof)
-    assert abs(anchor - np.log2(0.18)) < 1e-6
+    anchor = curve_anchor_target(prof, eotf="power22")
+    # 容差 5e-5: curve_inv_y 在 4097 点曲线上线性反查的固有插值误差 (~1e-5 log2)
+    assert abs(anchor - np.log2(0.18 ** 2.2)) < 5e-5
 
 
 def test_curve_anchor_target_outputs_mid_gray():
-    # 反演锚点后经曲线应输出中灰 (≈117)
+    # R24: 锚点线性值经**复合影调** (先 curve 后基座编码) 应输出中灰 (≈117)
     xs = np.linspace(0.0, 1.0, 65)
     ys = np.power(xs, 1.0 / 2.2)
     prof = _curve_profile(xs, ys)
-    x = 2.0 ** curve_anchor_target(prof)
-    # 锚定后的线性值经 power 曲线 → 中灰 gamma → ≈117
-    lut = make_power_lut(2.2, 4096)
-    gamma = apply_lut1d(np.array([x], dtype=np.float32), lut)
-    assert abs(float(gamma[0]) * 255.0 - 117.0) < 1.0
+    x = 2.0 ** curve_anchor_target(prof, eotf="power22")
+    after_curve = float(apply_lut1d(
+        np.array([x], dtype=np.float32), curve_lut_from_points(xs, ys, 4096))[0])
+    gamma = float(apply_lut1d(
+        np.array([after_curve], dtype=np.float32), make_power_lut(2.2, 4096))[0])
+    assert abs(gamma * 255.0 - 117.0) < 1.0
 
 
 def test_curve_anchor_target_clamped():
@@ -221,9 +230,41 @@ def test_tone_stage_applies_profile_curve():
     ToneStage({"profile_curve": True, "brightness": 0.0}).run(ctx)
     assert ctx.domain == DOMAIN_GAMMA_RGB
     assert ctx.state["tone_profile_curve"] is True
-    # 热路径用 16384 级最近邻快查表 (apply_lut1d_fast, 量化误差 <1/16384)
-    expected = apply_lut1d_fast(img, curve_lut_from_points(xs, ys, 16384))
+    # R24 复合语义: ProfileToneCurve 是 linear→linear 场景曲线, 施加 =
+    # sRGB 编码(curve(x)) —— 复合 LUT = base_lut(profile_lut), 单次
+    # gather (16384 级最近邻, 量化误差 <1/16384)
+    composed = apply_lut1d(curve_lut_from_points(xs, ys, 16384),
+                           make_srgb_eotf_lut(16384))
+    expected = apply_lut1d_fast(img, composed)
     assert float(np.abs(ctx.image - expected).max()) < 1e-5
+
+
+def test_get_profile_lut_composed_invariants():
+    # R24 复合不变量: base∘curve 恒单调、白→白、恒等曲线 ⇒ 与曲线基逐位一致
+    from pixo.render.modules.tone_map import _get_profile_lut
+    xs = np.linspace(0.0, 1.0, 257)
+    lut_id = _get_profile_lut(_curve_profile(xs, xs), "srgb", 2.2)
+    assert lut_id is not None
+    base = make_srgb_eotf_lut(16384)
+    # 恒等曲线: 采样点恰落网格节点 ⇒ 复合后与曲线基逐位一致
+    assert float(np.abs(lut_id - base).max()) < 1e-7
+    # 非平凡曲线: 单调 + 端点白→白 (黑端 Adobe 曲线 y(0)=0 契约由 parse 保证)
+    lut = _get_profile_lut(_curve_profile(xs, np.power(xs, 1.4)), "srgb", 2.2)
+    assert np.all(np.diff(lut.astype(np.float64)) >= -1e-7), "复合曲线非单调"
+    assert float(lut[-1]) == float(base[-1]) and abs(float(lut[-1]) - 1.0) < 1e-6
+
+
+def test_get_profile_lut_cache_keyed_by_eotf_gamma():
+    # R24: 复合 LUT 依赖 (eotf, gamma) ⇒ 缓存键必须含两者 (旧实现按 prof 单键)
+    from pixo.render.modules.tone_map import _PROFILE_CACHE, _get_profile_lut
+    xs = np.linspace(0.0, 1.0, 65)
+    prof = _curve_profile(xs, np.power(xs, 1.3))
+    l_srgb = _get_profile_lut(prof, "srgb", 2.2)
+    l_pow = _get_profile_lut(prof, "power22", 2.2)
+    assert l_srgb is not None and l_pow is not None and l_srgb is not l_pow
+    keys = [k for k in _PROFILE_CACHE if k[0] == id(prof)]
+    assert any(k[1:] == ("srgb", 2.2) for k in keys)
+    assert any(k[1:] == ("power22", 2.2) for k in keys)
 
 
 def test_tone_stage_fallback_srgb_when_no_curve():
