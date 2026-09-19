@@ -9,15 +9,14 @@ __version__ = "0.1.0"
 
 __all__ = [
     "api",
-    "Renderer", "RenderIntent", "RawInput", "RawMetadata", "CameraCalibration",
+    "Renderer",
 ]
 
 
 def __getattr__(name):
     if name == "api":
         return _importlib.import_module(".api", __name__)
-    if name in ("Renderer", "RenderIntent", "RawInput", "RawMetadata",
-                "CameraCalibration"):
+    if name == "Renderer":
         api = _importlib.import_module(".api", __name__)
         return getattr(api, name)
     raise AttributeError(f"module 'pixo.render' has no attribute {name!r}")

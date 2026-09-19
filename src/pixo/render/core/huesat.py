@@ -46,7 +46,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from .tone import apply_hue_sat_map as _apply_hue_sat_map_table
 
 # HSV 与 RGB 互转用全范围 float 约定: H ∈ [0, 360), S/V ∈ [0, 1]
 _H_MIN = 0.0
@@ -249,27 +248,6 @@ def get_look_table(prof) -> tuple[np.ndarray | None, tuple[int, int, int] | None
     return decode_table(data, dims), dims, encoding
 
 
-def apply_hue_sat_map_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:
-    """对 DNG 同款 Camera→ProPhoto 中间图应用 HueSatMap (真 0xC6FA)。
-
-    经 core/tone.py 的 float32/4096 表插值 (clean-room M1 实现, 依据公开
-    规范材料), 与 DNG HueSatMap 规范语义一致, 且 6MP 级输入比通用
-    float64 路径快约一个量级。
-    """
-    table, dims, encoding = get_hue_sat_table(prof)
-    if table is None or strength <= 0.0:
-        return pp
-    return _apply_hue_sat_map_table(pp, table, dims, encoding, strength)
-
-
-def apply_look_table_prophoto(pp: np.ndarray, prof, strength: float = 1.0) -> np.ndarray:
-    """对 DNG 同款 Camera→ProPhoto 中间图应用 LookTable (0xC726)。"""
-    table, dims, encoding = get_look_table(prof)
-    if table is None or strength <= 0.0:
-        return pp
-    return _apply_hue_sat_map_table(pp, table, dims, encoding, strength)
-
-
 # ---------------------------------------------------------------------------
 # 局部暖色高光饱和 (A1/B5: 烟花/霓虹/暖灯, 不写死全局 DCP)
 # ---------------------------------------------------------------------------
@@ -407,6 +385,5 @@ def apply_local_warm_sat(rgb_linear: np.ndarray, sat_scale: float = 1.0,
     return np.clip(out, 0.0, None).astype(target_dtype)
 
 
-__all__ = ["apply_hue_sat_map_prophoto", "apply_look_table_prophoto",
-           "make_hue_sat_map", "get_hue_sat_table", "get_look_table",
+__all__ = ["make_hue_sat_map", "get_hue_sat_table", "get_look_table",
            "apply_local_warm_sat"]

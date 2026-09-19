@@ -96,7 +96,7 @@ from pixo.render.core.calibration import load_dcp
 from pixo.render.core.color import cam_to_xyz
 from pixo.render.core.curves import make_base_curve_lut
 from pixo.render.core.rp_ccm import RPCCM, apply_rp_ccm
-from pixo.render.core.tone import _SRGB_DEC_TABLE, srgb_decode
+from pixo.render.core.curves import srgb_decode
 from pixo.render.modules.exposure import _cal_ev, _probe_sample
 from theta_io import Theta
 
@@ -120,7 +120,6 @@ NEAR_TOL = 0.3             # exposure._cal_ev 的 wb 邻域 (|结点med − med|
 CACHE_SCHEMA = "pixo.calib_opt_samples.v1"
 DEFAULT_SEED = 20260904
 
-_SRGB_DEC_T = torch.tensor(np.asarray(_SRGB_DEC_TABLE, dtype=np.float64))
 _LAB_M = torch.tensor(diff_core._SRGB_TO_XYZ_D65_F, dtype=torch.float64)
 _LAB_D65 = torch.tensor([0.95047, 1.00000, 1.08883], dtype=torch.float64)
 _EPS_K = 216.0 / 24389.0
@@ -187,13 +186,11 @@ def cal_ev_weights(xs: np.ndarray, ws: np.ndarray, med: float,
 # ---------------------------------------------------------------------------
 
 def srgb_decode_t(x: torch.Tensor) -> torch.Tensor:
-    """γ [0,1] → 线性 (core.tone.srgb_decode 的表插值同式; 真实链 4096 级表,
-    torch 线性插值 ≤半格表分辨率偏差 —— 与 t30 tone LUT 同族的已知近似)。"""
-    n = _SRGB_DEC_T.shape[0] - 2
-    scaled = x.clamp(0.0, 1.0) * float(n)
-    i0 = scaled.floor().long().clamp(0, n - 1)
-    frac = scaled - i0.to(scaled.dtype)
-    return _SRGB_DEC_T[i0] * (1.0 - frac) + _SRGB_DEC_T[i0 + 1] * frac
+    """γ [0,1] → 线性 torch 解析式 (core.curves.srgb_decode 同式; R30 起真实
+    链为解析式, 原 4096 表插值近似随 core/tone 退役, 代理同步精确化)。"""
+    xc = x.clamp(0.0, 1.0)
+    return torch.where(x <= 0.04045, x.clamp(min=0.0) / 12.92,
+                       ((xc + 0.055) / 1.055) ** 2.4)
 
 
 def linear_srgb_to_lab_t(lin: torch.Tensor) -> torch.Tensor:

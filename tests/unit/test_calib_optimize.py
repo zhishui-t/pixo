@@ -271,9 +271,9 @@ class TestProxyPrimitives:
         x = np.linspace(0.0, 1.0, 33)
         got = optimize.srgb_decode_t(
             torch.tensor(x, dtype=torch.float64)).numpy()
-        from pixo.render.core.tone import srgb_decode
-        want = srgb_decode(x.astype(np.float32))
-        np.testing.assert_allclose(got, want, atol=1e-6)
+        from pixo.render.core.curves import srgb_decode
+        want = srgb_decode(x)
+        np.testing.assert_allclose(got, want, atol=1e-9)
 
     def test_lab_dist_zero_safe(self):
         a = torch.zeros(4, 3, dtype=torch.float64, requires_grad=True)

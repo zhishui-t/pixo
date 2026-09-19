@@ -68,7 +68,7 @@ from pixo.render.core.huesat import _rgb_to_hsv
 from pixo.render.core.oklab import oklab_to_oklch, srgb_to_oklab
 from pixo.render.core.split_tone import _RGB_WEIGHTS, _shadow_weight, split_tone_rgb
 from pixo.render.core.split_tone_oklab import split_tone_oklab_rgb
-from pixo.render.core.tone import srgb_decode
+from pixo.render.core.curves import srgb_decode
 
 XIAMEN_REPORT = "exports/auto/xiamen_sample/report.json"
 

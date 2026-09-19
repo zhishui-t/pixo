@@ -43,8 +43,8 @@ import numpy as np
 
 from ..pipeline.graph import Stage, StageContext, register_stage
 from ..pipeline.graph import DOMAIN_LINEAR_RGB
-from ..core.huesat import (apply_hue_sat_map_prophoto, apply_look_table_prophoto,
-                           apply_local_warm_sat, get_hue_sat_table, get_look_table)
+from ..core.huesat import (apply_local_warm_sat, get_hue_sat_table,
+                           get_look_table)
 from ..core.huesat_oklch import (OklchDeform, apply_oklch_deform,
                                  is_identity_deform, load_oklch_deform)
 
@@ -199,7 +199,8 @@ class HueSatStage(Stage):
             if spec is not None and not is_identity_deform(spec):
                 # OKLCh 域连续形变 (t17 点云): 输入线性 sRGB → gamma 域 →
                 # OKLCh 形变 → gamma → 解码回线性 (stage 域接口不变)。
-                from ..core.tone import srgb_decode, srgb_encode
+                # R30: srgb_* 由 core/curves 提供 (core/tone 随 DNG 复刻线退役)
+                from ..core.curves import srgb_decode, srgb_encode
                 gamma = srgb_encode(np.clip(np.asarray(img, np.float64), 0.0, None))
                 deformed = apply_oklch_deform(gamma, spec, strength=strength)
                 img = srgb_decode(deformed)

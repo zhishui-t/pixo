@@ -22,15 +22,21 @@ def srgb_encode(x: np.ndarray) -> np.ndarray:
     return np.where(x <= 0.0031308, 12.92 * x, 1.055 * np.power(x, 1.0 / 2.4) - 0.055)
 
 
-def srgb_decode(y: float) -> float:
-    """sRGB EOTF 逆 (gamma → 线性), 标量。0.4587(≈117/255) → ≈0.178。"""
-    y = float(y)
-    if y <= 0.0:
-        return 0.0
-    if y <= 0.04045:
-        return y / 12.92
-    y = min(y, 1.0)
-    return ((y + 0.055) / 1.055) ** 2.4
+def srgb_decode(y):
+    """sRGB EOTF 逆 (gamma → 线性); 标量或 ndarray 均可。
+
+    R30 起 huesat oklch 形变消费 (原 core/tone.py 向量化版随 DNG 复刻线
+    退役迁入); 标量输入返回 float, 数组输入返回数组, 语义与旧版逐位一致
+    (y≤0→0, 末段按 min(y,1) 截断)。
+    """
+    arr = np.asarray(y, dtype=np.float64)
+    out = np.where(
+        arr <= 0.0, 0.0,
+        np.where(arr <= 0.04045, arr / 12.92,
+                 ((np.minimum(arr, 1.0) + 0.055) / 1.055) ** 2.4))
+    if np.ndim(y) == 0:
+        return float(out)
+    return out
 
 
 def make_srgb_eotf_lut(n: int = 4096) -> np.ndarray:

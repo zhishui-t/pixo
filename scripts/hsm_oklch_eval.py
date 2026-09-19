@@ -45,7 +45,7 @@ for _p in (str(_SCRIPTS), str(_SCRIPTS / "src")):
         sys.path.insert(0, _p)
 
 from eval_rp_ccm_ab import delta_e_2000, linear_srgb_to_lab, selftest
-from pixo.render.core.tone import srgb_decode
+from pixo.render.core.curves import srgb_decode
 from fit_rp_ccm import SAMPLE_LIN_HI, SAMPLE_LIN_LO
 from fit_rp_ccm import DCP, aligned_pair, iter_corpus, sample_linear_pairs
 from pixo.render.api import Renderer

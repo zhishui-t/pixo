@@ -2,11 +2,10 @@
 import importlib as _importlib
 
 __all__ = [
-    "context", "graph", "base", "presets",
+    "context", "graph", "presets",
     "StageContext", "StageParams", "StageResult",
     "Stage", "Pipeline", "register_stage", "available_stages", "STAGE_REGISTRY",
     "DOMAIN_LINEAR_CAM", "DOMAIN_LINEAR_RGB", "DOMAIN_GAMMA_RGB",
-    "camera_key", "load_camera_cache", "find_camera_entry", "render_dcp_linear",
     "DEFAULT_STAGES", "build_default_pipeline", "pipeline_from_config", "attach_prof",
 ]
 
@@ -15,8 +14,6 @@ _SUBMODULES = {
     "graph": ("Stage", "Pipeline", "register_stage", "available_stages",
               "STAGE_REGISTRY", "DOMAIN_LINEAR_CAM", "DOMAIN_LINEAR_RGB",
               "DOMAIN_GAMMA_RGB"),
-    "base": ("camera_key", "load_camera_cache", "find_camera_entry",
-             "render_dcp_linear"),
     "presets": ("DEFAULT_STAGES", "build_default_pipeline",
                 "pipeline_from_config", "attach_prof"),
 }

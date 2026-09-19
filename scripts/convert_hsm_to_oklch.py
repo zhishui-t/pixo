@@ -34,7 +34,7 @@ from pixo.render.core.color import (linear_prophoto_to_linear_srgb,
 from pixo.render.core.huesat import (_hsv_to_rgb, _rgb_to_hsv,
                                      _srgb_decode_v, _srgb_encode_v)
 from pixo.render.core.oklab import oklab_to_oklch, srgb_to_oklab
-from pixo.render.core.tone import srgb_encode
+from pixo.render.core.curves import srgb_encode
 
 DCP = "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 OUT_DIR = "configs/color"

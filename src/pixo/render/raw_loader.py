@@ -9,7 +9,6 @@ from .core.io import (
     camera_neutral_wb_cached,
     decode_cfa_half,
     decode_raw,
-    decode_stage3_like,
 )
 
 # 规划中的便捷别名
@@ -18,7 +17,6 @@ load_raw = decode_raw
 __all__ = [
     "decode_raw",
     "decode_cfa_half",
-    "decode_stage3_like",
     "camera_neutral_wb",
     "camera_neutral_wb_cached",
     "load_raw",

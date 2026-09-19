@@ -37,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from pixo.render.api import Renderer
 from pixo.render.core.rp_ccm import RPCCM, fit_rp_ccm, rp_features, save_rp_ccm
-from pixo.render.core.tone import srgb_decode
+from pixo.render.core.curves import srgb_decode
 
 DCP = "resources/dcp/Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp"
 

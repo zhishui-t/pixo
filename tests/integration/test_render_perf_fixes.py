@@ -9,7 +9,6 @@
 - io.py 缓存 LRU：超限淘汰最旧一条而非全清；命中刷新 recency
 - lut.py 统一缓存：load_lut/load_lut_path 单 dict + LRU 上限 4
 - tone_map._PROFILE_CACHE 强引用防 id 复用
-- base.render_dcp_linear 不再第二次 rawpy.imread（双解压修复）
 - 并发 render/update_params 冒烟
 """
 from __future__ import annotations
@@ -25,7 +24,6 @@ import pixo.render.core.io as core_io
 import pixo.render.core.lut as lut_mod
 import pixo.render.core.lut3d as lut3d
 import pixo.render.modules.tone_map as tone_map
-import pixo.render.pipeline.base as base_mod
 import pixo.render.web.session as sess_mod
 from pixo.render.pipeline.context import DOMAIN_GAMMA_RGB
 from pixo.render.web.session import RawPreviewSession
@@ -531,51 +529,3 @@ def test_profile_cache_strong_ref_prevents_id_reuse(monkeypatch):
 # base.py 双解压修复
 # ---------------------------------------------------------------------------
 
-def test_render_dcp_linear_decodes_once(monkeypatch, tmp_path):
-    imread_calls = []
-    wb_calls = []
-    decode_calls = []
-
-    class _RawObj:
-        def close(self):
-            pass
-
-    monkeypatch.setattr(base_mod.rawpy, "imread",
-                        staticmethod(lambda p: (imread_calls.append(1),
-                                                _RawObj())[1]))
-    monkeypatch.setattr(
-        base_mod, "decode_stage3_like",
-        lambda *a, **k: (decode_calls.append(1) or
-                         (np.zeros((4, 4, 3), dtype=np.float32), _RawObj())))
-    monkeypatch.setattr(base_mod, "camera_neutral_wb_cached",
-                        lambda raw, raw_path=None: (
-                            wb_calls.append(1)
-                            or np.array([2.0, 1.0, 1.0], dtype=np.float32)))
-    monkeypatch.setattr(base_mod, "find_camera_entry",
-                        lambda raw_path, cache=None: {
-                            "white_level": 15892, "opcodes": {},
-                            "src_bounds": [0, 0, 4, 4], "dst_size": [4, 4],
-                            "total_baseline": 0.0, "stage3_gain": 1.0,
-                            "tone_table": [[0.0, 0.0], [1.0, 1.0]]})
-
-    import pixo.render.core.resample as resample_mod
-    import pixo.render.core.calibration as calib_mod
-    monkeypatch.setattr(resample_mod, "dng_resample", lambda img, a, b: img)
-    monkeypatch.setattr(calib_mod, "load_dcp", lambda p: object())
-    ident = lambda x, *a, **k: x  # noqa: E731
-    monkeypatch.setattr(base_mod, "cam_wb_to_prophoto",
-                        lambda src, prof, wb: src)
-    monkeypatch.setattr(base_mod, "apply_hue_sat_map_prophoto", ident)
-    monkeypatch.setattr(base_mod, "apply_look_table_prophoto", ident)
-    monkeypatch.setattr(base_mod, "exposure_ramp", ident)
-    monkeypatch.setattr(base_mod, "apply_rgb_tone", ident)
-    monkeypatch.setattr(base_mod, "linear_prophoto_to_srgb", ident)
-    monkeypatch.setattr(base_mod, "load_tone_table", lambda t: t)
-
-    raw = tmp_path / "x.nef"
-    raw.write_bytes(b"x")
-    base_mod.render_dcp_linear(raw, "p.dcp", cache={"entries": {}})
-
-    assert len(decode_calls) == 1   # 第一次解码
-    assert len(wb_calls) == 1       # WB 复用同一 raw 对象（close 前取）
-    assert len(imread_calls) == 0, "第二次 rawpy.imread 双解压未消除"
