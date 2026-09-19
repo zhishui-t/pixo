@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-19 — 第二十九轮：lr_* 卡暖度域清偿（LR 双锚点复验驱动的旧底补偿退役）
+
+- **"拟合准不准"的裁定（LR 域）**：用 white_balance.py 冻存的双 LR 锚点
+  （0376 a+6/b+12、5236 a0/b−1）复验——**今天的中性链色度天然命中双锚点**
+  （5236 逐值精确），2026-08 的暖度标定已随 R12 clean-room 色彩重写 + R23
+  中性化**失效**：lr_* 卡的 warmth/warmth_curve/trim 在 0376 过冲黄偏 +46b*。
+  与 R24 profile_curve、R28 decode_raw gamma 同族（**旧标定 × 新底 = 系统性
+  失配**，本轮为该家族第三次清偿）。
+- **清偿**：lr_* 三卡白平衡暖度域 → 纯 as_shot（130 行旧补偿退役）；
+  lr_adobe_standard 另关 huesat（DCP LookTable max=2.0 属旧底增量，0376 贡献
+  +21b*；LR 参照已删无法重拟合，按锚点证据退役）。**修后双锚点**：0376
+  a+4/b+15（was b+58）、5236 **a0/b−1 逐值命中**。语料 n=24 中位 19.19→17.04
+  / 12.73→12.35（温和——主战场是钨丝灯域，语料中位被日光片稀释）。
+- **遗留**：lr_baseline 系 refine/colorcal 的 wb_B 微曲线本轮不动（幅度小、
+  证据仅双锚）；LookTable 与"打开≈LR"亮度域的重建需 LR 参照（guanlan 桥 +
+  Lightroom，另立项）。
+- **验收**：渲染代码零改动；风格卡/服务/金样本 **112 passed**。
+- **详见**：`.artifacts/R29_warmth_reanchor.md`。
+
 ## 2026-09-19 — 第二十八轮：decode_raw gamma 原生 bug 修复（export 主线回归线性域）+ recipe 泛化性三问
 
 - **重大修复：`decode_raw` 的"线性"输出自带 rawpy 缺省 gamma=(2.222, 4.5)**
