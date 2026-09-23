@@ -399,6 +399,13 @@ def neutral_to_xy(neutral, prof) -> tuple[float, float]:
     Balance xy Coordinates", 规范 pp.80-81):
       next = XYZtoXY(inv(CM_interp(last)) @ neutral), 收敛到场景白点。
     无 CM 时退化为 FM1 @ neutral (或 sRGB 近似)。
+
+    R32-T2 对照注记 (见 .agent-team/dev1-r32-t2.md): 迭代内 xy→CCT 反查
+    现用 McCamy 近似 (极端点误差可达 ~2900K; 内部 _neutral_to_xy 路径用
+    temperature_from_xy/Kim, 误差 ≤9.1K —— 双口径并存, 见
+    .artifacts/_r32_t2_dcp_compare.json E1/E2)。已试切 Kim: 需与
+    temp_tint_to_wb (正解) 同步切换且重生成 gate 金样本 (正反解互逆 +
+    零漂移), 属队长批准项, 本轮回滚保持 McCamy。
     """
     neutral = np.asarray(neutral, dtype=np.float64).reshape(3)
     cm1 = _mat3(getattr(prof, "color_matrix1", None)) if prof is not None else None
@@ -427,6 +434,9 @@ def cct_from_wb(wb, prof=None) -> float:
     """WB 乘数 → 相关色温 K (CIE xy → McCamy)。
 
     越界钳位到 [1000, 50000] K (规格: 越界钳位)。
+    R32-T2 对照注记: McCamy 极端点误差 ~2900K vs temperature_from_xy ≤9.1K
+    (E1); 切换涉及 temp_tint_to_wb 正反解对联动 + 金样本重生成, 待队长批准
+    (见 dev1-r32-t2.md 裁决 V1)。
     """
     neutral = wb_to_neutral(wb)
     xy = neutral_to_xy(neutral, prof)
@@ -562,6 +572,10 @@ def cam_to_xyz_matrix(prof, wb) -> np.ndarray:
     if cm1 is not None:
         neutral = wb_to_neutral(wb)
         scene_xy = neutral_to_xy(neutral, prof)
+        # R32-T2 待议: 此处 CCT 反查仍用 McCamy (xy_to_cct)。统一到
+        # temperature_from_xy 会使 CM 插值矩阵元变化 ≤0.0014
+        # (_r32_t2_dcp_compare.json E2), 但会漂移默认链金样本 —— 需队长
+        # 批准重生成金样本后一并统一 (公开 neutral_to_xy 已于 R32-T2 切换)。
         cct = xy_to_cct(*scene_xy)
         cm, cc = interpolate_color_matrices(prof, cct)
         cam_to_xyz_scene = np.linalg.inv(cm) @ np.linalg.inv(cc)

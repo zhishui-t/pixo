@@ -147,3 +147,46 @@
 - `.qa_ok` 前置意见已写：全量回归 1732/0 与分支推送由 tester 棒收口（码检已抽查 gate 4/4 + RCD 15/15 + native all passed）。
 
 *reviewer · 码检棒 2026-09-23 · 执行引擎：宿主原生（WorkBuddy refusal×1 本棒，战役累计×4，均按 §4 处置）*
+
+---
+
+# R32-T2 检视报告（design-review-r32 续）· 轻量棒
+
+> 日期：2026-09-23（T2 检视棒）｜ 检视人：reviewer（本审核线）
+> 被检对象：① core/color.py 三处注释锚点；② tests/unit/test_region_masks_channel.py T1 遗漏适配；③ dev1-r32-t2.md + .artifacts/_r32_t2_dcp_compare.json 数据面抽核；④ V1 回滚纪律 + V9 证据
+> 执行引擎：宿主原生（R32 §4 既定兜底，RT 任务族 refusal 实证累计，未重试）
+
+## T2-1. color.py 锚点 ✓（纯注释实证）
+
+`git diff` 全量 14 行新增逐一核对：`neutral_to_xy` docstring 注记（:399-411 段）、`cct_from_wb` docstring 注记（:427-437 段）、`cam_to_xyz_matrix` 行内 # 注记（:572-576 段）——**全部为注释/docstring 文本，零代码行、零行为变更** ✓。
+
+## T2-2. 测试替身适配 ✓（两态实测，且暴露 T1 提交遗漏实情）
+
+- 修复本身正确：stub lambda 补 `demosaic="AHD"` 缺省，与 `_render_full_quality` 现显式传参的调用面对齐 ✓。
+- **两态实测（stash push/pop，本棒亲跑）**：HEAD 提交态（275a818，无适配）→ **2 failed**（`test_render_full_quality_state_extras_masks` / `test_render_full_quality_no_extras_backward_compatible`）；工作区（含适配）→ **23 passed**。协调者断言独立复现 ✓。
+- **记录（纪律点）**：T1 提交 2758a18 漏带此适配文件 → 提交态全量回归必含 2 失败；T1 交棒的「1732 passed」口径应为**含适配的工作区态**。建议 T2 提交信息注明「补 T1 遗漏的测试替身适配」，避免两报告口径打架。
+
+## T2-3. 数据面抽核（2 个关键数字，一过一退）
+
+**抽核 A ✓「RT 灰点随 WB 漂移 3200K xy(0.364,0.446)」（E3/V4）——推导链扎实，采纳：**
+- json e3 `gray_rt[3200K]=[0.36359, 0.44628, 0.19013]`（XYZ/sum 表示）与报告 xy(0.364,0.446) 一致；pixo 侧 gray_px 恒 (0.34567,0.3585)=D50 ✓。
+- 机制实读钉死：RT dcp.cc:1891-1939 dcraw legacy 段（本棒实读原文）——cam_rgb 过 xyz_sRGB 后**逐行归一化使 (1,1,1)→(1,1,1)**（RGB 等能白），取逆再复合——中性点因此锚在 sRGB 管道而非 PCS，随 WB 漂移；脚本 :181 注释「dcp.cc 1900-1939」+ :199 srgb_design 表与原文行号/结构吻合 ✓。
+- **可复算性实证**：实验脚本重跑两次，产出 json **逐位一致**（determinism=True）✓。
+
+**抽核 B ✗「FM1@(1,1,1)=XYZ D50 逐位成立」（E4/V5）——证据表述缺陷，退回修订（主要）：**
+- 脚本 E4 段**无此 claim 的任何断言/输出代码**（note 为纯文字，rows 仅有矩阵差/ΔE/灰点）；
+- **与同一 json 的数据表面矛盾**：e4 rows `gray_px`（pixo FM 域链灰点）= (0.28848,0.24395)@3200K / (0.37942,0.25578)@4500K / (0.46432,0.25245)@6500K——随 WB 漂移且 ≠ D50(0.3457,0.3585)。本棒以 pixo 链独立复算 `(inv(s)·cam_to_prophoto_matrix)@(1,1,1)` 三个 WB 点，输出与 gray_px **逐位一致**（脚本可信），即 pixo FM 域链 (1,1,1) 并不出 D50；
+- 本棒四种构造独立复算均 ≠ D50：RT 字面 white=D50（归一 xy (0.2563,0.3811)）、RT 字面 white=StdA 场景白（(0.3827,0.3924)）、规范式 FM1·(CM1·1)/Y（XYZ 差 -0.26 级）、pixo 折回链（见上）；
+- **真实出处已钉死**：RT dcp.cc:1892 `constexpr Triple white_d50 = {0.3457, 0.3585, 0.2958}` 是**无 FM 分支 `MapWhiteMatrix(white_d50, white_xyz)` 的源白点常量**——json note 与报告 V5 行把这一源码常量误写成了「FM1@(1,1,1) 输出逐位=D50」的验证结论。
+- **处置**：不动摇 V5 裁决方向（保持+待议，依据是 ΔE 数据与「FM 优先=渲染哲学变更」的定性判断，均独立成立），**不阻塞 T2 提交**；但 **dev-1 须修订 dev1-r32-t2.md V5 行与 json e4 note**（改写为上述常量出处事实）后方可被 T8 台账引用——T8 台账数字必须可复算，此为门槛。
+
+## T2-4. V1 回滚纪律与 V9 证据 ✓
+
+- **V1 回滚纪律 ✓**：吸收尝试触碰金样本零漂移红线（4 失败）即回滚，三处锚点留码（T2-1 已证纯注释）；受影响面 46 passed 本棒复跑全绿（test_color_math + test_illumination_est + test_diff_core + test_gate_golden，29.16s）✓。红线优先于改进，处置正确。
+- **V9 LookTable 证据 ✓（入 T8 台账首位成立）**：meta 实测锚定真 Adobe DCP（look_dims=[90,16,16]、look_encoding=1、hsm 缺、BEO=-0.15）；「底座零消费」grep 证实（calibration.py 仅解析 tag 面；huesat.py:36 可选 look 开关基座默认关闭，R11 A 轨退役史在案）；E7 幅度如实标注「需完整 hsdApply 移植」不过度声称 ✓。前置条件：同报告内 V5 表述缺陷修订后一并归档。
+
+## T2 结论
+
+**通过（0 BLOCKER / 1 主要〔证据表述，限向修订，不阻塞提交〕/ 1 记录〔T1 提交遗漏适配，本棒修复正位〕）**。color.py 锚点与测试修复可提交；T2 推送后 dev-1 顺手修订 dev1-r32-t2.md V5 行 + json e4 note（措辞见 T2-3 处置），T8 台账编制时按修订稿引用。
+
+*reviewer · T2 检视棒 2026-09-23 · 执行引擎：宿主原生*

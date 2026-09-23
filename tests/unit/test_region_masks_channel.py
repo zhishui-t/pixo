@@ -379,7 +379,9 @@ def export_env(monkeypatch):
     monkeypatch.setattr(presets_mod, "build_default_pipeline", wrapped)
     monkeypatch.setattr(
         io_mod, "decode_raw",
-        lambda path, half_size=False: (_gradient_image(240, 320), _FakeRaw()))
+        # R32-T1: _render_full_quality 现显式传 demosaic (缺省 "AHD")
+        lambda path, half_size=False, demosaic="AHD": (
+            _gradient_image(240, 320), _FakeRaw()))
     monkeypatch.setattr(io_mod, "camera_neutral_wb_cached",
                         lambda raw, raw_path: None)
     return capture
