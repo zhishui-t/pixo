@@ -25,6 +25,8 @@ import pytest
 from pixo.service import PixoServiceRuntime, create_app
 from pixo.service.runtime import _segmenter_warmup_enabled
 
+from _corpus_paths import RAW_SKIP_REASON, REAL_A
+
 
 class FakeSession:
     """预览会话替身（供给路径所需的 render/params 桩）。"""
@@ -192,11 +194,10 @@ def test_supply_nonblocking_during_warm_then_hot(monkeypatch, tmp_path):
 # 真权重 e2e（RAW 可达时）: 预热吸收冷启 + 预热中请求不阻塞
 # ---------------------------------------------------------------------------
 
-_REAL_RAW = Path("K:/data/photo/0711/raw/DSC_5236.NEF")
+_REAL_RAW = REAL_A
 
 
-@pytest.mark.skipif(not _REAL_RAW.is_file(),
-                    reason="真实 RAW 语料不可达（本机路径）")
+@pytest.mark.skipif(_REAL_RAW is None, reason=RAW_SKIP_REASON)
 def test_warmup_absorbs_cold_start_and_nonblocking(monkeypatch):
     """真权重: 预热耗时 ≈17s；预热后首供给 <3s（对照 R15 冷启 17.7s）；
     预热进行中 GET /region 立即响应（不阻塞）。"""

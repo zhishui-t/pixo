@@ -11,7 +11,8 @@ sys.path.insert(0, os.path.join(PIXO_ROOT, "src"))
 from pixo.vision.segmenters.multi_router import MultiModelSegmenter
 from pixo.vision.segmenters.rfdetr_person import RFDetrPersonSegmenter
 
-IMG = r"K:/data/photo/0711/jpeg/DSC_5236.jpg"
+IMG = os.environ.get("PIXO_CORPUS_A_JPEG",
+                     r"K:/data/photo/西安/0711/jpeg/DSC_5236.JPG")
 
 report = {"status": "running", "steps": []}
 

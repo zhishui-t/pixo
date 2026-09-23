@@ -319,38 +319,17 @@ def _probe_linear_srgb(ctx: StageContext, cam: np.ndarray) -> np.ndarray:
     重复矩阵合成 (旧实现误用 ForwardMatrix 且手工拼 XYZ→sRGB/Bradford 矩阵)。
     """
     from ..core.color import cam_to_xyz
-    from .white_balance import auto_wb_linear
-    from ..core.io import camera_neutral_wb
+    from .white_balance import resolve_wb
 
     small = _probe_sample(cam)
     if ctx.prof is None:
         return _luma_proxy(small)
 
-    wb_mode = ctx.params_for("whitebalance").get("mode", "as_shot")
-    if wb_mode == "off":
-        wb = np.ones(3, dtype=np.float32)
-    elif wb_mode == "auto":
-        wb = auto_wb_linear(small)
-    elif wb_mode == "manual":
-        # 手动白平衡 (temp/tint): 与 whitebalance Stage 同链路的物理正解
-        from ..core.color import temp_tint_to_wb
-        wbp = ctx.params_for("whitebalance")
-        temp = wbp.get("temp")
-        if temp is None:
-            raise ValueError("whitebalance mode=manual 需要 temp 参数")
-        wb = temp_tint_to_wb(ctx.prof, float(temp), float(wbp.get("tint") or 0.0))
-        wb = wb / wb[1] if wb[1] > 0 else wb
-    else:
-        wb = ctx.state.get("camera_wb")
-        if wb is None:
-            wb = camera_neutral_wb(ctx.raw)
-        if isinstance(wb_mode, (list, tuple)):
-            # 数值向量手动系数 [r,g,b]
-            wb = np.array(wb_mode, dtype=np.float32)
-            wb = wb / wb[1] if wb[1] > 0 else wb
-        elif wb_mode not in ("as_shot", None):
-            raise ValueError(
-                f"exposure probe: 未知 whitebalance mode {wb_mode!r}")
+    # WB 解析走 resolve_wb（**唯一同源**，同 whitebalance Stage 渲染线）:
+    # 此前本函数另抄了一份 if/elif 链, 两线各自演化即静默分叉 —— 自动曝光按
+    # A 组 WB 测光、实际按 B 组 WB 渲染, 且都不报错。2026-09-21 收敛。
+    # "auto" 分支的取样图显式传 small（降采样估计整图统计, 省算力）。
+    wb = resolve_wb(ctx, ctx.params_for("whitebalance").get, image=small)
 
     rgb = cam_to_xyz(small, wb, ctx.prof)
     y = (0.2126 * rgb[:, :, 0] + 0.7152 * rgb[:, :, 1]

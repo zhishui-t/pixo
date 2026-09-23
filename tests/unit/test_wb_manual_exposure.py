@@ -2,7 +2,8 @@
 
 根因: exposure.py `_probe_linear_srgb` 非 off/auto/as_shot 时把 mode 当数值
 向量 np.array("manual") → "could not convert string to float: 'manual'"。
-本测试覆盖修复后的 manual temp/tint 分支 + 旧模式回归 + 缺 temp 报错。
+本测试覆盖修复后的 manual temp/tint 分支 + 旧模式回归 + 缺 temp 的播种语义
+(2026-09-21: 缺 temp 不再直接报错, 改为以 as-shot CCT 播种; 无基准才报错)。
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ import numpy as np
 import pytest
 
 from pixo.render.core.calibration import DcpProfile
-from pixo.render.core.color import cam_to_xyz, temp_tint_to_wb
+from pixo.render.core.color import cam_to_xyz, cct_from_wb, temp_tint_to_wb
 from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM
 from pixo.render.modules.exposure import (
     ExposureStage,
@@ -116,9 +117,34 @@ def test_old_modes_regression(wb_mode):
     assert np.isfinite(y).all()
 
 
-def test_manual_missing_temp_raises():
-    """manual 缺 temp 时抛 ValueError 且信息含 temp。"""
+def test_manual_missing_temp_seeds_from_as_shot():
+    """manual 缺 temp → 以 as-shot CCT 播种 (LR 同义), **不报错**。
+
+    2026-09-21 契约变更 (旧: 缺 temp 直接 ValueError)。新契约: 切到 Manual
+    时 Temp/Tint 由 As Shot 播种, 基准由 RAW + DCP 唯一确定 ⇒ 属域转换,
+    引擎可自行推导; 仅"连基准都取不到"才是调用方错误 (见下一条)。
+    """
     img = _cam_image()
     ctx = _make_ctx(img, wb_mode="manual")          # temp=None
+    y = _probe_linear_srgb(ctx, img)
+    assert np.isfinite(y).all()
+    # 播种后的 wb == "以 as-shot CCT 为 temp, tint=0" 的解析结果
+    prof = _profile()
+    wb0 = np.asarray(_FakeRaw().camera_whitebalance[:3], dtype=np.float32)
+    wb0 = wb0 / wb0[1]
+    seeded = temp_tint_to_wb(prof, float(cct_from_wb(wb0, prof)), 0.0)
+    seeded = seeded / seeded[1]
+    rgb_exp = cam_to_xyz(img[::4, ::4], seeded, prof)
+    y_exp = (0.2126 * rgb_exp[..., 0] + 0.7152 * rgb_exp[..., 1]
+             + 0.0722 * rgb_exp[..., 2]).astype(np.float32)
+    assert float(np.abs(y - y_exp).max()) < 1e-5
+
+
+def test_manual_missing_temp_raises_without_basis():
+    """无 raw 亦无 state['camera_wb'] → 取不到播种基准, ValueError 且含 temp。"""
+    img = _cam_image()
+    ctx = StageContext("test.NEF", raw=None, prof=_profile(),
+                       config={"stages": {"whitebalance": {"mode": "manual"}}})
+    ctx.set_image(img.astype(np.float32), DOMAIN_LINEAR_CAM)
     with pytest.raises(ValueError, match="temp"):
         _probe_linear_srgb(ctx, img)

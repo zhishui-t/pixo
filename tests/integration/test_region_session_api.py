@@ -21,6 +21,8 @@ from fastapi.testclient import TestClient
 
 from pixo.service import PixoServiceRuntime, create_app
 
+from _corpus_paths import RAW_SKIP_REASON, REAL_A
+
 
 class FakeSession:
     """测试用预览会话替身（镜像 RawPreviewSession 的 region_masks 属性面）。"""
@@ -138,22 +140,23 @@ class TestRegionStatusApi:
 # patch 嵌套闭环 + preview e2e（真 RawPreviewSession 渲染, RAW skip 守卫）
 # ---------------------------------------------------------------------------
 
-_REAL_RAW = Path("K:/data/photo/0711/raw/DSC_5236.NEF")
-_REAL_RAW_ALT = Path("data/photo/0711/raw/DSC_5236.NEF")
+# 语料路径集中解析（语料搬家 / env 覆盖见 tests/_corpus_paths.py）
+_REAL_RAW = REAL_A
 
 pytestmark_real = pytest.mark.skipif(
-    not (_REAL_RAW.is_file() or _REAL_RAW_ALT.is_file()),
-    reason="真实 RAW 语料不可达（本机路径）",
+    _REAL_RAW is None,
+    reason=RAW_SKIP_REASON,
 )
 
 
 def _real_raw() -> Path:
-    return _REAL_RAW if _REAL_RAW.is_file() else _REAL_RAW_ALT
+    assert _REAL_RAW is not None          # 由 pytestmark_real 保证
+    return _REAL_RAW
 
 
 @pytest.mark.skipif(
-    not (_REAL_RAW.is_file() or _REAL_RAW_ALT.is_file()),
-    reason="真实 RAW 语料不可达（本机路径）",
+    _REAL_RAW is None,
+    reason=RAW_SKIP_REASON,
 )
 class TestRegionPatchE2E:
     """端到端: Route B 掩码注入 → 嵌套 patch → canonical 回读 → 渲染生效。"""

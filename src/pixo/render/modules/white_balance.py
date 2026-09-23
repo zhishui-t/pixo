@@ -259,6 +259,73 @@ def auto_wb_linear(cam_rgb: np.ndarray, clip_range=(0.5, 2.0)) -> np.ndarray:
     return wb.astype(np.float32)
 
 
+def resolve_wb(ctx: StageContext, p,
+               image: np.ndarray | None = None) -> np.ndarray:
+    """按 whitebalance 参数解析相机域 WB 增益 —— **唯一同源实现**。
+
+    `p` = `(key, default=None) -> value` 的取值函数：
+      - 渲染线 `WhiteBalanceStage.process` 传 `self.p(ctx, …)` 的偏函数；
+      - 测光探针线 `exposure._probe_linear_srgb` 传 `ctx.params_for("whitebalance").get`。
+
+    `image` = **仅** "auto" 分支的灰度世界取样图（缺省 `ctx.image`）：测光探针
+    在降采样图 `small` 上估 WB 以省算力，其估计值本就是整图统计的近似；取样图
+    不参与其它分支 ⇒ 显式外提参数，避免探针为省算力另抄一份解析链。
+
+    两线此前各抄了一份 if/elif 链（2026-09-21 审计发现），一旦改动其一即
+    **静默分叉**：自动曝光按 A 组 WB 测光、实际按 B 组 WB 渲染。故收敛到本函数
+    （同源纪律，同 region_masks 的 `compute_crop_rect` 教训）。
+
+    mode 语义（缺省 "as_shot"）:
+      "off"     → [1,1,1]（只做色矩阵，不白平衡）
+      "auto"    → 线性域灰度世界估计（取样图见 `image`）
+      "manual"  → Temp(K)/Tint；**temp 缺省时以相机 as-shot CCT 为基准**
+                  （LR 手动白平衡同义：切到 Manual 时 Temp/Tint 由 As Shot 播种；
+                  该基准由 RAW + DCP 唯一确定 ⇒ 域转换，不是观感猜测）
+      [r,g,b]   → 手动系数向量（归一化 G=1）
+    """
+    from ..core.color import temp_tint_to_wb
+    from ..core.io import camera_neutral_wb
+
+    mode = p("mode", "as_shot")
+    if mode == "off":
+        return np.ones(3, dtype=np.float32)
+    if mode == "auto":
+        return auto_wb_linear(ctx.image if image is None else image)
+
+    def _as_shot() -> np.ndarray:
+        """相机 as-shot WB（state 注入优先；会话渲染路径 ctx.raw 可能为 None）。"""
+        wb0 = ctx.state.get("camera_wb")
+        if wb0 is None:
+            if ctx.raw is None:
+                return None
+            wb0 = camera_neutral_wb(ctx.raw)
+        return np.asarray(wb0, dtype=np.float32)
+
+    if mode == "manual":
+        tint = float(p("tint") or 0.0)
+        temp = p("temp")
+        if temp is None:
+            wb0 = _as_shot()
+            if wb0 is None:
+                raise ValueError(
+                    "manual 白平衡模式需要提供 temp 参数"
+                    "（无 raw 亦无 state['camera_wb']，取不到 as-shot 色温基准）")
+            temp = float(cct_from_wb(wb0, ctx.prof))
+        wb = temp_tint_to_wb(ctx.prof, float(temp), tint)
+        return wb / wb[1] if wb[1] > 0 else wb
+
+    wb = _as_shot()
+    if wb is None:
+        raise ValueError(
+            f"whitebalance mode={mode!r} 需要 ctx.raw 或 state['camera_wb']")
+    if isinstance(mode, (list, tuple)):
+        wb = np.array(mode, dtype=np.float32)      # 手动系数 [r,g,b]
+        wb = wb / wb[1] if wb[1] > 0 else wb
+    elif mode not in ("as_shot", None):
+        raise ValueError(f"未知 whitebalance mode {mode!r}")
+    return wb
+
+
 @register_stage("whitebalance", order=20,
                 domain_in=DOMAIN_LINEAR_CAM, domain_out=DOMAIN_LINEAR_RGB)
 class WhiteBalanceStage(Stage):
@@ -326,27 +393,9 @@ class WhiteBalanceStage(Stage):
             raise ValueError("whitebalance Stage 需要 DCP profile (ctx.prof)")
         mode = self.p(ctx, "mode")
         cam = ctx.image
-        if mode == "off":
-            wb = np.ones(3, dtype=np.float32)
-        elif mode == "auto":
-            wb = auto_wb_linear(cam)
-        elif mode == "manual":
-            temp = self.p(ctx, "temp")
-            if temp is None:
-                raise ValueError("manual 白平衡模式需要提供 temp 参数")
-            tint = float(self.p(ctx, "tint") or 0.0)
-            wb = temp_tint_to_wb(prof, float(temp), tint)
-            wb = wb / wb[1]  # 归一化 G=1
-        else:
-            from ..core.io import camera_neutral_wb
-            wb = ctx.state.get("camera_wb")
-            if wb is None:
-                wb = camera_neutral_wb(ctx.raw)
-            if mode not in ("as_shot", None):
-                # 手动系数: mode = [r, g, b] 列表
-                wb = np.array(mode, dtype=np.float32)
-                wb = wb / wb[1] if wb[1] > 0 else wb
-
+        # WB 解析收敛到 resolve_wb（**唯一同源**：测光探针 exposure._probe_linear_srgb
+        # 调同一函数，避免"探针按 A 组 WB 测光、渲染按 B 组 WB 出图"的静默分叉）。
+        wb = resolve_wb(ctx, lambda k, d=None: self.p(ctx, k, d))
         # 场景键保留校正前的相机 WB (scene_trim / 后续场景自适应按原场景
         # 光照判键, 不应被观感暖度增益污染)。
         ctx.state["wb_cam"] = np.asarray(wb, dtype=np.float32).copy()

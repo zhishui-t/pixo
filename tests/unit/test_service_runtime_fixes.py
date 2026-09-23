@@ -201,7 +201,7 @@ def test_create_photo_unrestricted_without_data_root(tmp_path):
 # R30 B2: 默认打开观感注入 (北极星: 打开照片≈LR)
 # ---------------------------------------------------------------------------
 
-def test_default_look_loaded_and_env_off(monkeypatch):
+def test_default_look_loaded_and_env_off(monkeypatch, tmp_path):
     """default_look.json 注入新会话; PIXO_DEFAULT_LOOK=off 回中性; 非法文件回中性。"""
     from pixo.service import runtime as rt_mod
 
@@ -215,17 +215,16 @@ def test_default_look_loaded_and_env_off(monkeypatch):
     rt_mod._default_look_cache = None
     assert rt_mod._load_default_look() == {}
 
-    # 非法文件: 回中性 + 不抛
-    import pathlib, json as _json
-    p = pathlib.Path(rt_mod._DEFAULT_LOOK_FILE).parent / "_bad_look.json"
+    # 非法文件: 回中性 + 不抛。
+    # 临时文件放 tmp_path 而非 configs/styles/ —— 后者是**受版本控制的源码目录**,
+    # 用例中途崩溃会在仓库里留下野生文件; 且本机 harness 的 safe-delete shim 会
+    # 在测试体内拦截 unlink 抛 SystemExit (全量跑时偶发假失败)。
+    p = tmp_path / "_bad_look.json"
     p.write_text("{not json", encoding="utf-8")
-    try:
-        monkeypatch.setenv("PIXO_DEFAULT_LOOK", str(p))
-        rt_mod._default_look_cache = None
-        assert rt_mod._load_default_look() == {}
-    finally:
-        p.unlink(missing_ok=True)
-        rt_mod._default_look_cache = None
+    monkeypatch.setenv("PIXO_DEFAULT_LOOK", str(p))
+    rt_mod._default_look_cache = None
+    assert rt_mod._load_default_look() == {}
+    rt_mod._default_look_cache = None
 
 
 def test_default_session_factory_injects_look(monkeypatch, tmp_path):

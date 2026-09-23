@@ -23,7 +23,12 @@ class HslStage(Stage):
 
     param_schema = {
         "enabled": {"type": "bool"},
-        "bands": {"type": "float_or_str"},     # 8 band dict 列表 (或 JSON 字符串), None→默认全 0
+        # 8 band dict 的**两种等价形态**：list[dict]（前端 patch）| JSON 字符串
+        # （cards/tools 落盘形态，configs/styles/films/*.json 全为串）；None → 默认全 0。
+        # ⚠️ 类型名 float_or_str 是既有契约：其语义含"结构数组"，**必须与栅栏
+        # render/web/session.py::_check_value 同款**（2026-09-21 修：Stage 端曾
+        # 只放行数值向量 ⇒ list[dict] 被渲染期拒绝，一动 HSL 面板就 400）。
+        "bands": {"type": "float_or_str"},
         "smooth": {"type": "float", "min": 0.0, "max": 1.0},
         # 编辑域 (设计 §1.2/§2.2): "hsv"(旧内核) | "oklch"。决定**无 domain 键**
         # band 的归属; band 级 "domain" 键逐段覆盖。F10 起缺省 oklch (第一批

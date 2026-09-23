@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -22,7 +23,9 @@ from pixo.render.api import Renderer      # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LAYERS = {
-    "0711": [Path("K:/data/photo/0711/raw")],
+    # 语料 2026-09 重组: 0711 并入 西安/ 下（集中解析见 tests/_corpus_paths.py）
+    "0711": [Path(os.environ.get("PIXO_CORPUS_A_RAW_DIR",
+                                 "K:/data/photo/西安/0711/raw"))],
     "spring": [Path("K:/data/photo/2026春节")],
     "xiamen": [p for p in Path("K:/data/photo/厦门").iterdir() if p.is_dir()],
 }

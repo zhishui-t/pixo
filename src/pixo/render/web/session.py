@@ -26,6 +26,7 @@ import numpy as np
 import rawpy
 
 from pixo.render.core.io import decode_cfa_half
+from pixo.render.pipeline.graph import is_curve_dict
 from pixo.render.pipeline.presets import build_default_pipeline
 from pixo.render.pipeline.region_masks import adapt_state_extras
 from pixo.render.pipeline.runner import (finalize_gamma_output,
@@ -135,6 +136,61 @@ def merge_param_patches(base: Any, update: Any) -> dict:
     return out
 
 
+def translate_param_intents(patch: Any) -> dict:
+    """把「调用方提交的参数」翻译成「引擎可执行的完整意图」（返回**新 dict**）。
+
+    引擎侧的判据是 `Stage.wants(ctx)`；R23 责权原则规定引擎只提供能力、**不猜**
+    调用方意图。因此「我提交了参数」→「请执行这个 Stage」这一步必须发生在
+    **调用方边界** —— 本函数即该边界，与 `__style` / `__scene` 控制键同一层
+    （两者也在服务层解析）。引擎内部不做任何自动开启。
+
+    规则一 · 门控 Stage 视为已声明执行（**数据驱动**，不硬编码 stage 名单）：
+      对 patch 中每个 stage 桶，若该 Stage 的 `param_schema` 声明了 `enabled`
+      键、桶内含至少一个其它参数键、且桶内未显式给出 `enabled`
+      ⇒ 注入 `enabled: True`。
+
+      实测背景（2026-09-21 探针，真实 HTTP 通道 PUT→渲染 逐位对比）：
+      R23 把 clarity/skin/refine/dehaze/hsl/calibration/split_tone/region_adjust
+      的 `enabled` 归到 False 后，UI `patch()` 只发 `{stage:{param:值}}`
+      ⇒ `wants()` 恒 False ⇒ **清晰度 / 去朦胧 / 色彩校准 / 分离色调 / 磨皮
+      滑杆「调了没效果」**（V1 与基线逐位相同；V2 追加 `enabled:true` 即生效）。
+
+    规则二 · 白平衡滑杆语义（LR 同义）：
+      显式给出 `temp` / `tint` 且未显式给出 `mode` ⇒ 注入 `mode="manual"`。
+      `mode` 缺省为 `"as_shot"`（默认观感亦如此）时 temp/tint 是**死参数**，
+      UI 的色温/色调滑杆同样「调了没效果」。切 manual 后若只给了 `tint`，
+      缺省的 `temp` 由 Stage 以相机 as-shot CCT 兜底（见
+      `white_balance.process`），故只拖色调也成立。
+
+    不做的事（边界必须清楚）：
+      - **不覆盖**显式给出的 `enabled` / `mode`：显式 `False` / `"as_shot"`
+        是有效意图（「保留参数但关掉」/「显式要相机白平衡」）；
+      - 不给没有 `enabled` 键的 Stage 注入（exposure/tone/whitebalance/...
+        本就无门，注入会被 F04 栅栏按未知键 400）；
+      - 不改任何数值：不把参数「改成正数」来伪造意图。
+    """
+    schemas = _param_schemas()
+    out: dict = {}
+    for stage, bucket in dict(patch or {}).items():
+        # 桶浅拷：注入的键不写回调用方入参（调用方可能复用同一 dict）。
+        out[stage] = dict(bucket) if isinstance(bucket, dict) else bucket
+
+    for stage, bucket in out.items():
+        if not isinstance(bucket, dict) or not bucket:
+            continue
+        name = str(stage)
+        schema = schemas.get(name)
+        if not schema:
+            continue
+        if "enabled" in schema and "enabled" not in bucket:
+            if any(k != "enabled" for k in bucket):
+                bucket["enabled"] = True
+        if name == "whitebalance" and "mode" not in bucket:
+            if bucket.get("temp") is not None or bucket.get("tint") is not None:
+                bucket["mode"] = "manual"
+    return out
+
+
 # ---------------------------------------------------------------------------
 # R22 F04 —— 参数栅栏（update_params 零校验的必修）
 # ---------------------------------------------------------------------------
@@ -223,12 +279,23 @@ def _check_value(stage: str, key: str, value: Any, schema: dict) -> None:
             raise ParamValidationError(
                 f"参数 '{stage}.{key}' 类型不符：{value!r} 应为 str")
     elif typ == "float_or_str":
-        # 数值 / 字符串 / 结构数组（hsl.bands）/ 曲线 dict 均放行（既有前端
-        # 语义），仅数值时套用数值域。
+        # 数值 / 字符串 / 数值向量（whitebalance.mode [r,g,b] / warmth_curve）/
+        # 曲线 dict / 结构数组（hsl.bands 的 list[dict] 及其 JSON 串形态）均放行
+        # —— 与 Stage 端 graph.Stage._validate_param 的同名分支**必须同款**
+        # （一致性由 tests/unit/test_param_type_consistency.py 锁死）；仅数值时
+        # 套用数值域。
         if isinstance(value, bool) or not isinstance(
                 value, (int, float, str, list, tuple, dict)):
             raise ParamValidationError(
                 f"参数 '{stage}.{key}' 类型不符：{value!r} 应为数值/字符串/结构")
+        if isinstance(value, dict) and value and not is_curve_dict(value):
+            # 非空 dict 形态**仅**接受曲线结构；判据与 Stage 端同源
+            # (graph.curve_dict_problem) —— 此前栅栏放行任意 dict、Stage 拒绝，
+            # 属"栅栏放行 ⇒ 渲染期 500"的危险方向 (2026-09-21 收敛)。
+            # 空 dict 不在此拦：与 Stage 端「空容器 = no-op 放行」同款。
+            raise ParamValidationError(
+                f"参数 '{stage}.{key}' 结构非法：{value!r} 应为曲线 dict "
+                f"(rgb/red/green/blue/luminance → 非空 [[x,y],...] 点集)")
         if isinstance(value, (int, float)):
             if not math.isfinite(float(value)):
                 raise ParamValidationError(

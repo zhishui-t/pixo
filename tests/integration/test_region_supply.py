@@ -21,6 +21,8 @@ from fastapi.testclient import TestClient
 
 from pixo.service import PixoServiceRuntime, create_app
 
+from _corpus_paths import RAW_SKIP_REASON, REAL_A
+
 
 class FakeSession:
     """测试用预览会话替身（含 region 属性面与供给所需的 render 桩）。"""
@@ -213,11 +215,10 @@ def test_supply_then_patch_then_render_uses_masks(monkeypatch, tmp_path,
 # 真权重 e2e（RAW 可达时; 兼作成本实测载体, 用时数据打点在输出）
 # ---------------------------------------------------------------------------
 
-_REAL_RAW = Path("K:/data/photo/0711/raw/DSC_5236.NEF")
+_REAL_RAW = REAL_A
 
 
-@pytest.mark.skipif(not _REAL_RAW.is_file(),
-                    reason="真实 RAW 语料不可达（本机路径）")
+@pytest.mark.skipif(_REAL_RAW is None, reason=RAW_SKIP_REASON)
 def test_real_weights_supply_e2e(monkeypatch):
     """真权重供给 e2e（B1 修复语义钉死, tester O1 建议）:
     PIXO_SEGMENTER=multi + PIXO_REGION_SUPPLY=1 → 该 RAW 对 segformer 全零

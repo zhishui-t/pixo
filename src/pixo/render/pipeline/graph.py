@@ -21,6 +21,53 @@ class PipelineError(RuntimeError):
     """管线契约违约 (Stage 声明输出域与实际写入不符等)。"""
 
 
+# ---------------------------------------------------------------------------
+# param_schema 类型语义 —— 两端共用判据（**唯一同源**）
+#
+# `param_schema` 有两个独立的解释器：
+#   ① 渲染期  Stage._validate_param（本模块）
+#   ② 栅栏期  render/web/session._check_value（HTTP 400 前拦截）
+# 两者的同名 type 分支语义**必须逐字对齐**，否则出现「栅栏放行、渲染期拒绝」
+# （前端面板一动就 400/500）。2026-09-21 实测事故：`float_or_str` 的栅栏分支
+# 放行任意 `list`（含 hsl.bands 的 list[dict]），Stage 分支只放行数值向量
+# ⇒ 拖 HSL 色相滑杆必 400。
+#
+# 结论：凡是判据需要"结构化"的地方，抽成本层的 **无依赖** 函数，两端都调它，
+# 不再各写一份。一致性由 tests/unit/test_param_type_consistency.py 锁死。
+# ---------------------------------------------------------------------------
+
+_CURVE_DICT_KEYS = frozenset({"rgb", "red", "green", "blue", "luminance"})
+
+
+def curve_dict_problem(v) -> Optional[str]:
+    """曲线 dict 结构判据（**两端唯一同源**）：合法返回 None，否则返回原因。
+
+    `float_or_str` 的 dict 形态**仅**接受曲线结构
+    （`{"rgb"|"red"|"green"|"blue"|"luminance": [[x,y],...]}`），因为全仓
+    没有第二个把 dict 喂给 `float_or_str` 键的调用方（2026-09-21 核查
+    configs/ + tests/ + frontend/src + 全部消费方源码）。
+
+    ⚠️ `region_adjust.regions` 走的是 **`dict`** 类型分支（任意 dict），
+    与本判据无关。
+    """
+    if not isinstance(v, dict) or not v:
+        return ("曲线 dict 需为非空 dict"
+                f"（合法键: {sorted(_CURVE_DICT_KEYS)}）")
+    unknown = set(v) - _CURVE_DICT_KEYS
+    if unknown:
+        return (f"未知曲线键 {sorted(unknown)}; "
+                f"合法键: {sorted(_CURVE_DICT_KEYS)}")
+    for k, pts in v.items():
+        if not isinstance(pts, (list, tuple)) or len(pts) == 0:
+            return f"曲线键 '{k}' 需为非空 [[x,y],...] 点集"
+    return None
+
+
+def is_curve_dict(v) -> bool:
+    """`curve_dict_problem(v) is None` 的 bool 版（栅栏侧用）。"""
+    return curve_dict_problem(v) is None
+
+
 class Stage(ABC):
     """渲染 Stage 插件基类。
 
@@ -36,9 +83,13 @@ class Stage(ABC):
     order: int = 100
     domain_in: Optional[str] = None   # None = 任意域
     domain_out: Optional[str] = None
-    # 参数 schema: {"<name>": {"type": "float"|"int"|"str"|"bool"|"float_or_str",
+    # 参数 schema: {"<name>": {"type": "float"|"int"|"str"|"bool"|"float_or_str"
+    #                          |"dict"|"any",
     #                          "min": .., "max": .., "choices": [...]}}
-    # 各字段均可选; float_or_str 额外放行数值向量 (如 whitebalance 手动 [r,g,b] 系数)。
+    # 各字段均可选; 类型语义必须与栅栏 render/web/session.py::_check_value **同款**。
+    # float_or_str = 数值 | 字符串 | 数值向量 (whitebalance 手动 [r,g,b]) |
+    #                曲线 dict | 结构数组 (hsl.bands 的 list[dict] 及其 JSON 串形态);
+    # dict / any = 结构由消费方自校验 (放行)。
     # 基类默认为只读代理 (L1): 防止 update/赋值污染类级共享状态;
     # 子类整体重绑定 param_schema = {...} 不受影响。
     param_schema: Mapping[str, dict] = MappingProxyType({})
@@ -98,18 +149,16 @@ class Stage(ABC):
 
         数值不做深校验 (交给 _apply_user_curve 等); 只查: dict 非空、键合法、
         每个键值为非空 [[x,y],...] 点集 (list/tuple)。
+
+        ⚠️ 判据来自模块级 :func:`curve_dict_problem`（**唯一同源**）—— 栅栏
+        `web/session._check_value` 的 `float_or_str` 分支调同款，两端不再各写
+        一份键集/规则（2026-09-21 一致性收敛）。
         """
-        allowed = {"rgb", "red", "green", "blue", "luminance"}
         if not isinstance(v, dict) or not v:
             return False
-        unknown = set(v) - allowed
-        if unknown:
-            raise ValueError(
-                f"[{self.name}] 参数含未知曲线键 {sorted(unknown)}; 合法键: {sorted(allowed)}")
-        for k, pts in v.items():
-            if not isinstance(pts, (list, tuple)) or len(pts) == 0:
-                raise ValueError(
-                    f"[{self.name}] 曲线键 '{k}' 需为非空 [[x,y],...] 点集")
+        problem = curve_dict_problem(v)
+        if problem is not None:
+            raise ValueError(f"[{self.name}] 参数含{problem}")
         return True
 
     def _validate_param(self, key: str, value, schema: dict) -> None:
@@ -134,6 +183,18 @@ class Stage(ABC):
                 ok = True
             if not ok and isinstance(value, dict):
                 ok = self._curve_dict_check(value)
+            if not ok and isinstance(value, (list, tuple)):
+                # 结构数组 (hsl.bands = [{"name","hue_center","width",...}, ...])：
+                # 元素结构由**消费方**自校验 (HslStage._resolve_bands)，此处只守
+                # "是序列"这一层。2026-09-21: 与栅栏 __check_value 的同名分支
+                # **必须同款** —— 此前本分支只放行 numeric_seq，于是 `list[dict]`
+                # 被渲染期拒绝 (栅栏却放行) ⇒ 面板一动 HSL 就 400。两端一致性由
+                # tests/unit/test_param_type_consistency.py 锁死。
+                ok = True
+        elif typ == "dict":
+            # 结构字典 (region_adjust.regions = {prompt: {param: 值}})：元素结构
+            # 由消费方自校验；与栅栏同名分支同款（同上，一致性测试锁死）。
+            ok = isinstance(value, dict)
         if not ok:
             raise ValueError(
                 f"[{self.name}] 参数 '{key}' 非法: 值 {value!r} 类型不符, 期望 {typ}")

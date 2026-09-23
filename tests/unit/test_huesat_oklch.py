@@ -28,6 +28,8 @@ from pixo.render.core.hsl_oklch import _cmax_of_l  # noqa: E402
 from pixo.render.core.oklab import (oklab_to_oklch, oklab_to_srgb,  # noqa: E402
                                     oklch_to_oklab, srgb_to_oklab)
 
+from _corpus_paths import RAW_SKIP_REASON, raw_glob  # noqa: E402
+
 
 def _assert_in_gamut_deform(lch_in: np.ndarray, rgb_out: np.ndarray,
                             lch_out: np.ndarray,
@@ -245,11 +247,9 @@ class TestLoadAndDispatch:
         if not DCP_PATH.is_file():
             pytest.skip("DCP 不存在")
         from pixo.render.api import Renderer
-        raws = sorted((_REPO.parent / "data" / "photo" / "0711" / "raw")
-                      .glob("DSC_526*.NEF")) or sorted(
-            Path("K:/data/photo/0711/raw").glob("DSC_526*.NEF"))
+        raws = raw_glob("DSC_526*.NEF")
         if not raws:
-            pytest.skip("语料 RAW 不可达")
+            pytest.skip(RAW_SKIP_REASON)
         r = Renderer(str(DCP_PATH))
         hs = {"enabled": True}
         a = r.render_preview_full(str(raws[0]), long_edge=192,
@@ -268,9 +268,9 @@ class TestLoadAndDispatch:
         if not DCP_PATH.is_file() or not POINTS_GLOB:
             pytest.skip("DCP/点云不存在")
         from pixo.render.api import Renderer
-        raws = sorted(Path("K:/data/photo/0711/raw").glob("DSC_526*.NEF"))
+        raws = raw_glob("DSC_526*.NEF")
         if not raws:
-            pytest.skip("语料 RAW 不可达")
+            pytest.skip(RAW_SKIP_REASON)
         r = Renderer(str(DCP_PATH))
         a = r.render_preview_full(str(raws[0]), long_edge=192,
                                   params={"huesat": {"enabled": True,

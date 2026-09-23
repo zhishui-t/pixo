@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -27,7 +28,8 @@ from pixo.state import PhotoStateMachine
 from pixo.pipeline.loop import RawRenderBackend
 from pixo.render.web.export import ExportManager
 from pixo.render.web.session import (ParamValidationError, RawPreviewSession,
-                                     merge_param_patches)
+                                     merge_param_patches,
+                                     translate_param_intents)
 from pixo.vision import MockSegmenter, VisionMeasure, vision_health
 
 _LOGGER = logging.getLogger(__name__)
@@ -358,10 +360,17 @@ def _load_default_look() -> dict:
     """默认打开观感 params（进程内缓存; env=off 回 {}; 文件缺失回 {} + warning）。
 
     只在会话工厂消费（打开照片的初始 params）; auto-loop 自建闭环不受影响。
+
+    ⚠️ 必须返回**深拷贝**（2026-09-21 修）：旧实现 `dict(cache)` 只拷外层，
+    内层 stage 桶与模块级缓存**同一对象**；会话建好后 `_deep_merge` 是**原地
+    合并** ⇒ 用户改一次参数就把缓存改写了，**后续新建的所有会话都继承上一次
+    的编辑**（实测：S1 置 whitebalance=manual/temp7000 ⇒ S2 全新会话初始
+    参数即为 manual/temp7000）。默认观感是「每张照片的初始数据」，不是共享
+    可变状态。
     """
     global _default_look_cache
     if _default_look_cache is not None:
-        return dict(_default_look_cache)
+        return copy.deepcopy(_default_look_cache)
     raw = os.environ.get(_DEFAULT_LOOK_ENV, "").strip()
     if raw.lower() in ("off", "0", "false", "no"):
         _default_look_cache = {}
@@ -375,7 +384,7 @@ def _load_default_look() -> dict:
         _LOGGER.warning("[pixo.runtime] 默认观感加载失败(回中性): %s (%s)",
                         path, exc)
         _default_look_cache = {}
-    return dict(_default_look_cache)
+    return copy.deepcopy(_default_look_cache)
 
 
 # R26 tech_debt #20：状态机转移类事件（重放判定用，machine._auto_event_type 全集）
@@ -686,6 +695,12 @@ class PixoServiceRuntime:
         （场景预设 id）在此解析为 stage 参数覆盖，再与 patch 其余内容深合并
         （显式参数优先）。解析结果经会话栅栏校验（未知 stage/键/数值域/
         路径类 → HTTP 400）。两个控制键同时给出视为语义冲突 → 400。
+
+        2026-09-21 追加「调用方边界意图翻译」：装配后过
+        :func:`translate_param_intents` —— 显式参数 ⇒ 声明执行该 Stage
+        （门控 Stage 补 `enabled=True`）、显式 `temp`/`tint` ⇒ 切 `manual`
+        白平衡。这是**调用方边界**的职责（引擎只读 `enabled`，不猜意图），
+        否则 UI 滑杆「调了没效果」。
         """
         session = self.get_session(session_id)
         patch = dict(patch or {})
@@ -704,6 +719,10 @@ class PixoServiceRuntime:
             card_params = _style_card_params(str(style_id))
             patch = merge_param_patches(card_params, patch)
             control_traces.append((_CONTROL_STYLE, style_id))
+        # 调用方边界意图翻译（2026-09-21）：显式参数 ⇒ 声明执行该 Stage /
+        # 显式 temp·tint ⇒ 切 manual 白平衡。放在卡·场景装配**之后**——卡里
+        # 显式声明的 enabled/mode 优先，翻译只补空缺。引擎侧依旧零自动开启。
+        patch = translate_param_intents(patch)
         try:
             generation = session.update_params(patch)
         except ParamValidationError as exc:

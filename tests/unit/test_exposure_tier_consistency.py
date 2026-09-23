@@ -16,8 +16,9 @@
   - 断言阈值取修后实测的 ~10 倍余量 (统计噪声合理上界), 同时保证修前
     实测散度必然越界 (合成图是回归哨兵; 真实 RAW 用例是环境一致性巡检)。
 
-真实 RAW 用例遵循仓库惯例: K:/data/photo/0711/raw/DSC_5236.NEF 存在才
-运行, 缺失时 skip。
+真实 RAW 用例(DSC_5236.NEF)按 tests/_corpus_paths.py 的集中解析定位,
+语料不可达时 skip（旧写法是硬编码 K:/data/photo/0711/raw, 语料重组后
+静默失效 —— 现由解析器报告已探测的候选目录）。
 
 运行: python -m pytest tests/unit/test_exposure_tier_consistency.py -q
 """
@@ -37,6 +38,8 @@ from pixo.render.modules.exposure import (
 )
 from pixo.render.pipeline.graph import DOMAIN_LINEAR_CAM, StageContext
 
+from _corpus_paths import RAW_SKIP_REASON, REAL_A
+
 # EV / med 档间一致性阈值 (选择依据见模块 docstring)
 _EV_EPS = 0.02    # 修后实测 ~0.0015 EV
 _MED_EPS = 0.01   # 修后实测 ~0.0005 log2
@@ -48,7 +51,7 @@ _NIKON_CM1 = [1.1643, -0.653, 0.0726, -0.4355, 1.2179, 0.2449, -0.0231, 0.0811, 
 _NIKON_CM2 = [0.9874, -0.3784, -0.0823, -0.4728, 1.2673, 0.2286, -0.0648, 0.1513, 0.6375]
 _NIKON_FM1 = [0.7978, 0.1352, 0.0313, 0.288, 0.7119, 0.0001, 0.0, 0.0, 0.8251]
 
-_REAL_RAW = Path(r"K:\data\photo\0711\raw\DSC_5236.NEF")
+_REAL_RAW = REAL_A
 _REAL_DCP = (Path(__file__).resolve().parents[2] / "resources" / "dcp"
              / "Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp")
 
@@ -192,7 +195,7 @@ def test_synthetic_raw_three_tiers_same_ev(_no_cal_file):
     assert all(abs(r[1]) < 2.0 for r in rows), f"EV 不应触到 max_ev 钳位: {rows}"
 
 
-@pytest.mark.skipif(not _REAL_RAW.exists(), reason="真实 RAW 不在本机 (DSC_5236.NEF)")
+@pytest.mark.skipif(_REAL_RAW is None, reason=RAW_SKIP_REASON)
 def test_real_raw_three_tiers_same_ev():
     """真实 RAW (半解码 → 三档): EV 决策与探针统计一致。
 

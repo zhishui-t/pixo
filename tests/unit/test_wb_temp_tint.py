@@ -9,8 +9,8 @@ import numpy as np
 import pytest
 
 from pixo.render.core.calibration import DcpProfile
-from pixo.render.core.color import (cam_to_linear_srgb_matrix, temp_tint_to_wb,
-                                 wb_to_temp_tint)
+from pixo.render.core.color import (cam_to_linear_srgb_matrix, cct_from_wb,
+                                 temp_tint_to_wb, wb_to_temp_tint)
 from pixo.render.pipeline.graph import StageContext, DOMAIN_LINEAR_CAM, DOMAIN_LINEAR_RGB
 from pixo.render.modules.white_balance import WhiteBalanceStage, apply_warmth
 from pathlib import Path
@@ -255,10 +255,31 @@ def test_explicit_warmth_curve_overrides_cal_file(tmp_path):
     assert np.allclose(ctx.state["wb"], expected, atol=1e-5)
 
 
-def test_manual_requires_temp():
-    """mode=manual 但 temp=None → ValueError。"""
+def test_manual_missing_temp_seeds_as_shot():
+    """mode=manual 且 temp=None → 以 as-shot CCT 播种, **不报错** (LR 同义)。
+
+    2026-09-21 契约变更 (旧行为: 只要缺 temp 就 ValueError)。新契约对齐
+    LR 手动白平衡: 切到 Manual 时 Temp/Tint 由 As Shot 播种 —— 播种基准由
+    RAW + DCP 唯一确定, 属**域转换**而非观感猜测, 因此引擎可以自己算;
+    只有"连基准都取不到"(无 raw 且无 state['camera_wb'])才是调用方错误。
+    """
     prof = _profile()
-    ctx = StageContext("test.NEF", raw=_FakeRaw(), prof=prof,
+    raw = _FakeRaw()
+    ctx = StageContext("test.NEF", raw=raw, prof=prof,
+                       config={"stages": {"whitebalance": {"mode": "manual"}}})
+    ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
+    WhiteBalanceStage().run(ctx)                      # 不抛
+    wb0 = np.asarray(raw.camera_whitebalance[:3], dtype=np.float32)
+    wb0 = wb0 / wb0[1]
+    expected = temp_tint_to_wb(prof, float(cct_from_wb(wb0, prof)), 0.0)
+    expected = expected / expected[1]
+    assert np.allclose(ctx.state["wb"], expected, atol=1e-5)
+
+
+def test_manual_missing_temp_raises_without_basis():
+    """无 raw 亦无 state['camera_wb'] → 取不到播种基准, ValueError 含 temp。"""
+    prof = _profile()
+    ctx = StageContext("test.NEF", raw=None, prof=prof,
                        config={"stages": {"whitebalance": {"mode": "manual"}}})
     ctx.set_image(np.full((8, 8, 3), 0.5, dtype=np.float32), DOMAIN_LINEAR_CAM)
     with pytest.raises(ValueError, match="temp"):

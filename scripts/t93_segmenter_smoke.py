@@ -4,6 +4,7 @@
 输出: stdout 每图每 prompt 的形状/二值/覆盖占比/bbox；越界与异常报 FAIL。
 """
 from __future__ import annotations
+import os
 import sys
 from pathlib import Path
 import numpy as np
@@ -14,9 +15,12 @@ sys.path.insert(0, str(ROOT / 'src'))
 from pixo.render.api import Renderer
 from pixo.vision.segmenters.multi_router import MultiModelSegmenter
 
+# 语料 2026-09 重组: 0711 并入 西安/ 下（集中解析见 tests/_corpus_paths.py）
+_RAW_DIR = Path(os.environ.get('PIXO_CORPUS_A_RAW_DIR',
+                               'K:/data/photo/西安/0711/raw'))
 RAWS = [
-    Path(r'K:/data/photo/0711/raw/DSC_5236.NEF'),
-    Path(r'K:/data/photo/0711/raw/DSC_5241.NEF'),
+    _RAW_DIR / 'DSC_5236.NEF',
+    _RAW_DIR / 'DSC_5241.NEF',
 ]
 PROMPTS = ['face', 'person', 'sky']
 

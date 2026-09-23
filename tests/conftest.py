@@ -2,6 +2,8 @@
 
 职责:
   - 确保 `import pixo.render.*` / `import pixo.*` 可用：将 src 目录插入 sys.path。
+  - 将 tests 目录插入 sys.path，使各层用例可共用 `_corpus_paths`（真实 RAW
+    语料路径的唯一解析入口 —— 语料搬家时改一处即可，见该模块 docstring）。
   - 注册 e2e / regression / gate / gate_e2e markers。
 
 运行约定:
@@ -18,8 +20,10 @@ from pathlib import Path
 # tests/conftest.py -> 仓库根
 ROOT = Path(__file__).resolve().parent.parent
 SRC_ROOT = ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+TESTS_ROOT = Path(__file__).resolve().parent
+for _p in (str(SRC_ROOT), str(TESTS_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 
 def pytest_configure(config):
