@@ -125,20 +125,21 @@
       "id": "t6",
       "label": "T6 HSL 均衡器+分色调增强",
       "role": "dev-1",
-      "status": "in_progress",
+      "status": "done",
       "deps": [
         "t5"
       ],
-      "note": "dev-1 进行中"
+      "note": "吸收2: rt施加数学+preserve_luma; CLUT猜测推翻; 1760/0"
     },
     {
       "id": "t7",
       "label": "T7 曝光六项优化校准（RT 阴影高光恢复/黑白点/auto 曲线）",
       "role": "dev-1",
-      "status": "pending",
+      "status": "in_progress",
       "deps": [
         "t6"
-      ]
+      ],
+      "note": "dev-1 进行中"
     },
     {
       "id": "t8",

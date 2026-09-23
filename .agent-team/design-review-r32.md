@@ -382,3 +382,43 @@ toning2col 全段实读：**逐像素解析数学**——secondeg_end/begin 二�
 **通过（0 BLOCKER / 0 主要 / 1 建议〔preserve_luma 系数域注明〕+ 1 台账建议〔FlatCurve 列 T8 横切项〕）**。测试实证：test_hsl_split_tone_r32t6 + test_split_tone_oklab + test_hsl = **42 passed**（本棒复跑）；全量 1760/0 留 tester 棒复核。T6 可提交推送并派 T7（曝光校准 + T5 登记的匹配曲线联动接驳）。
 
 *reviewer · T6 检视棒 2026-09-23 · 执行引擎：宿主原生*
+
+---
+
+# R32-T7 检视报告（design-review-r32 续）· 轻量棒
+
+> 日期：2026-09-23（T7 检视棒）｜ 检视人：reviewer（本审核线）
+> 被检对象：modules/exposure.py（auto_match_suggest + mode="match"）、test_exposure_match.py（新 6 用例）、_r32_t7_exposure.json、dev1-r32-t7.md
+> RT 对照基线：rtengine/improcfun.cc getAutoExp :5440-5650 @ 6c4cb59（本棒全文实读）
+
+## T7-1. auto_match_suggest 逐式对照 ✓（16 结构点全对上 + 2 泛化等价）
+
+RT getAutoExp 全文实读，pixo 移植逐项核对：
+- **统计**：sum/ave（getSumAndAverage）、中位累积过半 ✓；八分位 log2(1+j) 域、sum/8 定格（末位 sum/16）✓；过曝外推 `1.5·oct[5]−0.5·oct[4]` 与 oct6/oct7 快照 ✓；零 octile 前向传播 ✓；ospread 加权间距 ÷5（分母 max(0.5, octile[3] 分段)）✓；
+- **clip 双点**：clippable=sum·clip、whiteclip/shc 两个 while 累积循环边界同 ✓（RT clip 为百分数 /100，pixo 参数语义 0.02=2% 已内化，等价）；
+- **EV 合成序**：expcomp1（中灰锚定 `log2(midgray·scale/(ave−shc+midgray·shc))`）+ expcomp2（顶点估计 `0.5·(C−(2·oct7−oct6)+log2(scale/rawmax))`）按 |e1|−|e2|>1 分派几何/算术混合 ✓；
+- **五参**：gain=2^ev → corr=√(gain·scale/rawmax) → black=shc·corr ✓；hlcompr 级数近似 ×2.3、clamp[0,100]、thresh=0 ✓；bright 控制笼包络两段式 + 0.25·max(0,·) ✓；contr=50(1.1−ospread) clamp ✓；黑帧全零安全返回 ✓；
+- **两处泛化数学等价**（dev 自述修正的 bin/scale 换算）：bin→scale 域 `×scale/n` ≡ RT `<<histcompr`（bin 宽同一）；`15.5−histcompr` ≡ `log2(n)−0.5`（n=imax=65536>>histcompr 时恒等）——修正后与 RT 原式一致 ✓；
+- **建议级登记（2 条二阶边界差异，不阻塞）**：①losum/hisum 分界 bin 双计（pixo 第一循环 range(int(ave_bins)+1) 且第二循环从 j 起——分界 bin 的 octile 累计/losum 各多计一次；影响八分位 ±1 bin 精度与黑帧判定边界）；②黑帧判据组合：RT `median==0 OR ave<1` vs pixo `median==0 AND hist[0]==0` 加 ave 阈——hist[0]>0 的 median=0 图像 pixo 不触发安全零（RT 会）。两条均在防御路径，正常图像建议值不受影响，T8 台账引用移植实现时注明即可。
+
+## T7-2. 缺省红线 ✓ + 建议语义 ✓
+
+- `default_params["mode"]=="baseline"` 为既有缺省（diff 未触 default_params），`mode="match"` 为 elif 插入分支，auto/off/baseline/数值路径零触碰——红线成立，`test_exposure_stage_default_mode_unchanged` 锁定 ✓；
+- **建议写 metrics 非自动套用 ✓**：black/hlcompr/contr/expcomp/overex 以 RT 原单位写 `ctx.results[-1].metrics["exposure_match_*"]`；EV 仅取建议 expcomp 沿既有 ev 应用链（同 max_ev 钳位）；**无 tone 参数写点**（六键消费留编辑动作显式化）——「建议语义」核过 ✓。
+
+## T7-3. 并存非整替数据 ✓
+
+E1 direction_check 如实记录：中灰直方图 getAutoExp_ev=**+0.369** vs 我方中位锚定 **0.0**（same_sign=false）——RT match 含「直方图顶点推向 clip」第二目标项，非纯中灰锚定；暗场 +1.106/亮场 −0.176 与中位锚定同号（暗/亮场景两口径方向一致）。json/报告/协调者表述三方一致 ✓——match 与 auto 并存的语义差异已数据化留档 ✓。
+
+## T7-4. 三个「保持」裁决 ✓
+
+- **黑白点硬钳制**：RT toneCurve.black（含逐通道 blackred/green/blue）= 曲线前数据钳制；pixo blacks/whites 为带通乘性键、无硬 clip——不吸收硬钳语义（我方设计特性=验收项）裁决合理 ✓；
+- **HL compression**：RT hlcompr/thresh=曝光曲线肩部压缩（shoulder 公式在案），pixo soft_highlight_rolloff+highlight_compress_curve+shoulder 能力已覆盖 ✓；
+- **E3 六键 ramp**：1024 级 ramp ±0.8 满载——四键双向单调、内域无 ≥3 采样硬 clip 平台、带外隔离数值在 json ✓（T1.5 六键数学达标的数据化）；
+- **guided filter 局部恢复**：RT S/H = Lab L* pow4 掩码 + **guidedFilter(L, mask) 局部细化** + L* gamma 映射 + NURBS 暗部对比 + 色度保持（§1.1 机理与任务书问题回答齐备）——pixo 六键为全局带通语义，**T8 台账登记**为独立工具语义 ✓。
+
+## T7 结论
+
+**通过（0 BLOCKER / 0 主要 / 2 建议登记〔八分位分界 bin 双计、黑帧判据组合——移植实现的二阶边界，T8 引用时注明〕）**。测试实证：test_exposure_match + test_exposure = **31 passed**（本棒复跑）；全量回归留 tester 棒复核。T7 可提交推送并派 T8（全模块清点收官棒）。
+
+*reviewer · T7 检视棒 2026-09-23 · 执行引擎：宿主原生*

@@ -337,13 +337,162 @@ def _probe_linear_srgb(ctx: StageContext, cam: np.ndarray) -> np.ndarray:
     return y
 
 
+def auto_match_suggest(hist_counts: np.ndarray, *, clip: float = 0.02,
+                       midgray: float = 0.1842,
+                       scale: float = 1.0) -> dict:
+    """RT getAutoExp 八分位直方图匹配的 numpy 移植 (R32-T7 对照吸收)。
+
+    出处: RawTherapee rtengine/improcfun.cc getAutoExp @ 6c4cb59 (GPLv3)。
+    输入 hist_counts 为**线性工作亮度**等距直方图计数 (bin 宽 = scale/N);
+    目标 = 中灰 midgray (线性 0.1842) 锚定 + clip 比例限幅 + 八分位间距定
+    对比。返回 RT 单位建议:
+      {"expcomp": EV, "black": 黑点 (scale 域), "hlcompr": 0..100,
+       "bright": 亮度, "contr": 0..100, "overex": int}
+    退化输入 (黑帧/无分布) 返回全 0 建议 (与 RT 同为安全零)。
+
+    建议到 pixo 六键的映射 (供调用方, 启发式): expcomp → exposure EV;
+    black → tone.blacks 负向; hlcompr/100 → tone.highlights 负向;
+    contr → tone.contrast。
+    """
+    hist = np.asarray(hist_counts, dtype=np.float64).reshape(-1)
+    n = hist.size
+    imax = n
+    zero = {"expcomp": 0.0, "black": 0.0, "hlcompr": 0, "bright": 0,
+            "contr": 0, "overex": 0}
+
+    def masked_bin(k: int) -> float:
+        return float(hist[k]) if 0 <= k < n else 0.0
+
+    total = float(hist.sum())
+    if total <= 0:
+        return dict(zero)
+    nz = np.nonzero(hist)[0]
+    if nz.size == 0:
+        return dict(zero)
+    # 平均亮度: bin 域均值 → scale 域 (RT 65536 bin 时 bin 宽=1, 二者同一;
+    # 通用 bin 数下须显式换算 bin 宽 = scale/n)
+    bin_w = scale / n
+    ave_bins = float((hist * np.arange(n)).sum() / total)
+    ave = ave_bins * bin_w
+    # 中位
+    cum = np.cumsum(hist)
+    median = int(np.searchsorted(cum, total / 2.0))
+    if median <= 0 and float(hist[0]) == 0.0:
+        return dict(zero)
+    if ave < 1e-6 * scale:
+        return dict(zero)
+
+    # 八分位 (log2 域) + 高/低侧累计 (bin 域遍历, 与 RT 同)
+    octile = np.zeros(8)
+    losum = hisum = 0.0
+    count = 0
+    j = 0
+    for j in range(min(int(ave_bins) + 1, n)):
+        if count < 8:
+            octile[count] += hist[j]
+            if octile[count] > total / 8.0 or (count == 7 and octile[count] > total / 16.0):
+                octile[count] = np.log2(1.0 + j)
+                count += 1
+        losum += hist[j]
+    for j in range(j, n):
+        if count < 8:
+            octile[count] += hist[j]
+            if octile[count] > total / 8.0 or (count == 7 and octile[count] > total / 16.0):
+                octile[count] = np.log2(1.0 + j)
+                count += 1
+        hisum += hist[j]
+    if losum == 0 or hisum == 0:
+        return dict(zero)
+
+    overex = 0
+    # RT 判据: octile 超出 log2(imax); 通用 bin 数下 log2(1+n) 为上限
+    oct_cap = np.log2(1.0 + n)
+    if octile[6] > oct_cap:
+        octile[6] = 1.5 * octile[5] - 0.5 * octile[4]
+        overex = 2
+    if octile[7] > oct_cap:
+        octile[7] = 1.5 * octile[6] - 0.5 * octile[5]
+        overex = 1
+    oct6, oct7 = octile[6], octile[7]
+    octile[octile == 0.0] = 0.0
+    for i in range(1, 8):
+        if octile[i] == 0.0:
+            octile[i] = octile[i - 1]
+    ospread = 0.0
+    for i in range(1, 6):
+        ospread += (octile[i + 1] - octile[i]) / max(
+            0.5, (octile[i + 1] - octile[3]) if i > 2 else (octile[3] - octile[i]))
+    ospread /= 5.0
+    if ospread <= 0.0:
+        return dict(zero)
+
+    # clip 限幅白点/黑点 (线性 bin 索引 → scale 域)
+    clippable = total * clip
+    clipped = 0.0
+    rawmax = n - 1
+    while rawmax > 1 and masked_bin(rawmax) + clipped <= 0:
+        clipped += masked_bin(rawmax)
+        rawmax -= 1
+    clipped = 0.0
+    whiteclip = n - 1
+    while whiteclip > 1 and masked_bin(whiteclip) + clipped <= clippable:
+        clipped += masked_bin(whiteclip)
+        whiteclip -= 1
+    clipped = 0.0
+    shc = 0
+    while shc < whiteclip - 1 and masked_bin(shc) + clipped <= clippable:
+        clipped += masked_bin(shc)
+        shc += 1
+    # bin 索引 → scale 域
+    rawmax *= scale / n
+    whiteclip *= scale / n
+    shc *= scale / n
+    median_sc = median * scale / n
+
+    # 曝光补偿: 中灰锚定估计与直方图顶点估计的几何混合
+    expcomp1 = np.log2(midgray * scale / max(ave - shc + midgray * shc, 1e-9))
+    if overex == 0:
+        # RT 常数 15.5 = log2(imax) - 0.5 (imax=65536 时); 通用 bin 数下
+        # 泛化为 log2(n) - 0.5
+        expcomp2 = 0.5 * ((np.log2(n) - 0.5 - (2.0 * oct7 - oct6))
+                          + np.log2(scale / max(rawmax, 1e-9)))
+    else:
+        expcomp2 = 0.5 * ((np.log2(n) - 0.5 - (2.0 * octile[7] - octile[6]))
+                          + np.log2(scale / max(rawmax, 1e-9)))
+    if abs(expcomp1) - abs(expcomp2) > 1.0:
+        expcomp = (expcomp1 * abs(expcomp2) + expcomp2 * abs(expcomp1)) / (
+            abs(expcomp1) + abs(expcomp2))
+    else:
+        expcomp = 0.5 * expcomp1 + 0.5 * expcomp2
+    gain = 2.0 ** expcomp
+    corr = float(np.sqrt(gain * scale / max(rawmax, 1e-9)))
+    black = shc * corr
+    # hlcompr: 把 whiteclip 经增益后拉回 scale 顶的级数近似
+    comp = (gain * whiteclip / scale - 1.0) * 2.3
+    hlcompr = int(max(0, min(100, 100.0 * comp / (max(0.0, expcomp) + 1.0))))
+    hlcomprthresh = 0
+    # bright: 控制笼包络近似, 把 sqrt(median·ave) 拉到中灰
+    midtmp = gain * np.sqrt(median_sc * ave) / scale
+    if midtmp < 0.1:
+        bright = (midgray - midtmp) * 15.0 / midtmp
+    else:
+        bright = (midgray - midtmp) * 15.0 / (0.10833 - 0.0833 * midtmp)
+    bright = 0.25 * max(0, bright)
+    contr = int(max(0, min(100, 50.0 * (1.1 - ospread))))
+    return {"expcomp": float(expcomp), "black": float(black),
+            "hlcompr": hlcompr, "hlcomprthresh": hlcomprthresh,
+            "bright": float(bright), "contr": contr, "overex": overex}
+
+
 @register_stage("exposure", order=10,
                 domain_in=DOMAIN_LINEAR_CAM, domain_out=DOMAIN_LINEAR_CAM)
 class ExposureStage(Stage):
     name = "exposure"
 
     param_schema = {
-        "mode": {"type": "float_or_str"},                       # "auto"|"off"|数值
+        # "auto"|"off"|"baseline"|EV 数值 | "match" (R32-T7: RT getAutoExp
+        # 八分位直方图匹配, 显式开启)
+        "mode": {"type": "float_or_str"},
         "target": {"type": "float"},                            # 显式锚点 log2
         "target_offset": {"type": "float"},
         "clip_p": {"type": "float", "min": 50.0, "max": 100.0},
@@ -432,6 +581,13 @@ class ExposureStage(Stage):
             # L2 bool 陷阱: bool 是 int 子类, 不排除会把 mode=True 误当
             # ev=1.0; bool 与其他非法类型 (容器等) 落入 auto 分支并一次性告警。
             ev = float(mode)
+        elif mode == "match":
+            # R32-T7 对照吸收 (RT getAutoExp): 八分位 log2 直方图匹配。
+            # 与 "auto" 的中位锚定不同: 同时匹配中灰锚定 / clip 限幅白黑点 /
+            # 八分位间距 (对比), 输出 RT 单位建议供 tone 六键消费 (启发式)。
+            ev, match = self._match_ev(ctx)
+            ctx.state["ev_mode"] = "match"
+            ctx.state["match_suggest"] = match
         else:
             if (isinstance(mode, bool)
                     or not isinstance(mode, (int, float, str, type(None)))):
@@ -491,6 +647,34 @@ class ExposureStage(Stage):
         if not valid:
             return None
         return max(valid, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]))
+
+    def _match_ev(self, ctx: StageContext) -> tuple[float, dict]:
+        """R32-T7: mode="match" —— RT getAutoExp 八分位匹配 (显式开启)。
+
+        探针线性亮度 → 4096 桶直方图 → auto_match_suggest (RT 单位建议)。
+        EV 取建议的 expcomp (与 "auto" 同 max_ev 钳位); black/hlcompr/contr
+        建议以 RT 原单位写入 metrics (exposure_match_*) 供 tone 键启发式
+        消费 —— 不自动改写 tone 参数 (编辑动作显式化)。
+        """
+        y = _probe_linear_srgb(ctx, ctx.image)
+        y = np.clip(y, 0.0, 1.0)
+        hist, _ = np.histogram(y, bins=4096, range=(0.0, 1.0))
+        clip = float(self.p(ctx, "highlight_budget", 0.02)) or 0.02
+        suggest = auto_match_suggest(hist, clip=clip, midgray=0.1842, scale=1.0)
+        try:
+            ctx.results[-1].metrics["exposure_match_expcomp"] = round(
+                float(suggest["expcomp"]), 4)
+            ctx.results[-1].metrics["exposure_match_black"] = round(
+                float(suggest["black"]), 2)
+            ctx.results[-1].metrics["exposure_match_hlcompr"] = int(
+                suggest["hlcompr"])
+            ctx.results[-1].metrics["exposure_match_contr"] = int(
+                suggest["contr"])
+            ctx.results[-1].metrics["exposure_match_overex"] = int(
+                suggest["overex"])
+        except Exception:
+            pass
+        return float(suggest["expcomp"]), suggest
 
     def _auto_ev(self, ctx: StageContext) -> float:
         # 探针: 影调级消费的线性 sRGB 域亮度 (固定网格面积均值, tier 无关)
