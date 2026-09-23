@@ -35,10 +35,16 @@ class HslStage(Stage):
         # 切换, ab_intent_report 全过背书); 存量卡逐位不变 (A1) 由 F07 卡级
         # 显式钉 "hsv" 兑现 (configs/styles/films/ 23 卡), 不再依赖 Stage 缺省。
         "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
+        # R32-T6 对照吸收: sat/lum 施加数学 (hsv 域 band)。缺省 "pixo" =
+        # 既有对称乘法逐位不变; "rt" = RT HSV Equalizer 非对称数学
+        # (正向二次混合防截断、负向乘法、lum 按 (1-(1-S)^4) 饱和衰减,
+        # 出处 improcfun.cc @ 6c4cb59)。仅作用于 hsv 域 band。
+        "adjust_math": {"type": "str", "choices": ["pixo", "rt"]},
     }
 
     def default_params(self):
-        return {"enabled": False, "bands": None, "smooth": 1.0, "color_domain": "oklch"}
+        return {"enabled": False, "bands": None, "smooth": 1.0,
+                "color_domain": "oklch", "adjust_math": "pixo"}
 
     def wants(self, ctx: StageContext) -> bool:
         # 仅 enabled=True 时进入 (bands 缺省/全 0 时 process 恒等, 无副作用)
@@ -60,14 +66,20 @@ class HslStage(Stage):
             raise ValueError(f"hsl color_domain 需为 'hsv'|'oklch' (实际 {domain!r})")
         bands = self._resolve_bands(ctx, domain)
         smooth = float(self.p(ctx, "smooth", 1.0))
+        adjust_math = str(self.p(ctx, "adjust_math", "pixo")).strip().lower()
+        if adjust_math not in ("pixo", "rt"):
+            raise ValueError(
+                f"hsl adjust_math 需为 'pixo'|'rt' (实际 {adjust_math!r})")
         img = np.clip(ctx.image, 0.0, 1.0)
         hsv_bands, oklch_bands = _split_bands_by_domain(bands, domain)
         if not oklch_bands:
             # 旧 hsv 路径原样 (含空列表/全 0 快路径逐位 no-op) —— 存量卡零迁移 (A1)
-            out = hsl_adjust_rgb(img, hsv_bands, smooth=smooth)
+            out = hsl_adjust_rgb(img, hsv_bands, smooth=smooth,
+                                 adjust_math=adjust_math)
         else:
             if hsv_bands:
-                img = hsl_adjust_rgb(img, hsv_bands, smooth=smooth)
+                img = hsl_adjust_rgb(img, hsv_bands, smooth=smooth,
+                                     adjust_math=adjust_math)
             out = oklch_adjust_rgb(img, oklch_bands, smooth=smooth)
         ctx.set_image(out, DOMAIN_GAMMA_RGB)
         ctx.results[-1].metrics["hsl_bands"] = len(bands)

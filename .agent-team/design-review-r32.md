@@ -336,3 +336,49 @@ dev-1 修正交棒复核（4 文件）：
 **通过（0 BLOCKER / 0 主要 / 1 建议勘误）**。测试实证：test_proxy_metrics + test_f04 + test_user_curve = **92 passed, 1 skipped**（本棒复跑）。T5 可提交推送并派 T6（HSL/分色调）；勘误句随 T6 或 T8 台账编制时顺带修正。
 
 *reviewer · T5 检视棒 2026-09-23 · 执行引擎：宿主原生*
+
+---
+
+# R32-T6 检视报告（design-review-r32 续）· 轻量棒
+
+> 日期：2026-09-23（T6 检视棒）｜ 检视人：reviewer（本审核线）
+> 被检对象：core/hsl.py（adjust_math="rt"）、core/split_tone_oklab.py（preserve_luma）、两 Stage schema 透传、test_hsl_split_tone_r32t6.py（新 7 用例）、契约测试同步、dev1-r32-t6.md + _r32_t6_hsl.json
+> RT 对照基线：rtengine/improcfun.cc @ 6c4cb59（本棒实读 :2740-2800 HSV 段、:4003-4104 toning2col 全段）
+
+## T6-1. adjust_math="rt" ✓（RT 施加式逐式对照通过）
+
+实读 improcfun.cc:2755-2791（HSV equalizer 像素段）逐式核对：
+- **sat 正向**：RT `s'=(1−p)s + p(1−(1−min(s,1))²)`（二次混合，高饱和收敛无截断）——pixo rt 分支同式 ✓；**sat 负向**：RT `s *= 1+p`（乘法）——同 ✓；
+- **lum 饱和衰减**：RT `valparam *= (1−SQR(SQR(1−min(s,1))))` = **(1−(1−S)⁴)**（近中性保护更强/中间饱和作用更满），再正混/负乘——pixo `lum_w=1−(1−protect)⁴` 同式 ✓；E3 数字手验自洽（1−(1−0.05)⁴=0.186 ✓、1−(1−0.9)⁴≈1.000 ✓）；
+- p 域 [-1,1] 同（RT 曲线输出 ±1、pixo x/100·m）；pixo 附加 clip(0,1) 与无 ±1e-5 死区 = 二阶加固，不改变语义；
+- 吸收面如实：吸收的是**施加数学**而非 RT 曲线控制面（RT sCurve/vCurve 为 hue 轴全域曲线，pixo 为 8 band 掩码——报告 §2 hue 行「保持+理由」裁决合理）✓。
+
+## T6-2. 缺省红线 ✓（两参数均缺省关闭 + 双锁）
+
+- hsl：`adjust_math="pixo"` 分支保留原式逐字（对称乘法+线性 protect），default/schema choices 校验到位，非法值 raise；oklch 路径不受影响 ✓。
+- split_tone：`preserve_luma=False` 时不进恢复块，输出路径原样；hsv 旧路径零接线 ✓。
+- 测试双锁：`test_adjust_math_default_bitwise_unchanged`（内联旧公式复算 ≤1e-6）+ `test_split_tone_preserve_luma_default_bitwise_unchanged`（array_equal）✓。E2 的 50.05% clip 数据即**既有行为画像**（锁定非修复）✓——RT 正向混合 s=0.8/+100 → 0.96 手验吻合（`test_adjust_math_rt_sat_boost_no_clip` 断言化）。
+
+## T6-3. preserve_luma ✓（乘性恢复同构 + E4 可信；1 条建议注明系数域）
+
+- RT 实读（improcfun.cc:4093-4104）：`preserv = lumbefore/lumafter`，`CLIP(rgb·preserv)`——pixo `scale = y/max(y_after,1e-9); out·scale` 同式 ✓（pixo 1e-9 防零除更稳）。
+- **建议（不阻塞）**：系数域差异未注明——RT luma 加权为 **Rec.601（0.299/0.587/0.114）**，pixo `_RGB_WEIGHTS` 为 **BT.709（0.2126/0.7152/0.0722）**。机理同构（乘性恢复），系数域为 pixo 全链自洽选择，建议 docstring 一句注明「RT 原文 Rec.601、本实现 BT.709（域惯例）」避免「同式」误读。
+- E4 三臂数据可信 ✓：0.08627（RT preser=0）/ 0.02691（pixo oklch）/ 0.00467（RT preser=1）——「恢复有效 + 我方 oklch 居中」支撑 A2；json note 如实标注「RT 参考含 secondeg_* 简化（测量参考非逐位），结论量级级」——诚实不过度声称 ✓。
+
+## T6-4. CLUT 裁决 ✓（源码推翻成立）
+
+toning2col 全段实读：**逐像素解析数学**——secondeg_end/begin 二次 ramp（阴影/高光中段削平）+ 阴影保护 `pow(min(rgb)/20000, 0.85)`（纯黑不动）+ 高光滚落（>45535 线性衰减），全段无任何 LUT 查表；labtoning docstring 自注「ctColorCurve curve **500 colors**」（500 点色曲线 + opacity 曲线）。「CLUT 猜测被源码推翻」表述与源码一致 ✓。
+
+## T6-5. FlatCurve 登记 → 建议列 T8 台账（横切项）
+
+§6.2 登记如实（FlatCurve FCT_MinMaxCPoints 控制笼未移植、未做曲线级对拍—— apples-to-apples 缺失如实声明）。**评估：应列 T8 台账**——hue 轴自由控制点曲线是**能力面差异**而非纯 UX 差异（8 具名带 + 环状升余弦掩码无法表达任意非对称 hue 形状；RT 侧 8 带实为 UI 分区、参数面是自由曲线，报告 §1.1 结构纠正已自证），且 FlatCurve 体系横跨 HSV Equalizer 与曲线编辑器两域，登记为 T8 横切项（非 HSV 单项）。
+
+## T6-6. 契约测试同步 ✓
+
+加法式合规：`test_stage_default_params_preserved` 原 8 键值零改动断言保持、新键 `preserve_luma: False` 显式入表 + schema 在位断言 ✓；新 7 用例判别力合格（0.96/0.3 手验锚点、衰减四断言、漂移 d_on < d_off/3、两个 array_equal 红线锁）✓。
+
+## T6 结论
+
+**通过（0 BLOCKER / 0 主要 / 1 建议〔preserve_luma 系数域注明〕+ 1 台账建议〔FlatCurve 列 T8 横切项〕）**。测试实证：test_hsl_split_tone_r32t6 + test_split_tone_oklab + test_hsl = **42 passed**（本棒复跑）；全量 1760/0 留 tester 棒复核。T6 可提交推送并派 T7（曝光校准 + T5 登记的匹配曲线联动接驳）。
+
+*reviewer · T6 检视棒 2026-09-23 · 执行引擎：宿主原生*

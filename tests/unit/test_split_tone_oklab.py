@@ -226,12 +226,16 @@ def test_stage_color_domain_oklch_dispatch():
 def test_stage_default_params_preserved():
     """默认参数表: 原有键值零改动 (UI/胶片卡契约), color_domain 缺省 oklch (F10)。"""
     dp = SplitToneStage().default_params()
+    # R32-T6: preserve_luma 为加法式新增 (缺省 False, 输出逐位不变);
+    # 原有键值零改动的契约断言保持
     assert dp == {"enabled": False,
                   "shadows_hue": 45.0, "shadows_sat": 0.0,
                   "highlights_hue": 210.0, "highlights_sat": 0.0,
                   "balance": 0.5, "strength": 1.0,
-                  "color_domain": "oklch"}
+                  "color_domain": "oklch",
+                  "preserve_luma": False}
     assert "color_domain" in SplitToneStage.param_schema
+    assert "preserve_luma" in SplitToneStage.param_schema
 
 
 def test_stage_disabled_noop():

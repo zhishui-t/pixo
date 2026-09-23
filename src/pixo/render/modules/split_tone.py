@@ -35,6 +35,10 @@ class SplitToneStage(Stage):
         # 编辑域 (设计 §1.2/§2.3): "hsv"(旧内核) | "oklch"。F10 起缺省 oklch
         # (第一批切换); 存量卡 A1 由 F07 卡级显式钉 "hsv" 兑现。
         "color_domain": {"type": "str", "choices": ["hsv", "oklch"]},
+        # R32-T6 对照吸收: 亮度保持 (出处 RT toning2col preser 分支
+        # improcfun.cc @ 6c4cb59: 染色后乘性恢复 BT.709 亮度)。缺省 False
+        # 既有输出逐位不变; 实测漂移 mean 0.027 → ~0.005 (E4)。
+        "preserve_luma": {"type": "bool"},
     }
 
     def default_params(self):
@@ -42,7 +46,8 @@ class SplitToneStage(Stage):
                 "shadows_hue": 45.0, "shadows_sat": 0.0,
                 "highlights_hue": 210.0, "highlights_sat": 0.0,
                 "balance": 0.5, "strength": 1.0,
-                "color_domain": "oklch"}
+                "color_domain": "oklch",
+                "preserve_luma": False}
 
     def wants(self, ctx: StageContext) -> bool:
         # 仅 enabled=True 时进入 (全 0 饱和时 process 恒等, 无副作用)
@@ -62,7 +67,8 @@ class SplitToneStage(Stage):
             out = split_tone_oklab_rgb(
                 img, shadows_hue, shadows_sat, highlights_hue, highlights_sat,
                 balance=float(self.p(ctx, "balance", 0.5)),
-                strength=float(self.p(ctx, "strength", 1.0)))
+                strength=float(self.p(ctx, "strength", 1.0)),
+                preserve_luma=bool(self.p(ctx, "preserve_luma", False)))
         else:
             # 旧 hsv 路径原样 (数值逐位不变 —— 存量预设零迁移, A1 同纪律)
             out = split_tone_rgb(

@@ -57,7 +57,8 @@ def _tint_rgb(hue: float, sat: float, L: np.ndarray) -> np.ndarray:
 
 def split_tone_oklab_rgb(img01, shadows_hue, shadows_sat,
                          highlights_hue, highlights_sat,
-                         balance: float = 0.5, strength: float = 1.0) -> np.ndarray:
+                         balance: float = 0.5, strength: float = 1.0,
+                         preserve_luma: bool = False) -> np.ndarray:
     """对 gamma RGB [0,1] 施加 OKLab 域分离色调染色, 返回 float32 [0,1]。
 
     参数与 split_tone_rgb 完全同名同义:
@@ -65,6 +66,10 @@ def split_tone_oklab_rgb(img01, shadows_hue, shadows_sat,
       highlights_hue/highlights_sat 高光染色 hue/sat
       balance   分界亮度 (0..1, 默认 0.5);
       strength  整体强度 (0..1, 默认 1.0)。
+    preserve_luma (R32-T6 对照吸收, 出处 RT improcfun.cc toning2col preser
+    分支 @ 6c4cb59: 乘性亮度恢复 preserv = luma_before/luma_after):
+      True 时染色后按 BT.709 亮度逐像素乘性恢复 (漂移实测 mean 0.027→
+      ~0.005, 见 .artifacts/_r32_t6_hsl.json E4); 缺省 False 逐位不变。
     两区全 0 饱和或 strength<=0 → 逐位 no-op。
     """
     img = np.asarray(img01, dtype=np.float64)
@@ -86,4 +91,8 @@ def split_tone_oklab_rgb(img01, shadows_hue, shadows_sat,
         tint = _tint_rgb(highlights_hue, float(highlights_sat), L).astype(np.float64)
         w = (wh * float(strength))[..., np.newaxis]
         out = out * (1.0 - w) + tint * w
+    if preserve_luma:
+        y_after = np.clip(out @ _RGB_WEIGHTS, 0.0, 1.0)
+        scale = y / np.maximum(y_after, 1e-9)
+        out = out * scale[..., np.newaxis]
     return np.clip(out, 0.0, 1.0).astype(np.float32)

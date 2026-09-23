@@ -115,20 +115,21 @@
       "id": "t5",
       "label": "T5 直方图后端增强（parade/联动口径）",
       "role": "dev-1",
-      "status": "in_progress",
+      "status": "done",
       "deps": [
         "t4"
       ],
-      "note": "dev-1 进行中"
+      "note": "Lab L*模式+联动契约; parade=波形三窗勘误; 1753/0"
     },
     {
       "id": "t6",
       "label": "T6 HSL 均衡器+分色调增强",
       "role": "dev-1",
-      "status": "pending",
+      "status": "in_progress",
       "deps": [
         "t5"
-      ]
+      ],
+      "note": "dev-1 进行中"
     },
     {
       "id": "t7",

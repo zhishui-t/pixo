@@ -73,15 +73,25 @@ def _ring_mask(h: np.ndarray, center: float, width: float, smooth: float) -> np.
     return (1.0 - smooth) * box + smooth * cos
 
 
-def hsl_adjust_rgb(img01, bands, smooth: float = 1.0):
+def hsl_adjust_rgb(img01, bands, smooth: float = 1.0,
+                   adjust_math: str = "pixo") -> np.ndarray:
     """对 gamma RGB [0,1] 应用人工 HSL 各色段调整。
 
     bands: 8 band dict 列表 (或 None → 不变)。out = 逐段顺序应用后的 float32
     [0,1] 图 (中性灰不变)。smooth ∈ [0,1] 掩码锐度。
+    adjust_math (R32-T6 对照吸收; 缺省 "pixo" 既有语义逐位不变):
+      - "pixo": sat/lum 对称乘法 (S' = S·(1+x·m), V' = V·(1+x·m·S));
+      - "rt": RawTherapee HSV Equalizer 非对称数学 (improcfun.cc:2755-2791
+        @ 6c4cb59, GPLv3; 逐式独立实现): 正向 = 二次混合
+        S' = (1−p)·S + p·(1−(1−S)²) (高饱和自然收敛, 无截断),
+        负向 = 乘法 S'·(1+p); lum 施加按 (1−(1−S)⁴) 随饱和衰减
+        (近中性保护更强、中间饱和作用更满)。
     """
     img01 = np.asarray(img01, dtype=np.float64)
     if not bands:
         return img01.astype(np.float32)
+    if adjust_math not in ("pixo", "rt"):
+        raise ValueError(f"adjust_math 须为 'pixo'|'rt' (实际 {adjust_math!r})")
     for band in bands:
         _validate_band(band)
     # 全 0 快路径: 逐位 no-op (连掩码都跳过)
@@ -91,8 +101,10 @@ def hsl_adjust_rgb(img01, bands, smooth: float = 1.0):
         return img01.astype(np.float32)
 
     smooth = float(np.clip(smooth, 0.0, 1.0))
+    rt = adjust_math == "rt"
     h, s, v = _rgb_to_hsv(img01)          # H[0,360) S/V[0...]
     protect = np.clip(s, 0.0, 1.0)        # 中性保护: S≈0 的像素任何参数不变
+    lum_w = protect if not rt else (1.0 - np.power(1.0 - protect, 4.0))
     for band in bands:
         c = float(band["hue_center"]) % 360.0
         w = float(band["width"])
@@ -103,9 +115,28 @@ def hsl_adjust_rgb(img01, bands, smooth: float = 1.0):
         if hs != 0.0:
             h = (h + hs * m * protect) % 360.0
         if sat != 0.0:
-            s = np.clip(s * (1.0 + sat / 100.0 * m), 0.0, 1.0)
+            if rt:
+                p = sat / 100.0 * m
+                pos = p > 0.0
+                # RT: 正向二次混合 (s=1 处收敛无截断), 负向乘法
+                s = np.where(
+                    pos,
+                    (1.0 - p) * s + p * (1.0 - np.square(1.0 - np.minimum(s, 1.0))),
+                    s * (1.0 + p))
+                s = np.clip(s, 0.0, 1.0)
+            else:
+                s = np.clip(s * (1.0 + sat / 100.0 * m), 0.0, 1.0)
         if lum != 0.0:
-            v = np.clip(v * (1.0 + lum / 100.0 * m * protect), 0.0, None)
+            if rt:
+                p = lum / 100.0 * m * lum_w
+                pos = p > 0.0
+                v = np.where(
+                    pos,
+                    (1.0 - p) * v + p * (1.0 - np.square(1.0 - np.minimum(v, 1.0))),
+                    v * (1.0 + p))
+                v = np.clip(v, 0.0, 1.0)
+            else:
+                v = np.clip(v * (1.0 + lum / 100.0 * m * protect), 0.0, None)
     out = _hsv_to_rgb(h, s, v)
     return np.clip(out, 0.0, 1.0).astype(np.float32)
 
