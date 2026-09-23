@@ -77,11 +77,11 @@
       "id": "t3",
       "label": "T3 胶片 HaldCLUT 接入",
       "role": "dev-1",
-      "status": "in_progress",
+      "status": "done",
       "deps": [
         "t2"
       ],
-      "note": "dev-1 进行中"
+      "note": "纯格式适配零吸收; 2.8e6倍精度优势实证"
     },
     {
       "id": "push",
@@ -105,10 +105,11 @@
       "id": "t4",
       "label": "T4 曲线体系增强（插值/多域/分通道）",
       "role": "dev-1",
-      "status": "pending",
+      "status": "in_progress",
       "deps": [
         "t3"
-      ]
+      ],
+      "note": "dev-1 进行中"
     },
     {
       "id": "t5",

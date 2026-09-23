@@ -146,4 +146,7 @@ def test_tool_convert_identity(tmp_path):
     probe = np.linspace(0.0, 1.0, 9, dtype=np.float32).reshape(-1, 1)
     probe = probe.repeat(3, axis=1)
     out = lut.lookup(probe)
-    assert np.abs(out - probe).max() <= 1.5 / (lut.n - 1) + 1e-5
+    # R32-T3 reviewer 遗留收紧: 恒等场是仿射场, 四面体插值应达量化级精度
+    # (顶点逐位精确, 非网格点仅受 float32 舍入限), 不应出现 1/(N-1) 级误差
+    assert np.abs(out - probe).max() <= 1e-4, (
+        f"恒等 CLUT 查表误差超量化级: {np.abs(out - probe).max()}")

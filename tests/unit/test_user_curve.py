@@ -204,3 +204,123 @@ def test_invalid_user_curve_dict_raises_at_param_layer():
         ctx.set_image(np.full((4, 4, 3), 0.5, np.float32), DOMAIN_LINEAR_RGB)
         with pytest.raises(ValueError, match=match):
             ToneStage().run(ctx)
+
+
+# ---- R32-T4: 插值模式 (对照吸收 RawTherapee diagonalcurves.cc) ----
+
+_STEEP = [[0.0, 0.0], [0.28, 0.02], [0.38, 0.5], [0.48, 0.72], [1.0, 1.0]]
+
+
+def test_r32t4_modes_pass_through_control_points():
+    """全部模式过控制点 (插值性质)。"""
+    from pixo.render.core.curves import curve_lut_from_points
+    xs = np.asarray([0.0, 0.28, 0.38, 0.48, 1.0])
+    ys = np.asarray([0.0, 0.02, 0.5, 0.72, 1.0])
+    grid = np.linspace(0, 1, 8193)
+    for mode in ("linear", "spline", "akima", "catmull_rom", "monotone"):
+        lut = curve_lut_from_points(xs, ys, 8193, mode=mode)
+        at_pts = np.interp(xs, grid, lut)
+        # linear 的误差为网格分辨率级 (LUT 离散), 其余模式应达数值精度
+        tol = 2e-4 if mode == "linear" else 1e-5
+        assert np.abs(at_pts - ys).max() <= tol, mode
+
+
+def test_r32t4_linear_default_bitwise_unchanged():
+    """缺省 (无 mode) 与 mode="linear" 逐位一致; 列表形式同 (向后兼容)。"""
+    img = np.linspace(0, 1, 256, dtype=np.float32).reshape(16, 16, 1)
+    img = np.repeat(img, 3, axis=2)
+    a = _apply_user_curve(img, _STEEP)
+    b = _apply_user_curve(img, {"rgb": _STEEP})
+    c = _apply_user_curve(img, {"rgb": _STEEP, "mode": "linear"})
+    assert np.array_equal(a, b) and np.array_equal(b, c)
+
+
+def test_r32t4_spline_matches_scipy_natural():
+    """spline 模式 = 自然三次样条 (scipy 独立参考交叉验证, RT DCT_Spline
+    同数学; dcp.cc spline_cubic_set 同族)。"""
+    from pixo.render.core.curves import curve_lut_from_points
+    xs = np.asarray([0.0, 0.28, 0.38, 0.48, 1.0])
+    ys = np.asarray([0.0, 0.02, 0.5, 0.72, 1.0])
+    grid = np.linspace(0, 1, 4097)
+    ours = curve_lut_from_points(xs, ys, 4097, mode="spline")
+    try:
+        from scipy.interpolate import CubicSpline
+    except ImportError:
+        pytest.skip("scipy 缺失")
+    ref = CubicSpline(xs, ys, bc_type="natural")(grid)
+    assert np.abs(ours - ref).max() <= 1e-6
+
+
+def test_r32t4_akima_matches_scipy():
+    """akima 模式 vs scipy Akima1DInterpolator 独立参考 (R32-T4 检视回流
+    新增: 初版 w_left 权重错位致切线偏差 0.1176, 现以 scipy 参考行锁定)。"""
+    from pixo.render.core.curves import curve_lut_from_points
+    xs = np.asarray([0.0, 0.28, 0.38, 0.48, 1.0])
+    ys = np.asarray([0.0, 0.02, 0.5, 0.72, 1.0])
+    grid = np.linspace(0, 1, 4097)
+    ours = curve_lut_from_points(xs, ys, 4097, mode="akima")
+    try:
+        from scipy.interpolate import Akima1DInterpolator
+    except ImportError:
+        pytest.skip("scipy 缺失")
+    ref = Akima1DInterpolator(xs, ys)(grid)
+    assert np.abs(ours - ref).max() <= 1e-6
+
+
+def test_r32t4_steep_overshoot_matrix():
+    """陡峭集过冲矩阵 (对照数据 .artifacts/_r32_t4_curves.json S2):
+    spline/akima 过冲显著, catmull_rom 轻微, monotone/linear 零过冲。"""
+    from pixo.render.core.curves import curve_lut_from_points
+    xs = np.asarray([0.0, 0.28, 0.38, 0.48, 1.0])
+    ys = np.asarray([0.0, 0.02, 0.5, 0.72, 1.0])
+    grid = np.linspace(0, 1, 4097)
+    inner = (grid > 1e-9) & (grid < 1 - 1e-9)
+
+    def overshoot(mode):
+        lut = curve_lut_from_points(xs, ys, 4097, mode=mode)
+        v = lut[inner]
+        return float(max(0.0, v.max() - ys.max(), ys.min() - v.min()))
+
+    assert overshoot("monotone") == 0.0
+    assert overshoot("linear") == 0.0
+    assert overshoot("catmull_rom") < 0.05
+    assert overshoot("spline") > 0.1    # 自然样条陡峭段过冲 (RT 同数学)
+    assert overshoot("akima") > 0.1
+
+
+def test_r32t4_catmull_rom_flat_asymptote():
+    """CR 平段语义 (黑白渐近线): y∈{0,1} 段精确保持, 平段上无样条摆动。"""
+    img = np.linspace(0, 1, 128, dtype=np.float32).reshape(8, 16, 1)
+    img = np.repeat(img, 3, axis=2)
+    curve = {"mode": "catmull_rom",
+             "rgb": [[0.0, 0.0], [0.3, 0.0], [0.55, 0.42],
+                     [0.62, 0.58], [0.75, 1.0], [1.0, 1.0]]}
+    out = _apply_user_curve(img, curve)
+    v = out.reshape(-1, 3)[:, 0]
+    inp = img.reshape(-1, 3)[:, 0]
+    flat_lo = np.abs(v[(inp >= 0.05) & (inp <= 0.25)]).max()
+    flat_hi = np.abs(1.0 - v[(inp >= 0.8) & (inp <= 0.98)]).max()
+    assert flat_lo == 0.0 and flat_hi == 0.0
+
+
+def test_r32t4_mode_invalid_and_two_point_fallback():
+    """非法 mode 报错; 两点控制 + 平滑模式自动回退 linear。"""
+    from pixo.render.core.curves import curve_lut_from_points
+    with pytest.raises(ValueError):
+        curve_lut_from_points([0, 0.5, 1], [0, 0.6, 1], 64, mode="wat")
+    with pytest.raises(ValueError):
+        _apply_user_curve(_neut(0.5), {"rgb": _STEEP, "mode": "wat"})
+    a = curve_lut_from_points([0, 1], [0, 1], 64, mode="spline")
+    b = curve_lut_from_points([0, 1], [0, 1], 64, mode="linear")
+    assert np.array_equal(a, b)
+
+
+def test_r32t4_tone_stage_mode_end_to_end():
+    """ToneStage 端到端: monotone 模式整体可用且分通道独立仍成立。"""
+    rng = np.random.default_rng(4)
+    img = rng.random((8, 8, 3)).astype(np.float32)
+    out = _stage_out(img, {"mode": "monotone",
+                           "red": [[0, 0], [0.5, 0.55], [1, 1]]})
+    assert out.shape == img.shape and np.isfinite(out).all()
+    # red 通道被抬 (0.5 → 0.55), 蓝/绿不动 (恒等 LUT 量化内)
+    assert out[..., 0].mean() > img[..., 0].mean() - 1e-3

@@ -37,6 +37,10 @@ class PipelineError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 _CURVE_DICT_KEYS = frozenset({"rgb", "red", "green", "blue", "luminance"})
+# R32-T4: 插值模式键 (可选, 缺省 "linear"; 取值合法集与
+# core/curves.py _CURVE_MODES / modules/tone_map.py _USER_CURVE_MODES 同源)
+_CURVE_DICT_MODES = frozenset({"linear", "spline", "akima", "catmull_rom",
+                               "monotone"})
 
 
 def curve_dict_problem(v) -> Optional[str]:
@@ -46,6 +50,8 @@ def curve_dict_problem(v) -> Optional[str]:
     （`{"rgb"|"red"|"green"|"blue"|"luminance": [[x,y],...]}`），因为全仓
     没有第二个把 dict 喂给 `float_or_str` 键的调用方（2026-09-21 核查
     configs/ + tests/ + frontend/src + 全部消费方源码）。
+    R32-T4：新增可选 `"mode"` 键（插值模式，缺省 "linear"）——值须为
+    `_CURVE_DICT_MODES` 内的字符串；曲线键点集规则不变。
 
     ⚠️ `region_adjust.regions` 走的是 **`dict`** 类型分支（任意 dict），
     与本判据无关。
@@ -53,11 +59,17 @@ def curve_dict_problem(v) -> Optional[str]:
     if not isinstance(v, dict) or not v:
         return ("曲线 dict 需为非空 dict"
                 f"（合法键: {sorted(_CURVE_DICT_KEYS)}）")
-    unknown = set(v) - _CURVE_DICT_KEYS
+    unknown = set(v) - _CURVE_DICT_KEYS - {"mode"}
     if unknown:
         return (f"未知曲线键 {sorted(unknown)}; "
-                f"合法键: {sorted(_CURVE_DICT_KEYS)}")
+                f"合法键: {sorted(_CURVE_DICT_KEYS | {'mode'})}")
+    mode = v.get("mode")
+    if mode is not None and mode not in _CURVE_DICT_MODES:
+        return (f"mode 非法: {mode!r}; "
+                f"合法值: {sorted(_CURVE_DICT_MODES)}")
     for k, pts in v.items():
+        if k == "mode":
+            continue
         if not isinstance(pts, (list, tuple)) or len(pts) == 0:
             return f"曲线键 '{k}' 需为非空 [[x,y],...] 点集"
     return None

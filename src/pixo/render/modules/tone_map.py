@@ -266,26 +266,54 @@ def _parse_user_curve_points(points, name):
     return xs, ys
 
 
+# R32-T4: user_curve 插值模式 (对照吸收 RawTherapee diagonalcurvetypes.h;
+# "linear" 缺省逐位不变, 其余见 core/curves.py 模式注)
+_USER_CURVE_MODES = ("linear", "spline", "akima", "catmull_rom", "monotone")
+
+
+def _user_curve_mode(user_curve) -> str:
+    """取 user_curve 的插值模式 (dict 形式 "mode" 键, 缺省 linear)。"""
+    if isinstance(user_curve, dict):
+        mode = user_curve.get("mode", "linear") or "linear"
+        if mode not in _USER_CURVE_MODES:
+            raise ValueError(
+                f"user_curve.mode 非法: {mode!r} (合法: {_USER_CURVE_MODES})")
+        return mode
+    return "linear"
+
+
+def _curve_lut_for(xs, ys, n, mode):
+    return curve_lut_from_points(xs, ys, n, mode=mode)
+
+
 def _apply_user_curve(img, user_curve, n: int = 4096) -> np.ndarray:
     """在 gamma 域 RGB 图上应用用户控制点曲线 (rgb → 分通道 → luminance)。
 
     user_curve 结构 (JSON 友好):
-      - [[x,y],...]                     RGB 主曲线 (三通道同 LUT)
-      - {"rgb":[[x,y],...]}             同上
+      - [[x,y],...]                     RGB 主曲线 (三通道同 LUT, linear)
+      - {"rgb":[[x,y],...], "mode":M}   M = 插值模式 (R32-T4 新增, 可省,
+                                        缺省 "linear"; 合法: linear/spline/
+                                        akima/catmull_rom/monotone —— spline=
+                                        自然三次样条(RT DCT_Spline 同数学),
+                                        catmull_rom=向心 CR α=0.375(RT 同参,
+                                        y∈{0,1} 平段=黑白渐近线精确保持),
+                                        monotone=Fritsch–Carlson 过冲自由)
       - {"red":[[..]], "green":[[..]], "blue":[[..]]}  分通道 (缺省恒等)
       - {"luminance":[[x,y],...]}       亮度曲线 (Rec.709 Y, 按 newY/max(oldY,eps)
                                          等比缩放 RGB 保色调, clip [0,1])
-    可同时给 rgb+per-channel+luminance, 应用顺序: rgb → per-channel → luminance。
+    mode 作用于 dict 内全部曲线组; 线性模式与 T1.4 既有语义逐位一致
+    (缺省不开启, 向后兼容)。应用顺序: rgb → per-channel → luminance。
     None/空 → 原样返回 (no-op)。
     """
     img = np.asarray(img, dtype=np.float32).copy()
     if user_curve is None:
         return img
+    mode = _user_curve_mode(user_curve)
     if isinstance(user_curve, (list, tuple)):
         if len(user_curve) == 0:
             return img
         xs, ys = _parse_user_curve_points(user_curve, "rgb")
-        lut = curve_lut_from_points(xs, ys, n)
+        lut = _curve_lut_for(xs, ys, n, mode)
         for c in range(3):
             img[..., c] = apply_lut1d_fast(img[..., c], lut)
         return img
@@ -295,25 +323,25 @@ def _apply_user_curve(img, user_curve, n: int = 4096) -> np.ndarray:
             "{rgb/red/green/blue/luminance: [[x,y],...]} 结构")
     if not user_curve:
         return img
-    allowed = {"rgb", "red", "green", "blue", "luminance"}
+    allowed = {"rgb", "red", "green", "blue", "luminance", "mode"}
     unknown = set(user_curve) - allowed
     if unknown:
         raise ValueError(
             f"user_curve 含未知键 {sorted(unknown)}; 合法键: {sorted(allowed)}")
     if "rgb" in user_curve:
         xs, ys = _parse_user_curve_points(user_curve["rgb"], "rgb")
-        lut = curve_lut_from_points(xs, ys, n)
+        lut = _curve_lut_for(xs, ys, n, mode)
         for c in range(3):
             img[..., c] = apply_lut1d_fast(img[..., c], lut)
     per_ch = {"red": 0, "green": 1, "blue": 2}
     for ch in ("red", "green", "blue"):
         if ch in user_curve:
             xs, ys = _parse_user_curve_points(user_curve[ch], ch)
-            lut = curve_lut_from_points(xs, ys, n)
+            lut = _curve_lut_for(xs, ys, n, mode)
             img[..., per_ch[ch]] = apply_lut1d_fast(img[..., per_ch[ch]], lut)
     if "luminance" in user_curve:
         xs, ys = _parse_user_curve_points(user_curve["luminance"], "luminance")
-        lut = curve_lut_from_points(xs, ys, n)
+        lut = _curve_lut_for(xs, ys, n, mode)
         old_y = (img @ _RGB_WEIGHTS).astype(np.float32)  # Rec.709 Y
         new_y = apply_lut1d_fast(old_y, lut)
         scale = new_y / np.maximum(old_y, 1e-9)

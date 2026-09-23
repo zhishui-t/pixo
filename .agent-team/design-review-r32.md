@@ -230,3 +230,67 @@ dev1-r32-t2.md V5 行勘误版（如实记录：RT dcp.cc:1892 无 FM 分支 Map
 **通过（0 BLOCKER / 0 主要 / 1 建议）**。T3 可提交推送并派 T4（曲线轮）；建议项（端到端容差收紧）随 T4 或收官轮顺带处理即可。
 
 *reviewer · T3 检视棒 2026-09-23 · 执行引擎：宿主原生*
+
+---
+
+# R32-T4 检视报告（design-review-r32 续）
+
+> 日期：2026-09-23（T4 检视棒）｜ 检视人：reviewer（本审核线）
+> 被检对象：core/curves.py 四插值模式、modules/tone_map.py mode 键、pipeline/graph.py 栅栏放行、tests/unit/test_user_curve.py（+7 用例）、_r32_t4_curves.json、dev1-r32-t4.md
+> RT 对照基线：rtengine/diagonalcurves.cc + diagonalcurvetypes.h @ 6c4cb59（本棒实读）
+> 独立验证：scipy 交叉复算（Akima1DInterpolator / CubicSpline(natural) / PCHIP，本棒亲跑）
+
+## T4-1. 四模式数学同构性（对照 RT 实读）
+
+- **spline ✓（双证）**：RT `spline_cubic_set`（diagonalcurves.cc:142-168，本棒实读）`ypp[0]=0 /* natural */` + `ypp[N-1]=0.0` ——自然边界确认；pixo `_natural_cubic_coeffs` 同边条件同三对角数学（矩阵解 vs NR 递推，同构）。双证：dev 四组控制集 vs scipy CubicSpline(natural) ≤6e-8（json `spline_vs_scipy_natural_max_diff`）+ 本棒独立复算 1.2e-14（机器精度）。
+- **catmull_rom ✓（逐式对照）**：α=0.375（RT `catmull_rom_tj` :286-292 `pow(sqrt(Δ²), alpha)+ti` 实读，pixo 同式）；端点斜率受限反射同式（:371-388 `rx=cx−dx·0.01`、`dx>1e-5` eps 判——pixo `_catmull_rom_reflect` 逐字对应）；de Casteljau 三级展开（A1/A2/A3/B1/B2/C 的 t 区间权式）逐项一致；**y∈{0,1} 平段精确保持**（RT 平段特例 :330 同款，`test_r32t4_catmull_rom_flat_asymptote` 0 偏差锁定）。采样密度（RT n_points 参数 vs pixo 512/单位区间）仅影响 np.interp 重采样精度（4096 LUT 下二阶），非语义差——pixo 为公开数学独立实现非逐位移植，注释如实。
+- **monotone ✓**：Fritsch–Carlson (1980) 三段式正确（端点单侧差商 / 变号置零+调和均值 / `tau=3/√(a²+b²)` 限幅），陡峭集 0 过冲断言在位。vs scipy PCHIP 差 0.123 系**已知变体差异**（FC≠PCHIP，两者均单调保持），非缺陷——报告如实区分。
+- **akima ✗（主要，见 T4-6）**。
+- 出处注释 ✓：RT diagonalcurves.cc 逐式标注 + akima/monotone 明标「公开文献独立实现，非代码移植」——GPL 面干净（RT 对照仅 spline/CR 数学，无代码拷贝）。
+
+## T4-2. 向后兼容红线 ✓（实现零触碰 + 三方 array_equal 锁定）
+
+- `curve_lut_from_points` linear 分支与旧实现逐字同（linspace+np.interp+float32，仅函数搬家加 `mode="linear"` 参数）；list 输入与非 dict → `_user_curve_mode` 恒返 "linear" → 旧路径逐位不变；dict 无 mode 键同。`test_r32t4_linear_default_bitwise_unchanged` 三方 `array_equal`（list = 无 mode dict = mode:"linear" dict）锁定 ✓。
+- tone_map allowed 集扩展受控（+mode）；graph 栅栏 mode 取值校验完备（合法集与 tone_map/curves 同值、None 放行=取默认、非法拒）✓。
+
+## T4-3. 前端影响面实查 ✓（报告 §6 影响面不成立，无需前端改动）
+
+frontend/src 全目录 `user_curve` 零命中；曲线 UI 为占位（AdjustmentsPanel.tsx:169-172「曲线编辑器正在开发中」）——**当前无任何前端 user_curve 构造/校验，mode 键不撞任何前端路径**。报告 §6「前端表单校验需同步」表述超出实况，建议改为「当前无前端校验面；未来曲线编辑器立项时纳入 mode 选择」。
+
+## T4-4. 过冲矩阵与事实纠正 ✓
+
+- 排序属实（S2_steep_contrast）：akima 0.331 > spline 0.209 > catmull_rom 0.013 > monotone/linear 0.0 ✓（json rows 本棒全读）。spline 交叉 ≤6e-8 口径=仅 spline vs scipy natural，诚实未扩大 ✓。
+- **「RT 无 Akima」实证 ✓**：diagonalcurvetypes.h 枚举全列（DCT_Empty/Linear/Spline/Parametric/NURBS/CatumullRom/Unchanged，本棒实读全文）+ rtengine 全目录 grep "akima" 零命中——任务书纠正有源码证据，防过冲正解=monotone 的结论由矩阵支撑。
+
+## T4-5. scipy 交叉验证口径 ✓（诚实但验证面不足，恰放过 T4-6）
+
+json/报告声称的交叉验证=仅 spline vs scipy natural（≤6e-8）——声称与实际一致；但 akima/monotone 无 scipy 参考行，akima 的结构偏差因此漏网。建议修 akima 时顺带补 `Akima1DInterpolator` 参考行（monotone 标「PCHIP 性质参考，非等值」）。
+
+## T4-6. 主要项（1）：akima 切线权重与 Akima (1970) 标准式不符
+
+- `_akima_tangents` 的 `w_left = |d[i+2]−d[i+1]| = |δ_i−δ_{i-1}|`——标准式（Akima 1970 式(6)；scipy 同）为 **`|δ_{i+1}−δ_{i+2}|`**（即 `|d[i+3]−d[i+4]|`）；w_right 用法正确。注释声称「权重按 Akima (1970) 式 (6)」与实现不符。
+- **独立复算实锤**：同控制点 pixo akima vs scipy `Akima1DInterpolator` max diff = **0.1176**（结构性偏差，非数值噪声）。
+- 连带：报告 :7/:43 与 json 的「akima 过冲 0.331 / mono_violations 797」数字系错误实现产物，须修后重生成；`test_r32t4_steep_overshoot_matrix` 的 `akima>0.1` 断言修后大概率仍绿（Akima 固有过冲倾向），须复跑确认。
+- **影响面**：不触及向后兼容红线（linear 缺省）与 spline/CR/monotone 三模式；akima 为可选新值，无既有消费方。
+
+## T4 结论
+
+**有条件通过（0 BLOCKER / 1 主要〔akima 权重，提交前必改〕）**。
+
+提交前置（dev-1，预计 3 行码 + 数据再生）：
+1. `curves.py _akima_tangents`：`w_left` 改 `abs(d[i+3] − d[i+4])`（=|δ_{i+1}−δ_{i+2}|），注释同步；
+2. 重跑 `_r32_t4_curves.py` 重生成 json（akima 行数字更新）+ dev1-r32-t4.md :7/:43 数字更新；
+3. 复跑 test_user_curve 全量（akima 断言确认）；修后 diff 过我一眼即放行。
+顺带（不阻塞）：§T4-3 前端表述改写 + akima scipy 参考行 + 栅栏 mode 非法值断言一条。
+
+*reviewer · T4 检视棒 2026-09-23 · 执行引擎：宿主原生*
+
+### T4-7. 回流复检（同日）——放行 ✓
+
+dev-1 修正交棒复核（4 文件）：
+1. **akima 修正 ✓（scipy 数值裁决）**：`_akima_tangents` 两处——w_left 权重 `|δ_i−δ_{i-1}|`→`|δ_{i+1}−δ_i|`（我点名）+ 左端延拓序 `[δ_{-1},δ_{-2}]`→`[δ_{-2},δ_{-1}]`（dev 自查，恰为 0.1176 主源）。本棒独立复算：**三控制集 + 5 随机集 vs scipy Akima1DInterpolator 全部 ≤5.95e-08**——与 scipy 语义对齐实证（dev 以 scipy 源码为锚正确；我上棒引用的文献式与 scipy 实现有出入，以数值为准）。break_mult 相对近零割线平均 fallback 同 scipy 语义。
+2. **过冲断言未迎合性放宽 ✓**：`akima > 0.1` 原样保留，0.180 实测真实成立；json akima 行 0.17979/914 与报告 0.180/914 一致；排序互换（spline 0.209 > akima 0.180）如实记录，「防过冲正解 = monotone」结论维持。
+3. **json/脚本/报告三方同步 ✓**：json 新增 `akima_vs_scipy_max_diff` 参考块（四组 ≤6e-8）；报告 :7/:43/:47/:51/:75 数字与勘误记录（含 0.1176/0.658 两处偏差来源）同步；§6 前端影响面句已改写（T4-3 结论吸收）。
+4. **测试 ✓**：test_r32t4_akima_matches_scipy（≤1e-6，scipy 缺失 skip）新增；test_user_curve 28 passed（21+7）+ test_param_type_consistency 6 passed 本棒复跑；全量 1746/0（dev 报，tester 棒复核）。
+
+**T4 放行**（主要项关闭；建议项——栅栏 mode 非法值断言一条——随 T5 顺带，不阻塞）。
