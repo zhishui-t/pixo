@@ -286,3 +286,12 @@ native 无 DNG/Adobe 引用）。MinGW-w64 + CMake 为构建期工具不随产�
   许可基础。
 - 本变更**不改变**其余警示的有效性：模型权重 NC 项（§3）、DCP ×6 再分发待处置
   （§7）、clean-room 证据缺口（§6.2）等仍按原口径执行。
+- **R32-T1 RawTherapee 代码移植（2026-09-23）**：`src/pixo/render/native/src/
+  rcd_demosaic_native.cpp`（含 `rcd.h`）移植自 RawTherapee
+  <https://github.com/Beep6581/RawTherapee>，commit `6c4cb59`（dev 分支）——
+  算法核心 `rtengine/rcd_demosaic.cc`（Copyright (c) 2017-2020 Luis Sanz
+  Rodriguez & Ingo Weyrich；上游 <https://github.com/LuisSR/RCD-Demosaicing>，
+  GPLv3）、`border_interpolate` 自 `rtengine/demosaic_algos.cc`（Copyright
+  (c) 2004-2010 Gabor Horvath）、`rt_math.h` 助手（SQR/LIM01/intp）内联垫片。
+  文件头保留 RT 原版权块与 GPLv3 声明原文 + 适配说明；本项目以
+  GPL-3.0-or-later 分发，合规同源。

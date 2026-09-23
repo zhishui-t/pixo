@@ -1,0 +1,12 @@
+# R32-T1 设计门禁
+审核人: reviewer (delivery 质量门禁)
+覆盖: T1 (RCD 去马赛克移植设计 .agent-team/design.md)
+时间戳: 2026-09-23T22:28:54+08:00 (UTC 2026-09-23T14:28:54Z)
+结论: 有条件通过
+BLOCKER: 0
+主要: 4 (M1 decode.demosaic 透传通道走不通须改显式参数/独立通道; M2 pattern 注释与 rawpy 语义不符须改 decode_cfa_half 口径; M3 ABI 与侦察草案矛盾须定夺; M4 demosaic 参数大小写口径与既有签名对齐)
+建议: 9 (S1-S9, 详见 .agent-team/design-review-r32.md)
+依据报告: .agent-team/design-review-r32.md
+执行引擎: 宿主原生 (WorkBuddy 引擎拒答 job-7f576fa973d8 stop_reason=refusal, 按 design.md §4 既定处置兜底并标注)
+附注: M1/M2 须队长修订 design.md 后 dev 方可动码; 修订落实情况码检 (.code_ok 前) 复核, 未落则驳回。
+v2 整改落位: 2026-09-23 复核 design.md v2 §1.1/§1.2/§6 —— M1 出口通道改显式 kwargs+独立通道 ✓; M2 pattern 改 color_desc 索引口径 (io.py:189-207) ✓; M3 定夺归一化归 Python/LIM01 留 native, 理由与钳位责任已写明 ✓; M4 对齐既有 demosaic="AHD" 大写口径 ✓; 测试面补四相位+错误路径 ✓ (S4/S5), S1 顺带吸收。建议级残留转码检: S2 返回契约 (img, raw) 未显式声明、demosaic 未知值行为未显式写死 (现状静默回落 AHD, 与既有口径自洽)。design_ok 维持, dev-1 可开 T1 实施。

@@ -1,0 +1,27 @@
+# R32-T1 码检门禁（.qa_ok_r32_t1 · 前置意见）
+检视人: reviewer (delivery 质量门禁, 本审核线保留码检权)
+覆盖: T1 RCD 移植实施 (render-core-integration 未 commit 增量 ≈ +806/−358)
+时间戳: 2026-09-23 (码检棒)
+结论: 通过
+BLOCKER: 0 | 主要: 0 | 当场小修: 1 (已验证) | 建议: 4
+依据报告: .agent-team/design-review-r32.md §C0-C4 (码检段; 注: 根目录 .qa_ok 为 R21 战役签章归档, 本文件为 R32-T1 战役限定门禁)
+码检独立验证: native tests 隔离构建 all passed (PIXO_RENDER_NATIVE_COPY_TO_PY=OFF, 未触碰在役 DLL) + pytest test_io_rcd 15/15 + test_gate_curves 4/4; 全量回归 1732 转 tester 复核
+当场小修: native/CMakeLists.txt 为 pixo_render_native_tests 目标补 -static-libgcc -static-libstdc++ (消除构建机 MinGW 运行时动态依赖; objdump 复核 import 表 + 隔离重建 all passed)
+前置意见 (tester 棒收口条件):
+  1. 全量 pytest 0 failed (dev 自报 1732, tester 复跑为准);
+  2. gate 金样本零漂移 (默认链 AHD 不动);
+  3. 分支推送 render-core-integration。
+建议项转交 (不阻塞): S-1 session.demosaic 粘性属性并发窗口; S-2 skipif 重复; S-3 libwinpthread 传递依赖 (MinGW 特性); S-4 A/B 报告补削波占比指标
+执行引擎: 宿主原生 (WorkBuddy job-717ad7b4aeeb refusal, 战役累计 ×4, 按 design.md §4 处置不重试)
+
+---
+
+# R32-T1 tester 收口签章（追加 · tester 三条件实测通过）
+tester: tester-whitebox (delivery · 测试白盒路) | 时间戳: 2026-09-23 | 依据: .agent-team/test-report-r32-t1.md
+结论: **前置三项收口条件全部实测通过, T1 收口同意** (缺陷 0 新增, 无 MISSING/DEVIATED 回流)
+  1. 全量回归 ✓ tester 复跑 `python -m pytest tests -q` = 1732 passed / 12 skipped / 1 xfailed / **0 failed** (238.94s), 与 dev 自报一致; 重点面命名留证: test_io_rcd 15/15 + test_gate_curves 4/4 + test_native_stage_kernels 等契约面 44 passed。
+  2. gate 金样本零漂移 ✓ test_gate_golden 7/7 (含 test_current_output_matches_goldens + generator no-drift) + test_gate_native_equivalence 6/6; 默认链白盒核验 (RCD 分支精确匹配进入 / _apply_dcraw_flip 仅 RCD 消费 / test_default_ahd_unchanged 回归锁) —— T1 红线「默认链 AHD 零漂移」成立。
+  3. A/B 抽片复算 ✓ 口径复算 (idx=floor(i*48/12)) 与 json 12 片逐一吻合; 抽 3 片 (DSC_0352 横拍 / **DSC_1319 竖拍 flip=5** / DSC_5278 记录最差 1.9479) 重跑双臂, fc_ratio_ratio 与记录值 **d=0.0000 逐位一致**, 方向正确 (两臂 shape 一致且竖向与记录吻合), fallback 0/3, 耗时比中位 0.597 << 3x。
+附加白盒抽查 (前置意见指定): decode_raw 缺省/未知值静默 AHD 无新增抛错 ✓ (test_unknown_demosaic_value_silent_ahd); PixoRenderDemosaicRCD 非 RGBG→FallbackRequested=1 路径 ✓ (在役 DLL ctypes 三态探针 + native test_main.cpp:487-503 + test_fallback_on_unsupported)。
+备注: 前置意见第 3 条「分支推送」为流程动作非 tester 权限 —— 工作树仍未 commit (git status 实证), 提请队长按流程收口; 遗留观察 4 项见 test-report-r32-t1.md 缺陷清单节 (均不阻塞)。
+执行引擎: 宿主原生

@@ -28,11 +28,16 @@ _EXT = {
 
 
 def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8,
-                         state_extras: Optional[dict] = None):
+                         state_extras: Optional[dict] = None,
+                         demosaic: str = "AHD"):
     """Full-quality 4s 主线：full-res decode + 完整 12 stage。
 
     返回 uint8 (output_bps=8) 或 uint16 (output_bps=16)。
     样板 (ctx 构建/注入/终检/量化) 收敛在 pipeline.runner (三入口共用)。
+
+    demosaic (R32-T1)：decode_raw 去马赛克选项 ("AHD" 缺省 / "RCD" native)。
+    显式 kwargs 通道 (设计 v2 M1)——不走 params stage 键 (strict 栅栏拒未知
+    stage 且 canonical 不透传)，缺省 "AHD" 时默认链零漂移。
 
     state_extras (F13)：与 RawPreviewSession.render 的同名参数同语义——
     额外 state 注入（归一化框分辨率无关直用；region_masks 软掩码在入口
@@ -48,7 +53,7 @@ def _render_full_quality(raw_path, prof, params: dict, output_bps: int = 8,
     if output_bps not in (8, 16):
         raise ValueError("output_bps 只支持 8 或 16")
 
-    img, raw = decode_raw(str(raw_path), half_size=False)
+    img, raw = decode_raw(str(raw_path), half_size=False, demosaic=demosaic)
     try:
         pipe = build_default_pipeline(prof=prof, params=params)
         state_inject = {}
@@ -166,18 +171,23 @@ class ExportManager:
             # 属性，服务层闭环后设置）转发全质量线；掩码不进 canonical_params
             # （ndarray 会污染参数指纹且不可 JSON 序列化），走独立通道。
             # 无掩码时不传该参（与旧调用面完全一致）。
+            # R32-T1：demosaic 同走独立通道（session 属性 → 显式 kwargs，
+            # 不进 params 白名单）；缺省 "AHD" 不传参（旧调用面不变）。
             extras = None
             session_masks = getattr(session, "region_masks", None)
             if isinstance(session_masks, dict) and session_masks:
                 extras = {"region_masks": session_masks}
+            session_demosaic = getattr(session, "demosaic", "AHD") or "AHD"
+            demosaic_kw = ({"demosaic": session_demosaic}
+                           if session_demosaic != "AHD" else {})
             if extras is not None:
                 img = _render_full_quality(
                     session.raw_path, self.prof, session.canonical_params(),
-                    output_bps=render_bps, state_extras=extras)
+                    output_bps=render_bps, state_extras=extras, **demosaic_kw)
             else:
                 img = _render_full_quality(
                     session.raw_path, self.prof, session.canonical_params(),
-                    output_bps=render_bps)
+                    output_bps=render_bps, **demosaic_kw)
             data = encode_image(img, fmt, quality=quality)
             path = out_dir / f"{session.session_id}_{task_id}{_EXT[fmt]}"
             path.write_bytes(data)

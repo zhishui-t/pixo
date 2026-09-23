@@ -1,119 +1,93 @@
 {
-  "title": "Pixo R31：RAW 打开色彩对齐 DNG 渲染（三臂对照）",
+  "title": "Pixo R32：RT 组件移植战役（T1-T8 串行，T8=全模块清点兜底吸收）",
   "nodes": [
     {
       "id": "brief",
-      "label": "任务书定稿（卡点①）",
+      "label": "任务书 v2 定稿（含 MinGW 指令）",
       "role": "队长+用户",
       "status": "done"
     },
     {
-      "id": "design",
-      "label": "设计：口径/判据/接口",
+      "id": "roster",
+      "label": "花名册卡点②",
+      "role": "队长+用户",
+      "status": "done"
+    },
+    {
+      "id": "env",
+      "label": "RT 源码 clone + native 工具链 bring-up",
+      "role": "junior-dev",
+      "status": "done",
+      "deps": [
+        "roster"
+      ],
+      "note": "工具链✅+RT clone✅"
+    },
+    {
+      "id": "t1-design",
+      "label": "T1 设计（RCD 移植方案+接口）",
       "role": "队长",
       "status": "done",
       "deps": [
-        "brief"
-      ]
+        "env"
+      ],
+      "note": "v2 两轮过审"
     },
     {
-      "id": "design-review",
-      "label": "设计审核 .design_ok",
+      "id": "t1-review",
+      "label": "T1 设计门禁",
       "role": "reviewer",
       "status": "done",
       "deps": [
-        "design"
+        "t1-design"
       ],
-      "note": "第2轮复检（v2 整改回传）"
+      "note": ".design_ok_r32_t1"
     },
     {
-      "id": "license",
-      "label": "GPLv3 许可证落地",
-      "role": "junior-dev",
-      "status": "done",
-      "deps": [
-        "design-review"
-      ]
-    },
-    {
-      "id": "converter",
-      "label": "DNG Converter 安装+批转",
-      "role": "junior-dev",
-      "status": "done",
-      "deps": [
-        "design-review"
-      ],
-      "note": "48/48 批转 42.1s + 消费自证"
-    },
-    {
-      "id": "sdk-build",
-      "label": "DNG SDK 编译 dng_validate",
+      "id": "t1-impl",
+      "label": "T1 RCD native 移植+A/B",
       "role": "dev-1",
       "status": "done",
       "deps": [
-        "design-review"
+        "t1-review"
       ],
-      "note": "jxl 已摘，重编验证"
+      "note": "生产就绪: 伪彩0.944/耗时0.673, 1732 passed"
     },
     {
-      "id": "rt-arm",
-      "label": "RT-cli 参照臂接入",
-      "role": "dev-2",
-      "status": "done",
-      "deps": [
-        "design-review"
-      ],
-      "note": "RT 5.13 装毕, 臂接入随测量跑"
-    },
-    {
-      "id": "measure-48",
-      "label": "三臂测量 n=48",
-      "role": "dev-2",
-      "status": "done",
-      "deps": [
-        "sdk-build",
-        "converter",
-        "rt-arm"
-      ],
-      "note": "48/48 有效; median|dL|=13.44 FAIL, 色度 0.23/0.51 PASS, Spearman 0.479 FAIL"
-    },
-    {
-      "id": "verdict",
-      "label": "矫正裁决执行（预授权）",
-      "role": "dev-2",
+      "id": "t1-qa",
+      "label": "T1 检视+回归",
+      "role": "reviewer+tester",
       "status": "in_progress",
       "deps": [
-        "measure-48"
+        "t1-impl"
       ],
-      "note": "失败路径执行(零写入); 候选c 4.453 介于达标线5与矫正目标3之间; 待用户仲裁"
+      "note": "reviewer 码检中"
     },
     {
-      "id": "code-review",
-      "label": "代码/数据检视",
-      "role": "reviewer",
+      "id": "t2",
+      "label": "T2 DCP 对照吸收",
+      "role": "dev-1",
       "status": "pending",
       "deps": [
-        "license",
-        "verdict"
+        "t1-qa"
       ]
     },
     {
-      "id": "regression",
-      "label": "回归+复现 .qa_ok",
-      "role": "tester-whitebox",
+      "id": "t3",
+      "label": "T3 胶片 HaldCLUT 接入",
+      "role": "dev-1",
       "status": "pending",
       "deps": [
-        "code-review"
-      ],
-      "note": "全量 0 failed+金样本零漂移"
+        "t2"
+      ]
     },
     {
-      "id": "report",
-      "label": "报告+changelog+推送",
+      "id": "push",
+      "label": "分支推送+报告+changelog",
       "role": "junior-dev",
       "status": "pending",
       "deps": [
-        "regression"
+        "t8"
       ]
     },
     {
@@ -122,7 +96,52 @@
       "role": "队长+用户",
       "status": "pending",
       "deps": [
-        "report"
+        "push"
+      ]
+    },
+    {
+      "id": "t4",
+      "label": "T4 曲线体系增强（插值/多域/分通道）",
+      "role": "dev-1",
+      "status": "pending",
+      "deps": [
+        "t3"
+      ]
+    },
+    {
+      "id": "t5",
+      "label": "T5 直方图后端增强（parade/联动口径）",
+      "role": "dev-1",
+      "status": "pending",
+      "deps": [
+        "t4"
+      ]
+    },
+    {
+      "id": "t6",
+      "label": "T6 HSL 均衡器+分色调增强",
+      "role": "dev-1",
+      "status": "pending",
+      "deps": [
+        "t5"
+      ]
+    },
+    {
+      "id": "t7",
+      "label": "T7 曝光六项优化校准（RT 阴影高光恢复/黑白点/auto 曲线）",
+      "role": "dev-1",
+      "status": "pending",
+      "deps": [
+        "t6"
+      ]
+    },
+    {
+      "id": "t8",
+      "label": "T8 RT 全模块清点与吸收台账（小波/局部调整/Retinex/降噪/色差/镜头矫正…）",
+      "role": "dev-1+队长",
+      "status": "pending",
+      "deps": [
+        "t7"
       ]
     }
   ]

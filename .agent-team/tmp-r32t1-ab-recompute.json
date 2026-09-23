@@ -1,0 +1,125 @@
+{
+ "summary": {
+  "n": 3,
+  "median_fc_ratio_ratio_recomputed": 0.9694,
+  "median_fc_ratio_ratio_recorded": 0.9694,
+  "median_time_ratio_recomputed": 0.597,
+  "fallbacks": 0,
+  "all_checks_pass": true,
+  "tolerances": {
+   "fc_ratio_ratio": 0.02,
+   "detail_rms_ratio": 0.02,
+   "deltae512_mean": 0.01
+  }
+ },
+ "rows": [
+  {
+   "file": "DSC_0352.dng",
+   "flip": 0,
+   "portrait": false,
+   "shape": [
+    6064,
+    4040
+   ],
+   "rec_shape": [
+    6064,
+    4040
+   ],
+   "ahd_ms": 2163.4,
+   "rcd_ms": 1232.6,
+   "time_ratio": 0.57,
+   "rec_time_ratio": 0.584,
+   "fallback": false,
+   "fc_ratio_ratio": 0.9694,
+   "rec_fc_ratio_ratio": 0.9694,
+   "d_fc": 0.0,
+   "detail_rms_ratio": 0.8733,
+   "rec_detail_rms_ratio": 0.8733,
+   "d_dr": 0.0,
+   "deltae512_mean": 0.00107,
+   "rec_deltae512_mean": 0.00107,
+   "d_de": 0.0,
+   "checks": {
+    "shape_match_two_arms": true,
+    "orientation_matches_recorded": true,
+    "no_fallback": true,
+    "fc_ratio_ratio_within_tol": true,
+    "detail_rms_ratio_within_tol": true,
+    "deltae_within_tol": true
+   },
+   "ok": true
+  },
+  {
+   "file": "DSC_1319.dng",
+   "flip": 5,
+   "portrait": true,
+   "shape": [
+    4040,
+    6064
+   ],
+   "rec_shape": [
+    4040,
+    6064
+   ],
+   "ahd_ms": 2341.2,
+   "rcd_ms": 1916.4,
+   "time_ratio": 0.819,
+   "rec_time_ratio": 0.853,
+   "fallback": false,
+   "fc_ratio_ratio": 0.9615,
+   "rec_fc_ratio_ratio": 0.9615,
+   "d_fc": 0.0,
+   "detail_rms_ratio": 0.9319,
+   "rec_detail_rms_ratio": 0.9319,
+   "d_dr": 0.0,
+   "deltae512_mean": 0.09511,
+   "rec_deltae512_mean": 0.09511,
+   "d_de": 0.0,
+   "checks": {
+    "shape_match_two_arms": true,
+    "orientation_matches_recorded": true,
+    "no_fallback": true,
+    "fc_ratio_ratio_within_tol": true,
+    "detail_rms_ratio_within_tol": true,
+    "deltae_within_tol": true
+   },
+   "ok": true
+  },
+  {
+   "file": "DSC_5278.dng",
+   "flip": 0,
+   "portrait": false,
+   "shape": [
+    6064,
+    4040
+   ],
+   "rec_shape": [
+    6064,
+    4040
+   ],
+   "ahd_ms": 2144.0,
+   "rcd_ms": 1279.7,
+   "time_ratio": 0.597,
+   "rec_time_ratio": 0.557,
+   "fallback": false,
+   "fc_ratio_ratio": 1.9479,
+   "rec_fc_ratio_ratio": 1.9479,
+   "d_fc": 0.0,
+   "detail_rms_ratio": 0.8744,
+   "rec_detail_rms_ratio": 0.8744,
+   "d_dr": 0.0,
+   "deltae512_mean": 0.0007,
+   "rec_deltae512_mean": 0.0007,
+   "d_de": 0.0,
+   "checks": {
+    "shape_match_two_arms": true,
+    "orientation_matches_recorded": true,
+    "no_fallback": true,
+    "fc_ratio_ratio_within_tol": true,
+    "detail_rms_ratio_within_tol": true,
+    "deltae_within_tol": true
+   },
+   "ok": true
+  }
+ ]
+}

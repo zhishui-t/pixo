@@ -475,6 +475,18 @@ if _DLL_PATH.exists():
             _lib.PixoRenderOklabToSrgbF32.argtypes = [
                 ctypes.POINTER(PixoRenderOklabToSrgbParams),
             ]
+        # R32-T1: RCD 全分辨率去马赛克内核 (移植自 RawTherapee, GPLv3)。
+        # 旧 DLL 未导出时不影响加载, demosaic_rcd() 抛 RuntimeError, 调用方
+        # (core/io.py decode_raw) 回落 rawpy AHD。
+        if hasattr(_lib, "PixoRenderDemosaicRCD"):
+            _lib.PixoRenderDemosaicRCD.restype = ctypes.c_int
+            _lib.PixoRenderDemosaicRCD.argtypes = [
+                ctypes.POINTER(ctypes.c_float),   # mosaic (已归一化 [0,1])
+                ctypes.POINTER(ctypes.c_float),   # out (H,W,3)
+                ctypes.c_int,                     # width
+                ctypes.c_int,                     # height
+                ctypes.POINTER(ctypes.c_int),     # pattern[4] (0=R,1=G,2=B)
+            ]
 
         # ABI 版本检查：v1.0 旧 DLL 没有 PixoRenderVersion 符号时容忍加载,
         # 但 version() 返回 None；major != 1 按不可用处理。
@@ -642,6 +654,45 @@ def decode_cfa_half(cfa: np.ndarray, pattern_r: int, pattern_g0: int,
         ctypes.c_int(h),
         ctypes.byref(params),
     )
+    _check_status(ret)
+    return out
+
+
+def demosaic_rcd(mosaic: np.ndarray, pattern) -> np.ndarray | None:
+    """调用 C++ RCD 去马赛克内核 (R32-T1, 移植自 RawTherapee GPLv3)。
+
+    mosaic : (H,W) float32, 已按 (v-black)/(white-black) 归一化到 [0,1]
+             (core/io.py decode_raw RCD 分支负责, 归一化归 Python —— 设计 v2 M3);
+    pattern: 2x2 布局码序列 [p00,p01,p10,p11], 0=R, 1=G, 2=B (row-major)。
+    返回 (H,W,3) float32 线性相机 RGB, 白电平相对 [0,1]。
+
+    不可用 (DLL 缺失/未导出符号) 抛 RuntimeError; 非 RGBG Bayer 布局或
+    min(H,W)<19 返回 None (=PixoRenderFallbackRequested, 调用方回落 AHD)。
+    """
+    _require_lib()
+    if not hasattr(_lib, "PixoRenderDemosaicRCD"):
+        raise RuntimeError("native RCD demosaic kernel unavailable (DLL 未导出)")
+    arr = np.ascontiguousarray(mosaic, dtype=np.float32)
+    if arr.ndim != 2:
+        raise ValueError(f"mosaic 须为 (H,W), 实际 {arr.shape}")
+    h, w = arr.shape
+    if w <= 0 or h <= 0:
+        raise ValueError(f"mosaic 尺寸须为正, 实际 {arr.shape}")
+    if min(w, h) < 19:  # RCD 最小可运行尺寸 (native 同门), 提前省一次拷贝
+        return None
+    pat = np.ascontiguousarray(pattern, dtype=np.int32).reshape(-1)
+    if pat.size != 4:
+        raise ValueError(f"pattern 须为 4 元素, 实际 {pat.size}")
+    out = np.empty((h, w, 3), dtype=np.float32)
+    ret = _lib.PixoRenderDemosaicRCD(
+        arr.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        out.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.c_int(w),
+        ctypes.c_int(h),
+        pat.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+    )
+    if ret == 1:  # PixoRenderFallbackRequested
+        return None
     _check_status(ret)
     return out
 
@@ -1280,7 +1331,7 @@ __all__ = ["available", "load_error", "version", "rgb_to_hsv", "hsv_to_rgb",
            "PixoRenderExposureParams", "PixoRenderMatrixApply3Params",
            "PixoRenderToneApplyLut1DParams", "PixoRenderClarityParams",
            "PixoRenderLut3DParams",
-           "apply_local_warm_sat_native", "decode_cfa_half",
+           "apply_local_warm_sat_native", "decode_cfa_half", "demosaic_rcd",
            "colorcal_apply_lab", "colorcal_apply_lab_f32",
            "colorcal_apply_lab_f32_oklch", "gamut_soft",
            "PixoRenderRefineSatProtectionParams",

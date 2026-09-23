@@ -386,6 +386,10 @@ class RawPreviewSession:
         # None/空不注入。与 render(state_extras=...) 参数同键时以参数为准
         # （ExportManager 导出时经 getattr 读取同批数组转发全质量线）。
         self.region_masks: Optional[dict] = None
+        # R32-T1：导出去马赛克选项（导出请求体独立字段 → submit_export 设置；
+        # ExportManager 经 getattr 读取转发全质量线）。缺省 "AHD"，
+        # 默认链零漂移；不进 params 白名单体系（设计 v2 M1）。
+        self.demosaic: str = "AHD"
         self.max_stage_entries = max_stage_entries
         self.max_encoding_entries = max_encoding_entries
         self.max_stage_bytes = max_stage_bytes

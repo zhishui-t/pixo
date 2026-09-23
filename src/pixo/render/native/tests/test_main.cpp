@@ -2,13 +2,17 @@
 // 构建: cmake -DPIXO_RENDER_NATIVE_BUILD_TESTS=ON && cmake --build .
 // 运行: pixo_render_native_tests.exe; 返回值 = 失败用例数。
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
+#include <vector>
 
 #include "abi.h"
 #include "decode.h"
 #include "oklab.h"
+#include "rcd.h"
 #include "warm_sat.h"
 
 // C ABI 导出的 HSV 函数（hsv.cpp 中定义）。
@@ -268,6 +272,238 @@ void TestOklabStride()
     }
 }
 
+// ---------------------------------------------------------------------------
+// RCD 去马赛克 (R32-T1): 合成 Bayer 四相位 + 伪彩 vs 双线性基线 + 确定性金样本
+// + 错误路径。
+
+// 简单双线性去马赛克基线 (伪彩对照用, 非 RT 代码): G@R/B = 十字均值,
+// R/B@G = 同向均值, R/B@对角位 = 对角均值; 越界邻居跳过。
+void bilinear_ref(const float* cfa, float* out, int w, int h, const int pat[4])
+{
+    auto code = [&](int r, int c) { return pat[((r & 1) << 1) | (c & 1)]; };
+    for (int r = 0; r < h; ++r) {
+        for (int c = 0; c < w; ++c) {
+            const float v = cfa[r * w + c];
+            float acc[3] = {0.f, 0.f, 0.f};
+            int cnt[3] = {0, 0, 0};
+            static const int dr[4] = {0, 0, -1, 1};
+            static const int dc[4] = {-1, 1, 0, 0};
+            for (int k = 0; k < 4; ++k) {
+                const int rr = r + dr[k];
+                const int cc = c + dc[k];
+                if (rr >= 0 && rr < h && cc >= 0 && cc < w) {
+                    acc[code(rr, cc)] += cfa[rr * w + cc];
+                    cnt[code(rr, cc)]++;
+                }
+            }
+            float racc[3] = {0.f, 0.f, 0.f};
+            int rcnt[3] = {0, 0, 0};
+            static const int ddr[4] = {-1, -1, 1, 1};
+            static const int ddc[4] = {-1, 1, -1, 1};
+            for (int k = 0; k < 4; ++k) {
+                const int rr = r + ddr[k];
+                const int cc = c + ddc[k];
+                if (rr >= 0 && rr < h && cc >= 0 && cc < w) {
+                    racc[code(rr, cc)] += cfa[rr * w + cc];
+                    rcnt[code(rr, cc)]++;
+                }
+            }
+            const int cd = code(r, c);
+            for (int ch = 0; ch < 3; ++ch) {
+                float val = v;
+                if (ch != cd) {
+                    // 优先十字 (G 邻居在十字位), 对角补 (R/B 邻居在对角位)
+                    if (cnt[ch] > 0) {
+                        val = acc[ch] / static_cast<float>(cnt[ch]);
+                    } else if (rcnt[ch] > 0) {
+                        val = racc[ch] / static_cast<float>(rcnt[ch]);
+                    } else {
+                        val = v;
+                    }
+                }
+                out[(r * w + c) * 3 + ch] = val;
+            }
+        }
+    }
+}
+
+// 色度高频能量 (伪彩指标): chroma=|R-G|, 高频=|chroma - 4邻均值|,
+// 返回指定矩形区 (行 [r0,r1), 列 [c0,c1)) 内均值。
+float chroma_hf_energy(const float* rgb, int w, int r0, int r1, int c0, int c1)
+{
+    double sum = 0.0;
+    int n = 0;
+    for (int r = r0; r < r1; ++r) {
+        for (int c = c0; c < c1; ++c) {
+            const float* p = rgb + (r * w + c) * 3;
+            const float chroma = std::fabs(p[0] - p[1]);
+            float avg = 0.f;
+            int cnt = 0;
+            static const int dr[4] = {0, 0, -1, 1};
+            static const int dc[4] = {-1, 1, 0, 0};
+            for (int k = 0; k < 4; ++k) {
+                const int rr = r + dr[k];
+                const int cc = c + dc[k];
+                if (rr >= r0 && rr < r1 && cc >= c0 && cc < c1) {
+                    const float* q = rgb + (rr * w + cc) * 3;
+                    avg += std::fabs(q[0] - q[1]);
+                    ++cnt;
+                }
+            }
+            if (cnt > 0) {
+                sum += std::fabs(chroma - avg / static_cast<float>(cnt));
+                ++n;
+            }
+        }
+    }
+    return n > 0 ? static_cast<float>(sum / n) : 0.f;
+}
+
+// 逐位比较 float (确定性金样本); 失败时打印实际位型供钉样本。
+bool float_bits_eq(float actual, float expected)
+{
+    std::uint32_t a = 0, e = 0;
+    std::memcpy(&a, &actual, sizeof a);
+    std::memcpy(&e, &expected, sizeof e);
+    if (a != e) {
+        std::fprintf(stderr,
+                     "  golden float mismatch: actual bits=0x%08x (%.9g), "
+                     "expected bits=0x%08x (%.9g)\n",
+                     a, actual, e, expected);
+        return false;
+    }
+    return true;
+}
+
+void TestRcdDemosaic()
+{
+    // 四相位 (row-major 2x2 布局码 0=R,1=G,2=B)
+    const int phases[4][4] = {
+        {0, 1, 1, 2}, // RGGB
+        {2, 1, 1, 0}, // BGGR
+        {1, 0, 2, 1}, // GRBG
+        {1, 2, 0, 1}, // GBRG
+    };
+    const int w = 48;
+    const int h = 36;
+    std::vector<float> cfa(static_cast<size_t>(w) * h);
+    std::vector<float> out(static_cast<size_t>(w) * h * 3);
+
+    for (const auto& pat : phases) {
+        // 1) 恒场 0.5 → 全图 ≈0.5, 无 NaN (含 border_interpolate 区)
+        std::fill(cfa.begin(), cfa.end(), 0.5f);
+        CHECK(PixoRenderDemosaicRCD(cfa.data(), out.data(), w, h, pat) ==
+              PixoRenderOk);
+        for (size_t i = 0; i < out.size(); ++i) {
+            CHECK(!std::isnan(out[i]));
+            CHECK(std::fabs(out[i] - 0.5f) < 1e-5f);
+        }
+
+        // 2) 垂直渐变 (中性梯, 无色度) → 单调保序 + 内部近似恢复
+        for (int r = 0; r < h; ++r) {
+            const float v = static_cast<float>(r) / static_cast<float>(h - 1);
+            std::fill(cfa.begin() + r * w, cfa.begin() + (r + 1) * w, v);
+        }
+        CHECK(PixoRenderDemosaicRCD(cfa.data(), out.data(), w, h, pat) ==
+              PixoRenderOk);
+        for (int r = 1; r < h; ++r) {
+            for (int c = 4; c < w - 4; c += 7) {
+                const float prev = out[((r - 1) * w + c) * 3];
+                const float curr = out[(r * w + c) * 3];
+                CHECK(curr >= prev - 1e-5f); // 渐变保序 (浮点容差)
+            }
+        }
+        for (int r = 10; r < h - 10; r += 3) {
+            const float v = static_cast<float>(r) / static_cast<float>(h - 1);
+            for (int c = 10; c < w - 10; c += 5) {
+                CHECK(std::fabs(out[(r * w + c) * 3] - v) < 0.02f);
+                CHECK(std::fabs(out[(r * w + c) * 3 + 1] - v) < 0.02f);
+                CHECK(std::fabs(out[(r * w + c) * 3 + 2] - v) < 0.02f);
+            }
+        }
+    }
+
+    // 3) 彩色垂直边伪彩: 左红场/右绿场, RCD 色度高频能量须低于双线性基线
+    {
+        const int* pat = phases[0]; // RGGB
+        const int edge = w / 2;
+        for (int r = 0; r < h; ++r) {
+            for (int c = 0; c < w; ++c) {
+                const bool left = c < edge;
+                const int site = pat[((r & 1) << 1) | (c & 1)];
+                // 场值: 左 = {R:0.6, G:0.1, B:0.1}; 右 = {R:0.1, G:0.6, B:0.1}
+                const float field[3] = {left ? 0.6f : 0.1f, left ? 0.1f : 0.6f,
+                                        0.1f};
+                cfa[r * w + c] = field[site];
+            }
+        }
+        CHECK(PixoRenderDemosaicRCD(cfa.data(), out.data(), w, h, pat) ==
+              PixoRenderOk);
+        std::vector<float> bil(static_cast<size_t>(w) * h * 3);
+        bilinear_ref(cfa.data(), bil.data(), w, h, pat);
+        // 边带 (edge±3) 与内部行: RCD 伪彩显著低于双线性
+        const float e_rcd = chroma_hf_energy(out.data(), w, 9, h - 9, edge - 3, edge + 3);
+        const float e_bil = chroma_hf_energy(bil.data(), w, 9, h - 9, edge - 3, edge + 3);
+        CHECK(e_rcd < e_bil);
+
+        // 4) 确定性金样本: 同输入两次运行逐位一致; 关键点位型钉样本
+        //    (锁算法不漂移; 再生成方式: 本测试失败输出会打印 actual bits)
+        std::vector<float> out2(out.size());
+        CHECK(PixoRenderDemosaicRCD(cfa.data(), out2.data(), w, h, pat) ==
+              PixoRenderOk);
+        CHECK(std::memcmp(out.data(), out2.data(), out.size() * sizeof(float)) == 0);
+
+        // 采样点 (边缘带内部): 金样本位型 (串行构建首轮实测钉入, 源 = RGGB
+        // 红绿边场景; 再生成: 本 CHECK 失败输出打印 actual bits)
+        struct Golden {
+            int r, c, ch;
+            std::uint32_t bits;
+        };
+        const Golden goldens[] = {
+            {18, 21, 0, 0x3f1999a4u}, // R@G(左区) ≈0.60000062
+            {18, 21, 1, 0x3dcccccdu}, // G 本位(左区) = 0.1
+            {18, 24, 0, 0x3dcccccdu}, // R 本位(右区) = 0.1
+            {18, 24, 1, 0x3f19996eu}, // G@R(右区, 垂直向判定) ≈0.5999974
+            {18, 27, 2, 0x3dcccdf0u}, // B@G ≈0.10000217
+        };
+        for (const auto& g : goldens) {
+            CHECK(float_bits_eq(out[(g.r * w + g.c) * 3 + g.ch],
+                                [&g] {
+                                    float v = 0.f;
+                                    std::memcpy(&v, &g.bits, sizeof v);
+                                    return v;
+                                }()));
+        }
+    }
+
+    // 5) 错误路径: 非法布局 / 尺寸过小 / 非正尺寸 / 空指针
+    {
+        const int good[4] = {0, 1, 1, 2};
+        std::vector<float> cfaS(20 * 20, 0.5f);
+        std::vector<float> outS(20 * 20 * 3);
+
+        const int bad1[4] = {0, 0, 2, 2};  // 2R 0G 2B
+        CHECK(PixoRenderDemosaicRCD(cfaS.data(), outS.data(), 20, 20, bad1) ==
+              PixoRenderFallbackRequested);
+        const int bad2[4] = {0, 1, 2, 3};  // 码值 3 越界
+        CHECK(PixoRenderDemosaicRCD(cfaS.data(), outS.data(), 20, 20, bad2) ==
+              PixoRenderFallbackRequested);
+        const int bad3[4] = {1, 1, 1, 1};  // 全 G
+        CHECK(PixoRenderDemosaicRCD(cfaS.data(), outS.data(), 20, 20, bad3) ==
+              PixoRenderFallbackRequested);
+        CHECK(PixoRenderDemosaicRCD(cfaS.data(), outS.data(), 10, 20, good) ==
+              PixoRenderFallbackRequested); // < 19
+        CHECK(PixoRenderDemosaicRCD(cfaS.data(), outS.data(), 0, 20, good) ==
+              PixoRenderInvalidArgs);
+        CHECK(PixoRenderDemosaicRCD(nullptr, outS.data(), 20, 20, good) ==
+              PixoRenderInvalidArgs);
+        CHECK(PixoRenderDemosaicRCD(cfaS.data(), nullptr, 20, 20, good) ==
+              PixoRenderInvalidArgs);
+        CHECK(PixoRenderDemosaicRCD(cfaS.data(), outS.data(), 20, 20, nullptr) ==
+              PixoRenderInvalidArgs);
+    }
+}
+
 } // namespace
 
 int main()
@@ -278,6 +514,7 @@ int main()
     TestWarmSatExceptionCaught();
     TestOklabRoundTrip();
     TestOklabStride();
+    TestRcdDemosaic();
 
     if (failures == 0) {
         std::printf("pixo_render_native_tests: all passed\n");

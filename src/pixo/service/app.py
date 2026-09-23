@@ -246,6 +246,9 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
         fmt = body.get("fmt", "jpeg")
         quality = body.get("quality")
         output_dir = body.get("output_dir")
+        # R32-T1：去马赛克导出选项（独立字段，不进 params 白名单）；
+        # 合法值校验在 submit_export（ValueError → 400）。
+        demosaic = body.get("demosaic")
         try:
             result = await run_in_threadpool(
                 rt.submit_export,
@@ -253,6 +256,7 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
                 fmt=str(fmt),
                 quality=int(quality) if quality is not None else None,
                 output_dir=output_dir,
+                demosaic=str(demosaic) if demosaic is not None else None,
             )
             return result
         except KeyError as exc:

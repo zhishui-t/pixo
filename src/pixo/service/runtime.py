@@ -1584,9 +1584,19 @@ class PixoServiceRuntime:
         fmt: str,
         quality: int | None = None,
         output_dir: str | Path | None = None,
+        demosaic: str | None = None,
     ) -> dict[str, Any]:
-        """提交导出任务。"""
+        """提交导出任务。
+
+        demosaic (R32-T1)：可选 "AHD"/"RCD"——导出请求体独立字段，经 session
+        属性（ExportManager getattr 读取）转发全质量线，不进 params 白名单；
+        None 保持 session 现值（缺省 "AHD"，默认链零漂移）。
+        """
         session = self.get_session(session_id)
+        if demosaic is not None:
+            if demosaic not in ("AHD", "RCD"):
+                raise ValueError(f"不支持的 demosaic 选项: {demosaic}")
+            session.demosaic = demosaic
         task_id = self.export_manager.submit(
             session,
             fmt=fmt,

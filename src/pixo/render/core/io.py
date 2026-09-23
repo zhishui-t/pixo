@@ -16,6 +16,8 @@ from typing import Tuple, Union
 import numpy as np
 import rawpy
 
+from ..degradation import record_degradation
+
 # P1 预览解码结果缓存：key=(raw_path, output_scale, mtime, size)。
 # rawpy 首次访问 raw_image_visible / raw_pattern / black_level 等属性会触发
 # DNG/RAW 解压（实测 ~1.3s）；同一文件重复预览时直接复用最终 RGB，避免重复解压。
@@ -137,11 +139,36 @@ def decode_raw(raw_path: Union[str, Path], half_size: bool = False,
     """解码 RAW → 相机原始 RGB 线性图 (float32, 0-1 相对白电平, 高光可 >1)。
 
     生产解码路径 (preview cfa_half / export 全分辨率)。
+    demosaic: "AHD" (缺省, rawpy) | "RCD" (R32-T1, native 全分辨率, 仅
+    half_size=False 时生效)。未知值与既有口径一致静默按 AHD 处理
+    (io.py:142 .get 缺省); RCD 不可用/失败/不支持时回落 AHD 并
+    record_degradation (返回契约 (img, raw) 不变 —— export/graph/bench
+    三处解包依赖)。返回的 rawpy 对象供 camera_neutral_wb 等消费。
     """
     algo = {"AHD": rawpy.DemosaicAlgorithm.AHD,
             "LINEAR": rawpy.DemosaicAlgorithm.LINEAR}.get(demosaic,
                                                           rawpy.DemosaicAlgorithm.AHD)
     raw = rawpy.imread(str(raw_path))
+    if demosaic == "RCD" and not half_size:
+        # R32-T1: native RCD (RawTherapee 移植, GPLv3)。失败/不支持均静默
+        # 回落 AHD (默认链语义不变, 降级可观测)。
+        img_rcd: np.ndarray | None
+        try:
+            img_rcd = _decode_raw_rcd(raw, str(raw_path))
+            if img_rcd is None:
+                record_degradation(
+                    "render.io.decode_raw.rcd", None,
+                    path=str(raw_path),
+                    reason="fallback",
+                    detail="RCD 不支持该输入 (非 RGBG Bayer/尺寸过小)，回退 rawpy AHD")
+        except Exception as exc:  # noqa: BLE001 - 回落不放大为调用方错误
+            record_degradation(
+                "render.io.decode_raw.rcd", exc,
+                path=str(raw_path),
+                detail="native RCD 去马赛克失败，回退 rawpy AHD")
+            img_rcd = None
+        if img_rcd is not None:
+            return img_rcd, raw
     rgb16 = raw.postprocess(
         use_camera_wb=False,
         output_bps=16,
@@ -160,6 +187,91 @@ def decode_raw(raw_path: Union[str, Path], half_size: bool = False,
     )
     img = rgb16.astype(np.float32) / 65535.0
     return img, raw
+
+
+def _rcd_mosaic_from_raw(raw: rawpy.RawPy) -> Tuple[np.ndarray, np.ndarray]:
+    """从 rawpy 对象取 mosaic 并归一化到 [0,1]（RCD native 输入契约）。
+
+    mosaic 取数路径与 decode_cfa_half 既有实现同源（raw_image_visible /
+    raw_pattern / color_desc / black_level_per_channel / white_level）；
+    归一化 = (v - black_pos) / (white - black_pos)，按 2x2 线性位置逐点广播
+    （设计 v2 M3：归一化归 Python，LIM01 钳位留 native）。
+
+    返回 (mosaic01 (H,W) float32, layout 码 [p00,p01,p10,p11] 0=R,1=G,2=B)。
+    非 2x2 RGBG（如 X-Trans 6x6）抛 ValueError，由调用方回落 AHD。
+    """
+    cfa = np.asarray(raw.raw_image_visible).astype(np.float32)
+    if cfa.ndim != 2 or min(cfa.shape) < 1:
+        raise ValueError(f"raw_image_visible 须为非空 (H,W), 实际 {cfa.shape}")
+    pattern = np.asarray(raw.raw_pattern, dtype=np.int32)
+    flat = pattern.ravel()
+    desc = raw.color_desc
+    if isinstance(desc, bytes):
+        desc = desc.decode("latin1")
+    desc = str(desc).upper()
+    # 按 color_desc 把每个 2x2 线性位置映射到 R/G/B（G 可两位共用同一 id），
+    # 与 decode_cfa_half 同一口径。
+    r_pos = [p for p in range(4) if desc[int(flat[p])] == "R"]
+    g_pos = [p for p in range(4) if desc[int(flat[p])] == "G"]
+    b_pos = [p for p in range(4) if desc[int(flat[p])] == "B"]
+    if (pattern.shape != (2, 2) or len(r_pos) != 1 or len(b_pos) != 1
+            or len(g_pos) != 2):
+        raise ValueError(
+            f"raw_pattern/color_desc 无法映射 2x2 RGBG: desc={desc!r}, "
+            f"pattern_shape={tuple(pattern.shape)}, pattern={flat.tolist()}")
+    layout = np.zeros(4, dtype=np.int32)
+    layout[r_pos[0]] = 0
+    for p in g_pos:
+        layout[p] = 1
+    layout[b_pos[0]] = 2
+
+    black_pos = np.array(
+        [float(raw.black_level_per_channel[int(flat[p])]) for p in range(4)],
+        dtype=np.float32).reshape(2, 2)
+    white = float(raw.white_level)
+    denom = white - black_pos
+    if not np.all(denom > 0):
+        raise ValueError(f"white/black 非法: white={white}, black={black_pos}")
+    h, w = cfa.shape
+    # 2x2 逐位置黑电平铺到全幅 (按 Bayer 周期), 广播相减/除
+    black_full = np.tile(black_pos, ((h + 1) // 2, (w + 1) // 2))[:h, :w]
+    mosaic01 = (cfa - black_full) / (white - black_full)
+    return np.ascontiguousarray(mosaic01, dtype=np.float32), layout
+
+
+def _apply_dcraw_flip(img: np.ndarray, flip: int) -> np.ndarray:
+    """对去马赛克输出施加 dcraw/libraw 翻转码（对齐 rawpy postprocess 行为）。
+
+    位语义（dcraw 原文）: bit2=转置(H/W 互换), bit1=上下镜像, bit0=左右镜像;
+    应用顺序 = 转置 → flipud → fliplr（libraw 同序; 3=180°, 5=90°, 6=90°）。
+    rawpy postprocess 缺省 user_flip=-1 自动按此码翻转; RCD 分支直接消费
+    raw_image_visible（传感器方向），须自行补齐，否则 portrait 拍摄的输出
+    横竖颠倒（R32-T1 A/B 实测发现: DSC_1319 flip=5）。
+    """
+    if flip & 4:
+        img = np.ascontiguousarray(img.transpose(1, 0, 2))
+    if flip & 2:
+        img = np.ascontiguousarray(np.flipud(img))
+    if flip & 1:
+        img = np.ascontiguousarray(np.fliplr(img))
+    return img
+
+
+def _decode_raw_rcd(raw: rawpy.RawPy, raw_path: str) -> np.ndarray | None:
+    """native RCD 全分辨率去马赛克（decode_raw 的 "RCD" 分支）。
+
+    返回 (H,W,3) float32 白电平相对 [0,1] 线性相机 RGB（已按 dcraw flip 码
+    对齐 postprocess 输出方向）；输入不支持（非 RGBG Bayer / 尺寸过小，
+    native FallbackRequested）返回 None，其余错误抛异常 —— 两者均由
+    decode_raw 静默回落 AHD 并记录降级。
+    """
+    from .._native import demosaic_rcd
+
+    mosaic01, layout = _rcd_mosaic_from_raw(raw)
+    out = demosaic_rcd(mosaic01, layout)
+    if out is None:
+        return None
+    return _apply_dcraw_flip(out, int(raw.sizes.flip))
 
 
 def decode_cfa_half(raw: rawpy.RawPy, output_scale: float = 1.0,

@@ -28,6 +28,7 @@ add_library(pixo_render_native SHARED
     src/refine.cpp
     src/stage_kernels.cpp
     src/lut3d.cpp
+    src/rcd_demosaic_native.cpp
 )
 
 # MinGW 默认加 lib 前缀, 这里去掉, 统一输出 pixo_render_native.dll
@@ -65,4 +66,13 @@ endif()
 
 if(PIXO_RENDER_NATIVE_BUILD_TESTS)
     add_subdirectory(tests)
+    # R32-T1 码检小修 (reviewer): tests 目标同款静态链接 —— 否则测试 exe
+    # 动态依赖构建机 MinGW 运行时 (libgcc_s_seh/libstdc++-6), 换机或 PATH
+    # 不同即无法加载 (libstdc++ 版本错配比 DLL 本体更隐蔽)。
+    if(NOT MSVC)
+        target_link_options(pixo_render_native_tests PRIVATE
+            -static-libgcc
+            -static-libstdc++
+        )
+    endif()
 endif()
