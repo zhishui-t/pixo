@@ -218,11 +218,14 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
         gen: int | None = Query(default=None),
         long_edge: int = Query(default=1024, ge=64, le=4096),
         bins: int = Query(default=256, ge=2, le=1024),
+        luma: str = Query(default="bt709"),
     ) -> dict[str, Any]:
         """返回当前 generation 预览的直方图（R25 F02：luma + RGB 计数）。
 
         工作台反馈环专用（调参后按 gen 刷新）；渲染失败返回
         histogram=None + error（与 measurements 端点同语义）。
+        R32-T5：luma=lab_l 追加 CIE L* 直方图键 lum_lstar（RT 面板 Luma
+        同口径）；取值校验在 histogram_session（ValueError → 400）。
         """
         try:
             session = rt.get_session(session_id)
@@ -232,7 +235,11 @@ def create_app(runtime: PixoServiceRuntime | None = None) -> FastAPI:
             raise _not_found(
                 f"generation 已过期: 请求={gen}, 当前={session.generation}"
             )
-        return rt.histogram_session(session_id, long_edge=long_edge, bins=bins)
+        try:
+            return rt.histogram_session(
+                session_id, long_edge=long_edge, bins=bins, luma=str(luma))
+        except ValueError as exc:
+            raise _bad_request(str(exc)) from exc
 
     @app.post("/api/sessions/{session_id}/exports", status_code=202)
     async def api_submit_export(

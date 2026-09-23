@@ -171,3 +171,32 @@ def test_default_session_blocks_lut_path():
     sess = RawPreviewSession("x.nef", prof=object())
     with pytest.raises(ParamValidationError, match="lut_path"):
         sess.update_params({"stylize": {"lut_path": "/x.cube"}})
+
+
+# ---- R32-T4/T5: user_curve mode 栅栏（graph.py curve_dict_problem 唯一同源）----
+
+def test_curve_dict_mode_valid_passes_fence():
+    """mode 合法值: 栅栏判据返回 None (曲线 dict + mode 键放行)。"""
+    from pixo.render.pipeline.graph import curve_dict_problem
+    for mode in ("linear", "spline", "akima", "catmull_rom", "monotone"):
+        v = {"rgb": [[0.0, 0.0], [1.0, 1.0]], "mode": mode}
+        assert curve_dict_problem(v) is None, mode
+
+
+def test_curve_dict_mode_invalid_rejected():
+    """R32-T5 reviewer 遗留补齐: mode 非法值在栅栏层被拒 (含原因)。"""
+    from pixo.render.pipeline.graph import curve_dict_problem
+    v = {"rgb": [[0.0, 0.0], [1.0, 1.0]], "mode": "wat"}
+    problem = curve_dict_problem(v)
+    assert problem is not None and "mode" in problem
+
+
+def test_curve_dict_mode_reaches_stage_fence():
+    """栅栏走 Stage._curve_dict_check 时非法 mode 抛 ValueError。"""
+    from pixo.render.modules.tone_map import ToneStage
+    from pixo.render.pipeline.graph import curve_dict_problem
+    v = {"rgb": [[0.0, 0.0], [1.0, 1.0]], "mode": "wat"}
+    assert curve_dict_problem(v) is not None
+    stage = ToneStage()
+    with pytest.raises(ValueError):
+        stage._curve_dict_check(v)

@@ -105,20 +105,21 @@
       "id": "t4",
       "label": "T4 曲线体系增强（插值/多域/分通道）",
       "role": "dev-1",
-      "status": "in_progress",
+      "status": "done",
       "deps": [
         "t3"
       ],
-      "note": "dev-1 进行中"
+      "note": "4模式+平段; akima双错回流修正; 1746/0"
     },
     {
       "id": "t5",
       "label": "T5 直方图后端增强（parade/联动口径）",
       "role": "dev-1",
-      "status": "pending",
+      "status": "in_progress",
       "deps": [
         "t4"
-      ]
+      ],
+      "note": "dev-1 进行中"
     },
     {
       "id": "t6",

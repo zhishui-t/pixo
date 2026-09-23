@@ -186,3 +186,54 @@ def test_histogram_invalid_inputs_and_bins_guard():
         compute_histogram(np.zeros((4, 4, 3), dtype=np.uint8), bins=1)
     with pytest.raises(ValueError):
         compute_histogram(np.zeros((4, 4, 3), dtype=np.uint8), bins=4096)
+
+
+# ---- R32-T5: lab_l 模式（RT 面板 Luma 口径 = CIE L*，对照吸收）----
+
+def test_histogram_lab_l_appends_lstar_key_default_unchanged():
+    """lab_l 追加 lum_lstar 键；缺省 bt709 输出键集与语义不变（向后兼容）。"""
+    from pixo.vision.measure import compute_histogram
+    img = np.zeros((4, 4, 3), dtype=np.uint8)
+    img[:2] = 64
+    img[2:] = 200
+    base = compute_histogram(img)
+    lab = compute_histogram(img, luma="lab_l")
+    assert "lum_lstar" not in base["counts"]
+    assert set(base["counts"]) == {"lum", "r", "g", "b"}
+    assert set(lab["counts"]) == {"lum", "lum_lstar", "r", "g", "b"}
+    # 既有键逐位不变
+    for k in ("lum", "r", "g", "b"):
+        assert lab["counts"][k] == base["counts"][k]
+
+
+def test_histogram_lab_l_known_gray_value():
+    """中灰 u8=118 → L*≈49.6（sRGB EOTF 逆 + CIE L* 分段式）→ 126 桶。"""
+    from pixo.vision.measure import compute_histogram
+    img = np.full((4, 4, 3), 118, dtype=np.uint8)
+    out = compute_histogram(img, luma="lab_l")["counts"]["lum_lstar"]
+    bins = [i for i, c in enumerate(out) if c > 0]
+    assert len(bins) == 1 and 124 <= bins[0] <= 128, bins
+
+
+def test_histogram_lab_l_endpoints_and_monotone():
+    """黑→桶 0、白→末桶；灰阶 L* 单调不减（感知均匀）。"""
+    from pixo.vision.measure import compute_histogram
+    img = np.full((2, 2, 3), 255, dtype=np.uint8)
+    out = compute_histogram(img, luma="lab_l")
+    assert out["counts"]["lum_lstar"][-1] == 4
+    blk = compute_histogram(np.zeros((2, 2, 3), np.uint8),
+                            luma="lab_l")["counts"]["lum_lstar"]
+    assert blk[0] == 4
+    grays = [40, 80, 120, 160, 200]
+    peaks = []
+    for g in grays:
+        o = compute_histogram(np.full((2, 2, 3), g, np.uint8),
+                              luma="lab_l")["counts"]["lum_lstar"]
+        peaks.append(max(i for i, c in enumerate(o) if c > 0))
+    assert peaks == sorted(peaks), peaks
+
+
+def test_histogram_lab_l_invalid_luma_raises():
+    from pixo.vision.measure import compute_histogram
+    with pytest.raises(ValueError):
+        compute_histogram(np.zeros((4, 4, 3), np.uint8), luma="wat")

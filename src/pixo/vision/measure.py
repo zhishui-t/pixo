@@ -164,8 +164,9 @@ def compute_proxy_metrics(image_rgb: np.ndarray) -> dict[str, float]:
     }
 
 
-def compute_histogram(image_rgb: np.ndarray, bins: int = 256) -> dict:
-    """直方图测量（R25 F02，R23 §6 在册能力补齐）。
+def compute_histogram(image_rgb: np.ndarray, bins: int = 256,
+                      luma: str = "bt709") -> dict:
+    """直方图测量（R25 F02，R23 §6 在册能力补齐；R32-T5 对照吸收增强）。
 
     BT.709 luma + RGB 三通道计数直方图，供工作台 UI 与测量报告消费
     （数组本体不进 decide 规则——规则引擎只吃标量，见 pipeline/metrics.py）。
@@ -178,12 +179,22 @@ def compute_histogram(image_rgb: np.ndarray, bins: int = 256) -> dict:
        "counts": {"lum": [...], "r": [...], "g": [...], "b": [...]}}
     口径：0-255 值域均匀分桶（bins=256 即每 1 级一桶，编辑器直方图惯例，
     末桶含右端点 255）；luma 经 _luminance（BT.709, 0-255 域）后同尺度分桶。
+
+    R32-T5 吸收（口径对照 RawTherapee improccoordinator.cc @ 6c4cb59
+    updateLRGBHistograms，GPLv3；数学为公开 CIE 定义独立实现）：
+      luma="lab_l" 时追加 "lum_lstar" 键 —— CIE L*（0-255 域）直方图，
+      即 RT 面板 Luma 直方图的口径（RT: Lab L/128 256 桶；L* 感知均匀，
+      曝光判定与曲线编辑器背景的感知口径，替代线性 BT.709 加权）。
+      本实现经 gamma sRGB → 线性 BT.709 Y → CIE L*（工作空间原色差为
+      二阶近似，docstring 如实记录）；既有 lum/r/g/b 键与语义逐位不变。
     """
     if image_rgb is None:
         return {}
     arr = np.asarray(image_rgb)
     if arr.ndim != 3 or arr.shape[2] < 3 or arr.size == 0:
         return {}
+    if luma not in ("bt709", "lab_l"):
+        raise ValueError(f"luma 须为 'bt709' 或 'lab_l'，实际 {luma!r}")
     if not 2 <= int(bins) <= 1024:
         raise ValueError(f"bins 须在 [2, 1024]，实际 {bins}")
     rgb = _to_float_rgb(arr)  # 0-255 浮点、nan 防御、4ch 截断
@@ -194,16 +205,36 @@ def compute_histogram(image_rgb: np.ndarray, bins: int = 256) -> dict:
         return [int(c) for c in counts]
 
     lum = _luminance(rgb)
+    counts = {
+        "lum": _hist(lum),
+        "r": _hist(rgb[..., 0]),
+        "g": _hist(rgb[..., 1]),
+        "b": _hist(rgb[..., 2]),
+    }
+    if luma == "lab_l":
+        counts["lum_lstar"] = _hist(_lstar_255(rgb / 255.0))
     return {
         "bins": int(bins),
         "pixels": int(lum.size),
-        "counts": {
-            "lum": _hist(lum),
-            "r": _hist(rgb[..., 0]),
-            "g": _hist(rgb[..., 1]),
-            "b": _hist(rgb[..., 2]),
-        },
+        "counts": counts,
     }
+
+
+def _lstar_255(rgb01: np.ndarray) -> np.ndarray:
+    """gamma sRGB (0-1) → CIE L* (0-255 域)。
+
+    路径: sRGB EOTF 逆 → 线性 BT.709 Y ∈ [0,1] → CIE L* 标准分段式
+    (Y > (6/29)³: L* = 116·Y^(1/3) − 16; 否则 (29/3)³·Y)。
+    L* ∈ [0,100] 线性缩放到 0-255 分桶域。
+    """
+    rgb01 = np.clip(np.nan_to_num(rgb01, nan=0.0), 0.0, 1.0)
+    lin = np.where(rgb01 <= 0.04045, rgb01 / 12.92,
+                   ((rgb01 + 0.055) / 1.055) ** 2.4)
+    y = (_LUM_R * lin[..., 0] + _LUM_G * lin[..., 1] + _LUM_B * lin[..., 2])
+    eps = 216.0 / 24389.0
+    f = np.where(y > eps, np.cbrt(y), (24389.0 / 27.0) * y / 116.0)
+    lstar = 116.0 * f - 16.0
+    return np.clip(lstar, 0.0, 100.0) * 2.55
 
 
 def measure_global(image_rgb: np.ndarray) -> dict[str, float]:

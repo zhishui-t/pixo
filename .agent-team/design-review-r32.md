@@ -294,3 +294,45 @@ dev-1 修正交棒复核（4 文件）：
 4. **测试 ✓**：test_r32t4_akima_matches_scipy（≤1e-6，scipy 缺失 skip）新增；test_user_curve 28 passed（21+7）+ test_param_type_consistency 6 passed 本棒复跑；全量 1746/0（dev 报，tester 棒复核）。
 
 **T4 放行**（主要项关闭；建议项——栅栏 mode 非法值断言一条——随 T5 顺带，不阻塞）。
+
+---
+
+# R32-T5 检视报告（design-review-r32 续）· 轻量棒
+
+> 日期：2026-09-23（T5 检视棒）｜ 检视人：reviewer（本审核线）
+> 被检对象：vision/measure.py（luma="lab_l"）、service/runtime.py+app.py（透传+400）、test_f04_param_fence.py（+3 遗留补齐）、test_proxy_metrics.py（+4）、dev1-r32-t5.md
+> RT 对照基线：rtengine/improccoordinator.cc + rtgui/histogrampanel.cc @ 6c4cb59（本棒实读）
+
+## T5-1. Lab L* 口径 ✓（RT 系数实读 + 数学标准 + 手算锚点）
+
+- **RT 系数实读**：`updateLRGBHistograms`（improccoordinator.cc:2939-2996）`histLuma[(int)(nprevl->L/128.f)]++`——LabImage L 域 [0,32768]（L*×327.68；旁证：同函数 Chroma `/188` 自注「48000/256」同域惯例）→ 桶 = int(L*×2.56) 0..256；pixo `_lstar_255` = L*×2.55 → 0-255 域同语义（缩放差 0.4% + 末桶惯例差 = 二阶，docstring 如实记录）。**报告 §1「L*∈[0,100] 线性映射 256 桶」与实读相符，口径同构成立** ✓。
+- **数学 ✓**：sRGB EOTF 逆（0.04045/12.92/1.055/2.4）→ 线性 BT.709 Y → CIE L* 分段式（eps=216/24389、(24389/27)y/116）——全部标准式；工作空间原色（非 Rec709）差已在 docstring 如实记为二阶近似。中灰锚点独立手算：u8=118 → linear≈0.1793 → L*≈49.4 → ×2.55≈126 桶，与测试 124..128 断言吻合 ✓。
+- **域语义说明（不阻塞）**：RT 面板 Luma 取自 16 位 Lab 管道（nprevl），pixo 从 gamma sRGB 预览帧 EOTF 逆近似——帧域差已由 docstring「二阶近似」+ 报告 §2 域行覆盖，如实。
+
+## T5-2. 向后兼容红线 ✓（三重锁定）
+
+- 实现层：counts 先建 4 键再条件追加 `lum_lstar`——bt709 缺省路径输出键集/数值零变化 ✓；
+- 测试层：键集断言 + 同输入 lab_l 调用的既有 4 键逐位相等（`test_histogram_lab_l_appends_lstar_key_default_unchanged`）✓；
+- 检视层：本棒手工内联旧实现体复算 `counts.lum` 与新版**逐位一致** ✓。
+- 非法 luma 两层 400 ✓：函数层 raise（measure.py luma 校验）+ 端点层 `except ValueError → _bad_request`（app.py 实读）。
+
+## T5-3. 联动契约定型 ✓（对照 firstAnalysis 数据流）
+
+- RT：`firstAnalysis`（improccoordinator.cc:861）产 vhist16（65536 桶工作空间 Y master）→ CurveFactory 压 256 供曲线编辑器背景 + 同 master 喂 getAutoExp 曝光匹配——报告 §1 表格与实读一致 ✓。
+- pixo 契约 = `compute_histogram(pre_curve_gamma_frame, bins=256).counts.lum`：曲线背景所需「施加前亮度分布 256 桶」形状对齐 ✓；帧域差（RT 工作空间线性 Y vs pixo gamma 帧）以 `pre_curve_gamma_frame` 命名如实标注 ✓；管线截帧登记「待曲线 UI 落地，非本棒」清晰、不冒进 ✓；`luma=lab_l` 显式开启供感知 y 轴 ✓。契约充分。
+
+## T5-4. parade 裁决 ✓（实读 drawParade；1 条表述勘误）
+
+- `HistogramArea::drawParade`（histogrampanel.cc:1491-1530，本棒实读）：仅将已备数据渲染为红/绿/蓝三窗 Cairo buffer（含 needRed/Green/B 开关），**零新数据计算**——「非独立数据模式」裁决成立，我方 r/g/b 键即数据面的表述准确 ✓。
+- **勘误（建议级，不改裁决）**：drawParade 渲染的底层数据是 **rwave/gwave/bwave（RGB 波形 waveform）**，非报告 §1 行 19 所写 histRed/Green/Blue（直方图）——parade 在 RT 中是波形监视器的三窗布局。裁决（同数据多窗、非新模式）不受影响；T8 台账引用时按「RT parade=波形三窗」表述即可。
+
+## T5-5. 遗留补齐与 T7 登记 ✓
+
+- test_f04_param_fence 3 断言落位 ✓（合法五值栅栏放行 / 非法值拒且含 "mode" 原因 / Stage._curve_dict_check 抛 ValueError——T4 遗留项关闭）；
+- 匹配曲线联动（RT getAutoExp→曝光/对比自动匹配）登记 T7 曝光校准轮、口径清晰不在本棒 ✓。
+
+## T5 结论
+
+**通过（0 BLOCKER / 0 主要 / 1 建议勘误）**。测试实证：test_proxy_metrics + test_f04 + test_user_curve = **92 passed, 1 skipped**（本棒复跑）。T5 可提交推送并派 T6（HSL/分色调）；勘误句随 T6 或 T8 台账编制时顺带修正。
+
+*reviewer · T5 检视棒 2026-09-23 · 执行引擎：宿主原生*

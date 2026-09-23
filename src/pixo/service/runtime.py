@@ -983,12 +983,15 @@ class PixoServiceRuntime:
         session_id: str,
         long_edge: int = 1024,
         bins: int = 256,
+        luma: str = "bt709",
     ) -> dict[str, Any]:
         """对当前会话渲染预览并计算直方图（R25 F02，R23 §6 能力补齐）。
 
         与 measure_session 同错误语义：渲染失败不抛 5xx，返回 error 标记。
         直方图数组本体不进 measurement/decide（规则引擎只吃标量，见
         pipeline/metrics.py）；本方法仅供工作台反馈环（/histogram 端点）。
+        R32-T5：luma="lab_l" 追加 CIE L* 直方图键 lum_lstar（RT 面板 Luma
+        同口径，感知均匀曝光判定）；缺省 "bt709" 输出键集不变。
         """
         from pixo.vision.measure import compute_histogram
 
@@ -1004,7 +1007,7 @@ class PixoServiceRuntime:
                 "histogram": None,
                 "error": "render_failed",
             }
-        hist = compute_histogram(image, bins=int(bins))
+        hist = compute_histogram(image, bins=int(bins), luma=str(luma))
         return {
             "session_id": session_id,
             "generation": session.generation,
