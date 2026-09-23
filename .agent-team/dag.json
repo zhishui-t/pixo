@@ -67,19 +67,21 @@
       "id": "t2",
       "label": "T2 DCP 对照吸收",
       "role": "dev-1",
-      "status": "pending",
+      "status": "done",
       "deps": [
         "t1-qa"
-      ]
+      ],
+      "note": "10差异/0吸收/V9 LookTable→T8首位"
     },
     {
       "id": "t3",
       "label": "T3 胶片 HaldCLUT 接入",
       "role": "dev-1",
-      "status": "pending",
+      "status": "in_progress",
       "deps": [
         "t2"
-      ]
+      ],
+      "note": "dev-1 进行中"
     },
     {
       "id": "push",

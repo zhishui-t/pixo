@@ -190,3 +190,43 @@
 **通过（0 BLOCKER / 1 主要〔证据表述，限向修订，不阻塞提交〕/ 1 记录〔T1 提交遗漏适配，本棒修复正位〕）**。color.py 锚点与测试修复可提交；T2 推送后 dev-1 顺手修订 dev1-r32-t2.md V5 行 + json e4 note（措辞见 T2-3 处置），T8 台账编制时按修订稿引用。
 
 *reviewer · T2 检视棒 2026-09-23 · 执行引擎：宿主原生*
+
+---
+
+# R32-T3 检视报告（design-review-r32 续）· 轻量棒
+
+> 日期：2026-09-23（T3 检视棒）｜ 检视人：reviewer（本审核线）
+> 被检对象：core/lut3d.py 增量（hald_level_to_lut + write_cube）、tools/haldclut_convert.py（新 CLI）、tests/unit/test_haldclut_convert.py（6 用例）、dev1-r32-t3.md、T2 限向修订落位
+> RT 对照基线：rtengine/clutstore.cc @ 6c4cb59（本棒实读 :25-215）
+
+## T3-1. hald_level_to_lut 索引推导 ✓（实读 RT 原文对照）
+
+- **level 布局全一致**：边长=level³（RT clutstore.cc:40-47 `while level³<fw` 恰等）、网格 N=level²（:137 `clut_level *= clut_level`）、线性索引 **r+g·N+b·N²**（:183 `color = red + green*level + blue*level_square`，:137 后 level 即 N）、位深口径 uint16/65535（:138 `flevel_minus_one=(N-1)/65535`）——pixo 实现（xs=idx%side、ys=idx//side 行主序 gather、meshgrid ij 序 r 最慢 b 最快）与 RT 逐点对应 ✓。
+- 防呆：非 level³ 边长拒收并引导 n² 布局走既有 `hald_to_lut` ✓；**既有 hald_to_lut（n² 布局）零触碰**（diff 纯追加，唯一删除行为 `__all__` 扩展）✓。
+- write_cube 行序 r 最慢/b 最快与 parse_cube 读入一致；互逆性由 `test_write_cube_roundtrip` 锁定（4³ 随机数据、容差 2e-6=%.6g 文本量化、domain 断言）✓。
+
+## T3-2. 「三线性 vs 四面体 10 倍」论断 ✓（基准可信 + 独立复算远超）
+
+- **基准可信**：测试内 `rt_trilinear_ref` 与 RT getRGB 非 SSE 路径（clutstore.cc:186-210）逐式等价——intp 参数序展开同构（RT `intp(re, next, cur)` = cur+re·(next−cur) ≡ 测试 `intp(t,a,b)=a+t(b-a)` 同式）、r 向插值→g 混→b 平面重复→b 混结构一致、顶格钳 `min(N-2, v·(N-1)/65535)` 同款；出处标注在案（仅测量用，非生产移植）✓。
+- **独立复算（同场景 seed=7，本棒亲跑）**：err_tet=**5.96e-08**（float32 eps 级，仿射场上逐位精确）、err_tri=**1.665e-01**、比值 **≈2.8×10⁶ 倍**——「10 倍以上」论断保守成立，「吸收 RT 引擎代码只有精度下行」的取舍依据扎实 ✓。
+- 测试实证：test_haldclut_convert + test_lut = **22 passed**（本棒复跑）✓。
+
+## T3-3. CLI 与测试判别力 ✓（1 条建议）
+
+- 6 用例覆盖：恒等精确（16 位顶点 ≤1.5e-5=量化级）、8/16 位一致性（≤2/255）、非法尺寸拒绝（非立方/非方图）、write_cube↔parse_cube 往返、仿射精度对照、端到端 png→cube→lookup（真走 cv2 16 位 png 与 BGR→RGB 翻转往返）——判别力足够 ✓。
+- BGR 翻转正确性由端到端用例隐性锁定 ✓（cv2 读出 BGR、Hald 索引按 RGB——翻转缺失则恒等断言必挂）。
+- **建议（不阻塞）**：`test_tool_convert_identity` 端到端容差 `1.5/(n-1)≈0.1` 偏松（恒等 CLUT 上四面体应达量化级），可收紧至 ≤1e-4 级提升判别力；现版防「布局级完全错误」够用。
+
+## T3-4. 许可纪律 ✓
+
+RT 官方 Film Simulation 包许可异质如实记录（聚合无统一许可、CC-BY-NC 混杂）**不入仓**；实测 3 个胶片观感全部自造（自有版权）；转正入库留队长/用户裁决——与 task-brief T3 纪律（只引擎/格式层，数据另议）一致 ✓。
+
+## T3-5. T2 限向修订落位 ✓
+
+dev1-r32-t2.md V5 行勘误版（如实记录：RT dcp.cc:1892 无 FM 分支 MapWhiteMatrix 源白点常量 {0.3457,0.3585,0.2958} 被误当验证结论、E4 脚本无此断言、四种复算均 ≠D50）+ `_r32_t2_dcp_compare.json` e4 note 重新生成 + `.py` note 同步——与本棒 T2-3 钉死的事实一致，修订完整落位 ✓。上棒退回项关闭。
+
+## T3 结论
+
+**通过（0 BLOCKER / 0 主要 / 1 建议）**。T3 可提交推送并派 T4（曲线轮）；建议项（端到端容差收紧）随 T4 或收官轮顺带处理即可。
+
+*reviewer · T3 检视棒 2026-09-23 · 执行引擎：宿主原生*

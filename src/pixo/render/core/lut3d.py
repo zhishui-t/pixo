@@ -340,4 +340,81 @@ def hald_to_lut(hald: np.ndarray) -> LUT3D:
         cube[:, :, b, :] = np.transpose(tile, (1, 0, 2))          # 转置: [r, g, :]
     return LUT3D(cube)
 
-__all__ = ["tetrahedral_interp", "LUT3D", "parse_cube", "hald_to_lut"]
+
+# ---------------------------------------------------------------------------
+# Hald CLUT —— RT level 布局 (R32-T3) 与 .cube 写出
+# ---------------------------------------------------------------------------
+
+def hald_level_to_lut(hald: np.ndarray, max_value: float | None = None) -> LUT3D:
+    """HaldCLUT 图 (RT level 布局) → LUT3D。
+
+    布局口径 = RawTherapee clutstore.cc @ 6c4cb59 (GPLv3; 本函数为其加载
+    几何的独立 numpy 实现, 仅格式适配、无算法移植): 图像边长 = level³
+    (level>1 整数), 网格 N = level², 线性像素索引 = r + g·N + b·N²
+    (行主序扫描, b 最慢)。恒等 Hald level 8 → 512×512 图, 64³ 网格。
+
+    hald     : (S, S, 3|4) ndarray (S=level³); uint8/uint16 会被
+               max_value (缺省 = dtype 最大值 255/65535) 归一化, 浮点输入
+               按 [0,1] 直读。第 4 通道 (alpha) 忽略。
+    max_value: 位深归一化上限; None = 按 dtype 推断 (uint8→255,
+               uint16→65535, 浮点→1.0)。
+    返回 LUT3D ((N,N,N,3) float32, 索引序 [r,g,b])。
+    """
+    img = np.asarray(hald)
+    if img.ndim != 3 or img.shape[2] < 3:
+        raise ValueError(f"Hald 图须为 (S,S,>=3), 实得 {img.shape}")
+    if img.shape[0] != img.shape[1]:
+        raise ValueError(f"Hald 图必须是正方形, 实得 {img.shape[:2]}")
+    side = img.shape[0]
+    level = int(round(side ** (1.0 / 3.0)))
+    if level <= 1 or level ** 3 != side:
+        raise ValueError(
+            f"Hald 边长 {side} 不是 level³ (RT level 布局); "
+            f"n² 布局请用 hald_to_lut")
+    n = level * level  # 网格 N = level²
+    if max_value is None:
+        if img.dtype == np.uint8:
+            max_value = 255.0
+        elif img.dtype == np.uint16:
+            max_value = 65535.0
+        else:
+            max_value = 1.0
+    rgb = img[..., :3].astype(np.float32) / float(max_value)
+
+    rr, gg, bb = np.meshgrid(np.arange(n), np.arange(n), np.arange(n),
+                             indexing="ij")
+    idx = (rr + gg * n + bb * n * n).reshape(-1)
+    xs = idx % side
+    ys = idx // side
+    flat = rgb.reshape(-1, 3)
+    cube = flat[ys * side + xs].reshape(n, n, n, 3)
+    return LUT3D(np.ascontiguousarray(cube, dtype=np.float32))
+
+
+def write_cube(data: np.ndarray, path, title: str | None = None,
+               domain_min: float = 0.0, domain_max: float = 1.0) -> None:
+    """(N,N,N,3) LUT 数据 → 标准 .cube 文件 (Iridas/Resolve 通用格式)。
+
+    行序与 LUT3D.data 的内存序一致: r 最慢、b 最快 (parse_cube 的读入口径)。
+    非默认 DOMAIN 时写出 DOMAIN_MIN/MAX 行; 值按 "%.6g" 文本序列化。
+    """
+    data = np.asarray(data, dtype=np.float64)
+    if data.ndim != 4 or data.shape[3] != 3 or data.shape[0] != data.shape[1] \
+            or data.shape[1] != data.shape[2]:
+        raise ValueError(f"LUT data 须为 (N,N,N,3), 实得 {data.shape}")
+    n = data.shape[0]
+    lines: list[str] = []
+    if title:
+        lines.append(f'TITLE "{title}"')
+    if domain_min != 0.0 or domain_max != 1.0:
+        lines.append(f"DOMAIN_MIN {domain_min:.6g} {domain_min:.6g} {domain_min:.6g}")
+        lines.append(f"DOMAIN_MAX {domain_max:.6g} {domain_max:.6g} {domain_max:.6g}")
+    lines.append(f"LUT_3D_SIZE {n}")
+    lines.append("")
+    flat = data.reshape(-1, 3)  # r 最慢, b 最快 (与 parse_cube 行序一致)
+    for row in flat:
+        lines.append(f"{row[0]:.6g} {row[1]:.6g} {row[2]:.6g}")
+    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+__all__ = ["tetrahedral_interp", "LUT3D", "parse_cube", "hald_to_lut",
+           "hald_level_to_lut", "write_cube"]
