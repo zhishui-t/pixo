@@ -1,0 +1,16 @@
+# R32 战役终检签章（.qa_ok_r32_final）
+tester: tester-whitebox (delivery · 测试白盒路, campaign 终检棒) | 时间戳: 2026-09-24
+依据: .agent-team/test-report-r32-final.md (五项逐项证据) | 基线: render-core-integration
+
+结论: **终检五项全绿, 签章通过 —— R32 战役 (T1-T8) 收口。代码缺陷 0 新增 (0 blocker / 0 major / 0 minor)。**
+
+1. 全量回归 ✓ `python -m pytest tests -q` = **1765 passed / 12 skipped / 1 xfailed / 0 failed** (195.33s), 符合预期 ~1765+。
+2. gate 金样本零漂移 ✓ 战役累计 diff 上: test_gate_golden 7/7 (含 test_current_output_matches_goldens + generator no-drift) + test_gate_native_equivalence 6/6 + test_gate_curves 4/4; 四步「显式开启/缺省不变」回归锁全绿 (T1 default_ahd / T4 linear 逐位 / T6 adjust_math+split_tone array_equal / T7 baseline mode) —— 默认链零漂移红线成立。
+3. campaign 抽验 ✓ (命名批 72 passed / 26.42s) T1 test_io_rcd 15/15 (FallbackRequested + 默认 AHD 分支); T4 test_r32t4_akima_matches_scipy (scipy 独立参考 ≤1e-6); T6 test_adjust_math_default_bitwise_unchanged (array_equal); T7 match 端到端 metrics 写点 + exposure.py 代码面零 tone 参数写点 (grep params[/set_param 无命中)。
+4. GPL 合规面 ✓ THIRD_PARTY_NOTICES §8 R32-T1 RT 条目完整 (上游 URL + commit 6c4cb59 + 版权人 + 子组件 + GPL-3.0-or-later 同源); rcd_demosaic_native.cpp 文件头 RT 版权块逐字存在。
+5. 分支推送态 ✓ (2026-09-24 补核闭环) `git status -sb` = `render-core-integration...origin/render-core-integration` 同步零偏差、工作树全净; `git rev-parse HEAD` == `refs/remotes/origin/render-core-integration` == **fdd9d6f** (docs(r32) 收官提交, 纯 .agent-team/.artifacts 文档 + 台账, 零代码文件 —— 条件 1-4 证据对分支尖端继续有效); 本机 ls-remote 虽无凭据, tracking ref 与 status -sb 同步零偏差为本地可证的推送态权威记录。
+
+签章路径: 条件 1-4 证据 2026-09-23 固化于 test-report-r32-final.md; 第 5 项按报告「签章判定」节闭环路径, 于推送闭环后补核补签 —— 五项前置整体满足, 本签章成立。
+
+遗留观察 (不阻塞, 留档): 高反差场景 RCD 色度残余 >1 (DSC_5278/5957, 产品判断项, 数据在 _r32_t1_ab.json); 预览线 decode_cfa_flip 既有缺失待立项 (T1 报告 §缺陷清单); reviewer T1 建议 S-1~S-4。
+执行引擎: 宿主原生
