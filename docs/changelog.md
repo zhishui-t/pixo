@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-09-24 — 第三十二轮：RawTherapee 组件移植战役（T1-T8 八步串行，render-core-integration 分支）
+
+- **战役总况**：38 模块项裁决（吸收收编 8 / 具备保持 13 / 建议吸收 10〔P0×3〕/ 跳过 7）；
+  每步双门禁（设计/代码 review + 回归）；默认链零漂移红线全程实证（七提交累计）；
+  全量 1732→1765 passed / 0 failed（净增 33 用例）。GPLv3 合规（pixo 已 GPLv3，
+  RT 出处逐处标注；NOTICES §8）。
+- **T1 RCD 去马赛克进 native**（2758a18）：RT 核心逐字移植，A/B n=12 伪彩 0.944/
+  耗时 0.673 双优；附带修竖拍 flip bug（四态回归锁）。
+- **T2 DCP 链对照**（20fbbf2）：10 差异 0 吸收——我方矩阵合成=规范语义、RT 灰点随
+  WB 漂移系 dcraw 遗产；**最重发现 V9：底座整段跳过 DCP LookTable/HSM**（列 P0 首位）。
+- **T3 胶片 HaldCLUT**（ee8e071）：纯格式适配零引擎吸收（四面体插值精度高出 RT 三线性
+  ~2.8e6 倍）；转换器直通 .cube 卡库；RT 官方包许可异质不入仓。
+- **T4 曲线插值体系**（f5835ab）：user_curve 新增 spline/catmull_rom/akima/monotone 四模式
+  +黑白渐近线平段；检视抓 akima 双错（权重公式+左端延拓序）回流修正，scipy 双参考 ≤6e-8；
+  事实纠正：Akima 非 RT 模式。
+- **T5 直方图**（1236d2b）：Lab L* 感知亮度模式（RT 同口径）+ 曲线编辑器联动数据契约；
+  parade 实为波形三窗（勘误入档）。
+- **T6 HSL/分色调**（33abc4a）：RT 施加数学吸收（防截断二次混合/lum 饱和衰减/preserve_luma）；
+  CLUT 猜测被源码推翻（Split 系逐像素解析式）。
+- **T7 曝光匹配**（bd40c37）：getAutoExp 忠实移植（16 结构点过审）mode='match' 与 auto
+  并存；六键数学保持（ramp 实测达标）；黑白点硬钳制不吸收（我方乘性为设计特性）。
+- **T8 全模块清点台账**（.agent-team/r32-t8-ledger.md，正式交付物）：P0×3 =
+  LookTable 零消费 / guided-filter 局部恢复 / 预览线 flip 缺失；P1×4/P2×3 逐项带
+  工作量与证据；Locallab 归 S1/S2 图层轮。
+- **详见**：.artifacts/R32_rt_component_campaign.md（战役报告）。
+
 ## 2026-09-19 — 第三十轮：DNG 复刻线退役 + "色彩不准"定案与默认打开观感接线
 
 - **A. DNG 复刻线退役**（队长裁决）：OWN PIPELINE 换底后刻意保留的"回退保险"

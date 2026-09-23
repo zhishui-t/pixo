@@ -135,20 +135,21 @@
       "id": "t7",
       "label": "T7 曝光六项优化校准（RT 阴影高光恢复/黑白点/auto 曲线）",
       "role": "dev-1",
-      "status": "in_progress",
+      "status": "done",
       "deps": [
         "t6"
       ],
-      "note": "dev-1 进行中"
+      "note": "吸收1: mode=match移植; 六键/黑白点/HL压缩保持; 1765/0"
     },
     {
       "id": "t8",
       "label": "T8 RT 全模块清点与吸收台账（小波/局部调整/Retinex/降噪/色差/镜头矫正…）",
       "role": "dev-1+队长",
-      "status": "pending",
+      "status": "in_progress",
       "deps": [
         "t7"
-      ]
+      ],
+      "note": "dev-1 收官清点中"
     }
   ]
 }
