@@ -1,0 +1,22 @@
+﻿
+=== build/lib skin constants ===
+build/lib:183: SKIN_OKLAB_A = 0.01516
+build/lib:186: SKIN_OKLAB_MAJOR = 0.045692
+build/lib:189: SKIN_OKLAB_ANGLE = 0.191122
+build/lib:191: SKIN_OKLAB_SOFT_BAND = 0.25
+build/lib:218: def skin_mask_oklab(rgb01, soft_band: float = SKIN_OKLAB_SOFT_BAND) -> np.ndarray:
+build/lib:242: SKIN_OKLAB_A, SKIN_OKLAB_B,
+build/lib:243: SKIN_OKLAB_MAJOR, SKIN_OKLAB_MINOR,
+build/lib:244: SKIN_OKLAB_ANGLE)
+=== src skin constants ===
+src:188: SKIN_OKLAB_A = 0.015127
+src:191: SKIN_OKLAB_MAJOR = 0.049594
+src:194: SKIN_OKLAB_ANGLE = 0.196323
+src:196: SKIN_OKLAB_SOFT_BAND = 0.31
+src:223: def skin_mask_oklab(rgb01, soft_band: float = SKIN_OKLAB_SOFT_BAND) -> np.ndarray:
+src:247: SKIN_OKLAB_A, SKIN_OKLAB_B,
+src:248: SKIN_OKLAB_MAJOR, SKIN_OKLAB_MINOR,
+src:249: SKIN_OKLAB_ANGLE)
+=== build/lib exists? ===
+True
+2026/9/4 9:14:33

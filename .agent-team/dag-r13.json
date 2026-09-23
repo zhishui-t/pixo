@@ -1,0 +1,119 @@
+{
+  "title": "Pixo 第十三轮：功能迭代——M1 激活 × style_cards 接线 × region 扩展",
+  "nodes": [
+    {
+      "id": "r13-gate",
+      "label": "用户「功能继续迭代」",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "region-eval",
+      "label": "region规则激活评估",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "r13-gate"
+      ],
+      "note": "b+裁决/落地在飞"
+    },
+    {
+      "id": "stylecards-wire",
+      "label": "style_cards接decide_context",
+      "role": "dev-3",
+      "status": "done",
+      "deps": [
+        "r13-gate"
+      ],
+      "note": "默认关/双态11用例"
+    },
+    {
+      "id": "region-warmth",
+      "label": "region warmth参数",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "r13-gate"
+      ],
+      "note": "+13测试/零影响三重"
+    },
+    {
+      "id": "rule-activate",
+      "label": "规则入包裁决",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "region-eval",
+        "region-warmth"
+      ],
+      "note": "护栏+减半入包"
+    },
+    {
+      "id": "r13-qa",
+      "label": "门禁+全量回归",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "rule-activate",
+        "stylecards-wire"
+      ],
+      "note": ".r13_ok 1509/0"
+    },
+    {
+      "id": "r13-commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "r13-qa"
+      ]
+    },
+    {
+      "id": "r13-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r13-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r13-gate",
+      "region-eval"
+    ],
+    [
+      "r13-gate",
+      "stylecards-wire"
+    ],
+    [
+      "r13-gate",
+      "region-warmth"
+    ],
+    [
+      "region-eval",
+      "rule-activate"
+    ],
+    [
+      "region-warmth",
+      "rule-activate"
+    ],
+    [
+      "rule-activate",
+      "r13-qa"
+    ],
+    [
+      "stylecards-wire",
+      "r13-qa"
+    ],
+    [
+      "r13-qa",
+      "r13-commit"
+    ],
+    [
+      "r13-commit",
+      "r13-delivery"
+    ]
+  ]
+}

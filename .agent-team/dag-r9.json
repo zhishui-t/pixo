@@ -1,0 +1,448 @@
+{
+  "title": "Pixo 第九轮战役：收口清债 × oklch 切默认 × M1 掩码驱动渲染",
+  "nodes": [
+    {
+      "id": "gate1",
+      "label": "卡点①批准",
+      "role": "队长/用户",
+      "status": "done",
+      "note": "四方向全选+全自主"
+    },
+    {
+      "id": "design",
+      "label": "design.md+QA审核",
+      "role": "队长/qa",
+      "status": "done",
+      "deps": [
+        "gate1"
+      ],
+      "note": ".design_ok"
+    },
+    {
+      "id": "f06-golden-reverify",
+      "label": "F06 金样本重验",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "f02-baseline"
+      ],
+      "note": "24/24 PASS+F10放行"
+    },
+    {
+      "id": "f02-baseline",
+      "label": "F02 全量基线",
+      "role": "qa/队长",
+      "status": "done",
+      "deps": [
+        "gate1"
+      ],
+      "note": "1396 passed"
+    },
+    {
+      "id": "f01-changelog-history",
+      "label": "F01 changelog历史批",
+      "role": "writer",
+      "status": "done",
+      "deps": [
+        "gate1"
+      ],
+      "note": "31commit/11条目"
+    },
+    {
+      "id": "f18-dng-review",
+      "label": "F18 DNG SDK评估",
+      "role": "researcher",
+      "status": "done",
+      "deps": [
+        "gate1"
+      ],
+      "note": "发现GPL血缘"
+    },
+    {
+      "id": "f19-proposal",
+      "label": "F19 感知门禁提案",
+      "role": "researcher",
+      "status": "done",
+      "deps": [
+        "f18-dng-review"
+      ],
+      "note": "推荐双通道分期"
+    },
+    {
+      "id": "f03-fairface",
+      "label": "F03 FairFace移除",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "design",
+        "f02-baseline"
+      ],
+      "note": "82 passed"
+    },
+    {
+      "id": "f07-pin-hsv",
+      "label": "F07 存量卡钉hsv",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "design",
+        "f02-baseline"
+      ],
+      "note": "69条/逐位不变"
+    },
+    {
+      "id": "f08-gate-case",
+      "label": "F08 缺省分派case",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "f07-pin-hsv"
+      ],
+      "note": "19 case"
+    },
+    {
+      "id": "f12-region-stage",
+      "label": "F12 region_adjust",
+      "role": "dev-3",
+      "status": "done",
+      "deps": [
+        "design",
+        "f02-baseline"
+      ],
+      "note": "343 passed"
+    },
+    {
+      "id": "f13-mask-channel",
+      "label": "F13 掩码双线注入",
+      "role": "super-dev",
+      "status": "done",
+      "deps": [
+        "design",
+        "f02-baseline"
+      ],
+      "note": "门禁PASS已提交"
+    },
+    {
+      "id": "f14-decide-wiring",
+      "label": "F14 decide接线",
+      "role": "dev-3",
+      "status": "done",
+      "deps": [
+        "f12-region-stage",
+        "f13-mask-channel"
+      ],
+      "note": "e2e闭环(门禁在飞)"
+    },
+    {
+      "id": "f04-gsam",
+      "label": "F04 gsam移除",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "f03-fairface"
+      ],
+      "note": "107 passed"
+    },
+    {
+      "id": "f05-lr-baseline",
+      "label": "F05 lr_baseline处置",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "f04-gsam"
+      ],
+      "note": "记债(条目16)"
+    },
+    {
+      "id": "f09-patch-sync",
+      "label": "F09 patch同步",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "f07-pin-hsv"
+      ],
+      "note": "同源化(门禁PASS)"
+    },
+    {
+      "id": "f10-oklch-switch",
+      "label": "F10 切hsl+split_tone",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "f06-golden-reverify",
+        "f08-gate-case",
+        "f09-patch-sync"
+      ],
+      "note": "A1兑现(已提交3d2db90)"
+    },
+    {
+      "id": "f11-skin-ab",
+      "label": "F11 skin/colorcal A/B",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "f07-pin-hsv"
+      ],
+      "note": "72张语料/双结论"
+    },
+    {
+      "id": "f15-m1-assets",
+      "label": "F15 M1验收资产",
+      "role": "dev-3",
+      "status": "done",
+      "deps": [
+        "f14-decide-wiring",
+        "f08-gate-case"
+      ],
+      "note": "gate 20/harness/README"
+    },
+    {
+      "id": "m1-review",
+      "label": "M1 独立评审",
+      "role": "reviewer",
+      "status": "done",
+      "deps": [
+        "f15-m1-assets"
+      ],
+      "note": "0阻断/4重要/8建议,修复批在飞"
+    },
+    {
+      "id": "m1-test",
+      "label": "M1+oklch回归测试",
+      "role": "tester",
+      "status": "done",
+      "deps": [
+        "f15-m1-assets",
+        "f10-oklch-switch"
+      ],
+      "note": "1474 passed/0 failed"
+    },
+    {
+      "id": "f16-17-compliance",
+      "label": "F16/17 合规包",
+      "role": "researcher/writer",
+      "status": "done",
+      "deps": [
+        "f04-gsam"
+      ],
+      "note": "NOTICES已建"
+    },
+    {
+      "id": "qa-final",
+      "label": "QA 总审(.qa_ok)",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "f01-changelog-history",
+        "f05-lr-baseline",
+        "f10-oklch-switch",
+        "f11-skin-ab",
+        "m1-review",
+        "m1-test",
+        "f16-17-compliance",
+        "f19-proposal"
+      ],
+      "note": ".qa_ok PASS"
+    },
+    {
+      "id": "f20-changelog-round",
+      "label": "F20 changelog本轮批",
+      "role": "writer",
+      "status": "done",
+      "deps": [
+        "qa-final"
+      ]
+    },
+    {
+      "id": "commit",
+      "label": "分批commit",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "qa-final"
+      ],
+      "note": "14笔战役提交"
+    },
+    {
+      "id": "delivery",
+      "label": "DELIVERY 交付",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "f20-changelog-round",
+        "commit"
+      ],
+      "note": "卡点③呈报"
+    }
+  ],
+  "edges": [
+    [
+      "gate1",
+      "design"
+    ],
+    [
+      "gate1",
+      "f02-baseline"
+    ],
+    [
+      "gate1",
+      "f01-changelog-history"
+    ],
+    [
+      "gate1",
+      "f18-dng-review"
+    ],
+    [
+      "design",
+      "f03-fairface"
+    ],
+    [
+      "f02-baseline",
+      "f03-fairface"
+    ],
+    [
+      "design",
+      "f07-pin-hsv"
+    ],
+    [
+      "f02-baseline",
+      "f07-pin-hsv"
+    ],
+    [
+      "design",
+      "f12-region-stage"
+    ],
+    [
+      "f02-baseline",
+      "f12-region-stage"
+    ],
+    [
+      "design",
+      "f13-mask-channel"
+    ],
+    [
+      "f02-baseline",
+      "f13-mask-channel"
+    ],
+    [
+      "f02-baseline",
+      "f06-golden-reverify"
+    ],
+    [
+      "f03-fairface",
+      "f04-gsam"
+    ],
+    [
+      "f07-pin-hsv",
+      "f08-gate-case"
+    ],
+    [
+      "f07-pin-hsv",
+      "f09-patch-sync"
+    ],
+    [
+      "f06-golden-reverify",
+      "f10-oklch-switch"
+    ],
+    [
+      "f08-gate-case",
+      "f10-oklch-switch"
+    ],
+    [
+      "f09-patch-sync",
+      "f10-oklch-switch"
+    ],
+    [
+      "f07-pin-hsv",
+      "f11-skin-ab"
+    ],
+    [
+      "f04-gsam",
+      "f05-lr-baseline"
+    ],
+    [
+      "f12-region-stage",
+      "f14-decide-wiring"
+    ],
+    [
+      "f13-mask-channel",
+      "f14-decide-wiring"
+    ],
+    [
+      "f14-decide-wiring",
+      "f15-m1-assets"
+    ],
+    [
+      "f08-gate-case",
+      "f15-m1-assets"
+    ],
+    [
+      "f15-m1-assets",
+      "m1-review"
+    ],
+    [
+      "f15-m1-assets",
+      "m1-test"
+    ],
+    [
+      "f10-oklch-switch",
+      "m1-test"
+    ],
+    [
+      "f04-gsam",
+      "f16-17-compliance"
+    ],
+    [
+      "f18-dng-review",
+      "f19-proposal"
+    ],
+    [
+      "f01-changelog-history",
+      "qa-final"
+    ],
+    [
+      "f05-lr-baseline",
+      "qa-final"
+    ],
+    [
+      "f10-oklch-switch",
+      "qa-final"
+    ],
+    [
+      "f11-skin-ab",
+      "qa-final"
+    ],
+    [
+      "m1-review",
+      "qa-final"
+    ],
+    [
+      "m1-test",
+      "qa-final"
+    ],
+    [
+      "f16-17-compliance",
+      "qa-final"
+    ],
+    [
+      "f19-proposal",
+      "qa-final"
+    ],
+    [
+      "qa-final",
+      "f20-changelog-round"
+    ],
+    [
+      "qa-final",
+      "commit"
+    ],
+    [
+      "f20-changelog-round",
+      "delivery"
+    ],
+    [
+      "commit",
+      "delivery"
+    ]
+  ]
+}

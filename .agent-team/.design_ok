@@ -1,0 +1,11 @@
+# .design_ok — R31 设计门禁放行（第 3 阶段：设计审核 + 复检签发）
+
+审核人: reviewer（delivery 质量门禁；独立评审引擎=WorkBuddy 会话 wbdy-651119f0-3ba，model=deepseek-v4.1-flash，effort=max，两轮：job-6fba0b63b1fb 首审 / job-a7b4c04b4485 复检）
+被审对象: .agent-team/design.md v2.1（v1 → v2 六项 BLOCKER 整改 → v2.1 复检残留修订；修订均由队长落实并留痕 §9，reviewer 全程只读）
+覆盖 F-ID: F0 / F1 / F2 / F3 / F4 / F5（全覆盖）
+ISO 时间戳: 2026-09-22T11:11:41+0800 (2026-09-22T03:11:41Z)
+结论: **审核通过（两轮整改后通过）** —— 首轮 6 项 BLOCKER 全部消解（B1-B4/B6 文档修订落位复验；B5 经 pristine zip 3809 条目字节比对实证：vcxproj 11 删 0 加、sln 未动、SDK 源码零漂移）；复检 gating 残留-1/2/3（RT `-d` 无参 flag :32、§5 矛盾行删除+DNG 臂全分辨率表述 :33/:85、§8 时间限定+本轮产物白名单 :113-118）经逐处 grep 复核全部落位；判据侧实证：§2 float 管线与 8 位标度逐像素吻合 ≤1.08 LSB、u16 换算链恒等、ΔE76 对齐 fit_tone_curve.py:106-111、§3 判据量唯一可复算且 F4 引用闭环。§2/§3 为唯一口径真相源。
+非阻塞观察: ① design.md:87 RT pp3 行仍为无条件表述，与 :32 条件口径（仅元数据证实非 sRGB 时补并以偏离记录）未逐字对齐，以 §2 为准；② §8 残留枚举未穷尽盘上全部既有 `_r31_*` 文件（时间限定+白名单机制已覆盖其意图）。
+复检证据: .agent-team/design-review.md（R31 首轮意见 + v2 复检报告两段：20 条事实性核验、逐项 verdict 表、cv2 5.0.0 数值实验、pristine zip 全树比对）
+开工前置提醒: F1 第一件事="只编 vcxproj"重编验证（B5 物理清净后的最后闭环，design.md:84）；建议级残留（残留-4~6、F4 拟合接口/F5 抽片量化等备忘）见 design-review.md，随报告批注即可，不阻塞。
+归档说明: 原 `.design_ok`（R22 内容）已另存 `.agent-team/.design_ok.r22` 以保留门禁证据链，本文件为 R31 签章。

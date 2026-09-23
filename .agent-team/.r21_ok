@@ -1,0 +1,28 @@
+# .r21_ok — R21 收口门禁通过签章（第二十一轮：闭环插电 M0）
+
+审核人: qa (QA-checker，交付总审 + 门禁执笔)
+覆盖 F-ID: F01 / F02 / F03 / F04 / F05（CR-01~05 全覆盖；逐条核对与证据见 `.agent-team/qa-report-r21.md` §4）
+ISO 时间戳: 2026-09-10T22:54:49+08:00 (2026-09-10T14:54:49Z)
+
+## 门禁三要素（QA 本会话独立复跑，命令+输出为凭）
+
+1. **全量回归**: `python -m pytest tests -q -m "not e2e"` → **1574 passed / 6 skipped / 1 xfailed / 0 failed**（212.66s；此前另一次复跑 251.99s 同结果）
+   - 红线 R20 基线 1533 → **≥1533 达成**（+41 = dev-1 20 + dev-2 14 + dev-2 6 + tester 门禁负控镜像 1）
+2. **金样本 gate 零漂移**:
+   - 合成 gate（21 features）: `python -m pytest tests/regression/test_gate_golden.py -q` → **7 passed in 26.94s**
+   - 真 RAW（4 features × 6 样本 = 24 case）: `python src/pixo/render/tools/gate_golden.py compare --samples D:/tmp/pixo_t108/samples.json --out data/golden/reference/render_bench/goldens/gate_defaults --long-edge 512` → **RESULT: PASS（24/24，u8_max=0 / u16_max=0 逐位一致）**，`git status -- data` 零改动
+3. **真 RAW 闭环实证（F05 门禁）**: `$env:PIXO_GATE_AUTOLOOP_RAW='K:\data\photo\0711\raw\DSC_5236.NEF'; python -m pytest tests/regression/test_gate_auto_loop_e2e.py -q -m gate` → **2 passed in 124.06s**
+   - `state=ACCEPTED`；`params={"colorcal":{"saturation":-0.15}}` 非空；`rule_ids=["saturation_high_rule"]`（全 trace decide 事件并集口径）
+   - 与「仅渲染基线」像素差 `baseline_pixel_diff=56,293,263`；FINAL_QC 高光溢出 `0.025923 ≤ 0.03`
+   - trace 完整（`trace_event_count=12`、含 `param_update`、`measurements=2`）；聚合正控（断言⑥）与负控镜像（断言⑦）同绿
+   - `segmenter_last_degraded=[]`（默认路由 rfdetr+segformer 离线可用；未设 `PIXO_ALLOW_RESTRICTED`）
+
+## 结论
+
+**通过。** F01~F05 全部实现且逐条可追溯，全量回归 1574/0、金样本零漂移、真 RAW 闭环门禁 2 passed 三项门禁要素齐备；QA 独立复跑与独立复算（D1 反例样本、D2 观测）均与交付报告一致。遗留问题已三级处置：**阻塞 0 项**；记债 **#20**（auto-loop 不联动 `/timeline`·`/decide` 缓存）与 **#21**（无任务级超时/取消）须写入 `docs/tech_debt.md` 与 `DELIVERY-R21.md`；QA 另修 3 项（2 处测试 docstring 措辞、1 处 D1 证据脚本误标）并复验。详见 `.agent-team/qa-report-r21.md`。
+
+## 证据与边界
+
+- 原始输出: `.agent-team/tmp-qa-r21-{full,full-final,gate,gate-noenv,golden,golden-compare,targeted,targeted2}.txt`、`tmp-qa-r21-d1-recheck*.{py,txt}`、`tmp-qa-r21-d2*.{py,txt}`
+- 关联门禁: `.design_ok`（设计审核 + 增量复核条目 #1）、`.qa_ok`（交付总审）均已在位
+- 边界: QA 未改 `src/**`、`frontend/**`、`configs/**`、`docs/changelog.md`；未执行 git 提交（提交与 changelog/DELIVERY 归队长，见 brief 完成标准 6）

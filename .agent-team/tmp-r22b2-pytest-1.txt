@@ -1,0 +1,75 @@
+..FFF.                                                                   [100%]
+================================== FAILURES ===================================
+__________________ test_model_license_registry_paths_resolve __________________
+
+    def test_model_license_registry_paths_resolve():
+        """条目 3（R22 加固）: 许可台账登记的仓内路径与当前路径同步（无悬空），
+        且交付形态（in_repo / external_*）与 files[] 事实一致。
+    
+        覆盖：`files[]` 逐项相对仓库根存在性；`delivery=in_repo` ⇒ 非空；
+        外部条目的显式标记 + notes。不覆盖：法律判断本身（许可条款真伪 = 人工核验，
+        THIRD_PARTY_NOTICES §7 速查表）。
+        """
+        result = _check_model_licenses()
+>       assert result["checked_paths"] >= 1, (
+            "断言空转：model_licenses.json 无任何 files[] 路径被检查（条目不完整）")
+E       AssertionError: 断言空转：model_licenses.json 无任何 files[] 路径被检查（条目不完整）
+E       assert 0 >= 1
+
+tests\unit\test_tech_debt_invariants.py:188: AssertionError
+______________ test_model_license_registry_guard_is_falsifiable _______________
+
+tmp_path = WindowsPath('C:/Windows/Temp/pytest-of-10042/pytest-908/test_model_license_registry_gu0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002687F85A630>
+
+    def test_model_license_registry_guard_is_falsifiable(tmp_path, monkeypatch):
+        """条目 3 负控（层 ④）: 把 aesthetic_scorer.pt 的路径改成不存在的值
+        ⇒ 生产断言 `test_model_license_registry_paths_resolve` **必红**。
+    
+        用临时副本 + monkeypatch 模块常量，**不触碰仓库文件**（负控仅证明守卫
+        可被证伪，即断言非空转）。
+        """
+        data = _load_json(_LICENSE_PATH)
+        mutated = 0
+        for entry in data["models"]:
+            if entry.get("name") == "aesthetic_scorer.pt":
+                entry["files"] = ["resources/models/aesthetic/__不存在__.pt"]
+                mutated += 1
+        assert mutated == 1, "负控前置失败：model_licenses.json 未找到 aesthetic_scorer.pt"
+        bad = tmp_path / "model_licenses.json"
+        bad.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        monkeypatch.setattr(sys.modules[__name__], "_LICENSE_PATH", bad)
+>       with pytest.raises(AssertionError, match="悬空"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: '悬空'
+E         Actual message: '断言空转：model_licenses.json 无任何 files[] 路径被检查（条目不完整）\nassert 0 >= 1'
+
+tests\unit\test_tech_debt_invariants.py:223: AssertionError
+______________ test_vision_model_path_or_source_resolution_rules ______________
+
+    def test_vision_model_path_or_source_resolution_rules():
+        """条目 3（R22 加固）: `vision_models.json` 的 `path_or_source` 解析规则。
+    
+        规则（写死在此，防后人误读）：
+          1. `$VAR/相对路径` → 以环境变量 `VAR` 为基座解析；**`VAR` 未设置时判
+             「待核验」并报红**，绝不静默通过（旧台账的
+             `$GUANLAN_ROOT/models/aesthetic_scorer.pt` 即此形态；R22 已改为仓内
+             相对路径 `resources/models/aesthetic/aesthetic_scorer.pt`）。
+          2. 仓内相对路径（`resources/`、`src/`、`./`、`../`）或盘符绝对路径
+             → 必须存在。
+          3. 其他字符串（如 "HuggingFace 缓存 openai/clip-vit-base-patch32"）视为
+             外部来源描述 ⇒ 条目必须带 `delivery=external_hub_download|external_pip_download`。
+        """
+        result = _check_vision_model_paths()
+>       assert result["checked_paths"] >= 1, (
+            "断言空转：vision_models.json 无任何可解析路径被检查")
+E       AssertionError: 断言空转：vision_models.json 无任何可解析路径被检查
+E       assert 0 >= 1
+
+tests\unit\test_tech_debt_invariants.py:303: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/unit/test_tech_debt_invariants.py::test_model_license_registry_paths_resolve
+FAILED tests/unit/test_tech_debt_invariants.py::test_model_license_registry_guard_is_falsifiable
+FAILED tests/unit/test_tech_debt_invariants.py::test_vision_model_path_or_source_resolution_rules
+3 failed, 3 passed in 1.10s

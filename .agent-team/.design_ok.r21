@@ -1,0 +1,23 @@
+# .design_ok — R21 设计门禁放行（第 4 阶段：设计审核 + 修复）
+
+审核人: QA-checker
+被审对象: .agent-team/design-r21.md（审核前 136 行 → 修订后 173 行）
+覆盖 F-ID: F01 / F02 / F03 / F04 / F05（全覆盖；逐项对照见 .agent-team/design-review-r21.md §1，CR-01~05 与 brief 完成标准 1~6 均已追溯）
+ISO 时间戳: 2026-09-10T21:45:36+08:00 (2026-09-10T13:45:36Z)
+结论: 审核通过（修复后通过）——design-r21.md 经 10 处最小修订（4 处重要：F01/F05 的 rule_ids 断言原本不可运行（LoopResult.decision 是状态字符串，loop.py:1959）；§2.1 缺 lint/装配用键宇宙，按原文字 load_rules 会抛 DecideError（region_rules.yaml 的 sky_*/plant_*）；F04 缺接口小节与返回契约；F05 gate 只挂 gate_e2e 会掉出 CR-05 的 `-m gate` 选中）并逐处复验落位后，满足：F01~F05 全覆盖、接口与契约明确、可测且无误判断言、404/400/异常/单飞/降级/时长边界充分、文件域两流互斥、风险已识别且可执行。
+范围声明: 门禁仅表示 QA 的设计审核结论（只审设计、未改 src/ tests/ configs/）。
+卡点②声明: 本门禁**不表示用户已确认**；design-r21.md §7 用户确认记录仍待队长请用户确认（team-manifest.md:51 卡点②），用户点头前不得进入第 6 阶段开发。
+不阻塞项: 5 项需队长裁决（D1 F05 rule_ids 可达性仅约 1% 余量 / D2 CR-04 点名的 make_default_scorer 真假分支 / D3 /decide 缓存与 auto-loop 联动 / D4 无任务级超时取消 / D5 curl 手测由 gate 替代），详见 design-review-r21.md §10。
+
+---
+
+## 增量复核条目 #1 — 契约修订 R1（F05 真 RAW 首跑 FAILED 后的 rework 回流）
+
+审核人: QA-checker
+覆盖项: design §7「契约修订 R1」+ §1 F01 + §2.2 GET/POST 契约 + §4 断言②（含新增断言 6 正控 / 7 负控）；§2.3 任务表字段、§5 风险行 2 证据同步
+ISO 时间戳: 2026-09-10T22:15:28+08:00 (2026-09-10T14:15:28Z)
+结论: **通过（增量复核通过）**——R1 修复方向（`rule_ids` = 全 trace `event_type=="decide"` 事件 `value["rule_ids"]` 的并集，首次出现序去重；追加 `rule_ids_by_iteration`）经复核**正确 / 可达 / 不误判 / 与 engine 语义自洽**；裁决 A 维持；裁决 B（不修 engine/loop，不透传历史 rule_ids）维持。复核**就地纠正首版 R1 两处事实错误**：① 把 `iteration>=max_iterations` 的 `last_iteration` 误作"短路返回 []"（实为 `should_stop=False`、规则照跑，`engine.py:977-989`；本次空值真因是该轮规则**自然不命中**：首轮 `saturation_high_rule` 命中后末轮 `colorfulness_proxy` 5.8936 < 阈值 6.13）；② 提议用 `PIXO_GATE_AUTOLOOP_MAX_ITER=1` 当负控（该轮同样照跑规则、本语料首轮必命中 ⇒ 会得出错误结论）。已补入有效正控（`rule_ids` == `rule_ids_by_iteration` 逐轮并集）与单元级负控（全空→`[]`；首轮命中+末轮空→首轮命中）。**未放宽任何断言、未改语料、未动 engine/loop/渲染路径。**
+证据: `.agent-team/tmp-r21-gate-run.txt:98`（末轮 decide = `adjust_and_continue` + `last_iteration=True` + `rule_ids=[]` + `params={'colorcal':{'saturation':-0.15}}` + `colorfulness_proxy=5.8936`）、`:3`（其余四条断言全过）、`:112`（`1 failed in 102.90s`）
+范围声明: 门禁仅表示 QA 的设计审核结论；本次未改 `src/**`、`tests/**`（仅只读回读取证）。
+卡点②声明（不变）: 本门禁不表示用户已确认；用户批准记录由队长维护于 design §7（2026-09-10 用户批准设计、卡点②通过——该记录为队长事实登记，非本门禁的认证）。
+不阻塞遗留: `runtime.py:1021-1029` 与 `test_gate_auto_loop_e2e.py:38-48,79-85` 的 docstring 仍保留"短路"归因措辞（**行为已正确**：并集实现已落 `runtime.py:993-1054`、gate `:106-116`），建议收口时对齐措辞，不必单独返工；详见 `design-review-r21.md §11`。

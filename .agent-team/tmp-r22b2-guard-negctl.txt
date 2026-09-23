@@ -1,0 +1,27 @@
+========================================================================
+[A] 生产断言（正常态）
+  test_model_license_registry_paths_resolve: PASS
+  test_vision_model_path_or_source_resolution_rules: PASS
+========================================================================
+[B] 覆盖面审计：实际被检查的路径（证明非空转）
+  model_licenses.json: checked_paths=1 dangling=[] incomplete=[]
+    - aesthetic_scorer.pt: delivery='in_repo' files=['resources/models/aesthetic/aesthetic_scorer.pt']
+    - openai/clip-vit-base-patch32: delivery='external_hub_download' files=[]
+    - uniface-face-parsing: delivery='external_hub_download' files=[]
+    - rfdetr-seg-2xl: delivery='external_pip_download' files=[]
+    - segformer-b1-finetuned-ade-512-512: delivery='external_hub_download' files=[]
+    - facebook/sapiens-seg-0.3b: delivery='external_hub_download' files=[]
+  vision_models.json:  checked_paths=1 pending=[] unmarked=[]
+    - aesthetic-scorer: kind=repo path_or_source='resources/models/aesthetic/aesthetic_scorer.pt'
+    - openai-clip-vit-base-patch32: kind=external path_or_source='HuggingFace 缓存 openai/clip-vit-base-patch32'
+========================================================================
+[C] 负控 1：files[] 路径改坏（临时副本）⇒ 生产断言必红
+  变红 ✓ AssertionError: model_licenses.json 台账悬空路径（登记未同步）: ['aesthetic_scorer.pt: files=resources/models/aesthetic/__不存在__.pt（相对仓库根不存在）']
+========================================================================
+[D] 负控 2：删掉 delivery 标记（临时副本）⇒ 层②必红
+  变红 ✓ AssertionError: 断言空转：model_licenses.json 无任何 files[] 路径被检查（条目不完整）
+========================================================================
+[E] 负控 3：$GUANLAN_ROOT 形态 + 环境变量缺失 ⇒ 判「待核验」
+  pending = ['legacy-env: path_or_source 依赖环境变量 $GUANLAN_ROOT（未设置）⇒ 待核验']
+========================================================================
+结论: 三层负控均变红/判待核验 ⇒ 断言非空转，可被破坏性测试证伪。

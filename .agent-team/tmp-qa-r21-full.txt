@@ -1,0 +1,38 @@
+........................................................................ [  4%]
+........................................................................ [  9%]
+..........s.............................s.s............................. [ 13%]
+........................................................................ [ 18%]
+........................................................................ [ 22%]
+........................................................................ [ 27%]
+........................................................................ [ 31%]
+........................................................................ [ 36%]
+........................................................................ [ 40%]
+........................................................................ [ 45%]
+...................................................s.................... [ 50%]
+........................................................................ [ 54%]
+........................................................................ [ 59%]
+........................................................................ [ 63%]
+........................................................................ [ 68%]
+.................................................s...................... [ 72%]
+........................................................................ [ 77%]
+..........................................s............................. [ 81%]
+........................................................................ [ 86%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+....................................................................x    [100%]
+============================== warnings summary ===============================
+D:\Python\Python312\tools\Lib\site-packages\fastapi\testclient.py:1
+  D:\Python\Python312\tools\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/integration/test_segmenter_warmup.py: 11 warnings
+  D:\Python\Python312\tools\Lib\site-packages\torch\jit\_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/unit/test_calib_optimize.py::TestPenalties::test_shared_theta_theta0_finite_and_skin_zero
+  K:\work\project\pixo\tests\unit\test_calib_optimize.py:242: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:823.)
+    assert float(cons["skin_pos"]) == 0.0            # θ0 轴正 → hinge 零
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1574 passed, 6 skipped, 1 xfailed, 13 warnings in 251.99s (0:04:11)

@@ -1,0 +1,51 @@
+warning: in the working copy of 'tests/unit/test_metrics_for_decide_public.py', LF will be replaced by CRLF the next time Git touches it
+diff --git a/tests/unit/test_metrics_for_decide_public.py b/tests/unit/test_metrics_for_decide_public.py
+index 65282f6..b77d044 100644
+--- a/tests/unit/test_metrics_for_decide_public.py
++++ b/tests/unit/test_metrics_for_decide_public.py
+@@ -6,8 +6,8 @@
+    dict 断言，而不是与已改成 wrapper 的 loop 函数自比）；
+ 2. ``metric_universe(("face", "sky", "plant"))`` 覆盖 ``region_rules.yaml``
+    的 condition 与 formula 引用的**全部**键；
+-3. **显式传** ``metric_keys=metric_universe(...)`` 后，6 个 ``DEFAULT_RULES``
+-   文件全部 ``load_rules`` 无 ``DecideError``；
++3. **显式传** ``metric_keys=metric_universe(...)`` 后，7 个 ``DEFAULT_RULES``
++   文件全部 ``load_rules`` 无 ``DecideError``（R22 F01 扩容：+noise_rules.yaml）；
+ 4. ``merge_proxy_metrics`` 把 ``compute_proxy_metrics`` 三键合到 measurement
+    **顶层**（非 ``global`` 下），且随后 ``metrics_for_decide`` 可见。
+ 
+@@ -168,6 +168,10 @@ def test_metric_keys_is_flatten_fixed_set_without_region_keys():
+         "colorfulness_proxy",
+         "tonal_range",
+         "crop_suggestion_applicable",
++        # R22 F01 扩容（design §1/§2.1）：噪声/细节 4 层展平键入键宇宙
++        # measurement["global"]["detail"]["sharpness"] → 精确集合 10→12 键
++        "noise_ratio",
++        "detail_score",
+     })
+     assert not any(k.startswith(("face_", "sky_", "plant_")) for k in METRIC_KEYS)
+ 
+@@ -226,8 +230,9 @@ def test_metric_universe_follows_prompts_argument():
+ 
+ 
+ def test_default_rules_load_with_explicit_metric_universe():
+-    """显式传键宇宙后，6 个 DEFAULT_RULES 文件全部 load_rules 无 DecideError。"""
+-    assert len(DEFAULT_RULES) == 6
++    """显式传键宇宙后，7 个 DEFAULT_RULES 文件全部 load_rules 无 DecideError。"""
++    # R22 F01 扩容（design §1/§2.1）：新增 noise_rules.yaml（默认关）⇒ 6→7 文件
++    assert len(DEFAULT_RULES) == 7
+     universe = metric_universe(("face", "sky", "plant"))
+ 
+     total = 0
+@@ -238,8 +243,10 @@ def test_default_rules_load_with_explicit_metric_universe():
+         per_file[Path(path).name] = len(rules)
+         total += len(rules)
+ 
+-    assert total == 11, per_file  # 6 文件 / 11 条（exploration-r21 probe2 口径）
++    # R22 F01 扩容（design §1/§2.1）：noise_luminance_rule_040 计入 ⇒ 11→12 条
++    assert total == 12, per_file  # 7 文件 / 12 条（R22 F01 增量后口径）
+     assert per_file["region_rules.yaml"] == 2
++    assert per_file["noise_rules.yaml"] == 1
+ 
+ 
+ # ---------------------------------------------------------------- 验收 ④ 顶层合并

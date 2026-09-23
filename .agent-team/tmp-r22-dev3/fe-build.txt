@@ -1,0 +1,20 @@
+✓ Lockfile passes supply-chain policies (verified 11s ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: esbuild@0.21.5
+
+Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+[ERROR] Command failed with exit code 1: "D:\code\nodejs\node.exe" "C:\Users\10042\AppData\Roaming\npm\node_modules\pnpm\bin\pnpm.mjs" install
+
+pnpm: Command failed with exit code 1: "D:\code\nodejs\node.exe" "C:\Users\10042\AppData\Roaming\npm\node_modules\pnpm\bin\pnpm.mjs" install
+    at getFinalError (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:89024:14)
+    at makeError (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:91331:21)
+    at getSyncResult (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:93175:10)
+    at spawnSubprocessSync (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:93135:14)
+    at execaCoreSync (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:93065:23)
+    at callBoundExeca (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:95593:23)
+    at boundExeca (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:95570:49)
+    at sync2 (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:95729:10)
+    at runPnpmCli (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:269872:5)
+    at runDepsStatusCheck (file:///C:/Users/10042/AppData/Roaming/npm/node_modules/pnpm/dist/pnpm.mjs:271638:7)

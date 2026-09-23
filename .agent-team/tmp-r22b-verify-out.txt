@@ -1,0 +1,14 @@
+[1] 镜像存在: True | src: True
+[2] 字节数: src=3036 cfg=3036 | 相等=True
+[3] sha256 src=d7b7f1ca8dc814c304f9cc1a5fbb8e644684ce2262eccaa10ebd49fa3caa68b1
+    sha256 cfg=d7b7f1ca8dc814c304f9cc1a5fbb8e644684ce2262eccaa10ebd49fa3caa68b1
+[4] configs/rules/*.yaml 盘点 (n=7): ['color_rules.yaml', 'crop_suggest_rule_003.yaml', 'exposure_rule_001.yaml', 'highlight_protect_rule_002.yaml', 'noise_rules.yaml', 'region_rules.yaml', 'tone_clarity_rules.yaml']
+[5] noise_rules.yaml 已被日落护栏枚举: True
+[6] 镜像全部为 src 侧同名文件: True
+[7] 宽松模式 load_rules(configs 镜像) -> n=1, enabled=False
+    严格模式注册集 n=24（含 noise_ratio=True）
+[8] 严格模式 load_rules(configs 镜像) -> n=1, rule_id=noise_luminance_rule_040
+[9] action.formula='0.5 * (noise_ratio / 0.62 - 1.0)'
+    命中守卫 token: 无
+[10] condition 无 formula 键: True
+[11] DEFAULT_RULES n=7 -> ['exposure_rule_001.yaml', 'highlight_protect_rule_002.yaml', 'crop_suggest_rule_003.yaml', 'tone_clarity_rules.yaml', 'color_rules.yaml', 'region_rules.yaml', 'noise_rules.yaml']

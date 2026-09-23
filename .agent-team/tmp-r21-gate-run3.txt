@@ -1,0 +1,21 @@
+[R21-F05] rules_count=11
+Loading weights:   0%|          | 0/208 [00:00<?, ?it/s]Loading weights: 100%|██████████| 208/208 [00:00<00:00, 16010.56it/s]
+[R21-F05] {"state": "ACCEPTED", "reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (2)", "iteration": 2, "rules_count": 11, "params": {"colorcal": {"saturation": -0.15}}, "rule_ids": ["saturation_high_rule"], "rule_ids_last_nonempty": ["saturation_high_rule"], "trace_event_count": 12, "measurements": 2, "has_param_update": true, "highlight_clip_ratio": 0.025923, "colorfulness_proxy": 9.2987, "segmenter_last_degraded": []}
+[R21-F05-decide-events] [{"iteration": 1, "decision": "adjust_and_continue", "rule_ids": ["saturation_high_rule"], "last_iteration": false, "colorfulness_proxy": 6.1888}, {"iteration": 2, "decision": "adjust_and_continue", "rule_ids": [], "last_iteration": true, "colorfulness_proxy": 5.8936}]
+[R21-F05] baseline_pixel_diff=56293263
+[R21-F05-rule-ids-by-iteration] [{"iteration": 1, "rule_ids": ["saturation_high_rule"]}, {"iteration": 2, "rule_ids": []}]
+..
+=================================== PASSES ====================================
+_____________________ test_real_raw_auto_loop_end_to_end ______________________
+------------------------------ Captured log call ------------------------------
+WARNING  pixo.vision.segmenters.multi_router:multi_router.py:114 [pixo.vision.segmenters] 后端 sapiens 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+WARNING  pixo.vision.segmenters.multi_router:multi_router.py:114 [pixo.vision.segmenters] 后端 uniface 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+WARNING  pixo.vision.segmenters.multi_router:multi_router.py:153 [pixo.vision.segmenters] prompt 'face' 无后端返回，零掩码降级
+============================= slowest 5 durations =============================
+119.67s call     tests/regression/test_gate_auto_loop_e2e.py::test_real_raw_auto_loop_end_to_end
+
+(4 durations < 0.005s hidden.  Use -vv to show these durations.)
+=========================== short test summary info ===========================
+PASSED tests/regression/test_gate_auto_loop_e2e.py::test_real_raw_auto_loop_end_to_end
+PASSED tests/regression/test_gate_auto_loop_e2e.py::test_rule_ids_aggregation_negative_and_positive_control
+2 passed in 119.72s (0:01:59)

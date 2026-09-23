@@ -1,0 +1,33 @@
+﻿
+=== apply_rp_ccm / load_rp_ccm in src ===
+K:\work\project\pixo\src\pixo\render\core\rp_ccm.py:22: 运行时: apply_rp_ccm(linear_rgb, coeff) 作用于 DCP 渲染后的**线性 sRGB**。
+K:\work\project\pixo\src\pixo\render\core\rp_ccm.py:41: "rp_features", "n_terms", "identity_rp_ccm", "apply_rp_ccm",
+K:\work\project\pixo\src\pixo\render\core\rp_ccm.py:42: "fit_rp_ccm", "save_rp_ccm", "load_rp_ccm",
+K:\work\project\pixo\src\pixo\render\core\rp_ccm.py:67: 这是 apply_rp_ccm 曝光不变性的数值根基。
+K:\work\project\pixo\src\pixo\render\core\rp_ccm.py:163: def apply_rp_ccm(linear_rgb, coeff: RPCCM) -> np.ndarray:
+K:\work\project\pixo\src\pixo\render\core\rp_ccm.py:232: def load_rp_ccm(path: str | Path) -> RPCCM:
+=== count ===
+4
+=== qa-report-r21 195-215 ===
+|---|---|---|---|
+| **#20** | auto-loop **不联动** `/api/photos/{id}/timeline` 与 `/decide` 缓存（不回写 `runtime.state_machines` / `photo.last_decision`） | design §2.3 + §7 D3 裁决；`runtime.py` 只写任务表；实测跑完 `ACCEPTED` 后 timeline 仍 `RAW_PENDING` | 用户视角"跑完了状态没变"；需新字段/端点才能联动 |
+| **#21** | auto-loop **无任务级超时/取消**（渲染无中断点；`max_iterations ≤ 5` + `preview_long_edge` 仅软控；实测单张 72–124s） | design §2.2 时长口径 + D4 裁决；门禁 `duration` 字段 | 长任务无法中止；资源占用靠上限兜底 |
+| #22（建议，编号由队长续排） | `_auto_loop_tasks` **无淘汰**（与 `ExportManager._tasks` 同现状） | dev-1 遗留 3 / tester §7.3 | 长跑服务下任务表无界增长 |
+| #23（建议） | 不同 photo **共用 `max_workers=1` 队列且无 `queued` 态**（提交即 `running`，实际可能在排队） | dev-1 遗留 4 / tester §7.4 | 轮询进度不精确；单飞只保证同 photo 不重跑 |
+| #24（建议） | auto-loop 后台 `segmenter.segment` **未持 `runtime._segmenter_infer_lock`**（R16 已识别的"后端懒加载非线程安全"面）；与 HTTP `measure_session`/region 供给并发时可能重复加载权重 | QA 代码检视：`runtime.py:945` 传 `self._segmenter`，loop 内直接 `segment()`；对比 `_segmenter_infer_lock` 的既有用法（R15/R16） | 仅冗余加载/内存峰值，无正确性证据受损（本轮 max_workers=1 已限流） |
+| #25（建议） | `build/lib/pixo/**` 旧副本漂移（**不含** `metrics.py`，`loop.py` 仍是旧实体）⇒ 若打包/导入误取 `build/lib` 会 `ImportError` | dev-2 遗留 1 / exploration §7.4（QA 已确认 pytest 下 `tests/conftest.py:21-22` 先插 `src`，无实际影响） | 打包路径需确认并清理 |
+| #26（建议） | `crop_suggestion_applicable`（注册）与 `crop_suggestion_available`（运行期产）**命名并存** | dev-2 D-5 / 遗留 3 | 易误用；当前无规则引用后者 |
+| #27（建议） | 坏 JSON `src/pixo/render/bench/preview_cold_baseline.json` + `preview_v16_nef_baseline_{cold,hot}.json` 与 **单 RAW gate manifest** 的 `raw` 指向已消失的 `K:\data\photo\corpus_a\...` | tester §7.6 / exploration §7.1-7.2 | 该 manifest 的 compare 无法本机复跑（sha 仍可校验） |
+
+### 7.3 已知无害（登记即可，不进 tech_debt 硬清单）
+
+1. `pixo.pipeline.metrics` 未 re-export 到 `pipeline/__init__.py`（design §2.1 明确允许；调用方显式 import）。
+2. `task-brief.md:35` 语料计数"3428"与实测 765 不符（文档口径，队长域）。
+3. 门禁对"末轮机制形态"（`last_iteration=True` + `adjust_and_continue`）的无条件断言与**默认语料**耦合：默认 env 固定 DSC_5236 且三样本实测一致；若换语料且末轮走 `stopped` 短路需同步该断言（换语料时仅打印不判的 DSC_5236 专属块已做语料守卫）。
+4. 服务缺省 `PIXO_SEGMENTER=mock` ⇒ auto-loop 默认拿到合成掩码：已按 design 在响应暴露 `segmenter_type` + `degraded:["mock_segmenter"]`；真路由需运维设 `multi`（改缺省会影响既有测量/region 线，属越界）。
+5. `_metrics_for_decide` 保留为 wrapper（意图内，`loop.py:522-529`）。
+6. 前端零改动（非目标；`decidePhoto` 仍零调用）。
+7. `src/pixo` 下 131 处 `except Exception` 静默降级（CR-08 范围，本轮不动）。
+
+---
+

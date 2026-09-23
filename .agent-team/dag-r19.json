@@ -1,0 +1,52 @@
+{
+  "title": "Pixo 第十九轮：#19 标定覆盖缺口专项评估",
+  "nodes": [
+    {
+      "id": "r19-gate",
+      "label": "「不要停」延续",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "gap-eval",
+      "label": "#19 垫片精度+扩域评估",
+      "role": "researcher",
+      "status": "done",
+      "deps": [
+        "r19-gate"
+      ]
+    },
+    {
+      "id": "r19-commit",
+      "label": "报告入库+台账处置",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "gap-eval"
+      ]
+    },
+    {
+      "id": "r19-delivery",
+      "label": "呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r19-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r19-gate",
+      "gap-eval"
+    ],
+    [
+      "gap-eval",
+      "r19-commit"
+    ],
+    [
+      "r19-commit",
+      "r19-delivery"
+    ]
+  ]
+}

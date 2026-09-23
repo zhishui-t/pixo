@@ -1,0 +1,12 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0
+rootdir: K:\work\project\pixo
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 25 items
+
+tests\unit\test_skin_oklab.py ..................                         [ 72%]
+tests\regression\test_gate_golden.py .......                             [100%]
+
+============================= 25 passed in 49.23s =============================

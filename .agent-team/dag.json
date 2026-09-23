@@ -1,0 +1,129 @@
+{
+  "title": "Pixo R31：RAW 打开色彩对齐 DNG 渲染（三臂对照）",
+  "nodes": [
+    {
+      "id": "brief",
+      "label": "任务书定稿（卡点①）",
+      "role": "队长+用户",
+      "status": "done"
+    },
+    {
+      "id": "design",
+      "label": "设计：口径/判据/接口",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "brief"
+      ]
+    },
+    {
+      "id": "design-review",
+      "label": "设计审核 .design_ok",
+      "role": "reviewer",
+      "status": "done",
+      "deps": [
+        "design"
+      ],
+      "note": "第2轮复检（v2 整改回传）"
+    },
+    {
+      "id": "license",
+      "label": "GPLv3 许可证落地",
+      "role": "junior-dev",
+      "status": "done",
+      "deps": [
+        "design-review"
+      ]
+    },
+    {
+      "id": "converter",
+      "label": "DNG Converter 安装+批转",
+      "role": "junior-dev",
+      "status": "done",
+      "deps": [
+        "design-review"
+      ],
+      "note": "48/48 批转 42.1s + 消费自证"
+    },
+    {
+      "id": "sdk-build",
+      "label": "DNG SDK 编译 dng_validate",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "design-review"
+      ],
+      "note": "jxl 已摘，重编验证"
+    },
+    {
+      "id": "rt-arm",
+      "label": "RT-cli 参照臂接入",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "design-review"
+      ],
+      "note": "RT 5.13 装毕, 臂接入随测量跑"
+    },
+    {
+      "id": "measure-48",
+      "label": "三臂测量 n=48",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "sdk-build",
+        "converter",
+        "rt-arm"
+      ],
+      "note": "48/48 有效; median|dL|=13.44 FAIL, 色度 0.23/0.51 PASS, Spearman 0.479 FAIL"
+    },
+    {
+      "id": "verdict",
+      "label": "矫正裁决执行（预授权）",
+      "role": "dev-2",
+      "status": "in_progress",
+      "deps": [
+        "measure-48"
+      ],
+      "note": "失败路径执行(零写入); 候选c 4.453 介于达标线5与矫正目标3之间; 待用户仲裁"
+    },
+    {
+      "id": "code-review",
+      "label": "代码/数据检视",
+      "role": "reviewer",
+      "status": "pending",
+      "deps": [
+        "license",
+        "verdict"
+      ]
+    },
+    {
+      "id": "regression",
+      "label": "回归+复现 .qa_ok",
+      "role": "tester-whitebox",
+      "status": "pending",
+      "deps": [
+        "code-review"
+      ],
+      "note": "全量 0 failed+金样本零漂移"
+    },
+    {
+      "id": "report",
+      "label": "报告+changelog+推送",
+      "role": "junior-dev",
+      "status": "pending",
+      "deps": [
+        "regression"
+      ]
+    },
+    {
+      "id": "accept",
+      "label": "交付验收（卡点④）",
+      "role": "队长+用户",
+      "status": "pending",
+      "deps": [
+        "report"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+s.                                                                       [100%]
+=================================== PASSES ====================================
+=========================== short test summary info ===========================
+PASSED tests/regression/test_gate_auto_loop_e2e.py::test_rule_ids_aggregation_negative_and_positive_control
+SKIPPED [1] tests\regression\test_gate_auto_loop_e2e.py:146: PIXO_GATE_AUTOLOOP_RAW not set
+1 passed, 1 skipped in 0.79s

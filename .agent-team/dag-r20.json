@@ -1,0 +1,100 @@
+{
+  "title": "Pixo 第二十轮：style_cards 数据评估 × warmth 日光扩域",
+  "nodes": [
+    {
+      "id": "r20-gate",
+      "label": "用户批准两项",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "warmth-nodes",
+      "label": "warmth日光段补结点",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "r20-gate"
+      ],
+      "note": "85%回收/基线R20重生成"
+    },
+    {
+      "id": "cards-eval",
+      "label": "style_cards 54张评估",
+      "role": "researcher",
+      "status": "done",
+      "deps": [
+        "r20-gate"
+      ],
+      "note": "-5.6pp净负"
+    },
+    {
+      "id": "cards-verdict",
+      "label": "默认开否裁决",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "cards-eval"
+      ],
+      "note": "维持关(数据)"
+    },
+    {
+      "id": "r20-qa",
+      "label": "门禁+全量",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "warmth-nodes",
+        "cards-verdict"
+      ],
+      "note": ".r20_ok 1533/0"
+    },
+    {
+      "id": "r20-commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "r20-qa"
+      ]
+    },
+    {
+      "id": "r20-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r20-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r20-gate",
+      "warmth-nodes"
+    ],
+    [
+      "r20-gate",
+      "cards-eval"
+    ],
+    [
+      "cards-eval",
+      "cards-verdict"
+    ],
+    [
+      "warmth-nodes",
+      "r20-qa"
+    ],
+    [
+      "cards-verdict",
+      "r20-qa"
+    ],
+    [
+      "r20-qa",
+      "r20-commit"
+    ],
+    [
+      "r20-commit",
+      "r20-delivery"
+    ]
+  ]
+}

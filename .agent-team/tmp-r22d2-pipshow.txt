@@ -1,0 +1,22 @@
+﻿Name: pixo
+Version: 0.1.0
+Summary: Pixo render / vision / meta Python engine
+Home-page: 
+Author: 
+Author-email: 
+License: Proprietary
+Location: D:\Python\Python312\tools\Lib\site-packages
+Editable project location: K:\work\project\pixo
+Requires: exifread, numpy, opencv-python, rawpy
+Required-by: 
+Files:
+  __editable__.pixo-0.1.0.pth
+  __editable___pixo_0_1_0_finder.py
+  __pycache__\__editable___pixo_0_1_0_finder.cpython-312.pyc
+  pixo-0.1.0.dist-info\INSTALLER
+  pixo-0.1.0.dist-info\METADATA
+  pixo-0.1.0.dist-info\RECORD
+  pixo-0.1.0.dist-info\REQUESTED
+  pixo-0.1.0.dist-info\WHEEL
+  pixo-0.1.0.dist-info\direct_url.json
+  pixo-0.1.0.dist-info\top_level.txt

@@ -1,0 +1,26 @@
+# .qa_ok — R21 交付总审放行签章
+
+审核人: QA-checker
+覆盖 F-ID: F01 / F02 / F03 / F04 / F05（逐条核对见 .agent-team/qa-report-r21.md §4；对 CR-01~05 与 task-brief 完成标准 1~6 全部满足；完成标准 6 changelog/DELIVERY 归队长收尾）
+ISO 时间戳: 2026-09-10T22:54:49+08:00 (2026-09-10T14:54:49Z)
+结论: **通过（修复后通过），0 阻塞项**——需求逐条核对无缺项、测试证据（命令+输出）齐全且由 QA 独立复跑、遗留问题已三级处置。
+
+## 独立复跑（QA 本会话亲自执行，非采信报告）
+- 全量回归: `python -m pytest tests -q -m "not e2e"` → **1574 passed / 6 skipped / 1 xfailed / 0 failed**（212.66s；另一次 251.99s 同结果）≥ 红线 1533
+- F05 真 RAW 门禁: `PIXO_GATE_AUTOLOOP_RAW='K:\data\photo\0711\raw\DSC_5236.NEF' python -m pytest tests/regression/test_gate_auto_loop_e2e.py -q -m gate` → **2 passed in 124.06s**（断言①~⑦全绿；`rule_ids=["saturation_high_rule"]`、`baseline_pixel_diff=56,293,263`、`highlight_clip_ratio=0.025923`）
+- 金样本: `python -m pytest tests/regression/test_gate_golden.py -q` → **7 passed**；`gate_golden.py compare`（真 RAW 24 case）→ **RESULT: PASS（u8_max=0 / u16_max=0，逐位一致）**，`data/` 零改动
+- 定向: `test_auto_loop_api.py + test_metrics_for_decide_public.py + test_scorer_adapter_callable.py` → **40 passed**
+- D1 反例独立复算（自写探针）: DSC_5237 5.8847→6.1472（末轮**命中**）、DSC_5238 真并集 `[dehaze_rule_030, saturation_high_rule, clarity_flat_rule_031]` → 与 tester 数字逐位一致
+- D2 独立观测: `make_default_scorer()` → `_PixoScorerAdapter`、`callable=True`、调用返回 dict
+
+## QA 修复记录（3 项，均已复验；未改 src/**）
+1. `tests/integration/test_auto_loop_api.py` docstring「末轮 `rule_ids` 恒为 `[]`」→ 改为"取决于该轮指标是否跨过阈值（5236 不命中/5237 命中）"，并写明不得把"末轮必空"当不变量（复验 20 passed）
+2. `tests/regression/test_gate_auto_loop_e2e.py` docstring 重复短语去重（复验 无 env 1 passed / 1 skipped）
+3. `.agent-team/tmp-r21-d1-extract.py:35` 证据误标勘误：`rule_ids_last_nonempty` ≠ `union_rule_ids`，改按真并集计算并单列；重生成 `tmp-r21-d1-table.txt`（原件备份 `tmp-r21-d1-table-orig.txt`）
+
+## 遗留处置（详见 qa-report-r21.md §7）
+- 阻塞交付: **0 项**
+- 记债（写入 `docs/tech_debt.md` + `DELIVERY-R21.md`）: **#20** auto-loop 不联动 `/timeline` 与 `/decide` 缓存；**#21** 无任务级超时/取消；另建议续排 #22~#27（任务表无淘汰 / 无 queued 态 / 后台 segment 未持 `_segmenter_infer_lock` / `build/lib` 漂移 / `crop_suggestion_applicable|available` 并存 / 坏 JSON·失效 corpus_a 路径）
+- 已知无害: 7 项（metrics 未 re-export、task-brief 语料计数、门禁末轮断言与默认语料耦合、`PIXO_SEGMENTER=mock` 缺省已留痕、wrapper 保留、前端零改动、131 处 except Exception）
+
+范围声明: 门禁仅表示 QA 的交付审核结论；本轮 QA 未改 `src/**`、`frontend/**`、`configs/**`、`docs/changelog.md`，未执行 git 提交（提交归队长）。`.design_ok`（含增量复核条目 #1）保持不删。

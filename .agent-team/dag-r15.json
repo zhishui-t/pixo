@@ -1,0 +1,99 @@
+{
+  "title": "Pixo 第十五轮：预览掩码供给 × 54 张试水观察",
+  "nodes": [
+    {
+      "id": "r15-gate",
+      "label": "用户「不要停」全自主",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "preview-masks",
+      "label": "预览会话掩码供给",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "r15-gate"
+      ],
+      "note": "懒触发/缺省关(17.7s冷启)"
+    },
+    {
+      "id": "trial-54",
+      "label": "54张试水观察",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "r15-gate"
+      ],
+      "note": "+9pp/分层复权落地中"
+    },
+    {
+      "id": "r15-test",
+      "label": "tester 验证",
+      "role": "tester",
+      "status": "done",
+      "deps": [
+        "preview-masks",
+        "trial-54"
+      ]
+    },
+    {
+      "id": "r15-qa",
+      "label": "门禁+全量",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "r15-test"
+      ],
+      "note": ".r15_ok 1524/0"
+    },
+    {
+      "id": "r15-commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "r15-qa"
+      ]
+    },
+    {
+      "id": "r15-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r15-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r15-gate",
+      "preview-masks"
+    ],
+    [
+      "r15-gate",
+      "trial-54"
+    ],
+    [
+      "preview-masks",
+      "r15-test"
+    ],
+    [
+      "trial-54",
+      "r15-test"
+    ],
+    [
+      "r15-test",
+      "r15-qa"
+    ],
+    [
+      "r15-qa",
+      "r15-commit"
+    ],
+    [
+      "r15-commit",
+      "r15-delivery"
+    ]
+  ]
+}

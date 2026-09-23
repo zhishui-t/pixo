@@ -1,0 +1,11 @@
+feat(pipeline): 公共指标 API + 评分器适配器可调用契约 (R21 F03/F04)
+
+- 新增 src/pixo/pipeline/metrics.py：metrics_for_decide / METRIC_KEYS /
+  metric_universe(prompts) / merge_proxy_metrics；不 import pixo.service（库层单向）
+- loop._metrics_for_decide 改薄 wrapper（行为逐键不变，调用点语义不动）
+- _PixoScorerAdapter.__call__ 返回 dict（overall + dimensions + 溯源字段），
+  一并满足 loop._score_aesthetic 与 smart_crop._score_scalar 两个可调用契约；
+  返回 AestheticScore 本体因 loop.py:932 的 float() 在 try 之外会 TypeError→500
+- 新增单测 20 例：公共 API 与旧实现逐键一致；metric_universe 覆盖 region_rules
+  引用面（只传 METRIC_KEYS 必抛 DecideError 的负控）；adapter 跨层注入 loop 与
+  suggest_crop（use parts.scorer is not None，不写"非 fallback"以免误判）

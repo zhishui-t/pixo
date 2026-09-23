@@ -1,0 +1,7 @@
+docs(r21): changelog 第二十一轮 + tech_debt #20/#21 + 后续修改要求清单
+
+- changelog：R21「闭环插电（M0）」条目（F01~F05 + 契约修订 R1 + 验收数字）
+- tech_debt：#20 auto-loop 与 /decide 缓存、/timeline 不联动；#21 无任务级
+  超时/取消；另列总审续排候选（未编号）
+- docs/R21_CHANGE_REQUESTS.md：本会话实测产出的 15 条 CR 清单（含对上一轮
+  "calib_out 待入库"结论的更正：该目录是陈旧快照，生产表已同源或更新）

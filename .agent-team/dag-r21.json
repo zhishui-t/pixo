@@ -1,0 +1,134 @@
+{
+  "title": "Pixo 第二十一轮（R21）：闭环插电 M0 —— SinglePhotoLoop 接入服务层",
+  "nodes": [
+    {
+      "id": "clarify",
+      "label": "范围/人马/推送 确认",
+      "role": "队长+用户",
+      "status": "done",
+      "note": "M0 + DSH角色 + 已推远端"
+    },
+    {
+      "id": "gate1",
+      "label": "卡点①花名册批准",
+      "role": "用户",
+      "status": "done",
+      "deps": ["clarify"],
+      "note": "2026-09-10 批准"
+    },
+    {
+      "id": "explore",
+      "label": "探索:服务层装配面摸底",
+      "role": "researcher",
+      "status": "done",
+      "deps": ["gate1"],
+      "note": "3条前提修正+8遗留"
+    },
+    {
+      "id": "design",
+      "label": "设计:F01~F05 接口约定",
+      "role": "队长",
+      "status": "done",
+      "deps": ["explore"],
+      "note": "design-r21.md"
+    },
+    {
+      "id": "design-review",
+      "label": "设计审核+修复",
+      "role": "QA-checker",
+      "status": "done",
+      "deps": ["design"],
+      "note": "10处修订,.design_ok"
+    },
+    {
+      "id": "gate2",
+      "label": "卡点②用户确认设计",
+      "role": "用户",
+      "status": "done",
+      "deps": ["design-review"],
+      "note": "2026-09-10 批准开工"
+    },
+    {
+      "id": "stream1",
+      "label": "F01+F02 服务层闭环入口",
+      "role": "dev-1",
+      "status": "done",
+      "deps": ["gate2"],
+      "note": "20 passed; 端点已注册"
+    },
+    {
+      "id": "stream2",
+      "label": "F03+F04 口径与评分器签名",
+      "role": "dev-2",
+      "status": "done",
+      "deps": ["gate2"],
+      "note": "20 passed(+37消费方回归)"
+    },
+    {
+      "id": "r1-fix",
+      "label": "R1口径:rule_ids取并集+收口",
+      "role": "dev-1",
+      "status": "done",
+      "deps": ["stream1"],
+      "note": "20 passed;机制用例+措辞"
+    },
+    {
+      "id": "r1-review",
+      "label": "R1设计增量复核",
+      "role": "QA-checker",
+      "status": "done",
+      "deps": ["design-review"],
+      "note": "通过;纠正归因+.design_ok#1"
+    },
+    {
+      "id": "test",
+      "label": "F05 门禁2 passed+全量1574",
+      "role": "tester",
+      "status": "done",
+      "deps": ["stream1", "stream2", "r1-fix"],
+      "note": "122s;1574/0;金样本零漂移"
+    },
+    {
+      "id": "qa",
+      "label": "总审+门禁签章",
+      "role": "QA-checker",
+      "status": "done",
+      "deps": ["test", "r1-review"],
+      "note": "0阻塞;1574/0;2 passed;签章"
+    },
+    {
+      "id": "commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": ["qa"],
+      "note": "4 提交已推 origin(a092d3a)"
+    },
+    {
+      "id": "delivery",
+      "label": "卡点③交付呈报",
+      "role": "队长+用户",
+      "status": "running",
+      "deps": ["commit"],
+      "note": "DELIVERY-R21 待用户验收"
+    }
+  ],
+  "edges": [
+    ["clarify", "gate1"],
+    ["gate1", "explore"],
+    ["explore", "design"],
+    ["design", "design-review"],
+    ["design-review", "gate2"],
+    ["gate2", "stream1"],
+    ["gate2", "stream2"],
+    ["stream1", "r1-fix"],
+    ["design-review", "r1-review"],
+    ["stream1", "test"],
+    ["stream2", "test"],
+    ["r1-fix", "test"],
+    ["test", "qa"],
+    ["r1-review", "qa"],
+    ["qa", "commit"],
+    ["commit", "delivery"]
+  ]
+}

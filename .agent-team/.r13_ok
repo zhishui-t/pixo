@@ -1,0 +1,86 @@
+# .r13_ok — R13 收口门禁通过签章
+
+- 审核人: qa (R13 收口门禁)
+- 覆盖: R13 三件 —— region warmth 参数 (dev-2) / style_cards 接线默认关
+  (dev-3, 队长裁决) / region 规则 b+ 条件入包 (dev-1, DEFAULT_RULES 激活)
+- ISO 时间戳: 2026-09-07T15:12:28Z
+- 全量终态: 1509 passed / 5 skipped / 1 xfailed / 0 failed
+
+## 五条结论
+
+1. **规则入包的行为影响 — PASS**:
+   - 全量 1509/0 failed; QC/loop 集成默认态原样通过——
+     test_qc_overflow_rolls_back_once_then_manual_review 隔离参数已按裁决移除
+     (净零 diff), 按接线前语义跑 MANUAL_REVIEW 断言 = 「默认关=接线前行为」
+     链级证据 (region 入包不影响该测试: 合成语料无 sky/plant 真实区域)。
+   - 触发用例语义同步完整: metrics 补 *_area_ratio=0.4 (隔离拦截因素,
+     注释明示「保证拦截因素是 reliable 闸而非护栏缺指标同形失败」),
+     期望值同步试水系数 (-0.375 / 0.1); 双流 (dev-1/dev-2) 同改无重复无遗漏。
+   - 激活钉死断言 test_region_rules_activation_guard_and_trial_coefficients:
+     护栏 (area_ratio lt 0.70 双规则) + 试水系数 (-0.25/0.2) + DEFAULT_RULES
+     入包三重钉死, 复权须显式改断言; 真默认包 e2e
+     (test_e2e_region_rule_participates_under_default_rules_package) 守护
+     「入包」本身。
+   - YAML 双镜像: src/ 与 configs/ 两份 region_rules.yaml sha256 字节级一致
+     (15f225d5...); 护栏+系数+头注激活声明三要素齐。
+   - 生产默认路径相容: 默认构造 prompts=["face","sky","plant"] (loop.py:775)
+     注册全部 region 指标键, strict lint 相容 (实测确认)。
+2. **style_cards 默认关 — PASS**:
+   - 缺省关 env 语义 (未设置/空串/关态值 → False; 开态值 → True) + DI 优先,
+     均有 committed 测试; 关态 decide_context 键整体缺席 (默认+DI 显式关);
+     对照组两轮渲染逐位一致; QC 集成默认态原样通过 (见 1)。
+   - 开态 env 全链 e2e: PIXO_STYLE_CARDS=1 → 加载 → 接线 → rule_ids 含卡前缀
+     → exposure 落位 -0.15 → 渲染变暗 (lum2 < lum1-1.0); 优先级三态
+     (卡 6000 > 系统默认 3000 / 用户软偏好 9000 > 卡 / 锁定参数硬保护);
+     know 故障降级不阻断闭环。
+   - 修复 1 项 (见修复记录): 报告声称的 know 零触达 (never-touches) 断言
+     实缺, qa 补齐——默认关下 load_style_cards 哨兵替换全程不得调用。
+3. **warmth 零影响 — PASS (三重复核全过)**:
+   - 23 卡字节级: qa 独立复跑 _f07_pin_hsv_render_check.py (float32 sha256)
+     = dev r13_render_hashes.json = R11 基线, 23/23 全等。
+   - gate --check: OK 21 features 零漂 (region_adjust case 显式参数不含
+     warmth, 默认关零影响口径正确)。
+   - RAW gate_defaults: RESULT PASS 24/24 全零漂 (max|Δ|=0)。
+   - 公式级抽验: _warmth_gains = [1, 1+0.10w, 1-0.26w] 与 apply_warmth
+     缺省斜率 g_slope=0.10/b_slope=0.26 (white_balance.py:188-189) 结构同构
+     (gain=[·,1+g·s,1-b·s] :207-208); 锚定声称的冻结锚点 WARMTH_B0/B1_FROZEN
+     =1.79/2.287 (:69-70) 属实; r_slope 缺省 0 → R 不动属实。
+   - 施加序断言强度: exposure→warmth→saturation 公式级钉死 (独立重构期望链);
+     两次逐通道增益乘法相互可交换 (次序数值不可区分, 无需锁), HSV 饱和度
+     核为非线性不可交换锚点, 「增益在前饱和在后」结构被有效锁定——合格。
+   - warmth=0 恒等三重 (wants False / 未写 / 逐位) 在位。
+4. **并发整合终态 — PASS**: git diff 全量过目——loop.py 两流改动共存无冲突
+   (dev-2 warmth registry :86-89 / dev-3 style_cards :114-136+:761+:850-871+:1467-1471,
+   区域不重叠); test_decide_region_wiring 双流语义一致; test_loop_e2e.py
+   净零 (隔离参数加后移除 = 终态接线前语义); src 无孤儿引用
+   (enable_style_cards/style_cards_enabled 仅 loop.py; know 层 load_style_cards
+   为既有知识层 API); stash 重放事件 (dev-2 §6.1 / dev-3 §并发整合) 终态无残留。
+5. **全量回归 — PASS**: 1509 passed / 5 skipped / 1 xfailed / 0 failed
+   (R12 基线 1481 + R13 新增 28: warmth 11 [region_adjust 8 函数含参数化 4 档
+   + wiring 3] + region 激活 5 [guard 钉死 + 默认包 e2e + warmth wiring 计入上条]
+   + style_cards 12 [11 + qa 补 1])。
+
+## 修复记录 (qa 最小修复, 均已复验)
+
+1. **know 零触达断言补齐** (tests/unit/test_loop_style_cards.py 新增
+   test_disabled_default_never_touches_know_layer):
+   - 改了什么: 默认关态下以哨兵替换 pixo.know.load_style_cards, 构造期与
+     迭代全程调用即 AssertionError; 同时断言 enable_style_cards=False 且
+     _style_cards==[]。
+   - 为什么: 任务书点名「know 零触达断言」; stream-3 报告 §3 声称该断言
+     在位 ("never-touches 断言: 默认关不产生任何知识层加载/IO") 但全仓
+     grep 实缺——声称与实存不符。实现面本身安全 (加载在 enable 门内),
+     但裁决承诺行为应有 committed 守护 (防未来重构把加载提到开关判断前)。
+   - 验证: test_loop_style_cards.py 12 passed; 全量 1509 passed 0 failed。
+2. 临时产物: qa 复跑生成的 .artifacts/_r13_qa_verify_hashes.json 用后即删
+   (对照结论已并入本签章第 3 条)。
+
+## 遗留与升级 (不阻塞)
+
+- builtin 卡 DSL 动作串噪声 (无键值串落 informational 顶层键, 不吞键):
+  know 层 DSL 解析待后续迭代 (dev-3 遗留 #2)。
+- region 规则观察窗: 试水系数 (-0.25/0.2) + 护栏 (0.70) 观察窗后按数据
+  复权——复权须显式改 wiring 钉死断言 (YAML 头注已声明该契约)。
+- S-4 溢出吞轮 (region.* 被溢出限流压回): 实测自恢复非阻断, 暂缓立项
+  (dev-1 遗留 #3)。
+- 本轮未 commit (提交策略归队长); changelog 待队长随提交补 R13 条目。

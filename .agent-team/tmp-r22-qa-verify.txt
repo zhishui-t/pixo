@@ -1,0 +1,35 @@
+﻿
+=== design-r22.md line count ===
+97
+=== design-review-r22.md line count ===
+151
+=== git status --short (tracked+untracked, excl node_modules) ===
+?? .artifacts/calib_domain_gap_analysis.py
+?? .artifacts/calib_domain_gap_checkpoint.jsonl
+?? .artifacts/calib_domain_gap_checkpoint_run1.jsonl
+?? .artifacts/calib_domain_gap_eval.py
+?? .artifacts/engine_probe/
+?? .artifacts/ev_stress_checkpoint.jsonl
+?? .artifacts/ev_stress_experiment.py
+?? .artifacts/ev_stress_results.json
+?? .artifacts/f07_render_hashes_after.json
+?? .artifacts/f07_render_hashes_before.json
+?? .artifacts/f10_render_hashes_after.json
+?? .artifacts/r10_render_hashes_after.json
+?? .artifacts/r10_render_hashes_after_fix.json
+?? .artifacts/r11_render_hashes.json
+?? .artifacts/r13_region_eval/
+?? .artifacts/r13_render_hashes.json
+?? .artifacts/r20_warmth_daylight_verify.json
+?? .artifacts/region_overflow_gate_spot.json
+?? .artifacts/region_replay_spot.json
+?? .artifacts/region_rules_pure_effect.json
+?? .artifacts/rp_ccm_lowfreq_ckpt/
+?? .artifacts/rp_ccm_lowfreq_eval.py
+?? .artifacts/rp_ccm_lowfreq_results.json
+?? .artifacts/style_cards_trial54.py
+?? .artifacts/style_cards_trial54_aggregate.py
+?? .artifacts/tester_f10_hashes_after.json
+?? .artifacts/warmth_curve_pre_r20.json
+=== git status for src/tests/frontend/configs/docs ===
+(empty above = no changes in those trees)

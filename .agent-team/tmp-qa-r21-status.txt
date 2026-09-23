@@ -1,0 +1,37 @@
+ M src/pixo/pipeline/batch.py
+ M src/pixo/pipeline/loop.py
+ M src/pixo/service/app.py
+ M src/pixo/service/runtime.py
+?? .artifacts/calib_domain_gap_analysis.py
+?? .artifacts/calib_domain_gap_checkpoint.jsonl
+?? .artifacts/calib_domain_gap_checkpoint_run1.jsonl
+?? .artifacts/calib_domain_gap_eval.py
+?? .artifacts/engine_probe/
+?? .artifacts/ev_stress_checkpoint.jsonl
+?? .artifacts/ev_stress_experiment.py
+?? .artifacts/ev_stress_results.json
+?? .artifacts/f07_render_hashes_after.json
+?? .artifacts/f07_render_hashes_before.json
+?? .artifacts/f10_render_hashes_after.json
+?? .artifacts/r10_render_hashes_after.json
+?? .artifacts/r10_render_hashes_after_fix.json
+?? .artifacts/r11_render_hashes.json
+?? .artifacts/r13_region_eval/
+?? .artifacts/r13_render_hashes.json
+?? .artifacts/r20_warmth_daylight_verify.json
+?? .artifacts/region_overflow_gate_spot.json
+?? .artifacts/region_replay_spot.json
+?? .artifacts/region_rules_pure_effect.json
+?? .artifacts/rp_ccm_lowfreq_ckpt/
+?? .artifacts/rp_ccm_lowfreq_eval.py
+?? .artifacts/rp_ccm_lowfreq_results.json
+?? .artifacts/style_cards_trial54.py
+?? .artifacts/style_cards_trial54_aggregate.py
+?? .artifacts/tester_f10_hashes_after.json
+?? .artifacts/warmth_curve_pre_r20.json
+?? docs/R21_CHANGE_REQUESTS.md
+?? src/pixo/pipeline/metrics.py
+?? tests/integration/test_auto_loop_api.py
+?? tests/regression/test_gate_auto_loop_e2e.py
+?? tests/unit/test_metrics_for_decide_public.py
+?? tests/unit/test_scorer_adapter_callable.py

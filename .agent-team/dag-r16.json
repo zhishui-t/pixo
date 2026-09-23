@@ -1,0 +1,86 @@
+{
+  "title": "Pixo 第十六轮：plant 溢出门控 × 供给启动预热",
+  "nodes": [
+    {
+      "id": "r16-gate",
+      "label": "用户「继续」",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "plant-gate",
+      "label": "plant溢出规则门控",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "r16-gate"
+      ],
+      "note": "阈值1%/回退消除"
+    },
+    {
+      "id": "supply-warm",
+      "label": "segmenter启动预热",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "r16-gate"
+      ],
+      "note": "17.7s→2.85s非阻塞"
+    },
+    {
+      "id": "r16-qa",
+      "label": "门禁+全量",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "plant-gate",
+        "supply-warm"
+      ],
+      "note": ".r16_ok 1532/0"
+    },
+    {
+      "id": "r16-commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "r16-qa"
+      ]
+    },
+    {
+      "id": "r16-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r16-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r16-gate",
+      "plant-gate"
+    ],
+    [
+      "r16-gate",
+      "supply-warm"
+    ],
+    [
+      "plant-gate",
+      "r16-qa"
+    ],
+    [
+      "supply-warm",
+      "r16-qa"
+    ],
+    [
+      "r16-qa",
+      "r16-commit"
+    ],
+    [
+      "r16-commit",
+      "r16-delivery"
+    ]
+  ]
+}

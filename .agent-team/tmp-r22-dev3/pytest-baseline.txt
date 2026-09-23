@@ -1,0 +1,39 @@
+...................................................F..........           [100%]
+================================== FAILURES ===================================
+___________________ test_invalid_color_domain_fails_visibly ___________________
+
+client = <starlette.testclient.TestClient object at 0x000001C94E8F0590>
+tmp_path = WindowsPath('C:/Windows/Temp/pytest-of-10042/pytest-904/test_invalid_color_domain_fail0')
+
+    def test_invalid_color_domain_fails_visibly(client, tmp_path):
+        """非法域值：update_params 不拦截（无键过滤），渲染期 Stage 校验 → 400。"""
+        sid, _ = _make_session(client, tmp_path)
+>       _put_params(client, sid, {"hsl": {"enabled": True, "color_domain": "lab"}})
+
+tests\integration\test_oklch_preview_e2e.py:159: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001C94E8F0590>
+sid = 'ae139a97dff54898'
+patch = {'hsl': {'enabled': True, 'color_domain': 'lab'}}
+
+    def _put_params(client: TestClient, sid: str, patch: dict) -> dict:
+        resp = client.put(f"/api/sessions/{sid}/params",
+                          json={**patch, "__source": "e2e_t21_oklch"})
+>       assert resp.status_code == 200, resp.text
+E       AssertionError: {"detail":"参数 'hsl.color_domain' 取值非法：'lab' 不在允许值 ['hsv', 'oklch']"}
+E       assert 400 == 200
+E        +  where 400 = <Response [400 Bad Request]>.status_code
+
+tests\integration\test_oklch_preview_e2e.py:108: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  exifread:__init__.py:75 File format not recognized.
+============================== warnings summary ===============================
+D:\Python\Python312\tools\Lib\site-packages\fastapi\testclient.py:1
+  D:\Python\Python312\tools\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/integration/test_oklch_preview_e2e.py::test_invalid_color_domain_fails_visibly
+1 failed, 61 passed, 1 warning in 53.32s

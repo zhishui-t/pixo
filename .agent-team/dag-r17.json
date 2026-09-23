@@ -1,0 +1,105 @@
+{
+  "title": "Pixo 第十七轮：M1 收尾打磨——前端联动 × 用户文档 × 椭圆参数化",
+  "nodes": [
+    {
+      "id": "r17-gate",
+      "label": "用户「继续」全自主",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "reason-ui",
+      "label": "前端reason矩阵联动",
+      "role": "dev-3",
+      "status": "done",
+      "deps": [
+        "r17-gate"
+      ],
+      "note": "四码+重试策略/34用例"
+    },
+    {
+      "id": "m1-docs",
+      "label": "M1用户文档",
+      "role": "writer",
+      "status": "done",
+      "deps": [
+        "r17-gate"
+      ],
+      "note": "150行5章"
+    },
+    {
+      "id": "ellipse-param",
+      "label": "椭圆常数参数化(#18)",
+      "role": "super-dev",
+      "status": "done",
+      "deps": [
+        "r17-gate"
+      ],
+      "note": "#18关闭/逐位零漂"
+    },
+    {
+      "id": "r17-qa",
+      "label": "门禁+全量",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "reason-ui",
+        "m1-docs",
+        "ellipse-param"
+      ],
+      "note": ".r17_ok 1533/0"
+    },
+    {
+      "id": "r17-commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "r17-qa"
+      ]
+    },
+    {
+      "id": "r17-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r17-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r17-gate",
+      "reason-ui"
+    ],
+    [
+      "r17-gate",
+      "m1-docs"
+    ],
+    [
+      "r17-gate",
+      "ellipse-param"
+    ],
+    [
+      "reason-ui",
+      "r17-qa"
+    ],
+    [
+      "m1-docs",
+      "r17-qa"
+    ],
+    [
+      "ellipse-param",
+      "r17-qa"
+    ],
+    [
+      "r17-qa",
+      "r17-commit"
+    ],
+    [
+      "r17-commit",
+      "r17-delivery"
+    ]
+  ]
+}

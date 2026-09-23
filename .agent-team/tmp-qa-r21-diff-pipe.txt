@@ -1,0 +1,98 @@
+warning: in the working copy of 'src/pixo/pipeline/loop.py', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/pixo/pipeline/batch.py b/src/pixo/pipeline/batch.py
+index 55963d1..65b5afc 100644
+--- a/src/pixo/pipeline/batch.py
++++ b/src/pixo/pipeline/batch.py
+@@ -409,6 +409,36 @@ class _PixoScorerAdapter:
+             domain_hint=domain_hint,
+         )
+ 
++    def __call__(
++        self,
++        image_rgb: np.ndarray,
++        masks: dict[str, np.ndarray] | None = None,
++    ) -> dict[str, Any] | None:
++        """可调用契约（R21/F04）：``scorer(image, masks) -> dict | None``。
++
++        loop 侧（``loop.py`` 的 ``_score_aesthetic``）与构图侧
++        （``render/geometry/smart_crop.py`` 的 ``_score_scalar``）都把评分器当
++        **可调用对象**用，而本适配器此前只有 ``.score(image, meta)``
++        （批量线 batch.py:710 依赖该签名，此处不动）。
++
++        **必须返回 dict，不得返回 AestheticScore 本体**：loop 侧
++        ``float(overall)`` 位于 ``try`` 之外，dataclass 无 ``__float__``
++        ⇒ ``TypeError`` 会穿出 ``run()``（静默跳过变 HTTP 500）。
++        dict 形态同时满足 loop 的 dict 分支与 ``_score_scalar`` 的 dict 分支；
++        ``source`` / ``raw_overall`` / ``domain_hint`` 保留以维持溯源字段。
++        """
++        del masks  # 真评分器不消费掩码（同 .score 的 meta 语义）
++        s = self.score(image_rgb)
++        if s is None:  # 防御：当前 .score 不会返回 None，保持契约完整
++            return None
++        return {
++            "overall": s.overall,
++            **s.dimensions,
++            "source": s.source,
++            "raw_overall": s.raw_overall,
++            "domain_hint": s.domain_hint,
++        }
++
+ 
+ class MockAgentSelector:
+     """Agent 语义优选占位实现。
+diff --git a/src/pixo/pipeline/loop.py b/src/pixo/pipeline/loop.py
+index 6b253f1..cfc6b63 100644
+--- a/src/pixo/pipeline/loop.py
++++ b/src/pixo/pipeline/loop.py
+@@ -30,6 +30,7 @@ import numpy as np
+ 
+ from pixo.decide import decide, qc_rollback, register_metric_keys
+ from pixo.decide.engine import _locked_params
++from pixo.pipeline.metrics import metrics_for_decide
+ from pixo.pipeline.perceptual import JndConvergenceTracker, delta_e_median
+ from pixo.state import PhotoStateMachine, TraceEvent
+ from pixo.render.geometry.smart_crop import suggest_crop
+@@ -519,36 +520,13 @@ def _compose_fingerprint(params: Mapping[str, Any]) -> str:
+ 
+ 
+ def _metrics_for_decide(measurement: dict[str, Any]) -> dict[str, Any]:
+-    """把完整测量报告展平为规则引擎可引用的指标 dict。"""
+-    if not isinstance(measurement, dict):
+-        return {}
+-    global_metrics = measurement.get("global") or {}
+-    regions = measurement.get("regions") or {}
+-    metrics: dict[str, Any] = {
+-        "mean_luminance": global_metrics.get("mean_luminance"),
+-        "highlight_clip_ratio": global_metrics.get("highlight_clip_ratio"),
+-        "shadow_clip_ratio": global_metrics.get("shadow_clip_ratio"),
+-        "contrast": global_metrics.get("contrast"),
+-        "preview_highlight_clip_estimate": global_metrics.get(
+-            "preview_highlight_clip_estimate"
+-        ),
+-        "preview_overflow_ratio": global_metrics.get(
+-            "preview_highlight_clip_estimate"
+-        ),
+-    }
+-    for key in ("haze_proxy", "colorfulness_proxy", "tonal_range"):
+-        if key in measurement:
+-            metrics[key] = measurement[key]
+-    for name, region in regions.items():
+-        if not isinstance(region, dict):
+-            continue
+-        metrics[f"{name}_luminance"] = region.get("mean_luminance")
+-        metrics[f"{name}_area_ratio"] = region.get("area_ratio")
+-        metrics[f"{name}_highlight_clip_ratio"] = region.get(
+-            "highlight_clip_ratio"
+-        )
+-        metrics[f"{name}_reliable"] = bool(region.get("reliable", False))
+-    return metrics
++    """把完整测量报告展平为规则引擎可引用的指标 dict。
++
++    R21/F03：实现已公共化为 :func:`pixo.pipeline.metrics.metrics_for_decide`
++    （service 侧装配共用同一口径）；本函数保留为薄 wrapper，维持既有模块内
++    调用点（loop.py:1393）与可能的既有导入不破。
++    """
++    return metrics_for_decide(measurement)
+ 
+ 
+ def _unreliable_regions(measurement: dict[str, Any]) -> list[str]:

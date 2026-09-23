@@ -1,0 +1,13 @@
+[DSC_5314.NEF ISO12800] shape=(4040, 6064, 3) decode=Nonems maxdiff_vs_saved=0 flat=1741657 tex=7349570 sigma0=0.023007 detail0=0.117620
+  bilateral sigma_color=0.02       p=0.0  op=    914ms noise=  86.95% detail=  47.94% dE= 0.334 
+  bilateral sigma_color=0.04       p=0.0  op=   1164ms noise=  89.63% detail=  79.76% dE= 0.482 
+  guided eps=0.001                 p=0.0  op=   5163ms noise=  93.78% detail=  72.97% dE= 0.459 
+  [frontier] [{'op': 'guided', 'params': {'eps': 0.001}, 'detail_preserve': 0.0, 'noise_drop_pct': 93.78, 'detail_drop_pct': 72.97, 'de_median_full': 0.4556}]
+
+=== aggregate (median across samples) ===
+bilateral|{"sigma_color": 0.02}|p=0.0                noise=  86.95% detail=  47.94% dE= 0.334 all3=0/1 axis2ok=0/1 max_noise@detail<=10%=None
+bilateral|{"sigma_color": 0.04}|p=0.0                noise=  89.63% detail=  79.76% dE= 0.482 all3=0/1 axis2ok=0/1 max_noise@detail<=10%=None
+guided|{"eps": 0.001}|p=0.0                          noise=  93.78% detail=  72.97% dE= 0.459 all3=0/1 axis2ok=0/1 max_noise@detail<=10%=None
+
+ANY_ALL3_OK = False
+[wrote] K:\work\project\pixo\.artifacts\r22-noise-ab\calib_report.json

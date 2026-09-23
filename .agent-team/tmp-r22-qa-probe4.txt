@@ -1,0 +1,285 @@
+--- src/pixo/pipeline/loop.py:1340-1380 ---
+   1340:             crop_suggestion = None
+   1341:             if self.crop_suggest:
+   1342:                 crop_suggestion = self._build_crop_suggestion(
+   1343:                     preview_img, masks, backend=backend, params=params
+   1344:                 )
+   1345:                 if crop_suggestion is not None:
+   1346:                     self._add_trace(
+   1347:                         sm,
+   1348:                         event_type="crop_suggest",
+   1349:                         reason="smart_crop 构图建议",
+   1350:                         value={
+   1351:                             "iteration": iteration,
+   1352:                             "rect": crop_suggestion["rect"],
+   1353:                             "ratio": crop_suggestion["ratio"],
+   1354:                             "score": crop_suggestion["score"],
+   1355:                             "source": crop_suggestion["source"],
+   1356:                             "top3": crop_suggestion["top3"],
+   1357:                         },
+   1358:                         metadata={"iteration": iteration},
+   1359:                     )
+   1360: 
+   1361:             aesthetic = self._score_aesthetic(preview_img, masks)
+   1362:             if aesthetic is not None:
+   1363:                 measurement["aesthetic"] = dict(aesthetic)
+   1364:                 overall_score = aesthetic["overall"]
+   1365:                 if aesthetic_scores:
+   1366:                     aesthetic_improvements.append(
+   1367:                         abs(overall_score - aesthetic_scores[-1])
+   1368:                     )
+   1369:                 aesthetic_scores.append(overall_score)
+   1370: 
+   1371:             metrics = _metrics_for_decide(measurement)
+   1372:             unreliable = _unreliable_regions(measurement)
+   1373:             if self.crop_suggest:
+   1374:                 # 锁定集合统一走引擎 _locked_params（与 exposure 锁定同源）；
+   1375:                 # compose 域前缀判断留在接线层，不改共享引擎。
+   1376:                 locked_set = _locked_params(
+   1377:                     {"locked_params": self.locked_params}
+   1378:                 )
+   1379:                 # 语义裁决(队长批): 前缀匹配从用户意图出发——锁定任一细粒度
+   1380:                 # 键(如 compose.ratio)即视为主张构图控制权, 此时放行会改
+--- src/pixo/pipeline/loop.py:755-800 ---
+   755:         # F14: 指标键宇宙注册（decide 公式/条件 lint 补缺，t59/t40 守卫）。
+   756:         # 键宇宙一旦非空，load_rules 对公式标识符与 condition.all 指标走
+   757:         # 严格校验 —— 因此必须注册 **完整生产 flatten 宇宙**（_metrics_for_
+   758:         # decide 全部产出键 + loop 上下文指标），不能只注册 region 键，
+   759:         # 否则默认规则包（tone_clarity 的 condition.all 引 haze_proxy 等）
+   760:         # 会在加载期 DecideError。
+   761:         register_metric_keys({
+   762:             # measurement["global"] / 顶层测量键 (_metrics_for_decide 固定键)
+   763:             "mean_luminance", "highlight_clip_ratio", "shadow_clip_ratio",
+   764:             "contrast", "preview_highlight_clip_estimate",
+   765:             "preview_overflow_ratio",
+   766:             # 顶层代理指标 (measurement 直出)
+   767:             "haze_proxy", "colorfulness_proxy", "tonal_range",
+   768:             # loop 上下文指标 (crop 建议链)
+   769:             "crop_suggestion_applicable",
+   770:         })
+   771:         # 区域 flatten 键 (<prompt>_{luminance,area_ratio,highlight_clip_ratio,
+   772:         # reliable})，region.* 规则的引用面 —— 按本 loop 的 prompts 注册
+   773:         # （幂等 set-add，无渲染行为副作用）。
+   774:         register_metric_keys(
+   775:             f"{prompt}_{suffix}"
+   776:             for prompt in self.prompts
+   777:             for suffix in ("luminance", "area_ratio",
+   778:                            "highlight_clip_ratio", "reliable")
+   779:         )
+   780:         self.targets = dict(targets or {})
+   781:         self.locked_params = list(locked_params or [])
+   782:         self.manual_on_unreliable = bool(manual_on_unreliable)
+   783:         self.export_path = Path(export_path) if export_path is not None else None
+   784:         # P1b 美学维度：可注入 scorer；阈值/停滞参数缺省 None 关闭。
+   785:         self.aesthetic_scorer = aesthetic_scorer
+   786:         self.aesthetic_accept_threshold = (
+   787:             float(aesthetic_accept_threshold)
+   788:             if aesthetic_accept_threshold is not None
+   789:             else None
+   790:         )
+   791:         self.aesthetic_stagnation_eps = (
+   792:             float(aesthetic_stagnation_eps)
+   793:             if aesthetic_stagnation_eps is not None
+   794:             else None
+   795:         )
+   796:         # JND 感知收敛早停（防过度修图）：连续 jnd_window 轮预览间 median
+   797:         # ΔE2000 < jnd_threshold（默认 0.5，低于 1.0 JND 保守值——保守带取
+   798:         # 1.0，权威阈值 2.3 见 perceptual.JND_DELTA_E）强制终止；
+   799:         # jnd_threshold=None 关闭。度量底座见 pipeline/perceptual.py。
+   800:         self.jnd_threshold = (
+MEAS loop.py:216 final_measurement: dict[str, Any] | None
+MEAS loop.py:522 def _metrics_for_decide(measurement: dict[str, Any]) -> dict[str, Any]:
+MEAS loop.py:532 def _unreliable_regions(measurement: dict[str, Any]) -> list[str]:
+MEAS loop.py:1322 measurement = self.measurer.measure(
+MEAS loop.py:1700 full_measurement = self.measurer.measure(
+MEAS loop.py:1719 full_measurement: dict[str, Any],
+MEAS loop.py:1865 full_measurement = qc2.get("measurement", full_measurement)
+MEAS loop.py:1914 final_measurement: dict[str, Any] | None,
+--- enable_style_cards refs ---
+   src\pixo\decide\engine.py:66 "style_card": 6000,
+   src\pixo\decide\engine.py:1104 def _style_card_rules(context: dict) -> list[dict]:
+   src\pixo\decide\engine.py:1105 """从 context["style_cards"] 生成风格卡片建议规则。
+   src\pixo\decide\engine.py:1107 风格卡片优先级为 6000（style_card），低于用户锁定（10000）与
+   src\pixo\decide\engine.py:1110 raw = context.get("style_cards") or []
+   src\pixo\decide\engine.py:1114 from pixo.know.cards import build_style_card_rules
+   src\pixo\decide\engine.py:1115 return build_style_card_rules(raw)
+   src\pixo\decide\engine.py:1126 style_cards / iteration / locked_params / preview_overflow_ratio 等。
+   src\pixo\decide\engine.py:1128 ``context["style_cards"]`` 生成的风格卡片建议。
+   src\pixo\decide\engine.py:1132 rules.extend(_style_card_rules(context))
+   src\pixo\know\cards.py:8 - 风格卡片生成规则使用 level="style_card"（权重 6000）；
+   src\pixo\know\cards.py:23 _STYLE_CARD_PRIORITY = 6000.0
+   src\pixo\know\cards.py:125 def style_card_from_dict(data: Mapping[str, Any]) -> StyleCard:
+   src\pixo\know\cards.py:139 def style_card_to_dict(card: StyleCard | Mapping[str, Any]) -> dict[str, Any]:
+   src\pixo\know\cards.py:147 DEFAULT_STYLE_CARDS: list[dict[str, Any]] = [
+   src\pixo\know\cards.py:353 def style_card_to_decide_rules(card: StyleCard | Mapping[str, Any]) -> list[dict[str, Any]]:
+   src\pixo\know\cards.py:356 生成规则带 ``level="style_card"`` / ``priority=6000``，
+   src\pixo\know\cards.py:359 data = style_card_to_dict(card)
+   src\pixo\know\cards.py:369 "priority": _STYLE_CARD_PRIORITY,
+   src\pixo\know\cards.py:370 "level": "style_card",
+   src\pixo\know\cards.py:371 "source": "style_card",
+   src\pixo\know\cards.py:382 def load_style_cards(source: Any | None = None) -> list[StyleCard]:
+   src\pixo\know\cards.py:389 raw_items = DEFAULT_STYLE_CARDS
+   src\pixo\know\cards.py:394 raw_items = data.get("style_cards") or data.get("cards")
+   src\pixo\know\cards.py:412 cards.append(style_card_from_dict(item))
+   src\pixo\know\cards.py:416 def load_style_card_dicts(source: Any | None = None) -> list[dict[str, Any]]:
+   src\pixo\know\cards.py:418 return [c.to_dict() for c in load_style_cards(source)]
+   src\pixo\know\cards.py:421 def build_style_card_rules(
+   src\pixo\know\cards.py:429 rules.extend(style_card_to_decide_rules(card))
+   src\pixo\know\cards.py:435 "DEFAULT_STYLE_CARDS",
+   src\pixo\know\cards.py:436 "style_card_from_dict",
+   src\pixo\know\cards.py:437 "style_card_to_dict",
+   src\pixo\know\cards.py:438 "style_card_to_decide_rules",
+   src\pixo\know\cards.py:439 "load_style_cards",
+   src\pixo\know\cards.py:440 "load_style_card_dicts",
+   src\pixo\know\cards.py:441 "build_style_card_rules",
+   src\pixo\know\registry.py:14 build_style_card_rules,
+   src\pixo\know\registry.py:15 load_style_cards,
+   src\pixo\know\registry.py:16 style_card_to_decide_rules,
+   src\pixo\know\registry.py:167 style_cards: Iterable[StyleCard | Mapping[str, Any]] | None = None,
+   src\pixo\know\registry.py:172 self.style_cards: list[StyleCard] = list(
+   src\pixo\know\registry.py:173 load_style_cards(style_cards) if style_cards is not None else load_style_cards()
+   src\pixo\know\registry.py:183 def register_style_card(
+   src\pixo\know\registry.py:188 self.style_cards.append(_as_style_card(card))
+   src\pixo\know\registry.py:223 """把全部风格卡片转成 Decide 规则（level=style_card）。"""
+   src\pixo\know\registry.py:224 return build_style_card_rules(self.style_cards)
+   src\pixo\know\registry.py:229 "style_cards": [c.to_dict() for c in self.style_cards],
+   src\pixo\know\registry.py:234 def _as_style_card(card: StyleCard | Mapping[str, Any]) -> StyleCard:
+   src\pixo\know\registry.py:238 from .cards import style_card_from_dict
+   src\pixo\know\registry.py:240 return style_card_from_dict(card)
+   src\pixo\know\registry.py:266 cards = load_style_cards(cards_path) if cards_path else load_style_cards()
+   src\pixo\know\registry.py:273 return KnowledgeRegistry(graph=graph, style_cards=cards, rag=rag)
+   src\pixo\know\__init__.py:5 - cards.StyleCard / load_style_cards / style_card_to_decide_rules: 风格卡片。
+   src\pixo\know\__init__.py:13 DEFAULT_STYLE_CARDS,
+   src\pixo\know\__init__.py:15 build_style_card_rules,
+   src\pixo\know\__init__.py:16 load_style_card_dicts,
+   src\pixo\know\__init__.py:17 load_style_cards,
+   src\pixo\know\__init__.py:18 style_card_from_dict,
+   src\pixo\know\__init__.py:19 style_card_to_decide_rules,
+   src\pixo\know\__init__.py:20 style_card_to_dict,
+   src\pixo\know\__init__.py:41 "load_style_cards",
+   src\pixo\know\__init__.py:42 "load_style_card_dicts",
+   src\pixo\know\__init__.py:43 "style_card_from_dict",
+   src\pixo\know\__init__.py:44 "style_card_to_dict",
+   src\pixo\know\__init__.py:45 "style_card_to_decide_rules",
+   src\pixo\know\__init__.py:46 "build_style_card_rules",
+   src\pixo\know\__init__.py:47 "DEFAULT_STYLE_CARDS",
+   src\pixo\pipeline\loop.py:117 # 开关 PIXO_STYLE_CARDS：**缺省关**（队长裁决，R13）。裁决依据：默认开曾实测
+   src\pixo\pipeline\loop.py:121 # （PIXO_STYLE_CARDS=1/true/on 等）。功能双态均已测试；安全性设计不变：
+   src\pixo\pipeline\loop.py:124 _STYLE_CARDS_ENV = "PIXO_STYLE_CARDS"
+   src\pixo\pipeline\loop.py:127 def style_cards_enabled(env: Mapping[str, str] | None = None) -> bool:
+   src\pixo\pipeline\loop.py:128 """读 PIXO_STYLE_CARDS 风格卡片开关（**缺省关**，R13 裁决）。
+   src\pixo\pipeline\loop.py:134 raw = str(source.get(_STYLE_CARDS_ENV, "")).strip().lower()
+   src\pixo\pipeline\loop.py:742 enable_style_cards: bool | None = None,
+   src\pixo\pipeline\loop.py:831 # R13 风格卡片接入 decide_context：enable_style_cards=None 时读
+   src\pixo\pipeline\loop.py:832 # PIXO_STYLE_CARDS（**缺省关**，R13 裁决——QC 回退漂移实证，激活留
+   src\pixo\pipeline\loop.py:834 # 卡源 = know.load_style_cards()（内置 6 张 builtin 卡，纯内存零
+   src\pixo\pipeline\loop.py:836 # 经 style_card_to_decide_rules 产出零规则，不作为决策卡源）。
+   src\pixo\pipeline\loop.py:839 # （知识层故障不阻断闭环，与引擎 _style_card_rules 的降级同向）。
+   src\pixo\pipeline\loop.py:840 self.enable_style_cards = (
+   src\pixo\pipeline\loop.py:841 style_cards_enabled() if enable_style_cards is None
+   src\pixo\pipeline\loop.py:842 else bool(enable_style_cards)
+   src\pixo\pipeline\loop.py:844 self._style_cards: list[dict[str, Any]] = []
+   src\pixo\pipeline\loop.py:845 if self.enable_style_cards:
+   src\pixo\pipeline\loop.py:847 from ..know import load_style_cards
+   src\pixo\pipeline\loop.py:848 self._style_cards = [c.to_dict() for c in load_style_cards()]
+   src\pixo\pipeline\loop.py:852 "style_cards: %s: %s", type(exc).__name__, exc)
+   src\pixo\pipeline\loop.py:1445 if self._style_cards:
+   src\pixo\pipeline\loop.py:1447 # test_know 权威用法；引擎 _style_card_rules 生成 priority
+   src\pixo\pipeline\loop.py:1449 decide_context["style_cards"] = list(self._style_cards)
+   src\pixo\service\runtime.py:808 ``enable_style_cards=False``。**不读 preview session /
+   src\pixo\service\runtime.py:956 enable_style_cards=False,
+--- tests free px hardcodes ---
+   tests\integration\test_loop_e2e.py:69 compose_params={"mode": "free", "x": 8, "y": 8, "width": 32, "height": 32},
+   tests\regression\test_gate_compose.py:81 ctx, out = _run_compose(img, mode="free", x=7, y=5, width=20, height=15)
+   tests\regression\test_gate_compose.py:92 ctx, out = _run_compose(img, mode="free", x=2, y=3, width=16, height=12,
+   tests\regression\test_gate_compose.py:118 ctx, out = _run_compose(img, mode="free", x=0, y=0, width=64, height=64,
+   tests\regression\test_gate_compose.py:135 ctx, out = _run_compose(img, mode="free", x=0, y=0,
+   tests\regression\test_gate_compose.py:149 ctx, out = _run_compose(img, mode="free", x=3, y=4, width=24, height=18,
+   tests\unit\test_compose_autolevel.py:109 ctx = _run(img, {"mode": "free"})
+   tests\unit\test_decide_region_wiring.py:488 a = _compose_fingerprint({"compose": {"mode": "free", "x": 10, "y": 0,
+   tests\unit\test_decide_region_wiring.py:491 "x": 10, "mode": "free"}})
+   tests\unit\test_decide_region_wiring.py:514 cropped = {"compose": {"mode": "free", "x": 8, "y": 8,
+   tests\unit\test_loop_replay.py:48 add(event_type="compose_params", reason="构图参数确定", value={"mode": "free"})
+   tests\unit\test_region_masks_channel.py:142 (240, 320), {"mode": "free"})
+   tests\unit\test_region_masks_channel.py:651 compose = {"mode": "free", "x": 50.0, "y": 0.0, "width": 50.0,
+--- docs 架构设计文档.md:380-396 ---
+--- docs/架构设计文档.md:380-396 ---
+   380: ```
+   381: 
+   382: 或自由裁剪：
+   383: 
+   384: ```json
+   385: {
+   386:   "crop": {
+   387:     "mode": "free",
+   388:     "x": 100,
+   389:     "y": 80,
+   390:     "width": 3000,
+   391:     "height": 2000
+   392:   }
+   393: }
+   394: ```
+   395: 
+   396: ### 7.5 接口
+--- src/pixo/service/runtime.py:620-680 ---
+   620:         if not _region_supply_enabled() or self.segmenter_type != "multi":
+   621:             return
+   622:         # R16 非阻塞衔接: 推理锁被预热/另一供给持有时**立即返回**（预热不挡
+   623:         # 请求, status.reason="segmenter_warming" 供 UI 稍后重查），锁释放后
+   624:         # 的下次查询以热态执行供给。
+   625:         if not self._segmenter_infer_lock.acquire(blocking=False):
+   626:             session.region_masks_source = "warming"
+   627:             return
+   628:         try:
+   629:             with self._region_supply_lock:
+   630:                 if getattr(session, "region_masks", None) is not None:
+   631:                     return                    # 并发 GET 下另一线程已完成
+   632:                 try:
+   633:                     img = session.render(
+   634:                         long_edge=_REGION_SUPPLY_EDGE)
+   635:                     # 持推理锁内分割: 与预热互斥（后端懒加载非线程安全）。
+   636:                     masks = self._segmenter.segment(
+   637:                         img, list(_REGION_PROMPTS))
+   638:                     candidates = dict(masks) if isinstance(masks, dict) else {}
+   639:                     valid = {k: v for k, v in candidates.items()
+   640:                              if _mask_has_signal(v)}
+   641:                     if valid:
+   642:                         session.region_masks = valid
+   643:                         session.region_masks_source = "segmenter"
+   644:                         _LOGGER.info(
+   645:                             "[pixo.runtime] region 掩码供给完成: session=%s "
+   646:                             "prompts=%s", session.session_id, sorted(valid))
+   647:                     else:
+   648:                         # 全零/空: 分割成功但无有效区域 → HSM 不应用（不注入,
+   649:                         # 不虚报 available）
+   650:                         session.region_masks = {}
+   651:                         session.region_masks_source = "segmenter"
+   652:                         _LOGGER.info(
+   653:                             "[pixo.runtime] region 掩码供给: 分割成功但无有效"
+   654:                             "区域掩码, HSM 不应用: session=%s",
+   655:                             session.session_id)
+   656:                 except Exception as exc:  # noqa: BLE001 - 失败不炸状态端点
+   657:                     session.region_masks = {}
+   658:                     session.region_masks_source = "segmenter_error"
+   659:                     _LOGGER.warning(
+   660:                         "[pixo.runtime] region 掩码供给失败 (降级为不可用): "
+   661:                         "session=%s %s: %s", session.session_id,
+   662:                         type(exc).__name__, exc)
+   663:         finally:
+   664:             self._segmenter_infer_lock.release()
+   665: 
+   666:     def _photo_id_for_session(self, session_id: str) -> str | None:
+   667:         """反查 photo_id：优先 session→photo 索引（O(1)），miss 再兜底扫描。"""
+   668:         photo_id = self._session_photo.get(session_id)
+   669:         if photo_id:
+   670:             return photo_id
+   671:         direct = getattr(self.sessions.get(session_id), "photo_id", None)
+   672:         if direct:
+   673:             return str(direct)
+   674:         for pid, photo in self.photos.items():
+   675:             if session_id in photo.sessions:
+   676:                 return pid
+   677:         return None
+   678: 
+   679:     # ---- 测量 / 决策 ----
+   680: 

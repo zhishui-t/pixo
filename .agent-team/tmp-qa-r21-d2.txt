@@ -1,0 +1,2 @@
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights: 100%|██████████| 398/398 [00:00<00:00, 16580.25it/s]
+{"default_scorer_type": "_PixoScorerAdapter", "is_pixo_adapter": true, "callable": true, "has_call_attr": true, "call_result": {"return_type": "dict", "keys": ["color", "composition", "content", "depth_of_field", "domain_hint", "lighting", "overall", "quality", "raw_overall", "source"]}}

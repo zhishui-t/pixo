@@ -1,0 +1,551 @@
+﻿DEFAULT_STAGES = ['exposure', 'whitebalance', 'compose', 'huesat', 'tone', 'dehaze', 'clarity', 'colorcal', 'calibration', 'hsl', 'split_tone', 'skin', 'region_adjust', 'stylize', 'refine']
+REGISTERED = ['calibration', 'clarity', 'colorcal', 'compose', 'dehaze', 'denoise', 'exposure', 'hsl', 'huesat', 'refine', 'region_adjust', 'sharpen', 'skin', 'split_tone', 'stylize', 'tone', 'vibrance', 'whitebalance']
+{
+  "calibration": {
+    "enabled": {
+      "type": "bool"
+    },
+    "shadow_tint": {
+      "type": "float",
+      "min": -100.0,
+      "max": 100.0
+    },
+    "red_hue": {
+      "type": "float",
+      "min": -180.0,
+      "max": 180.0
+    },
+    "red_sat": {
+      "type": "float",
+      "min": -100.0,
+      "max": 100.0
+    },
+    "green_hue": {
+      "type": "float",
+      "min": -180.0,
+      "max": 180.0
+    },
+    "green_sat": {
+      "type": "float",
+      "min": -100.0,
+      "max": 100.0
+    },
+    "blue_hue": {
+      "type": "float",
+      "min": -180.0,
+      "max": 180.0
+    },
+    "blue_sat": {
+      "type": "float",
+      "min": -100.0,
+      "max": 100.0
+    }
+  },
+  "clarity": {
+    "enabled": {
+      "type": "bool"
+    },
+    "strength": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    }
+  },
+  "colorcal": {
+    "saturation": {
+      "type": "float",
+      "min": -1.0,
+      "max": 1.0
+    },
+    "vibrance": {
+      "type": "float",
+      "min": -1.0,
+      "max": 1.0
+    },
+    "hue": {
+      "type": "float"
+    },
+    "neutral_a": {
+      "type": "float"
+    },
+    "neutral_b": {
+      "type": "float"
+    },
+    "neutral_a_curve": {
+      "type": "float_or_str"
+    },
+    "neutral_b_curve": {
+      "type": "float_or_str"
+    },
+    "neutral_mode": {
+      "type": "str",
+      "choices": [
+        "adaptive",
+        "static",
+        "off"
+      ]
+    },
+    "neutral_damping": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "neutral_sigma": {
+      "type": "float",
+      "min": 0.0
+    },
+    "skin_protect": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "skin_trim": {
+      "type": "float_or_str"
+    },
+    "scene_trim": {
+      "type": "float_or_str"
+    },
+    "scene_skin_trim": {
+      "type": "float_or_str"
+    },
+    "scene_hue": {
+      "type": "float_or_str"
+    },
+    "gamut_soft": {
+      "type": "float",
+      "min": 0.0
+    },
+    "color_domain": {
+      "type": "str",
+      "choices": [
+        "hsv",
+        "oklch"
+      ]
+    }
+  },
+  "compose": {
+    "mode": {
+      "type": "str",
+      "choices": [
+        "ratio",
+        "free",
+        "auto_level"
+      ]
+    },
+    "ratio": {
+      "type": "float_or_str"
+    },
+    "center": {
+      "type": "float_or_str"
+    },
+    "rotation": {
+      "type": "float",
+      "min": -360.0,
+      "max": 360.0
+    },
+    "horizontal_flip": {
+      "type": "bool"
+    },
+    "vertical_flip": {
+      "type": "bool"
+    },
+    "x": {
+      "type": "float"
+    },
+    "y": {
+      "type": "float"
+    },
+    "width": {
+      "type": "float"
+    },
+    "height": {
+      "type": "float"
+    },
+    "min_confidence": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    }
+  },
+  "dehaze": {
+    "enabled": {
+      "type": "bool"
+    },
+    "strength": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "radius": {
+      "type": "float",
+      "min": 1.0,
+      "max": 60.0
+    }
+  },
+  "denoise": {},
+  "exposure": {
+    "mode": {
+      "type": "float_or_str"
+    },
+    "target": {
+      "type": "float"
+    },
+    "target_offset": {
+      "type": "float"
+    },
+    "clip_p": {
+      "type": "float",
+      "min": 50.0,
+      "max": 100.0
+    },
+    "highlight_budget": {
+      "type": "float",
+      "min": 0.0,
+      "max": 0.2
+    },
+    "max_ev": {
+      "type": "float",
+      "min": 0.1,
+      "max": 6.0
+    },
+    "rolloff_knee": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "vignette": {
+      "type": "float",
+      "min": 0.0,
+      "max": 0.5
+    },
+    "subject_mode": {
+      "type": "str",
+      "choices": [
+        "box",
+        "full"
+      ]
+    },
+    "baseline_ev_curve": {
+      "type": "float_or_str"
+    },
+    "baseline_scene_ev": {
+      "type": "float_or_str"
+    },
+    "low_key_keep": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "low_key_range": {
+      "type": "float",
+      "min": 0.5,
+      "max": 6.0
+    },
+    "low_key_knee": {
+      "type": "float",
+      "min": 0.0,
+      "max": 4.0
+    }
+  },
+  "hsl": {
+    "enabled": {
+      "type": "bool"
+    },
+    "bands": {
+      "type": "float_or_str"
+    },
+    "smooth": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "color_domain": {
+      "type": "str",
+      "choices": [
+        "hsv",
+        "oklch"
+      ]
+    }
+  },
+  "huesat": {
+    "enabled": {
+      "type": "bool"
+    },
+    "strength": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "warm_highlight_sat": {
+      "type": "float",
+      "min": 1.0,
+      "max": 5.0
+    },
+    "warm_sat_spot_scale": {
+      "type": "float",
+      "min": 1.0,
+      "max": 5.0
+    },
+    "warm_sat_hue_center": {
+      "type": "float",
+      "min": 0.0,
+      "max": 360.0
+    },
+    "warm_sat_hue_halfwidth": {
+      "type": "float",
+      "min": 1.0,
+      "max": 90.0
+    },
+    "warm_sat_val_min": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "warm_sat_coverage_max": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "color_domain": {
+      "type": "str",
+      "choices": [
+        "hsv",
+        "oklch"
+      ]
+    },
+    "oklch_points_file": {
+      "type": "str"
+    }
+  },
+  "refine": {
+    "highlight_desat": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "sharpen": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "chroma_denoise": {
+      "type": "float",
+      "min": 0.0,
+      "max": 5.0
+    },
+    "warm_sat_curve": {
+      "type": "float_or_str"
+    },
+    "warm_sat_spot": {
+      "type": "float_or_str"
+    },
+    "warm_hue_curve": {
+      "type": "float_or_str"
+    }
+  },
+  "region_adjust": {
+    "enabled": {
+      "type": "bool"
+    },
+    "regions": {
+      "type": "dict"
+    }
+  },
+  "sharpen": {},
+  "skin": {
+    "enabled": {
+      "type": "bool"
+    },
+    "strength": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "color_domain": {
+      "type": "str",
+      "choices": [
+        "hsv",
+        "oklch"
+      ]
+    }
+  },
+  "split_tone": {
+    "enabled": {
+      "type": "bool"
+    },
+    "shadows_hue": {
+      "type": "float",
+      "min": 0.0,
+      "max": 360.0
+    },
+    "shadows_sat": {
+      "type": "float",
+      "min": 0.0,
+      "max": 100.0
+    },
+    "highlights_hue": {
+      "type": "float",
+      "min": 0.0,
+      "max": 360.0
+    },
+    "highlights_sat": {
+      "type": "float",
+      "min": 0.0,
+      "max": 100.0
+    },
+    "balance": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "strength": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "color_domain": {
+      "type": "str",
+      "choices": [
+        "hsv",
+        "oklch"
+      ]
+    }
+  },
+  "stylize": {
+    "lut": {
+      "type": "any"
+    },
+    "lut_path": {
+      "type": "str"
+    },
+    "lut_strength": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    }
+  },
+  "tone": {
+    "profile_curve": {
+      "type": "bool"
+    },
+    "eotf": {
+      "type": "str",
+      "choices": [
+        "srgb",
+        "power22",
+        "lrfit"
+      ]
+    },
+    "gamma": {
+      "type": "float",
+      "min": 1.0,
+      "max": 4.0
+    },
+    "brightness": {
+      "type": "float"
+    },
+    "use_filmic": {
+      "type": "bool"
+    },
+    "contrast": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "toe": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "shoulder": {
+      "type": "float",
+      "min": 0.0,
+      "max": 1.0
+    },
+    "highlight_compress_curve": {
+      "type": "float_or_str"
+    },
+    "user_curve": {
+      "type": "float_or_str"
+    },
+    "highlights": {
+      "type": "float",
+      "min": -1.0,
+      "max": 1.0
+    },
+    "shadows": {
+      "type": "float",
+      "min": -1.0,
+      "max": 1.0
+    },
+    "whites": {
+      "type": "float",
+      "min": -1.0,
+      "max": 1.0
+    },
+    "blacks": {
+      "type": "float",
+      "min": -1.0,
+      "max": 1.0
+    }
+  },
+  "vibrance": {},
+  "whitebalance": {
+    "mode": {
+      "type": "float_or_str"
+    },
+    "warmth": {
+      "type": "float",
+      "min": 0.0,
+      "max": 2.0
+    },
+    "warmth_b0": {
+      "type": "float"
+    },
+    "warmth_b1": {
+      "type": "float"
+    },
+    "warmth_r_slope": {
+      "type": "float",
+      "min": -0.05,
+      "max": 0.25
+    },
+    "warmth_g_slope": {
+      "type": "float",
+      "min": -0.05,
+      "max": 0.15
+    },
+    "warmth_b_slope": {
+      "type": "float",
+      "min": 0.05,
+      "max": 0.35
+    },
+    "warmth_r_day": {
+      "type": "float",
+      "min": 0.0,
+      "max": 0.5
+    },
+    "warmth_curve": {
+      "type": "float_or_str"
+    },
+    "warm_cal_file": {
+      "type": "str"
+    },
+    "fallback_outside_domain": {
+      "type": "bool"
+    },
+    "trim": {
+      "type": "float_or_str"
+    },
+    "temp": {
+      "type": "float",
+      "min": 1000.0,
+      "max": 50000.0
+    },
+    "tint": {
+      "type": "float",
+      "min": -150.0,
+      "max": 150.0
+    }
+  }
+}

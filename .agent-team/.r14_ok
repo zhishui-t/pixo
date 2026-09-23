@@ -1,0 +1,86 @@
+# .r14_ok — R14 收口门禁通过签章
+
+- 审核人: qa (R14 收口门禁)
+- 覆盖: R14 三件 —— 后端 region 状态 API (dev-2) + 前端 RegionSection (dev-3)
+  + B1/B2 修复批 (dev-3 追加, tester P1/P2)
+- ISO 时间戳: 2026-09-07T16:42:48Z
+- 全量终态: 1515 passed / 5 skipped / 1 xfailed / 0 failed (tester 报告复认一致)
+- 前端三件套: typecheck 零错误 / test:unit 30 pass 0 fail / build 5.31s ✓
+
+## 五条结论
+
+1. **B1 修复质量 (P1 关闭复核) — PASS**:
+   - `node e2e/_r14_ui_contract.mjs` 独立复跑 **5/5 passed**——含 B1 三断言
+     (会话未建立零 /region 请求 [实测 0 个] / 区域滑杆不渲染 [滑杆 0 + 提示 1] /
+     掩码不可用期间零 region_adjust PUT [实测 0 个]) + 真实 sid 重查
+     (PUT /params 与 GET /region 全程真实 sid, 零 demo-session) + UI 徽标与
+     真实后端状态一致性 (后端 available=false/masks_not_injected ↔ UI
+     "区域掩码不可用")。
+   - mock 兜底语义收紧审查通过: fetchRegionMaskStatus (api/index.ts:122-139)
+     四分支——①真离线 (backendAvailable===false) → mock 恒可用, **唯一**装
+     可用分支; ②无会话 (sessionId=null) → session_not_ready 未激活态;
+     ③404 (PixoApiError.status===404) → session_not_found 显式错误态;
+     ④其余失败 → fetch_failed 显式错误态。③④均不回退 mock; 函数不修改
+     backendAvailable 全局信号 (子端点失败≠后端离线)。
+   - 不可用态零 region PUT 提交面: 组件级 (ui.enabled=false 时滑杆整体
+     不渲染 = 无静默操作面) + 浏览器级 (契约脚本网络抓包断言 0 个
+     region_adjust PUT) 双层验证。
+   - reason 机器码→可行动文案映射 (4 已知码 + 未知码透传不吞诊断) 有
+     committed 测试 (regionSection.test.mjs +2)。
+2. **B2 — PASS**:
+   - vite proxy '/api' → 127.0.0.1:8000 (vite.config.ts) + API_BASE 缺省 ''
+     (同源相对路径, client.ts); VITE_PIXO_API_URL 显式覆盖保留 (直连场景)。
+   - 代理线路实证: curl :5173/api/health → 200; 契约脚本全程走 :5173/api/*
+     代理, PUT/GET 真实到达后端。
+   - 副作用审查: smoke 8/8 复跑通过 (t81 截图随跑更新 docs/ui/*.png 为预期
+     产物); 生产 build ✓ (API_BASE='' 同源部署语义, dist 产物正常);
+     PixoApiError 替换原 Error 不破坏既有 catch 面 (typecheck 零错误 +
+     三件套 30/0)。
+3. **后端双面方案 — PASS**: GET /api/sessions/{id}/region (404 语义与既有
+   端点一致) + PUT params 响应顶层 region 状态节; 6 测试全过 (API 形状 4 +
+   patch 嵌套深合并/真 RawPreviewSession 渲染 e2e 2——掩码区 Δ≈2^(-0.5/2.2)
+   ±15% + 非掩码区逐位不变)。
+   **canonical 纯净性**: canonical_params() (session.py:451) 为 per-stage
+   渲染参数合并 (default_params + 用户覆盖), region 状态节仅在响应**顶层**
+   与 canonical 并列, 不注入渲染参数面 ✓。
+4. **前端数学与接线 — PASS**:
+   - 感知传递独立抽验: 域内双向互逆最大偏差 **4.441e-16** (任务书阈 1e-9,
+     优 6 个数量级); 锚点 (位置 0.5→0 / 端点→满量纲 ±2/±1) ✓; 中心高分辨率
+     (|v(0.55)|=0.0251 < 线性 0.1) ✓; 越界 clamp 保护 ✓; buildRegionPatch
+     域钳制 ✓; γ=1.6 与 oklchScale C_SLIDER_GAMMA 同源 (源码直读比对) ✓。
+   - RegionSection 双态: 可用态 (prompt 胶囊/单区域 Badge 降级 + 三滑杆
+     exposure/saturation/warmth + "掩码就绪·N 个区域"); 不可用态 (灰徽标 +
+     reason 映射提示 + 重试按钮, 滑杆不渲染)。
+   - store 接线: sessionId 直读 useAppStore (与照片/参数请求同源),
+     useEffect 依赖 [sessionId, retryNonce] 变化自动重查, alive 竞态保护。
+5. **全量回归 — PASS**: 1515 passed / 5 skipped / 1 xfailed / 0 failed
+   (R13 基线 1509 + R14 新增 test_region_session_api.py 6 项 = 1515 计数
+   吻合; tester 报告 1515/0 复认一致)。
+
+## 修复记录 (qa 最小修复, 已复验)
+
+1. **client.ts 旧语义注释残留** (frontend/src/api/client.ts
+   getRegionMasks docstring):
+   - 改了什么: 「404/未实施由 api 层兜底 mock, 不作为前端错误」→ 更正为
+     「失败以 PixoApiError 抛出 (带 status)——兜底语义在
+     api/index.ts::fetchRegionMaskStatus (B1 收紧后: 仅真离线走 mock,
+     404/失败为显式错误态, 不装可用)」。
+   - 为什么: 该注释为 B1 修复前的旧语义, 与修复后实现矛盾——注释会误导
+     后续维护者以为 404 可安全兜底 mock (正是 B1 要关闭的断链行为)。
+   - 验证: typecheck 零错误 (注释级改动, 行为无变化); 前端三件套 30/0。
+
+## 验证环境注记
+
+- 联调验证时 8000 端口已有后端实例在跑 (qa 起的实例绑定失败 10048 退出);
+  该实例响应 R14 新端点契约形状 (GET /region 返回 available/prompts/reason
+  —— 旧代码无此端点必 404), 证明其为 R14 工作树代码, 联调验证有效。
+  (若为纯净环境, 后端由 `PYTHONPATH=src python -m pixo.service` 启动。)
+
+## 遗留与升级 (不阻塞)
+
+- O1 (tester 观察项): PUT 响应 region 节可作 "patch 后即时刷徽标" 数据源
+  (当前重查靠 sessionId 变化 + 手动重试)——后续增强项。
+- reason 细分 (分割未运行/无显著区域) 等 loop 分割链接入时扩展 (字段已留)。
+- 掩码可用态浏览器级验证需 Route B 注入端点 (服务暂无)——python 侧 e2e 已
+  覆盖该语义, UI 侧可用态渲染由 unit maskStatusToUi 断言覆盖。
+- 本轮未 commit (提交策略归队长)。

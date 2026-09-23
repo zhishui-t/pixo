@@ -1,0 +1,73 @@
+[pixo.vision.segmenters] 后端 sapiens 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+[pixo.vision.segmenters] 后端 uniface 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+Loading weights:   0%|          | 0/208 [00:00<?, ?it/s]Loading weights: 100%|██████████| 208/208 [00:00<00:00, 20812.43it/s]
+[pixo.vision.segmenters] prompt 'face' 无后端返回，零掩码降级
+{
+ "sample": "DSC_5237.NEF",
+ "rules_count": 11,
+ "state": "ACCEPTED",
+ "iteration": 2,
+ "params": {
+  "dehaze": {
+   "strength": 0.15,
+   "enabled": true
+  },
+  "colorcal": {
+   "saturation": -0.15
+  }
+ },
+ "decide_events": [
+  {
+   "iteration": 1,
+   "decision": "adjust_and_continue",
+   "last_iteration": false,
+   "rule_ids": [
+    "dehaze_rule_030"
+   ],
+   "colorfulness_proxy": 5.8847,
+   "haze_proxy": 0.2516,
+   "shadow_clip_ratio": 7e-06
+  },
+  {
+   "iteration": 2,
+   "decision": "adjust_and_continue",
+   "last_iteration": true,
+   "rule_ids": [
+    "dehaze_rule_030",
+    "saturation_high_rule"
+   ],
+   "colorfulness_proxy": 6.1472,
+   "haze_proxy": 0.2394,
+   "shadow_clip_ratio": 1.4e-05
+  }
+ ],
+ "rule_ids_by_iteration": [
+  {
+   "iteration": 1,
+   "rule_ids": [
+    "dehaze_rule_030"
+   ]
+  },
+  {
+   "iteration": 2,
+   "rule_ids": [
+    "dehaze_rule_030",
+    "saturation_high_rule"
+   ]
+  }
+ ],
+ "union_rule_ids": [
+  "dehaze_rule_030",
+  "saturation_high_rule"
+ ],
+ "last_nonempty_rule_ids": [
+  "dehaze_rule_030",
+  "saturation_high_rule"
+ ],
+ "old_last_event_rule_ids": [
+  "dehaze_rule_030",
+  "saturation_high_rule"
+ ],
+ "final_highlight_clip_ratio": 0.007422,
+ "segmenter_last_degraded": []
+}

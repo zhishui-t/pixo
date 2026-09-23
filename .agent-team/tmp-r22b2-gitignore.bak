@@ -1,0 +1,90 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# ---- rawlab 验收产物 / 一次性调试脚本(不纳入版本控制)----
+rawlab/out/
+rawlab/debug/
+
+# ---- 无关残留(DSH 会话日志与脚本 / 前端插件 / playwright)----
+pw-test/
+node_modules/
+dsh-*.log
+dsh-*.log.out
+dsh-*.err.log
+dsh-*.out.log
+dsh-*.ps1
+package.json
+package-lock.json
+vitest.config.ts
+apply.spec.ts
+
+# DSH 会话临时脚本
+*.mjs
+!src/pixo/dsh/*.mjs
+!frontend/e2e/*.mjs
+!frontend/tests/*.test.mjs
+
+# ---- C++ native build artifacts ----
+src/pixo/render/native/build/
+src/pixo/render/_native/*.dll
+src/pixo/render/_native/*.so
+src/pixo/render/_native/*.pyd
+
+# Extra native build dirs
+src/pixo/render/native/build*/
+
+# pixo.render decode disk cache
+src/pixo/render/bench/cache/
+
+# ---- Pixo frontend (Web UI) ----
+!frontend/package.json
+!frontend/package-lock.json
+
+# Frontend generated screenshots
+frontend/screenshots/
+
+# Auto-generated photo outputs and artifacts
+exports/
+
+# Agent teams 本地协作状态
+.agent-teams/
+
+# 美学评分器权重：git 不跟踪（磁盘产物），随 wheel data-files 分发（2026-09-07 用户拍板；部署见 docs/metrics/scorer_weights_deployment.md）
+resources/models/aesthetic/*.pt
+frontend/dist/
+frontend/e2e/screenshots/
+
+# ---- 实验残留：根目录临时脚本/日志/冒烟输出（不入版本控制）----
+/_*.py
+/_*.log
+/_*.txt
+/_*.png
+/_tools/
+
+# ---- 可再生 metrics 运行产物（.md 摘要保留跟踪，数据文件不跟踪）----
+docs/metrics/*.jsonl
+docs/metrics/*.json
+docs/metrics/.*.jsonl
+docs/metrics/.*.json
+docs/metrics/*_result.txt
+!docs/metrics/*.md
+
+# ---- stage1: graphify ������ artifacts ���ļ� ----
+.graphify/
+src/pixo/.graphify/
+.artifacts/*.npz
+.artifacts/*.log
+
+# stage2: �궨�����Ʋ������ seed �طŸ��֣�����⣩
+.artifacts/*.pt
+.artifacts/_*
+
+# Agent team 本地协作状态（黑板）
+.agent-team/
+.zcode/
+build/

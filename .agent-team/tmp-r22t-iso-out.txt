@@ -1,0 +1,38 @@
+RAW_DIR              = K:\data\photo\0711\raw
+NEF total            = 765  (parse_failed=0)
+ISO histogram        = [(100, 8), (110, 3), (125, 202), (140, 1), (160, 2), (180, 1), (200, 102), (220, 4), (250, 6), (280, 5), (320, 240), (360, 8), (400, 4), (450, 11), (500, 5), (560, 11), (640, 16), (800, 99), (1000, 1), (1600, 4), (3200, 12), (5000, 5), (6400, 11), (8000, 2), (12800, 2)]
+ISO>=1600            = 36
+ISO>=3200            = 32
+  DSC_5314.NEF     ISO= 12800 shutter=1/60     f/14/5   prog=Aperture Priority model=None
+  DSC_5315.NEF     ISO= 12800 shutter=1/60     f/14/5   prog=Aperture Priority model=None
+  DSC_5278.NEF     ISO=  8000 shutter=1/160    f/14/5   prog=Aperture Priority model=None
+  DSC_5279.NEF     ISO=  8000 shutter=1/160    f/14/5   prog=Aperture Priority model=None
+  DSC_5290.NEF     ISO=  6400 shutter=1/20     f/14/5   prog=Aperture Priority model=None
+  DSC_5291.NEF     ISO=  6400 shutter=1/20     f/14/5   prog=Aperture Priority model=None
+  DSC_5292.NEF     ISO=  6400 shutter=1/800    f/14/5   prog=Aperture Priority model=None
+  DSC_5293.NEF     ISO=  6400 shutter=1/800    f/14/5   prog=Aperture Priority model=None
+  DSC_5294.NEF     ISO=  6400 shutter=1/640    f/14/5   prog=Aperture Priority model=None
+  DSC_5295.NEF     ISO=  6400 shutter=1/800    f/14/5   prog=Aperture Priority model=None
+  DSC_5309.NEF     ISO=  6400 shutter=1/100    f/14/5   prog=Aperture Priority model=None
+  DSC_5310.NEF     ISO=  6400 shutter=1/100    f/14/5   prog=Aperture Priority model=None
+  DSC_5311.NEF     ISO=  6400 shutter=1/20     f/14/5   prog=Aperture Priority model=None
+  DSC_5312.NEF     ISO=  6400 shutter=1/20     f/14/5   prog=Aperture Priority model=None
+  DSC_5313.NEF     ISO=  6400 shutter=1/25     f/14/5   prog=Aperture Priority model=None
+  DSC_5280.NEF     ISO=  5000 shutter=1/125    f/14/5   prog=Aperture Priority model=None
+  DSC_5281.NEF     ISO=  5000 shutter=1/125    f/14/5   prog=Aperture Priority model=None
+  DSC_5282.NEF     ISO=  5000 shutter=1/125    f/14/5   prog=Aperture Priority model=None
+  DSC_5283.NEF     ISO=  5000 shutter=1/100    f/14/5   prog=Aperture Priority model=None
+  DSC_5284.NEF     ISO=  5000 shutter=1/100    f/14/5   prog=Aperture Priority model=None
+  DSC_5258.NEF     ISO=  3200 shutter=1/400    f/14/5   prog=Aperture Priority model=None
+  DSC_5259.NEF     ISO=  3200 shutter=1/400    f/14/5   prog=Aperture Priority model=None
+  DSC_5260.NEF     ISO=  3200 shutter=1/640    f/14/5   prog=Aperture Priority model=None
+  DSC_5261.NEF     ISO=  3200 shutter=1/640    f/14/5   prog=Aperture Priority model=None
+  DSC_5262.NEF     ISO=  3200 shutter=1/640    f/14/5   prog=Aperture Priority model=None
+  DSC_5263.NEF     ISO=  3200 shutter=1/640    f/14/5   prog=Aperture Priority model=None
+  DSC_5264.NEF     ISO=  3200 shutter=1/640    f/14/5   prog=Aperture Priority model=None
+  DSC_5285.NEF     ISO=  3200 shutter=1/125    f/14/5   prog=Aperture Priority model=None
+  DSC_5286.NEF     ISO=  3200 shutter=1/125    f/14/5   prog=Aperture Priority model=None
+  DSC_5287.NEF     ISO=  3200 shutter=1/125    f/14/5   prog=Aperture Priority model=None
+  DSC_5288.NEF     ISO=  3200 shutter=1/15     f/14/5   prog=Aperture Priority model=None
+  DSC_5289.NEF     ISO=  3200 shutter=1/15     f/14/5   prog=Aperture Priority model=None
+[wrote] K:\work\project\pixo\.artifacts\r22-noise-ab\corpus-iso.json

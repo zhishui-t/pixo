@@ -1,0 +1,36 @@
+
+### Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp
+    size=281064 sha256=aefcae08e6e7bd900dc0b27de81aed0123bd95ec84cb5a0d5aa223df42d2fc22
+    @    218: 'com.adobe'
+    @    228: 'Nikon Z 5 2 RawLab LR Baseline'
+    @   2404: 'RawLab fitted profile'
+
+### Nikon Z 5 2 RawLab LR Baseline.dcp
+    size=281080 sha256=f3a19d9a59ad9f8bb893e59ccd87b2e9a48134b774cbd546f91ead322a9d56b0
+    @    218: 'com.adobe'
+    @    228: 'Nikon Z 5 2 RawLab LR Camera Standard Baseline'
+    @   2420: 'RawLab fitted profile'
+
+### Nikon Z 5 2 RawLab LR Camera Standard Baseline.dcp
+    size=281080 sha256=f3a19d9a59ad9f8bb893e59ccd87b2e9a48134b774cbd546f91ead322a9d56b0
+    @    218: 'com.adobe'
+    @    228: 'Nikon Z 5 2 RawLab LR Camera Standard Baseline'
+    @   2420: 'RawLab fitted profile'
+
+### Nikon Z 5 2 RawLab Preview Baseline v2.dcp
+    size=4550 sha256=8d9d911a90f3d8f92d8c1c0be5b905ef87f54fdf8ff2815f733e36f80df0fe4d
+    @    182: 'com.adobe'
+    @    192: 'Nikon Z 5 2 RawLab Preview Baseline v2'
+    @   2376: 'RawLab fitted profile'
+
+### Nikon Z 5 2 RawLab Preview Baseline v3.dcp
+    size=4550 sha256=9b27eb48f1ee7e67e09e3815408bd7c297ea1fbab82fba0bc2dc40607953b661
+    @    182: 'com.adobe'
+    @    192: 'Nikon Z 5 2 RawLab Preview Baseline v3'
+    @   2376: 'RawLab fitted profile'
+
+### Nikon Z 5 2 RawLab Preview Baseline.dcp
+    size=4546 sha256=b21f2149b9890f3845d7504e8b1162c0754db8775fa4446d40618fa369520dda
+    @    182: 'com.adobe'
+    @    192: 'Nikon Z 5 2 RawLab Preview Baseline'
+    @   2372: 'RawLab fitted profile'

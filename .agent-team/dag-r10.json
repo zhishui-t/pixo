@@ -1,0 +1,110 @@
+{
+  "title": "Pixo 第十一轮：A 轨删除（GPL 清偿）× scene 门控观察窗",
+  "nodes": [
+    {
+      "id": "r11-gate",
+      "label": "用户拍板删A轨+继续",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "arail-points",
+      "label": "补5个DCP点云",
+      "role": "dev-2",
+      "status": "running",
+      "deps": [
+        "r11-gate"
+      ],
+      "note": "0.5人日前置"
+    },
+    {
+      "id": "arail-remove",
+      "label": "A轨删除210行",
+      "role": "dev-2",
+      "status": "pending",
+      "deps": [
+        "arail-points"
+      ]
+    },
+    {
+      "id": "arail-verify",
+      "label": "GPL清零+门禁",
+      "role": "dev-2/qa",
+      "status": "pending",
+      "deps": [
+        "arail-remove"
+      ]
+    },
+    {
+      "id": "scene-gate",
+      "label": "scene门控(观察窗)",
+      "role": "dev-1",
+      "status": "running",
+      "deps": [
+        "r11-gate"
+      ]
+    },
+    {
+      "id": "r11-qa",
+      "label": "专项门禁+全量回归",
+      "role": "qa",
+      "status": "pending",
+      "deps": [
+        "arail-verify",
+        "scene-gate"
+      ]
+    },
+    {
+      "id": "r11-commit",
+      "label": "分批commit+changelog",
+      "role": "队长",
+      "status": "pending",
+      "deps": [
+        "r11-qa"
+      ]
+    },
+    {
+      "id": "r11-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "pending",
+      "deps": [
+        "r11-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r11-gate",
+      "arail-points"
+    ],
+    [
+      "r11-gate",
+      "scene-gate"
+    ],
+    [
+      "arail-points",
+      "arail-remove"
+    ],
+    [
+      "arail-remove",
+      "arail-verify"
+    ],
+    [
+      "arail-verify",
+      "r11-qa"
+    ],
+    [
+      "scene-gate",
+      "r11-qa"
+    ],
+    [
+      "r11-qa",
+      "r11-commit"
+    ],
+    [
+      "r11-commit",
+      "r11-delivery"
+    ]
+  ]
+}

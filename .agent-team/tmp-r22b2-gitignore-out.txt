@@ -1,0 +1,13 @@
+before bytes=2006 sha256=7a033bceb9feea9a
+after  bytes=2340  sha256=c518a4a9e1c01d2e
+delta bytes=334 (插入注释 334 字节)
+除插入行外逐字节不变: True
+backup: K:\work\project\pixo\.agent-team\tmp-r22b2-gitignore.bak
+--- 插入后 build/ 邻域 ---
+88: .agent-team/
+89: .zcode/
+90: build/
+91: # build/ 排除说明 (R22 docs/tech_debt.md 条目 23, F10 #25):
+92: # setuptools build/lib/pixo 是构建中间产物 (旧副本, 与 src/ 漂移), 非发布源.
+93: # git 已排除; 打包 packages.find where="src" 不含它; 运行时拉 src (tests/conftest.py:21-22).
+94: # 明确排除 + 文档说明, 不删除 (build 流程可能依赖).

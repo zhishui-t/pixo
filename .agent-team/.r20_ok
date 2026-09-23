@@ -1,0 +1,83 @@
+# .r20_ok — R20 收口门禁通过签章
+
+- 审核人: qa (R20 收口门禁)
+- 覆盖: R20 —— warmth 日光段扩域 (#19 条件触发选项执行, dev-1; style_cards
+  评估为证据件已定案维持关, 无需门禁)
+- ISO 时间戳: 2026-09-08T03:55:51Z
+- 全量终态: 1533 passed / 5 skipped / 1 xfailed / 0 failed
+- 修复记录: 1 项 (R20 连带测试缺口)
+
+## 五条结论
+
+1. **域内零风险复核 — PASS**:
+   - **2001 点增益逐位一致独立复跑**: qa 以 git HEAD 旧曲线 vs 工作树新
+     曲线, 在旧域 [1.7578, 2.3984] 均匀 2001 点 (warmth=0.9) 逐点求
+     增益插值对拍 → **逐位一致 True** (旧 5 结点全保留的硬保证成立)。
+   - **gate warmth_cal_auto case 零漂**: test_gate_golden 7 passed 含
+     test_current_output_matches_goldens (全部 21 features 含
+     warmth_cal_auto——其基线**未重生成**而通过 = 域内不变的 gate 级
+     证明) + generator --check + sha 校验。
+2. **日光改善数据 — PASS**: `_r20_warmth_daylight_verify.py` 独立复跑:
+   - Part1 OOS-low n=31: 修前垫片偏差 median **+0.537** / p90 +1.117 /
+     max 2.426 → 修后 **+0.019** / +0.109 / 0.526; ΔE 绝对 6.142 →
+     5.287 (最优 5.186) —— 与任务书/报告数字**精确吻合**, 方向性过暖
+     消除。
+   - Part2 RAW 24 case 漂移 **0/24** = 基线重生成后与当前实现一致的
+     外科性自证 (dev 首跑时点基线未更新为 24/24 漂移, 队长重生成后
+     归零)。
+3. **基线治理 — PASS**:
+   - RAW round20-regen manifest 外科性: data/golden manifest diff 49 行
+     = 48 sha (24 case × u8/u16) + 1 reviewer 行 (round20-regen 记录),
+     samples/路径/结构零变动; 48 .npy + manifest 共 49 文件与四 feature
+     (wb_as_shot/exposure_auto/compose/clarity) 全覆盖。
+   - 合成 3 case (default_dispatch/card_portra_400/region_adjust) .npy
+     重生成 + manifest sha 同步; gate 7 passed 复跑通过。
+   - **region_adjust 垫片端点连带定性独立验证成立**: qa 以 git HEAD 旧
+     曲线 monkeypatch 复算 region_adjust case → 与旧基线 (HEAD .npy)
+     **逐位相等 True**; 新基线 vs 旧基线漂移 max|Δ|=0.016 —— 漂移
+     **完全归因曲线文件变化** (合成相机 wb_B=0.96 新旧域均域外, 垫片
+     外推锚点从旧首结点 1.7578 变为新首结点 1.10), 无其他代码路径,
+     「预期连带」定性复核通过。
+4. **台账与溯源 — PASS**: tech_debt #19 → 「已清偿-日光段扩域落地
+   (R20)」注记完整 (执行/效果/金样本影响报裁决/域内保证);
+   warmth_curve.json v2 的 r20_daylight_extension 溯源节完整 (date/
+   method/data/new_knots D1@1.10 w=0.5006·D2@1.40 w=0.0/
+   in_domain_guarantee/trial_history); 旧曲线备份
+   .artifacts/warmth_curve_pre_r20.json 在位。
+5. **全量 — PASS (含 1 项 qa 修复)**: 终态 **1533 passed / 0 failed**
+   (R17 基线 1533 + R20 新增 0——纯数据文件+基线重生成+文档, 无新增
+   测试)。首轮 1 failed 见修复记录。
+
+## 修复记录 (qa 最小修复, 已复验)
+
+1. **test_theta_io 形状断言未随 7 结点同步** (tests/unit/test_theta_io.py
+   test_load_theta_shapes_and_values):
+   - 改了什么: `theta.warmth_knots.shape == (5, 4)` → 与源文件结点数
+     动态对齐 `(len(_raw("warmth_knots")["knots"]), 4)` + 注释 R20
+     扩域沿革 (5→7 结点, D1/D2)。
+   - 为什么: R20 曲线扩域至 7 结点, 该测试的硬编码形状断言未同步
+     (dev-1 报告遗漏的连带面——theta I/O 层从 warmth_curve.json 读
+     结点), 首轮全量 1 failed 击穿红线。改为动态对齐防后续扩域再次
+     钉死碎裂 (仓库内其余 warmth 断言均动态对源, 此为唯一硬编码形状)。
+   - 验证: tests/unit/test_theta_io.py 22 passed; 终态全量 1533/0。
+   - 边界说明: 非 R20 行为缺陷 (theta 加载链正确读 7 结点, fixture
+     打印值即新曲线), 纯测试断言滞后。
+
+## 验证证据汇总
+
+- python .artifacts/_r20_warmth_daylight_verify.py (qa 复跑) → Part1
+  数字精确吻合 / Part2 0/24
+- qa 2001 点旧域增益对拍 (旧/新曲线 np.interp, warmth=0.9) → 逐位 True
+- qa region_adjust 旧曲线复算 == HEAD 旧基线 → 逐位 True (连带定性)
+- python -m pytest tests/regression/test_gate_golden.py -q → 7 passed
+- python -m pytest tests -q -m "not e2e" → 1533 passed / 0 failed (终态)
+
+## 遗留与升级 (不阻塞)
+
+- daylight 段 2 结点基于 R19 五臂网格最优 (分辨率 0.405 warmth); 更细
+  网格逐照片再优化收益预计 <0.2 ΔE, 不值得重跑 (dev-1 遗留)。
+- r19 评估报告 (calib_domain_gap_eval.md) 为历史记录不回写。
+- 合成 gate 21 features 中 warmth 相关仅 warmth_cal_auto (域内零漂已证);
+  region_adjust/default_dispatch/card_portra_400 新基线已随 R20 落位,
+  后续以新 sha 为准。
+- 本轮未 commit (提交策略归队长)。

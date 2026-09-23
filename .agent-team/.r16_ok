@@ -1,0 +1,88 @@
+# .r16_ok — R16 收口门禁通过签章
+
+- 审核人: qa (R16 收口门禁)
+- 覆盖: R16 两件 —— plant 溢出负联门控 (dev-1, 规则层事前) + segmenter
+  启动预热 (dev-2, 冷启 17.7s 优化, 非阻塞)
+- ISO 时间戳: 2026-09-07T23:19:13Z
+- 全量终态: 1532 passed / 5 skipped / 1 xfailed / 0 failed
+- 修复记录: 无 (本轮审查零缺陷)
+
+## 四条结论
+
+1. **plant 门控 — PASS**:
+   - **阈值 1% 数据分界依据独立复算** (R15 region_trial_54.json 溢出分布
+     重挖): 回退样本 (pass→escalate, 仅 DSC_5276/5277) 溢出地板
+     **1.6397% / 1.3470%** (与报告「1.35%/1.64%」精确吻合); 其余样本
+     (QC 不变/救回) 地板 max (除 5288) = **0.42%**; 5288 例外 **7.28%**
+     (plant 面积 0.8% 亚 JND, collateral) —— **0.42% < 1.0% < 1.35%
+     实测间隙成立**, 2.5% (S-4 datum) 拦不住回退落地轮的论证与 R15
+     fires 数据相容。
+   - **回退消除+零误伤回放独立复跑** (qa 复跑 `_r16_region_overflow_gate_
+     spot.py`, 6 样本 × 双轨真分割): DSC_5276/5277 plant 全程零触发
+     (plant_fires=0) + sky 压暗照常 (sky_fires=1) + QC pass→pass
+     (**回退消除**); DSC_5241/5240 延迟一轮恢复 (2 轮 @ ovf=0, it1 高溢出
+     暂挡); DSC_5280 it1 即触发 (3 轮 @ 0.42%, **零误伤**); DSC_5288
+     永久 gated (collateral, QC 双轨一致) —— 与 dev 产出 json 及报告
+     预期逐项一致。dev 产出 json (region_overflow_gate_spot.json) 亦经
+     结构化核对与报告六样本全符。
+   - **sky 豁免反向钉死断言在位**: activation_guard 测试扩展
+     `assert not ovf_conds, "sky 不应有溢出门控 (sky 豁免)"` + 新增
+     test_plant_rule_blocked_by_high_overflow (≥1% 不触发 / <1% 正常 /
+     高溢出下 sky 压暗照常触发 value<0)。
+   - **双镜像一致**: src/ 与 configs/ region_rules.yaml sha256 逐字节相同
+     (30d481b7...); 门控条件 (preview_overflow_ratio lt 0.01) 仅在 plant
+     规则; 头注依据段完整 (数据/阈值/双层防线/sky 豁免理由)。
+2. **预热 — PASS**:
+   - **非阻塞语义**: lifespan 以 daemon 线程启动 warm_segmenter (不
+     join, 服务立即就绪); 供给路径 `_segmenter_infer_lock.acquire(
+     blocking=False)` 失败 → source="warming" 秒回 reason=
+     segmenter_warming (测试: 持锁期间 region_status elapsed<0.5s +
+     stub.calls==0); 锁释放后重查热态供给 (available=True calls==1)。
+     warming 态不设 region_masks (保持 None) → 下次 GET 正常重试, 不破坏
+     「每会话至多一次」语义。
+   - **daemon 退出语义**: daemon=True 服务退出中断无清理 (权重加载可安全
+     中断, 下次启动重预热) —— 报告遗留声明在案。
+   - **幂等+推理锁并发面**: status=="done" 短路幂等 (重复预热 calls==1);
+     推理锁使预热与供给的 segment 互斥 (懒加载非线程安全面); 锁序
+     infer_lock 外层 → supply_lock 内层, 无反向获取无死锁; R15 并发供给
+     double-checked 锁保留。lifespan 衔接无缺口 (app.state.runtime 在
+     :81 于 lifespan 生效前设置; env 关/mock 时线程内短路 skipped 零成本)。
+   - **NC 门控 ⊆ {segformer, rfdetr}**: committed 断言双层钉死 (Stub
+     route_table 用例 + 真权重 e2e `set(backends) <= {"segformer",
+     "rfdetr"}`); 预热经 multi 常规路由, 受限后端 (sapiens/unace) 未注册
+     即不在路由表 (回放日志实证)。
+   - **缺省开成本面**: 无权重环境 multi segment 抛异常 → failed +
+     error 记录不炸启动 (test_warmup_failure_marks_failed); mock 环境 →
+     skipped(segmenter=mock) 不装可用; env 四值关 + 缺省开有四值断言。
+3. **交叉影响 — PASS**: plant 门控改变规则行为与 R15 断言一致 (wiring
+   27 passed: 既有用例 metrics 补 preview_overflow_ratio=0.0 隔离拦截
+   因素, R15 系数/护栏断言原样); 预热与供给衔接无回归 (supply 9 passed,
+   reason 加宽为四分——segmenter_warming 中间态加入, 原两值保持; R14
+   前端 REASON_TEXT 未知码透传容错吸收新码不炸); loop 域零改动
+   (git status 无 loop.py); warmup+supply+wiring 合跑 43 passed
+   (7+9+27 计数吻合)。
+4. **全量 — PASS**: 1532 passed / 5 skipped / 1 xfailed / **0 failed**
+   (R15 权威基线 1524 + R16 新增 8: warmup 7 + plant 门控用例 1,
+   计数吻合应增不减)。
+
+## 验证证据汇总
+
+- python -m pytest tests -q -m "not e2e" → 1532/0
+- python -m pytest tests/integration/test_segmenter_warmup.py
+  tests/integration/test_region_supply.py tests/unit/test_decide_region_wiring.py
+  -q → 43 passed
+- qa 独立复跑 .artifacts/_r16_region_overflow_gate_spot.py → 6 样本与
+  预期逐项一致 (输出如上结论 1)
+- qa 独立复算 R15 json 溢出分布 → 分界间隙 0.42% < 1.0% < 1.35% 成立
+
+## 遗留与升级 (不阻塞)
+
+- 5288 溢出地板 7.3% 永久 gated (亚 JND collateral) —— 语料出现
+  「高溢出+大 plant 面积」真实内容图时阈值再议 (dev-1 §遗留 1)。
+- 高溢出中性图提亮延迟一轮对闭环收敛轮数的影响 —— 留下轮 loop 收敛
+  数据复核 (QC 终态本轮不变)。
+- segmenter_warming 态的 UI 轮询间隔/文案归前端 (R14 契约 reason 字段
+  已备, 未知码透传不炸)。
+- measure_session 的 segment 未套推理锁 (历史窄窗, dev-2 遗留 #3 归
+  loop/service 域另案)。
+- 本轮未 commit (提交策略归队长)。

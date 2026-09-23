@@ -1,0 +1,22 @@
+..........................F                                              [100%]
+================================== FAILURES ===================================
+__________________ test_frontend_scene_ids_match_scenes_json __________________
+
+    def test_frontend_scene_ids_match_scenes_json():
+        """前端场景 id 常量必须与 scenes.json 键集一致（防两侧漂移）。"""
+>       assert FRONTEND_SCENES.is_file(), f"缺前端常量文件: {FRONTEND_SCENES}"
+E       AssertionError: 缺前端常量文件: K:\work\project\pixo\frontend\src\constants\scenePresets.ts
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = WindowsPath('K:/work/project/pixo/frontend/src/constants/scenePresets.ts').is_file
+
+tests\unit\test_f04_f05_injection.py:304: AssertionError
+============================== warnings summary ===============================
+D:\Python\Python312\tools\Lib\site-packages\fastapi\testclient.py:1
+  D:\Python\Python312\tools\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/unit/test_f04_f05_injection.py::test_frontend_scene_ids_match_scenes_json
+1 failed, 26 passed, 1 warning in 50.77s

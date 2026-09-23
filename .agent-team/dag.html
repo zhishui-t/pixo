@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="8">
+<title>Pixo R31：RAW 打开色彩对齐 DNG 渲染（三臂对照）</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; background: #fafafa; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .meta { color: #6b7280; font-size: 12px; margin-bottom: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-size: 12px; color: #4b5563; }
+  .chip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .viewport { overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+  .node { cursor: pointer; outline: none; }
+  .node:focus, .node:hover rect { stroke: #1677ff; }
+  .node.dimmed, path.dimmed { opacity: 0.24; }
+  path { stroke: #999999; stroke-width: 1; fill: none; }
+  path.active { stroke: #1677ff; stroke-width: 1.6; }
+  .hint { color: #9ca3af; font-size: 11px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>Pixo R31：RAW 打开色彩对齐 DNG 渲染（三臂对照）</h1>
+<div class="meta">更新于 2026-09-22 10:14:42 UTC · 每 8 秒自动刷新 · 布局与交互对齐 weave DagPanel</div>
+<div><span class="chip"><i style="background:#52c41a"></i>完成 8</span><span class="chip"><i style="background:#1677ff"></i>进行中 0</span><span class="chip"><i style="background:#8c8c8c"></i>待开始 4</span><span class="chip"><i style="background:#f5222d"></i>受阻/打回 0</span></div>
+<div class="viewport">
+<svg width="1734" height="174" style="display:block;overflow:visible">
+<path data-from="brief" data-to="design" d="M150 18C164 18,162 18,176 18"/>
+<path data-from="design" data-to="design-review" d="M326 18C340 18,338 18,352 18"/>
+<path data-from="design-review" data-to="license" d="M502 18C516 18,514 64,528 64"/>
+<path data-from="design-review" data-to="converter" d="M502 18C516 18,514 18,528 18"/>
+<path data-from="design-review" data-to="sdk-build" d="M502 18C516 18,514 156,528 156"/>
+<path data-from="design-review" data-to="rt-arm" d="M502 18C516 18,514 110,528 110"/>
+<path data-from="sdk-build" data-to="measure-48" d="M678 156C692 156,690 18,704 18"/>
+<path data-from="converter" data-to="measure-48" d="M678 18C692 18,690 18,704 18"/>
+<path data-from="rt-arm" data-to="measure-48" d="M678 110C692 110,690 18,704 18"/>
+<path data-from="measure-48" data-to="verdict" d="M854 18C868 18,866 18,880 18"/>
+<path data-from="license" data-to="code-review" d="M678 64C692 64,1042 18,1056 18"/>
+<path data-from="verdict" data-to="code-review" d="M1030 18C1044 18,1042 18,1056 18"/>
+<path data-from="code-review" data-to="regression" d="M1206 18C1220 18,1218 18,1232 18"/>
+<path data-from="regression" data-to="report" d="M1382 18C1396 18,1394 18,1408 18"/>
+<path data-from="report" data-to="accept" d="M1558 18C1572 18,1570 18,1584 18"/>
+<g class="node" data-id="brief" transform="translate(0,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">任务书定稿（卡点①） <tspan fill="#8c8c8c" font-weight="400">(队长+用户)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  
+</g>
+<g class="node" data-id="design" transform="translate(176,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">设计：口径/判据/接口 <tspan fill="#8c8c8c" font-weight="400">(队长)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  
+</g>
+<g class="node" data-id="design-review" transform="translate(352,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">设计审核 .design_ok <tspan fill="#8c8c8c" font-weight="400">(reviewer)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">第2轮复检（v2 整改回传）</text>
+</g>
+<g class="node" data-id="converter" transform="translate(528,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">DNG Converter 安装+批转 <tspan fill="#8c8c8c" font-weight="400">(junior-dev)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">48/48 批转 42.1s…</text>
+</g>
+<g class="node" data-id="license" transform="translate(528,46)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">GPLv3 许可证落地 <tspan fill="#8c8c8c" font-weight="400">(junior-dev)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  
+</g>
+<g class="node" data-id="rt-arm" transform="translate(528,92)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">RT-cli 参照臂接入 <tspan fill="#8c8c8c" font-weight="400">(dev-2)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">RT 5.13 装毕, 臂接…</text>
+</g>
+<g class="node" data-id="sdk-build" transform="translate(528,138)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">DNG SDK 编译 dng_valid… <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">jxl 已摘，重编验证</text>
+</g>
+<g class="node" data-id="measure-48" transform="translate(704,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">三臂测量 n=48 <tspan fill="#8c8c8c" font-weight="400">(dev-2)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">48/48 有效; medi…</text>
+</g>
+<g class="node" data-id="verdict" transform="translate(880,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">矫正裁决执行（预授权） <tspan fill="#8c8c8c" font-weight="400">(dev-2)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">失败路径执行(零写入); 候…</text>
+</g>
+<g class="node" data-id="code-review" transform="translate(1056,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">代码/数据检视 <tspan fill="#8c8c8c" font-weight="400">(reviewer)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
+  
+</g>
+<g class="node" data-id="regression" transform="translate(1232,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">回归+复现 .qa_ok <tspan fill="#8c8c8c" font-weight="400">(tester-whitebox)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">全量 0 failed+金样…</text>
+</g>
+<g class="node" data-id="report" transform="translate(1408,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">报告+changelog+推送 <tspan fill="#8c8c8c" font-weight="400">(junior-dev)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
+  
+</g>
+<g class="node" data-id="accept" transform="translate(1584,0)" tabindex="0">
+  <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">交付验收（卡点④） <tspan fill="#8c8c8c" font-weight="400">(队长+用户)</tspan></text>
+  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
+  
+</g>
+</svg>
+</div>
+<div class="hint">点击节点：聚焦它的完整上下游链（其余变暗）；Esc 或再点一次：解除。</div>
+<script>
+(function () {
+  var edges = [].map.call(document.querySelectorAll("path[data-from]"), function (p) {
+    return { from: p.dataset.from, to: p.dataset.to, el: p };
+  });
+  var nodes = [].map.call(document.querySelectorAll("g.node"), function (g) {
+    return { id: g.dataset.id, el: g };
+  });
+  var upstream = {}, downstream = {};
+  edges.forEach(function (e) {
+    (downstream[e.from] = downstream[e.from] || []).push(e.to);
+    (upstream[e.to] = upstream[e.to] || []).push(e.from);
+  });
+  var focused = null;
+  function apply() {
+    var related = null;
+    if (focused) {
+      related = {};
+      // 上下游各用独立 seen 集（weave relatedTaskIds 同构）：起点会被两侧都标记，
+      // 共用 seen 会让后跑的一侧在起点处提前 return、整条链丢失。
+      (function up(id, seen) { if (seen[id]) return; seen[id] = 1; related[id] = 1; (upstream[id] || []).forEach(function (x) { up(x, seen); }); })(focused, {});
+      (function dn(id, seen) { if (seen[id]) return; seen[id] = 1; related[id] = 1; (downstream[id] || []).forEach(function (x) { dn(x, seen); }); })(focused, {});
+    }
+    nodes.forEach(function (n) { n.el.classList.toggle("dimmed", !!related && !related[n.id]); });
+    edges.forEach(function (e) {
+      var active = !!related && !!related[e.from] && !!related[e.to];
+      e.el.classList.toggle("active", active);
+      e.el.classList.toggle("dimmed", !!related && !active);
+    });
+  }
+  nodes.forEach(function (n) {
+    n.el.addEventListener("click", function () { focused = focused === n.id ? null : n.id; apply(); });
+    n.el.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); focused = focused === n.id ? null : n.id; apply(); }
+    });
+  });
+  window.addEventListener("keydown", function (ev) { if (ev.key === "Escape") { focused = null; apply(); } });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+[pixo.vision.segmenters] 后端 sapiens 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+[pixo.vision.segmenters] 后端 uniface 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+[skin] 未分类图掩码占比 54.3% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+Loading weights:   0%|          | 0/208 [00:00<?, ?it/s]Loading weights: 100%|██████████| 208/208 [00:00<00:00, 20810.94it/s]
+[pixo.vision.segmenters] prompt 'face' 无后端返回，零掩码降级
+[skin] 未分类图掩码占比 53.6% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+{
+ "sample": "DSC_5238.NEF",
+ "rules_count": 11,
+ "state": "ACCEPTED",
+ "iteration": 2,
+ "params": {
+  "dehaze": {
+   "strength": 0.15,
+   "enabled": true
+  },
+  "colorcal": {
+   "saturation": -0.15
+  },
+  "clarity": {
+   "strength": 0.1
+  }
+ },
+ "decide_events": [
+  {
+   "iteration": 1,
+   "decision": "adjust_and_continue",
+   "last_iteration": false,
+   "rule_ids": [
+    "dehaze_rule_030",
+    "saturation_high_rule"
+   ],
+   "colorfulness_proxy": 6.5627,
+   "haze_proxy": 0.2233,
+   "shadow_clip_ratio": 0.000147
+  },
+  {
+   "iteration": 2,
+   "decision": "adjust_and_continue",
+   "last_iteration": true,
+   "rule_ids": [
+    "clarity_flat_rule_031",
+    "saturation_high_rule"
+   ],
+   "colorfulness_proxy": 6.562,
+   "haze_proxy": 0.2147,
+   "shadow_clip_ratio": 0.000331
+  }
+ ],
+ "rule_ids_by_iteration": [
+  {
+   "iteration": 1,
+   "rule_ids": [
+    "dehaze_rule_030",
+    "saturation_high_rule"
+   ]
+  },
+  {
+   "iteration": 2,
+   "rule_ids": [
+    "clarity_flat_rule_031",
+    "saturation_high_rule"
+   ]
+  }
+ ],
+ "union_rule_ids": [
+  "dehaze_rule_030",
+  "saturation_high_rule",
+  "clarity_flat_rule_031"
+ ],
+ "last_nonempty_rule_ids": [
+  "clarity_flat_rule_031",
+  "saturation_high_rule"
+ ],
+ "old_last_event_rule_ids": [
+  "clarity_flat_rule_031",
+  "saturation_high_rule"
+ ],
+ "final_highlight_clip_ratio": 0.013096,
+ "segmenter_last_degraded": []
+}

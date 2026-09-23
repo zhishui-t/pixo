@@ -273,3 +273,16 @@ native 无 DNG/Adobe 引用）。MinGW-w64 + CMake 为构建期工具不随产�
 | clean-room 过程记录 | CLEANROOM_M1..M5 不在仓 | 补档或 git 考古后才能坐实 warp/tone/resample 主张（§6.2） |
 | Adobe DNG SDK 专利面 | SDK 许可无专利条款；DNG 规范专利许可另立可撤销 | 见 F18（本文件 §6.2）；未做专利检索 |
 | 前端传递树 132 包 | lock 字段统计全宽松，未逐包人工复核 | 分发前工具化终验（§4） |
+
+---
+
+## 8. 项目许可证变更（2026-09-22，R31/F0）
+
+- 本轮确立项目整体许可为 **GPL-3.0-or-later**：仓根新增 `LICENSE`（GPLv3 全文，取自
+  <https://www.gnu.org/licenses/gpl-3.0.txt>）；`pyproject.toml` `license` 字段由
+  `"Proprietary"` 改为 `"GPL-3.0-or-later"`。
+- 事实影响：§6.1 警示一（huesat 的 RawTherapee GPL-3.0 代码衍生）所依赖的「非 GPL
+  分发即违约」前提不再成立；后续按需移植 RawTherapee GPL 算法（R31 设计已预留）有
+  许可基础。
+- 本变更**不改变**其余警示的有效性：模型权重 NC 项（§3）、DCP ×6 再分发待处置
+  （§7）、clean-room 证据缺口（§6.2）等仍按原口径执行。

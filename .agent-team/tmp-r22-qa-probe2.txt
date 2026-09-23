@@ -1,0 +1,160 @@
+LOOP src/pixo/pipeline/loop.py:505 def _compose_fingerprint(params: Mapping[str, Any]) -> str:
+LOOP src/pixo/pipeline/loop.py:815 # 变化 (含 adopt_crop 采纳) 即清空软掩码 + warn-once。
+LOOP src/pixo/pipeline/loop.py:1030 掩码来自旧构图帧的分割，compose 变化（含 adopt_crop 采纳）后几何
+LOOP src/pixo/pipeline/loop.py:1054 def _full_canvas_size(self, backend, fallback_w, fallback_h):
+LOOP src/pixo/pipeline/loop.py:1280 # I-1：注入前经 compose 指纹同步 —— adopt_crop 等构图变化即
+LOOP src/pixo/pipeline/loop.py:1612 adopt_crop = (
+LOOP src/pixo/pipeline/loop.py:1618 if adopt_crop:
+LOOP src/pixo/pipeline/loop.py:1619 fw, fh = self._full_canvas_size(
+LOOP src/pixo/pipeline/loop.py:1643 event_type="crop_adopted",
+LOOP src/pixo/pipeline/loop.py:1688 # I-1：刷新同样经 compose 指纹同步 —— 末轮 adopt_crop 后导出线
+RT src/pixo/service/runtime.py:184 库层 ``SinglePhotoLoop(rules=None)`` 缺省保持空（纯库语义）——本函数是
+RT src/pixo/service/runtime.py:795 preview_long_edge: int = 1024,
+RT src/pixo/service/runtime.py:806 MANUAL_REVIEW，规则全不落地）、``aesthetic_scorer=None``、
+RT src/pixo/service/runtime.py:814 preview_long_edge: preview 渲染长边（缺省 1024）。
+RT src/pixo/service/runtime.py:868 int(preview_long_edge), prompts_tuple,
+RT src/pixo/service/runtime.py:875 int(preview_long_edge), prompts_tuple,
+RT src/pixo/service/runtime.py:929 preview_long_edge: int,
+RT src/pixo/service/runtime.py:943 loop = SinglePhotoLoop(
+RT src/pixo/service/runtime.py:948 preview_long_edge=int(preview_long_edge),
+RT src/pixo/service/runtime.py:954 aesthetic_scorer=None,
+RT src/pixo/service/runtime.py:963 payload = {
+ENG src/pixo/decide/engine.py:1016 def qc_rollback(context: dict) -> dict:
+PRESET src/pixo/render/pipeline/presets.py:15 DEFAULT_STAGES = ["exposure", "whitebalance", "compose", "huesat", "tone",
+PRESET src/pixo/render/pipeline/presets.py:28 pipe = Pipeline(stages=DEFAULT_STAGES, params=p)
+PRESET src/pixo/render/pipeline/presets.py:36 stages = cfg.get("stages") or DEFAULT_STAGES
+PRESET src/pixo/render/pipeline/presets.py:50 __all__ = ["DEFAULT_STAGES", "build_default_pipeline", "pipeline_from_config",
+RULES src/pixo/decide/rules/__init__.py:31 DEFAULT_RULES = [
+RULES src/pixo/decide/rules/__init__.py:46 "DEFAULT_RULES",
+MEAS src/pixo/vision/measure.py:287 def measure_sharpness(image_rgb: np.ndarray) -> dict[str, float]:
+MEAS src/pixo/vision/measure.py:298 noise_ratio = max(0.0, min(1.0, (lap_raw - lap_denoised) / max(lap_raw, 1e-6)))
+MEAS src/pixo/vision/measure.py:304 "noise_ratio": round(noise_ratio, 4),
+MEAS src/pixo/vision/measure.py:306 "detail_score": round(lap_denoised, 2),
+RESHAPE src/pixo/render/modules/reshape.py:43 def wants(self, ctx: StageContext) -> bool:
+RESHAPE src/pixo/render/modules/reshape.py:73 def wants(self, ctx: StageContext) -> bool:
+RESHAPE src/pixo/render/modules/reshape.py:115 class DenoiseStage(Stage):
+RESHAPE src/pixo/render/modules/reshape.py:118 def wants(self, ctx: StageContext) -> bool:
+RESHAPE src/pixo/render/modules/reshape.py:127 class SharpenStage(Stage):
+RESHAPE src/pixo/render/modules/reshape.py:130 def wants(self, ctx: StageContext) -> bool:
+RESHAPE src/pixo/render/modules/reshape.py:148 def wants(self, ctx: StageContext) -> bool:
+LUT src/pixo/render/core/lut.py:9 ⚠️ 色彩域 (guanlan 8-10 教训): LUT 定义在 **sRGB gamma 域**查表。
+LUT src/pixo/render/core/lut.py:27 # ── LUT 库注册 (guanlan luts/ 复用; 环境变量 PIXO_RENDER_LUT_DIR 优先, 旧值仅作回退) ──
+LUT src/pixo/render/core/lut.py:28 _LUT_DIR = Path(os.environ.get("PIXO_RENDER_LUT_DIR", str(Path(__file__).resolve().parents[4].parent / "guanlan" / "luts")))
+LUT src/pixo/render/core/lut.py:90 def load_lut_path(path) -> LUT3D:
+STORE frontend/src/store/useAppStore.ts:16 fetchStyleCards,
+STORE frontend/src/store/useAppStore.ts:19 patchParams as remotePatchParams,
+STORE frontend/src/store/useAppStore.ts:76 setStyleCards: (cards: StyleCardData[]) => void;
+STORE frontend/src/store/useAppStore.ts:89 patchParam: (patch: ParamPatch, source?: Source) => Promise<void>;
+STORE frontend/src/store/useAppStore.ts:203 setStyleCards: (cards) => set({ styleCards: cards }),
+STORE frontend/src/store/useAppStore.ts:267 patchParam: async (patch, source = 'user') => {
+STORE frontend/src/store/useAppStore.ts:337 await get().patchParam(suggestion.patch, 'agent');
+STORE frontend/src/store/useAppStore.ts:391 void fetchStyleCards().then((cards) => useAppStore.getState().setStyleCards(cards));
+PANEL frontend/src/components/StyleAiPanel.tsx:16 export function StyleAiPanel() {
+PANEL frontend/src/components/StyleAiPanel.tsx:91 onClick={() => toggleCard(card.styleId)}
+PANEL frontend/src/components/StyleAiPanel.tsx:94 background: `linear-gradient(135deg, ${accentA(selected ? 0.22 : 0.10)}, ${T.overlay})`,
+PANEL frontend/src/components/StyleAiPanel.tsx:150 <Card key={s.id} radius="md" padding="sm" style={{ background: `linear-gradient(135deg, ${accentA(0.12)}, ${T.overlay})`, border: 
+PANEL frontend/src/components/StyleAiPanel.tsx:155 <Button size="xs" leftSection={<Check size={13} />} onClick={() => applyProjectSuggestion(activeProjectId, s)}>应用</Button>
+PANEL frontend/src/components/StyleAiPanel.tsx:156 <Button size="xs" variant="light" leftSection={<X size={13} />} onClick={() => ignoreProjectSuggestion(activeProjectId, s.id)}>忽略<
+PANEL frontend/src/components/StyleAiPanel.tsx:203 <Button size="sm" variant="light" leftSection={<Send size={14} />} onClick={send}>发送</Button>
+DOCS files: ['ARCH_REVIEW2_DISPOSITION.md', 'LEARNED_BACKEND_GOVERNANCE.md', 'LEARNED_BACKEND_PROMOTION.md', 'MASK_REGION_ADJUST.md', 'OWN_PIPELINE_REVIEW_DISPOSITION.md', 'OWN_PIPELINE_STAGE1_DESIGN.md', 'OWN_PIPELINE_STAGE2_DESIGN.md', 'OWN_PIPELINE_STAGE3_DESIGN.md', 'PIXO_ARCH_ALIGN_REVIEW.md', 'PIXO_DSH_PLUGIN.md', 'PIXO_FRONTEND_DESIGN.md', 'PIXO_ITERATIVE_LOOP_PLAN.md', 'PIXO_LICENSE_REVIEW.md', 'PIXO_RENDER_OWN_PIPELINE.md', 'PROJECT_GRAPH.md', 'PROJECT_GRAPH_FRONTEND.md', 'R21_CHANGE_REQUESTS.md', 'UI_OKLCH_SPEC.md', 'architecture.md', 'changelog.md', 'metrics', 'project_graph.json', 'project_graph_frontend.json', 'project_graph_full.json', 'tech_debt.md', 'ui', '架构设计文档.md']
+RULES YAML: ['__init__.py', '__pycache__', 'color_rules.yaml', 'crop_suggest_rule_003.yaml', 'exposure_rule_001.yaml', 'highlight_protect_rule_002.yaml', 'region_rules.yaml', 'tone_clarity_rules.yaml']
+--- tech_debt 83-92 (#3) ---
+   83: 3. **第三方许可登记**（NOTICES 已建，2026-09-07 F16；仓库根 `THIRD_PARTY_NOTICES.md`）：
+   84: - ~~缺少统一 `THIRD_PARTY_NOTICES.md`~~ 已建成文：素材源
+   85: `.agent-team/research/license-inventory.md`（researcher 盘点）+ F18
+   86: `dng-sdk-review.md`（代码血缘节）；三项发布警示（~~huesat RawTherapee GPL-3.0 衍生~~ R11 已清偿：A 轨删除,
+   87: 2026-09-07 / DCP×6 再分发未核验 / NC 模型门控）置顶。
+   88: - `model_licenses.json` 与 `vision_models.json` 的过期冲突（aesthetic「需核验」
+   89: + 旧 `$GUANLAN_ROOT` 路径 vs MIT 定论）**仍待处置**（NOTICES §3 冲突 A 已
+   90: 如实记录，台账更新不在 F16 范围）；segformer 条目 publishable/status 自相
+   91: 矛盾同挂待核验。
+   92: 
+--- tech_debt 156-160 (#12) ---
+   156: 12. **公式守卫日落条款**：
+   157: - 引擎原生 AND/between 落地后，新规则改用原生 condition，存量公式守卫规则
+   158: （clarity_flat 等）择机迁移（裁定见 t40 复审记录）。
+   159: 
+   160: 
+--- tech_debt 24 ---
+   24: - 条目 12（公式守卫日落）：触发前置（原生 AND/between 落地）未到；
+--- tech_debt 240-264 (#17) ---
+   240: 17. **compose free 模式像素矩形跨分辨率失准 × 掩码通道几何放大**（记债，
+   241: 2026-09-07 第九轮 M1 评审 I-2；根因既有，掩码通道为放大器）：
+   242: - 现状：`modules/compose.py::compute_crop_rect` free 模式的 x/y/width/
+   243: height 为**全画布像素**矩形。同一参数在不同渲染分辨率下相对裁剪窗
+   244: 不同（x=100px 在 320 宽 tier 占 31%、在 6000 宽导出占 1.7%）；loop
+   245: 的 adopt_crop 路径写 full-canvas 像素矩形（loop.py rect_norm_to_px），
+   246: preview 在小 tier 按同像素值裁剪 —— preview/export 相对取景不同。
+   247: - 掩码通道放大效应：`render/pipeline/region_masks.py` 的适配只做
+   248: shape 对齐不做坐标重映射 —— 分割掩码（旧构图帧坐标）被直接 resize
+   249: 到消费帧；裁剪窗相对不一致时，同一掩码坐标在两线对应**不同场景
+   250: 内容**，区域效果落点错位可达 10%+ 画幅宽。F13 交付说明中「掩码通道
+   251: 两线仍一致（同参数同适配）」的论断**仅对 ratio/full-frame 路径成立**
+   252: （该两线同参数同窗口；free-px-rect 路径不成立）。
+   253: - 时间性防线（M1 评审 I-1 同批）：compose 参数指纹变化（含 adopt_crop）
+   254: 即清空 region 掩码缓存（loop._sync_region_masks），region_adjust
+   255: 静默直通 —— "不作为"优于"错作为"；本条清偿前掩码不跨构图复用。
+   256: - 升级要点（原 hard-problems §6.1 记录，优先级提升）：涉及所有 free
+   257: 模式用户（非仅掩码链路）；清偿方向 = compose 参数 px→相对坐标
+   258: 归一化（独立战役，需迁移存量卡/用户参数）或适配器按裁剪窗差做
+   259: 坐标重映射。
+   260: - 现状钉死：`tests/unit/test_region_masks_channel.py::
+   261: test_free_px_rect_cross_resolution_geometry_mismatch_recorded`
+   262: 断言当前失配行为（防"静默变正确/静默变更坏"两边无感）——若未来
+   263: 清偿，该用例应**有意翻转重写**而非删除。
+   264: 
+QAR21:201 | #25（建议） | `build/lib/pixo/**` 旧副本漂移（**不含** `metrics.py`，`loop.py` 仍是旧实体）⇒ 若打包/导入误取 `build/lib` 会 `ImportError` | dev-2 遗留 1 / exploration §7.4（QA 已确认 pytest 下
+FEATURES lines 25-42:
+   25: FEATURES = (
+   26: "exposure", "whitebalance", "curves", "huesat", "clarity", "colorcal",
+   27: "calibration", "hsl", "hsl_oklch", "split_tone", "split_tone_oklab",
+   28: "skin", "skin_oklch", "skin_oklch_softband", "stylize", "refine",
+   29: # 标定数据敏感 case (t36 §5 门禁缺口关闭): 触达正式标定表的 auto 路径,
+   30: # 换表即漂移 (前置 15 case 均为纯函数+显式参数, 对表替换零敏感)。
+   31: "exposure_cal_auto", "warmth_cal_auto",
+   32: # 缺省分派 + 存量卡全管线 case (F08, oklch 前置修补 b): 堵 t52 §3.1
+   33: # 点名的盲区 —— 前置 17 case 全部直调内核/显式参数, 不经 Stage 分派,
+   34: # 翻转 default_params 的 color_domain 后金样本零敏感性 (t52 翻转实验
+   35: # 全绿即证)。两 case 经 build_default_pipeline 全管线 (DEFAULT_STAGES
+   36: # 真实链序), 分派语义在金样本层可观测。
+   37: "default_dispatch", "card_portra_400",
+   38: # region_adjust 全管线 case (F15, M1 验收): enabled=True + 合成软掩码
+   39: # (F13 契约) 经真实 DEFAULT_STAGES 链序快照 —— M1 stage 的像素语义
+   40: # (gamma 域增益曝光 + HSV S 缩放饱和 + 羽化软混合) 在金样本层可观测。
+   41: "region_adjust",
+   42: )
+golden baseline files: ['__init__.py', '__pycache__', 'gate', 'gate_cases.py', 'generate_gate_goldens.py']
+.agent-team/qa-report-r21.md:12 **通过（修复后通过），0 阻塞项。** F01~F05 对 CR-01~05 与 brief 完成标准 1~6 全部满足且有用例/运行证据；**全量回归 1574 passed / 0 failed**（红线 1533）、**金样本零漂移**（合成 gate 7 passed + 真 RAW 24
+.agent-team/qa-report-r21.md:22 | 独立复跑 ① 全量 | `python -m pytest tests -q -m "not e2e"` → **1574 passed / 0 failed**（跑两次：251.99s、212.66s） |
+.agent-team/qa-report-r21.md:23 | 独立复跑 ② 门禁 | `$env:PIXO_GATE_AUTOLOOP_RAW='K:\data\photo\0711\raw\DSC_5236.NEF'; python -m pytest tests/regression/test_gate_auto_loop_e2e.py -q -m g
+.agent-team/qa-report-r21.md:24 | 独立复跑 ③ 金样本 | `python -m pytest tests/regression/test_gate_golden.py -q` → **7 passed in 26.94s**；`python src/pixo/render/tools/gate_golden.py compar
+.agent-team/qa-report-r21.md:25 | 独立复跑 ④ 定向 | `python -m pytest tests/integration/test_auto_loop_api.py tests/unit/test_metrics_for_decide_public.py tests/unit/test_scorer_adapter_ca
+.agent-team/qa-report-r21.md:39 | 库层 `SinglePhotoLoop(rules=None)` 保持空（F02 硬约束） | ✅ | 未触碰 `loop.py:770`；`test_loop_layer_default_rules_stay_empty` 20 passed 内 |
+.agent-team/qa-report-r21.md:49 | F03 接线：`decide_photo` 展平 + 传 rules、字段集合不变 | ✅ | `decide({"metrics": metrics_for_decide(measurement), ..., "rules": _load_auto_loop_rules(...)})`；`te
+.agent-team/qa-report-r21.md:85 1574 passed, 6 skipped, 1 xfailed, 13 warnings in 212.66s   ← QA 终态复跑（FIX-1/2 之后）
+.agent-team/qa-report-r21.md:86 （同一命令早前一次：1574 passed, 6 skipped, 1 xfailed, 13 warnings in 251.99s）
+.agent-team/qa-report-r21.md:88 - 与 tester 报告（`tmp-r21-fulltest.txt`：1574/6/1）**逐项一致**；+41 的构成可自洽核对：dev-1 20 + dev-2 14 + dev-2 6 + tester 门禁负控镜像 1（真 RAW e2e 无 env 时 skip）。
+.agent-team/qa-report-r21.md:91 ### 3.2 F05 真 RAW 门禁——PASS（2 passed in 124.06s）
+.agent-team/qa-report-r21.md:102 2 passed in 124.06s
+.agent-team/qa-report-r21.md:109 python -m pytest tests/regression/test_gate_golden.py -q      → 7 passed in 26.94s
+.agent-team/qa-report-r21.md:116 ### 3.4 定向测试——PASS（40 passed）
+.agent-team/qa-report-r21.md:120 40 passed, 1 warning in 26.69s        （20 + 14 + 6）
+.agent-team/qa-report-r21.md:133 | **F05** 端到端门禁（CR-05） | ✅ 满足 | 真 RAW 闭环 2 passed（五条断言 + 正控⑥ + 负控镜像⑦）；`.r21_ok` 本轮签署；env/marker 语义实测自检（`-m gate` 选中 / 无 env skip 豁免） |
+.agent-team/qa-report-r21.md:137 | brief 完成标准 4（全量 ≥1533/0 failed + 金样本零漂移） | ✅ | 1574/0（复跑两次）+ 7 passed + 24 case `u8_max=0` |
+.agent-team/qa-report-r21.md:176 | **FIX-1** | `tests/integration/test_auto_loop_api.py:300-302`（docstring） | 写成「闭环收敛后末轮 `rule_ids` **恒为** `[]`」——即被队长明令禁止的"终止轮必空"不变量表述，且与 DSC_5237 反例矛
+.agent-team/qa-report-r21.md:177 | **FIX-2** | `tests/regression/test_gate_auto_loop_e2e.py:27-28`（docstring） | 同一句"口径经队长裁决修订"重复两遍（文档瑕疵） | 去重 | `python -m pytest tests/regression/test
+.agent-team/qa-report-r21.md:181 - 全量回归在 FIX-1/2 之后**重跑**（1574/0），故终态数字与最终树一致。
+.agent-team/qa-report-r21.md:230 | `tmp-qa-r21-gate.txt` / `tmp-qa-r21-gate-noenv.txt` | F05 门禁（有 env 2 passed / 无 env 1 passed+1 skipped） |
+.agent-team/qa-report-r21.md:231 | `tmp-qa-r21-golden.txt` / `tmp-qa-r21-golden-compare.txt` | 合成 gate 7 passed / 真 RAW 24 case RESULT: PASS |
+.agent-team/qa-report-r21.md:232 | `tmp-qa-r21-targeted.txt` / `tmp-qa-r21-targeted2.txt` | 定向 40 passed / FIX 后 `test_auto_loop_api.py` 20 passed |
+.agent-team/DELIVERY-R21.md:18 | F01 | `run_auto_loop()` + `POST /api/photos/{id}/auto-loop`（202；`sync=true` 200）+ `GET /api/auto-loop/{task_id}`；每 photo 单飞；失败语义 404/400/不裸抛 500 | `
+.agent-team/DELIVERY-R21.md:20 | F03 | `pipeline/metrics.py` 公共 API（`metrics_for_decide` / `METRIC_KEYS` / `metric_universe` / `merge_proxy_metrics`）+ service 顶层合并 proxies + `decide
+.agent-team/DELIVERY-R21.md:21 | F04 | `_PixoScorerAdapter.__call__` 返回 dict（`overall` + dimensions + 溯源字段） | `tests/unit/test_scorer_adapter_callable.py` **6 passed**（跨层注入 loop 与 `
+.agent-team/DELIVERY-R21.md:22 | F05 | E2E 门禁（双 marker + 独立 env）+ 真 RAW 证据 | 门禁 **2 passed**；全量 **1574 passed / 0 failed**；金样本双路零漂移 |
+.agent-team/DELIVERY-R21.md:50 | 全量回归 | **1574 passed / 0 failed** / 6 skipped / 1 xfailed（212.66s；另一次 251.99s 同结果） | `python -m pytest tests -q -m "not e2e"`；R20 红线 1533（+41 = 新增用例
+.agent-team/DELIVERY-R21.md:51 | F05 真 RAW 门禁 | **2 passed in 124.06s** | 独立 env `PIXO_GATE_AUTOLOOP_RAW` + `-m gate` |
+.agent-team/DELIVERY-R21.md:52 | 金样本零漂移 | 合成 gate **7 passed**；真 RAW compare **24/24 PASS（u8_max=0 / u16_max=0）** | `test_gate_golden.py` + `gate_golden.py compare`，`data/` 零改动 |
+.agent-team/DELIVERY-R21.md:53 | 定向 | **40 passed**（20 + 14 + 6） | 三文件批跑 26.15s（队长亦复核一次同结果） |
+.agent-team/DELIVERY-R21.md:61 | `dev-1` | F01/F02/F03 接线 + R1 修复 | GLM-5.3-Flash max | 成功：20 passed（含 R1 机制用例） |
+.agent-team/DELIVERY-R21.md:62 | `dev-2` | F03 公共 API + F04 | GLM-5.3-Flash max | 成功：20 passed（+37 消费方回归） |
+.agent-team/DELIVERY-R21.md:63 | `tester` | F05 门禁 + 全量回归 + D1 证据 | GLM-5.3-Flash max | 成功：门禁 2 passed、全量 1574/0；1 处证据脚本误标经 QA 修正 |

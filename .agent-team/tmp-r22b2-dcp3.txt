@@ -1,0 +1,36 @@
+
+### Nikon Z 5 2 RawLab LR Adobe Standard Baseline.dcp IFD0 @8 entries=17
+    tag=0xC612                        type=2 cnt=10   offset=218 value='com.adobe'
+    tag=0xC614 UniqueCameraModel      type=2 cnt=31   offset=228 value='Nikon Z 5 2 RawLab LR Baseline'
+    tag=0xC6F4                        type=2 cnt=22   offset=2404 value='RawLab fitted profile'
+    tag=0xC7A5 BaselineExposureOffset type=10 cnt=1 value=e049040000000000
+
+### Nikon Z 5 2 RawLab LR Baseline.dcp IFD0 @8 entries=17
+    tag=0xC612                        type=2 cnt=10   offset=218 value='com.adobe'
+    tag=0xC614 UniqueCameraModel      type=2 cnt=47   offset=228 value='Nikon Z 5 2 RawLab LR Camera Standard Baseline'
+    tag=0xC6F4                        type=2 cnt=22   offset=2420 value='RawLab fitted profile'
+    tag=0xC7A5 BaselineExposureOffset type=10 cnt=1 value=f049040000000000
+
+### Nikon Z 5 2 RawLab LR Camera Standard Baseline.dcp IFD0 @8 entries=17
+    tag=0xC612                        type=2 cnt=10   offset=218 value='com.adobe'
+    tag=0xC614 UniqueCameraModel      type=2 cnt=47   offset=228 value='Nikon Z 5 2 RawLab LR Camera Standard Baseline'
+    tag=0xC6F4                        type=2 cnt=22   offset=2420 value='RawLab fitted profile'
+    tag=0xC7A5 BaselineExposureOffset type=10 cnt=1 value=f049040000000000
+
+### Nikon Z 5 2 RawLab Preview Baseline v2.dcp IFD0 @8 entries=14
+    tag=0xC612                        type=2 cnt=10   offset=182 value='com.adobe'
+    tag=0xC614 UniqueCameraModel      type=2 cnt=39   offset=192 value='Nikon Z 5 2 RawLab Preview Baseline v2'
+    tag=0xC6F4                        type=2 cnt=22   offset=2376 value='RawLab fitted profile'
+    tag=0xC7A5 BaselineExposureOffset type=10 cnt=1 value=be11000000000000
+
+### Nikon Z 5 2 RawLab Preview Baseline v3.dcp IFD0 @8 entries=14
+    tag=0xC612                        type=2 cnt=10   offset=182 value='com.adobe'
+    tag=0xC614 UniqueCameraModel      type=2 cnt=39   offset=192 value='Nikon Z 5 2 RawLab Preview Baseline v3'
+    tag=0xC6F4                        type=2 cnt=22   offset=2376 value='RawLab fitted profile'
+    tag=0xC7A5 BaselineExposureOffset type=10 cnt=1 value=be11000000000000
+
+### Nikon Z 5 2 RawLab Preview Baseline.dcp IFD0 @8 entries=14
+    tag=0xC612                        type=2 cnt=10   offset=182 value='com.adobe'
+    tag=0xC614 UniqueCameraModel      type=2 cnt=36   offset=192 value='Nikon Z 5 2 RawLab Preview Baseline'
+    tag=0xC6F4                        type=2 cnt=22   offset=2372 value='RawLab fitted profile'
+    tag=0xC7A5 BaselineExposureOffset type=10 cnt=1 value=ba11000000000000

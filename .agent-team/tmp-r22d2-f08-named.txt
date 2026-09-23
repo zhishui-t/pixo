@@ -1,0 +1,29 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- D:\Python\Python312\tools\python.exe
+cachedir: .pytest_cache
+rootdir: K:\work\project\pixo
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 18 items
+
+tests/unit/test_skin_oklab.py::test_constants_sane PASSED                [  5%]
+tests/unit/test_skin_oklab.py::test_skin_mask_oklab_basic PASSED         [ 11%]
+tests/unit/test_skin_oklab.py::test_skin_mask_oklab_noop_extremes_no_nan PASSED [ 16%]
+tests/unit/test_skin_oklab.py::test_skin_mask_oklab_uint8_equals_float PASSED [ 22%]
+tests/unit/test_skin_oklab.py::test_skin_mask_oklab_soft_boundary_intermediate PASSED [ 27%]
+tests/unit/test_skin_oklab.py::test_skin_mask_oklab_input_validation PASSED [ 33%]
+tests/unit/test_skin_oklab.py::test_old_skin_mask_untouched PASSED       [ 38%]
+tests/unit/test_skin_oklab.py::test_mask_fn_dispatch PASSED              [ 44%]
+tests/unit/test_skin_oklab.py::test_skin_stage_hsv_default_bit_identical_to_legacy PASSED [ 50%]
+tests/unit/test_skin_oklab.py::test_skin_stage_oklch_uses_oklab_mask PASSED [ 55%]
+tests/unit/test_skin_oklab.py::test_skin_stage_invalid_domain_raises PASSED [ 61%]
+tests/unit/test_skin_oklab.py::test_colorcal_explicit_hsv_matches_default PASSED [ 66%]
+tests/unit/test_skin_oklab.py::test_colorcal_oklch_domain_switches_skin_trim_mask PASSED [ 72%]
+tests/unit/test_skin_oklab.py::test_colorcal_invalid_domain_raises PASSED [ 77%]
+tests/unit/test_skin_oklab.py::test_fit_script_recovers_known_ellipse PASSED [ 83%]
+tests/unit/test_skin_oklab.py::test_hsm_convert_semantics PASSED         [ 88%]
+tests/unit/test_skin_oklab.py::test_skin_oklab_constants_bitwise_locked_to_fit_json PASSED [ 94%]
+tests/unit/test_skin_oklab.py::test_skin_oklab_json_angle_deg_consistent_with_constant PASSED [100%]
+
+============================= 18 passed in 3.07s ==============================

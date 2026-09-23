@@ -1,0 +1,23 @@
+[calibration_store] 标定文件损坏, 回退默认值 (C:\WINDOWS\TEMP\tmpka0xy9n6\warmth_curve.json): Expecting value: line 1 column 33 (char 32)
+[render-degraded] 关键路径降级 source=render.white_balance.warmth_curve kind=fallback path=C:\WINDOWS\TEMP\tmpka0xy9n6\warmth_curve.json reason=calibration_unreadable exc=None detail=暖度分桶标定表损坏/顶层非 object，回退内置斜率模型
+[pixo.vision.segmenters] 后端 sapiens 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+[pixo.vision.segmenters] 后端 uniface 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+== 1) classify_native_failure 判定 ==
+  'version_gate'         <- RuntimeError('native colorcal oklch F32 kernel unavailable (需 DLL >= 1.6.0, 实际 (1, 5, 0))')
+  'version_gate'         <- RuntimeError('native clarity kernel unavailable (DLL 未导出)')
+  'native_unavailable'   <- RuntimeError('native DLL unavailable: native DLL not found: X.dll')
+  'exception'            <- ValueError('boom')
+  'fallback'             <- None
+== 2) 写坏 warmth_curve 副本 -> degraded + health 暴露 ==
+  _load_warm_cal(corrupt) -> None
+  degraded entries = 1
+  entry: {"source": "render.white_balance.warmth_curve", "kind": "fallback", "path": "C:\\WINDOWS\\TEMP\\tmpka0xy9n6\\warmth_curve.json", "reason": "calibration_unreadable", "detail": "暖度分桶标定表损坏/顶层非 object，回退内", "exception": null, "expected": false, "count": 1, "first_seen": "2026-09-10T15:45:38.188+00:00", "last_seen": "2026-09-10T15:45:38.188+00:00", "timestamp": "2026-09-10T15:45:38.188+00:00"}
+== 3) vision_health 增量键 ==
+  render_degraded_count = 1
+  render_status = 'degraded'
+  render_version_gate_count = 0
+  render_degraded sources = ['render.white_balance.warmth_curve']
+  status/ready 未变 = 'not_ready'/False
+== 4) 版本门合法拒绝 -> 不进 degraded ==
+  degraded = 0, version_gate = 1
+PROBE-OK

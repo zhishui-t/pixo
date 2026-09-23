@@ -1,0 +1,89 @@
+# .r11_ok — R11 收口门禁（A 轨删除 + scene 门控）
+
+审核人: qa
+覆盖: R11 双任务（A 轨删除面/点云/10 卡替换/scene 门控/RAW 治理/全量回归）
+ISO 时间戳: 2026-09-07T11:22:36+08:00
+结论: **PASS 放行**——六条全过，代码修复 0 处；知情裁决数据基础经 qa 独立抽验成立
+（10 卡量级/排序复现），RAW 漂移归因独立复现（门控 100% 驱动 + A 轨删除零贡献双证）。
+
+## 六条结论
+
+### 1. A 轨删除面 ✅
+- core/huesat.py 24→17 函数，**精确删 6**（apply_table_to_hsv / apply_hue_sat_map /
+  apply_look_table / _apply_table_prophoto / _apply_table_linear / _tri_index），与报告
+  清单一致（_tri_index 死代码偏差已自报）；
+- modules/huesat.py 重写：oklch-or-no-op 语义（非法域 fail-fast → 无表静默 no-op →
+  oklch+点云 → 退役 "hsv" warn-once + no-op）；use_dng 分支（H9）与 `_oklch_domain`
+  例外删尽；**缺省 color_domain 翻 oklch**（"hsv" 仅 schema 兼容）；metrics
+  color_domain 收缩为 oklch|none；
+- **GPL grep：huesat 三文件零命中**（rawtherapee|rtengine|dng_render|dng_color_spec）；
+  范围内其余命中全属声明另案（color.py ×7 H4-H8 / white_balance ×1 M 系 / lut3d ×1
+  通用格式 / docs ×6）——**1 处黑板未列名**：core/__init__.py:8「tone.py 原
+  engine/dng_render.py」命名迁移记录（良性注释，建议随 F18 另案批顺手清理措辞）；
+- H1/H2/H3/H9 落面确认；tech_debt #2 部分清偿注记 + #3 huesat GPL 警示划线清偿 ✓；
+  FUNCTION_GATE_SPEC §5.12 职责收缩（warm_sat + oklch）+ 矩阵行更新 ✓；
+- gate `huesat` case 保留的偏差处理正确（锁 apply_local_warm_sat 在用自研功能，报告 §3.3）。
+
+### 2. 点云 ✅
+- qa 直探 6 DCP：**含表 DCP 恰 3（LookTable）**，与 3 份点云一一对应（adobe_standard
+  2765 点既有 + lr_baseline / lr_camera_standard 各 2205 点新增）；Preview 系 3 个无表
+  （旧代码即无表直通，无回退需求）——「含表 DCP 3/3 覆盖」口径实证成立；
+  新点云 schema/键结构与既有惯例一致（convert 脚本产物）。
+
+### 3. 10 卡替换（知情裁决数据基础）✅
+- r11_render_hashes vs r10：**13 不变 / 10 变更**，变更卡与黑板 §4.1 清单**逐一吻合**
+  （fujifilm_acros_100 无 huesat 参数不在列）；
+- **ΔE 独立抽验 3 卡**（qa 换入 02a77b1 版 A 轨渲染 ↔ R11 B 轨，ΔE2000 同源复算）：
+  | 卡 | qa med/p95/max/>JND | dev-2 表 |
+  |---|---|---|
+  | film_pro_400h | 0.33 / 7.56 / 22.1 / **22.9%** | 0.79 / 7.38 / 19.3 / 23.5% |
+  | classic_chrome | 0.40 / 3.33 / 12.6 / **8.0%** | 0.54 / 4.08 / 6.7 / 10.5% |
+  | velvia_50 | 0.53 / 13.6 / 25.5 / **29.2%** | 1.02 / 11.8 / 28.2 / 29.6% |
+  **>JND% 三卡高度吻合**（22.9/8.0/29.2 vs 23.5/10.5/29.6）、排序一致
+  （velvia > pro_400h > classic_chrome）、量级级一致（median 亚 JND~1、p95 ≈2-5×JND、
+  >JND 8-30%）；median/max 随测试图构成浮动（qa 用 F07 合成基座 96×128 vs dev-2 512px
+  基座）——**裁决数据基础（中位亚 JND / 尾部可感知 / 用户可逆回滚）成立**。
+
+### 4. scene 门控 ✅
+- `_SKIN_RATIO_MAX_NO_SCENE = 0.50`：依据复核成立——渲染路径无 scene 分类器（qa R10
+  已证 RAW 链 scene 恒缺），F11 语料真人像 ≤40% vs 风景 56-90%，50% 落间隙；实现含
+  `skin_gate="coverage-cap"` 状态留痕 + warn；portrait 豁免（分类意图优先）代码与测试在位；
+- **人像位级复验**：portrait_tele（=X1_DSC_0466）四 case 基线 sha 在 round11 中**未动** +
+  当前 compare max=0——F11 refit 成果位级保全（传递证明）；
+- 语义矩阵 5 行有测试钉死（满幅无 scene False / 25%/42% True / portrait 豁免 True /
+  landscape 直通 / 下限门）。
+
+### 5. RAW 治理 ✅
+- round11-regen manifest：**恰 12 case sha 变更**（night_lowlight/wide_angle/
+  high_contrast ×4 features——与门控影响表一致），12 case（day_normal/high_key/
+  portrait_tele）**字节未动**；非 sha 字段零 diff；reviewer=round11-regen 双因注记；
+- **qa 独立归因**（dev-1 同款手法加严）：进程内禁用上限（=1e9）重渲 night_lowlight +
+  wide_angle → **u8 sha256 与 02a77b1（R10）基线逐位相等**——①12 case 漂移 100% 由
+  门控驱动；②A 轨删除对 RAW 四路径零贡献（在树状态下证）；③r11-stream-2 §5 的
+  「refit 时序」中间态疑虑在终态消解（禁上限即还原 R10 基线）。方向=移除两代同在的
+  无人像误磨皮（.r10b_ok §3b 观察窗首项清偿）；
+- 全量 compare：**24/24 PASS（max=0）**。
+
+### 6. 全量回归 ✅
+`python -m pytest tests -q -m "not e2e" -rs` →
+**1478 passed / 5 skipped / 1 xfailed / 0 failed（186.92s）**。
+- 对 R10 基线 1484：**净 -6 全部可对账**——删 A 轨专属用例（test_huesat 19→15、
+  test_huesat_domain 12→8，对应已删代码路径；保留功能测试 decode_table/dims/
+  sat_rolloff/make_hue_sat_map/warm_sat 经 qa grep 确认全在位，无误删）+ 新增 skin
+  门控 3 用例（21→24）+ 1 参数化例差；
+- skip 5 项与基线**逐条相同**；xfailed 1 不变。
+- 定向：huesat/skin/cards 域 96 passed；gate golden 4 passed；`--check` 20 features
+  零漂（huesat 缺省关 + case 锁 warm_sat 的静态推断实证）。
+
+## 修复记录
+代码修复：**0 处**。观察项 2 条：①core/__init__.py:8 命名迁移记录含 "dng_render"
+字样（良性，建议 F18 另案批顺手措辞清理）；②10 卡 ΔE 的 median/max 具体值随测试图
+构成浮动（>JND% 与排序稳定）——呈报引用量级表时建议附测试图口径。
+
+## 放行清单
+R11 批可提交：core/huesat.py + modules/huesat.py + core/huesat_oklch.py（注释）+
+convert 脚本（注释）+ skin.py（门控）+ 2 新点云 + 5 测试文件 + tech_debt/FUNCTION_GATE_SPEC
++ RAW 基线（12 case npy+manifest）。呈报保留用户推翻权（回滚命令在 r11-stream-2 §6 已列）。
+
+> 门禁章：qa 2026-09-07T11:22:36+08:00 — R11 PASS 放行（A 轨删除 GPL 清偿 + scene 门控
+> 观察窗清偿双任务）；归因独立复现加严，知情裁决数据基础成立。

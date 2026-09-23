@@ -1,0 +1,22 @@
+﻿正向 strict 通过 = 15/15
+[OK 反向拒绝] 未知 stage: 未知 stage 's1'（可用: ['calibration', 'clarity', 'colorcal', 'compose', 'dehaze', 'denoise', 'exposure', 'hsl', 'huesat', 'refine', 'region_adjust', 'sharpen', 'skin', 'split_tone', 'stylize', 'tone', 'vibrance', 'whitebalance']）
+[OK 反向拒绝] 未知键: 未知参数键 'tone.nope'（不在 tone 的 param_schema 中）
+[OK 反向拒绝] 越域高: 参数 'tone.contrast' 越域：5 大于上限 1.0
+[OK 反向拒绝] 越域低: 参数 'tone.highlights' 越域：-20 小于下限 -1.0
+[OK 反向拒绝] lut_path 路径键: 参数 'stylize.lut_path' 属路径类参数，本轮不接受（仓内无 LUT 资产；见 docs/STYLE_CARDS_USAGE.md）
+[OK 反向拒绝] 路径键: 参数 'whitebalance.warm_cal_file' 属路径类参数，本轮不接受（仓内无 LUT 资产；见 docs/STYLE_CARDS_USAGE.md）
+[OK 反向拒绝] 路径键2: 参数 'huesat.oklch_points_file' 属路径类参数，本轮不接受（仓内无 LUT 资产；见 docs/STYLE_CARDS_USAGE.md）
+[OK 反向拒绝] 路径形态值: 参数 'compose.ratio' 的值疑似文件路径（'..\\..\\x'），拒绝任何路径注入（见 docs/STYLE_CARDS_USAGE.md）
+[OK 反向拒绝] LUT 激活: 参数 'stylize.lut' 本轮不接受：无 LUT 资产，风格卡以参数注入方式应用（见 docs/STYLE_CARDS_USAGE.md）
+[OK 反向拒绝] 越枚举: 参数 'colorcal.neutral_mode' 取值非法：'bogus' 不在允许值 ['adaptive', 'static', 'off']
+[OK 反向拒绝] NaN: 参数 'compose.rotation' 必须为有限数值：nan
+[OK 反向拒绝] Inf: 参数 'compose.rotation' 必须为有限数值：inf
+[OK 反向拒绝] 非 dict 桶: stage 'tone' 的参数桶必须是对象，实际 5
+[OK 反向拒绝] 控制键/未知 stage: 未知 stage '__meta__'（可用: ['calibration', 'clarity', 'colorcal', 'compose', 'dehaze', 'denoise', 'exposure', 'hsl', 'huesat', 'refine', 'region_adjust', 'sharpen', 'skin', 'split_tone', 'stylize', 'tone', 'vibrance', 'whitebalance']；控制键由服务层解析）
+[OK 反向拒绝] 非 dict patch: 参数 patch 必须是对象（{stage: {...}}），实际 list
+非 strict 合成 stage 放行 = OK
+[OK 非 strict 拒绝敏感面] 参数 'stylize.lut_path' 属路径类参数，本轮不接受（仓内无 LUT 资产；见 docs/STYLE_CARDS_USAGE.md）
+[OK 非 strict 拒绝敏感面] 参数 'tone.user_curve' 的值疑似文件路径（'../x'），拒绝任何路径注入（见 docs/STYLE_CARDS_USAGE.md）
+缺省会话合成 stage = {'s1': {'x': 1}} gen = 1
+[OK 缺省会话拒 lut_path] 参数 'stylize.lut_path' 属路径类参数，本轮不接受（仓内无 LUT 资产；见 docs/STYLE_CARDS_USAGE.md）
+=== 失败项 = 0

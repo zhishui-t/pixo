@@ -1,0 +1,91 @@
+# .r17_ok — R17 收口门禁通过签章
+
+- 审核人: qa (R17 收口门禁)
+- 覆盖: R17 三件 —— 椭圆参数化 #18 清偿 (super-dev, DLL 1.6.0) / 前端
+  reason 联动 (segmenter 四码 + warming 重试策略) / M1 使用文档
+  (docs/MASK_REGION_ADJUST.md)
+- ISO 时间戳: 2026-09-07T23:39:17Z
+- 全量终态: 1533 passed / 5 skipped / 1 xfailed / 0 failed
+- 前端三件套: typecheck 零错误 / test:unit 34 pass 0 fail / build 5.25s
+
+## 四条结论
+
+1. **参数化核心复核 (#18) — PASS**:
+   - **constexpr 副本删除确认**: colorcal.cpp 的 SkinOklabA/B/Cos/Sin/
+     Major/Minor/SoftBand 七副本全部删除 (diff 实证 -行), SkinMaskOklab
+     改签名 `(const SkinOklabEllipse&, ...)` 只从参数读; grep 残留命中
+     仅为合法结构 (SkinOklabEllipse / PixoRenderSkinOklabEllipse) 与注释
+     —— 残留的 SkinLab* constexpr 属 Lab 域 (u8 旧路径) 不在 #18 范围。
+     abi.cpp 1.5.0→1.6.0 + changelog 注明签名不兼容 + ABI 空指针护栏。
+   - **数值纪律随字段携带**: skin_oklab_ellipse() (_native/__init__.py)
+     中心 float(np.float32(...)) f32 舍入后展宽 / cos·sin = np.cos/sin
+     f64 直传 (内核不调 libm, 跨实现 1 ULP 消除) / 半轴 f64 直传 /
+     软带 f32 (c_float 字段, NEP50 smoothstep 语义) —— 与报告表格逐项
+     一致; 测试七字段==单源变换断言在位。
+   - **对拍脚本独立复跑**: `python .agent-team/spike/_r17_kernel_snapshot.py
+     check` → `[check] DLL (1, 6, 0): PASS — 逐位零漂移` (改造前 1.5.0
+     编译期常数快照 vs 现在 1.6.0 参数化)。
+   - **版本门**: colorcal_apply_lab_f32_oklch 调用门 version >= (1,6,0)
+     (不满足抛 RuntimeError, 与符号缺失同路径) → 调用方回退纯 Python;
+     测试三层 (fixture `_oklch_kernel_exported` 门 / skip 理由 / gate
+     断言「>=1.6.0 未导出即红」) —— 1.5.x 旧 DLL 不炸、走回退。
+   - **参数化生效测试**: test_ellipse_parameterized_single_source ——
+     七字段==单源变换 + 半轴→0 掩码全零输出退化恒等 (编译期残留不可能
+     通过); oklch 套件 7/7 passed。
+   - tech_debt #18 ✅ 终章关闭 (注记完整: 结构/入口/零漂实证/性能无损/
+     SkinStage native 化独立机会项)。
+2. **前端 reason 联动 — PASS**: 四码矩阵 (segmenter_warming「模型加载中,
+   稍候自动重试」/ segmenter_no_masks「此图未检出可调区域」/
+   segmenter_error「分割服务异常，可点击重试」+ 既有三码不回归);
+   **重试策略**: 固定 2000ms 无抖动 × WARMING_AUTO_RETRY_MAX=5 封顶
+   (warmingRetryDelayMs 纯函数钉死: <5 → 2000, >=5 → null) + 封顶转
+   手动 (showManualRetry: warming 自动期隐藏/封顶与其余 reason 显示) +
+   进度显示 (n/5) + 计数复位 (reason 变化或换会话归零, 不闪断设计)。
+   单测 +4 (四码/策略/可见性/矩阵同源); 三件套 34 pass 0 fail
+   (30+4); 契约 `_r14_ui_contract.mjs` 复跑 **5/5 passed**。
+3. **M1 文档 — PASS (含 1 项 qa 修复)**: 抽验 4 处事实与源一致——
+   ① §3.2 规则表: sky (gt 150/lt 0.70/reliable/-0.5·(lum/150)/钳[-2,0])
+   与 plant (lt 70/lt 0.70/lt 0.01/reliable/0.2·((70−lum)/70)/钳[0,2])
+   同 YAML 逐项一致, 三道护栏数据 (0.70/high_contrast 99.6% 压 0.52 EV/
+   溢出地板 1.35~1.64% vs ≤0.42%) 同评估档案; ② §4.1 env 缺省值 4 项
+   (PIXO_SEGMENTER=mock / PIXO_REGION_SUPPLY=关 / PIXO_SEGMENTER_WARMUP=开 /
+   PIXO_ALLOW_RESTRICTED 未设) 与 runtime.py 解析一致; ③ §2 效果量级
+   (48%→57% 净+9pp / 7 救回 / ±0.5 EV / 试水系数出处声明 + 「复权后
+   独立增量未单独实测」如实标注) 同 region_trial_54; ④ §5 已知限制
+   四条 (#17 free 错位 / 双层防线 1%+2.5% / 灰区 tele 40.6% / 供给语义)
+   与实现一致。**qa 修复 2 处事实偏差 (见修复记录)**。
+4. **全量 — PASS**: 1533 passed / 5 skipped / 1 xfailed / **0 failed**
+   (R16 基线 1532 + 参数化生效测试 1, 计数吻合应增不减; 前端 4 项新测
+   不计入 python 全量)。
+
+## 修复记录 (qa 最小修复, 已复验)
+
+1. **MASK_REGION_ADJUST.md §2 两处事实偏差** (docs/MASK_REGION_ADJUST.md):
+   - 改了什么: ① 「区域不可用时三滑杆呈 locked 态（禁用+半透明）」→
+     「滑杆整体不渲染（禁用态无静默操作面，B1 修复后语义），状态徽标与
+     提示给出原因、必要时提供重试入口」; ② 「warmth（±1，预留位）」→
+     「warmth（±1，负=冷 / 正=暖）」。
+   - 为什么: ① 与 R14 B1 修复后实现矛盾——实现为不可用时滑杆不渲染
+     (ui_contract 断言「滑杆 0 个（禁用态）」实证), 「locked 态」是
+     B1 修复前旧设计描述残留; ② warmth 滑杆 R14 起已完整可用
+     (映射+内核+测试), 「预留位」误导使用者以为未实现 (§3.3 又完整
+     描述了其内核, 自相矛盾)。
+   - 验证: 文档级改动; 修改后全文重读, 与 RegionSection.tsx 实现
+     (ui.enabled 条件渲染) 与 §3.3 参数表一致。
+
+## 验证证据汇总
+
+- python -m pytest tests -q -m "not e2e" → 1533/0
+- python -m pytest tests/unit/test_native_colorcal_oklch.py -q → 7 passed
+- python .agent-team/spike/_r17_kernel_snapshot.py check → PASS 逐位零漂移
+- npm run typecheck / test:unit / build → 零错误 / 34 pass 0 fail / 5.25s
+- node e2e/_r14_ui_contract.mjs → 5/5 passed (真实 sid, 零 demo-session)
+
+## 遗留与升级 (不阻塞)
+
+- SkinStage oklch 掩码 native 化 (复用参数化内核, ~150ms @512 numpy
+  路径) —— 独立机会项 (#18 终章已记)。
+- spike 产物 _r17_kernel_snapshot.py + _r17_kernel_ref.npz 留档 (零漂
+  对拍证据, 处置归队长); .v15-locked DLL 现场 (服务持锁) 进程退出后
+  可删。
+- 本轮未 commit (提交策略归队长)。

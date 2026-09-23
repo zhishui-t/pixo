@@ -1,0 +1,48 @@
+ M src/pixo/decide/engine.py
+ M src/pixo/decide/rules/__init__.py
+ M src/pixo/pipeline/loop.py
+ M src/pixo/pipeline/metrics.py
+ M src/pixo/render/core/lut3d.py
+ M src/pixo/render/modules/color_cal.py
+ M src/pixo/render/modules/exposure.py
+ M src/pixo/render/modules/refine.py
+ M src/pixo/render/modules/reshape.py
+ M src/pixo/render/modules/tone_map.py
+ M src/pixo/render/modules/white_balance.py
+ M src/pixo/render/web/session.py
+ M src/pixo/service/runtime.py
+ M src/pixo/vision/health.py
+ M tests/unit/test_metrics_for_decide_public.py
+?? .artifacts/calib_domain_gap_analysis.py
+?? .artifacts/calib_domain_gap_checkpoint.jsonl
+?? .artifacts/calib_domain_gap_checkpoint_run1.jsonl
+?? .artifacts/calib_domain_gap_eval.py
+?? .artifacts/engine_probe/
+?? .artifacts/ev_stress_checkpoint.jsonl
+?? .artifacts/ev_stress_experiment.py
+?? .artifacts/ev_stress_results.json
+?? .artifacts/f07_render_hashes_after.json
+?? .artifacts/f07_render_hashes_before.json
+?? .artifacts/f10_render_hashes_after.json
+?? .artifacts/r10_render_hashes_after.json
+?? .artifacts/r10_render_hashes_after_fix.json
+?? .artifacts/r11_render_hashes.json
+?? .artifacts/r13_region_eval/
+?? .artifacts/r13_render_hashes.json
+?? .artifacts/r20_warmth_daylight_verify.json
+?? .artifacts/region_overflow_gate_spot.json
+?? .artifacts/region_replay_spot.json
+?? .artifacts/region_rules_pure_effect.json
+?? .artifacts/rp_ccm_lowfreq_ckpt/
+?? .artifacts/rp_ccm_lowfreq_eval.py
+?? .artifacts/rp_ccm_lowfreq_results.json
+?? .artifacts/style_cards_trial54.py
+?? .artifacts/style_cards_trial54_aggregate.py
+?? .artifacts/tester_f10_hashes_after.json
+?? .artifacts/warmth_curve_pre_r20.json
+?? configs/rules/noise_rules.yaml
+?? src/pixo/decide/rules/noise_rules.yaml
+?? src/pixo/render/degradation.py
+?? tests/unit/test_noise_metric_keys.py
+?? tests/unit/test_qc_soft_warnings.py
+?? tests/unit/test_render_degradation.py

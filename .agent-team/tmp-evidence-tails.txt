@@ -1,0 +1,11 @@
+=== tmp-r21-gate-final.txt (2468 bytes, enc=utf-16, lines=1) ===
+  剛ㄲ䘭㔰⁝畲敬彳潣湵㵴ㄱ਍䰍慯楤杮眠楥桧獴›†┰⁼††††簠〠㈯㠰嬠〰〺㰰ⰿ㼠瑩猯൝潌摡湩⁧敷杩瑨㩳ㄠ〰簥離袖離袖離袖離袖離袖⁼〲⼸〲‸せ㨰〰〼㨰〰‬ㄱ㔸⸲㐳瑩猯൝嬊㉒ⴱう崵笠猢慴整㨢∠䍁䕃呐䑅Ⱒ∠敲獡湯㨢∠䥆䅎彌䍑뺾ꃦ鮼牰癥敩⁷믧ꊭ›뻨낈鳦Ꞥ뿨ꎻ뷨낕⠠⤲Ⱒ∠瑩牥瑡潩≮›ⰲ∠畲敬彳潣湵≴›ㄱ‬瀢牡浡≳›≻潣潬捲污㨢笠猢瑡牵瑡潩≮›〭ㄮ紵ⱽ∠畲敬楟獤㨢嬠猢瑡牵瑡潩彮楨桧牟汵≥
+=== tmp-r21-d1-table.txt (2454 bytes, enc=utf-16, lines=1) ===
+  啒䕌⁓≻畲敬彳潣湵≴›ㄱ‬爢汵獥楟獤㨢嬠畮汬‬畮汬‬畮汬‬畮汬‬畮汬‬畮汬‬畮汬‬畮汬‬畮汬‬畮汬‬畮汬絝਍≻慳灭敬㨢∠卄彃㈵㘳丮䙅Ⱒ∠畤慲楴湯獟㨢ㄠ㠰㠮ⰹ∠瑳瑡≥›䄢䍃偅䕔≄‬椢整慲楴湯㨢㈠‬挢汯牯畦湬獥彳牰癥敩彷瑩牥∱›⸶㠱㠸‬挢汯牯畦湬獥彳牰癥敩彷慬瑳㨢㔠㠮㌹ⰶ∠潣潬晲汵敮獳晟湩污瑟灯㨢㤠㈮㠹ⰷ∠慨敺灟敲楶睥江獡≴›⸰㠱㜳‬琢湯污牟湡敧灟敲楶睥江獡≴›⸰㤴㜷‬氢獡彴敤楣敤牟汵彥摩≳›嵛‬產楮
+=== tmp-r21-fulltest.txt (3105 bytes, enc=utf-8, lines=35) ===
+  tests/unit/test_calib_optimize.py::TestPenalties::test_shared_theta_theta0_finite_and_skin_zero
+    K:\work\project\pixo\tests\unit\test_calib_optimize.py:242: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+    Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:823.)
+      assert float(cons["skin_pos"]) == 0.0            # θ0 轴正 → hinge 零
+  -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+  1574 passed, 6 skipped, 1 xfailed, 13 warnings in 277.51s (0:04:37)

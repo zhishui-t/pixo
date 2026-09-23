@@ -1,0 +1,8 @@
+﻿卡数 = 25
+卡违规数 = 0
+
+场景数 = 6 ids=['food', 'landscape', 'mono', 'night', 'portrait', 'street']
+场景违规数 = 0
+
+空 param_schema stage = ['denoise', 'sharpen', 'vibrance']
+路径类键（*_path/*_file）=  ['huesat.oklch_points_file', 'stylize.lut_path', 'whitebalance.warm_cal_file']

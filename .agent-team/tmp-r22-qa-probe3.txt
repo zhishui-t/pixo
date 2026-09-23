@@ -1,0 +1,321 @@
+--- src/pixo/service/app.py:286-316 ---
+   286:     @app.get("/api/auto-loop/{task_id}")
+   287:     def api_auto_loop_status(task_id: str) -> dict[str, Any]:
+   288:         """查询 auto-loop 任务状态（status= running|done|failed）。"""
+   289:         try:
+   290:             return rt.auto_loop_status(task_id)
+   291:         except KeyError as exc:
+   292:             raise _not_found(str(exc)) from exc
+   293: 
+   294:     @app.get("/api/photos/{photo_id}/timeline")
+   295:     def api_timeline(photo_id: str) -> dict[str, Any]:
+   296:         """返回照片状态机事件流 + Trace。"""
+   297:         try:
+   298:             return rt.timeline(photo_id)
+   299:         except KeyError as exc:
+   300:             raise _not_found(str(exc)) from exc
+   301: 
+   302:     @app.post("/api/photos/{photo_id}/decide")
+   303:     def api_decide(photo_id: str) -> dict[str, Any]:
+   304:         """触发一轮 Decide：渲染 + 测量 + 规则决策，结果缓存到照片。
+   305: 
+   306:         整条链路同步阻塞（渲染/测量），sync def 让 FastAPI 自动进线程池。
+   307:         """
+   308:         try:
+   309:             return rt.decide_photo(photo_id)
+   310:         except KeyError as exc:
+   311:             raise _not_found(str(exc)) from exc
+   312: 
+   313:     @app.get("/api/photos/{photo_id}/decide")
+   314:     def api_decide_cached(photo_id: str) -> dict[str, Any]:
+   315:         """只读返回最近一次 Decide 缓存；无缓存时 404 提示先 POST。
+   316: 
+--- src/pixo/render/pipeline/scene_apply.py:40-70 ---
+   40: def _reset_caches() -> None:
+   41:     """测试隔离钩子: 还原模块级场景预设缓存初始态 (与 exposure/
+   42:     white_balance/tone_map 的同名钩子配套, 供测试 fixture 使用)。"""
+   43:     global _cache
+   44:     _cache = None
+   45: 
+   46: 
+   47: def apply_scene_preset(scene_id: str) -> Tuple[Dict[str, dict], Optional[str]]:
+   48:     """场景 id → (params 覆盖, LUT id)。
+   49: 
+   50:     - 已知场景: params = 该场景的 stage 参数覆盖 (dict 拷贝), lut = LUT id 或 None。
+   51:     - 未知场景: ({}, None) 并告警 (回退基座默认)。
+   52:     """
+   53:     presets = load_scene_presets()
+   54:     entry = presets.get(scene_id) if scene_id else None
+   55:     if not isinstance(entry, dict):
+   56:         warnings.warn(
+   57:             f"未知场景 '{scene_id}', 回退基座默认 (可用: {sorted(presets)})",
+   58:             stacklevel=2)
+   59:         return {}, None
+   60:     params = entry.get("params")
+   61:     if not isinstance(params, dict):
+   62:         params = {}
+   63:     lut = entry.get("lut")
+   64:     return {k: dict(v) for k, v in params.items() if isinstance(v, dict)}, \
+   65:         (str(lut) if lut else None)
+   66: 
+   67: __all__ = ["load_scene_presets", "apply_scene_preset"]
+--- src/pixo/decide/rules/tone_clarity_rules.yaml:25-45 ---
+   25:     value: 0.22            # 分布表 p75=0.2260 取整
+   26:   action:
+   27:     param: dehaze.strength
+   28:     mode: delta
+   29:     formula: "0.06"
+   30:     clamp: [0.15, 0.45]
+   31:     step_decay: 0.5
+   32:     conflict_policy: high_priority_wins
+   33: 
+   34: - rule_id: clarity_flat_rule_031
+   35:   priority: 31
+   36:   # 护栏④日落条款首例 (t60): 原 formula 带通守卫迁原生 all 条件,
+   37:   # 行为等价 (同 metrics 快照触发集不变)。旧版留档一个发布周期后删:
+   38:   #   condition: {metric: haze_proxy, op: gte, value: 0.12}
+   39:   #   formula: "0.04 if (haze_proxy < 0.22 and tonal_range <= 0.46) else 0.0"
+   40:   condition:
+   41:     all:
+   42:       - metric: haze_proxy
+   43:         op: gte
+   44:         value: 0.12        # 分布表 p25=0.1202, 入口闭区间
+   45:       - metric: haze_proxy
+--- src/pixo/vision/measure.py:540-560 ---
+   540:             confidences: 可选 prompt -> 置信度；缺省按 1.0。
+   541:             image_id / render_version / detection_version / mask_version:
+   542:                 可选溯源字段；mask_version 缺省使用 DEFAULT_MASK_VERSION。
+   543: 
+   544:         Returns:
+   545:             包含 global、regions 与版本字段的完整测量报告。
+   546:         """
+   547:         rgb = _to_float_rgb(image_rgb)
+   548:         global_result = measure_global(rgb)
+   549:         global_result["detail"] = {
+   550:             "zone_exposure": measure_zone_exposure(rgb),
+   551:             "sharpness": measure_sharpness(rgb),
+   552:             "motion_blur": measure_motion_blur(rgb),
+   553:             "haze": measure_haze(rgb),
+   554:             "thresholds": {
+   555:                 "highlight_clip": HIGHLIGHT_CLIP_THRESHOLD,
+   556:                 "shadow_clip": SHADOW_CLIP_THRESHOLD,
+   557:                 "confidence": CONFIDENCE_THRESHOLD,
+   558:                 "min_area_ratio": MIN_AREA_RATIO,
+   559:             },
+   560:         }
+--- src/pixo/service/runtime.py:940-985 ---
+   940:         payload: dict[str, Any] | None = None
+   941:         error: str | None = None
+   942:         try:
+   943:             loop = SinglePhotoLoop(
+   944:                 render_backend=RawRenderBackend(raw_path, self.profile),
+   945:                 segmenter=self._segmenter,
+   946:                 measurer=VisionMeasure(),
+   947:                 rules=_load_auto_loop_rules(prompts),
+   948:                 preview_long_edge=int(preview_long_edge),
+   949:                 max_iterations=int(max_iterations),
+   950:                 prompts=list(prompts),
+   951:                 targets={},
+   952:                 locked_params=[],
+   953:                 manual_on_unreliable=False,
+   954:                 aesthetic_scorer=None,
+   955:                 agent_suggest=False,
+   956:                 enable_style_cards=False,
+   957:             )
+   958:             result = loop.run(
+   959:                 photo_id, raw_path=raw_path, max_iterations=int(max_iterations)
+   960:             )
+   961:             # 提取（含 trace rule_ids）放在同一 try 内：任何提取异常同样
+   962:             # 落 status=failed，不会把任务卡在 running。
+   963:             payload = {
+   964:                 "state": result.state,
+   965:                 "iteration": result.iteration,
+   966:                 "params": dict(result.params or {}),
+   967:                 "rule_ids": self._auto_loop_rule_ids(result),
+   968:                 "rule_ids_by_iteration": (
+   969:                     self._auto_loop_rule_ids_by_iteration(result)
+   970:                 ),
+   971:                 "trace_event_count": len(result.trace_events or []),
+   972:             }
+   973:         except Exception as exc:  # noqa: BLE001 - 闭环异常落任务表，不穿 HTTP
+   974:             first_line = (str(exc).splitlines() or [""])[0]
+   975:             error = f"{type(exc).__name__}: {first_line}"
+   976:             _LOGGER.warning(
+   977:                 "[pixo.runtime] auto-loop 任务失败: task=%s photo=%s %s",
+   978:                 task_id, photo_id, error,
+   979:             )
+   980: 
+   981:         duration = round(time.monotonic() - started, 3)
+   982:         with self._auto_loop_lock:
+   983:             task = self._auto_loop_tasks.get(task_id)
+   984:             if task is not None:
+   985:                 if payload is not None:
+--- loop.py metrics_for_decide / measurement call sites ---
+   33: from pixo.pipeline.metrics import metrics_for_decide
+   216: final_measurement: dict[str, Any] | None
+   249: "final_measurement": self.final_measurement,
+   522: def _metrics_for_decide(measurement: dict[str, Any]) -> dict[str, Any]:
+   525: R21/F03：实现已公共化为 :func:`pixo.pipeline.metrics.metrics_for_decide`
+   529: return metrics_for_decide(measurement)
+   762: # measurement["global"] / 顶层测量键 (_metrics_for_decide 固定键)
+   1371: metrics = _metrics_for_decide(measurement)
+   1803: params_after, preview_measurements, masks_cache, preview_stop_reason = (
+   1811: sm, photo_id, params_after, preview_measurements,
+   1860: sm, photo_id, rolled_params, preview_measurements,
+   1879: sm, photo_id, params_after, preview_measurements,
+   1902: sm, photo_id, params_after, preview_measurements,
+   1914: final_measurement: dict[str, Any] | None,
+   1934: final_measurement=final_measurement,
+--- src/pixo/render/native/src/abi.cpp:10-30 ---
+   10: // 1.5.0: 新增 PixoRenderColorCalApplyLabF32Oklch (colorcal oklch 域内核,
+   11: //        OKLab 椭圆掩码版 —— F11 实测 oklch 旁路 native 走纯 Python 路径
+   12: //        15x 慢 (8.5ms->131ms @512), 本内核堵回 native 量级)。
+   13: // 1.6.0: PixoRenderColorCalApplyLabF32Oklch 签名变化 —— 增第 7 参
+   14: //        PixoRenderSkinOklabEllipse* (椭圆常数参数化, tech_debt #18 清偿,
+   15: //        单源 core/skin.py SKIN_OKLAB_*, 编译期 constexpr 副本删除)。
+   16: //        与 1.5.0 的 6 参签名不兼容, ctypes 侧以 version >= 1.6.0 为调用门。
+   17: #include "abi.h"
+   18: 
+   19: PIXO_RENDER_NATIVE_API int PixoRenderVersion(struct PixoRenderVersion* version)
+   20: {
+   21:     if (version == nullptr) {
+   22:         return PixoRenderInvalidArgs;
+   23:     }
+   24:     version->major = 1;
+   25:     version->minor = 6;
+   26:     version->patch = 0;
+   27:     return PixoRenderOk;
+   28: }
+--- frontend/src/components/StyleAiPanel.tsx:16-26 ---
+   16: export function StyleAiPanel() {
+   17:   const activeProjectId = useAppStore((s) => s.activeProjectId);
+   18:   const styleCards = useAppStore((s) => s.styleCards);
+   19: 
+   20:   // t60 接线：点击卡选中 → 拉完整卡（GET /api/styles/{id}）展开详情；
+   21:   // 离线（后端不可达）时详情显示占位说明。
+   22:   const [selectedId, setSelectedId] = useState<string | null>(null);
+   23:   const [detail, setDetail] = useState<StyleCardDetail | null>(null);
+   24:   const [detailLoading, setDetailLoading] = useState(false);
+   25: 
+   26:   const toggleCard = (styleId: string) => {
+--- frontend/src/api/client.ts:135-150 ---
+   135:   return request<TimelineInfo>(`/api/photos/${photoId}/timeline`);
+   136: }
+   137: 
+   138: /** GET /api/styles —— 风格卡列表（降载：style_id + metadata）。 */
+   139: export async function listStyles(): Promise<StyleSummary[]> {
+   140:   const data = await request<{ styles: StyleSummary[] }>('/api/styles');
+   141:   return data.styles;
+   142: }
+   143: 
+   144: /** GET /api/styles/{style_id} —— 完整风格卡。 */
+   145: export async function getStyle(styleId: string): Promise<StyleCardDetail> {
+   146:   const data = await request<{ style: StyleCardDetail }>(
+   147:     `/api/styles/${encodeURIComponent(styleId)}`);
+   148:   return data.style;
+   149: }
+   150: 
+--- 9/4 report tail (last 22) ---
+   57: | DSC_0367_2026春节 | 14816 | +1.42 | 5.582 | 19.498 | 7.744 | 20.818 | +2.161 |
+   58: | DSC_0368_2026春节 | 14919 | +1.41 | 5.417 | 19.168 | 7.682 | 20.387 | +2.265 |
+   59: | DSC_0369_2026春节 | 15526 | +1.43 | 4.863 | 17.919 | 7.764 | 18.529 | +2.901 |
+   60: | DSC_0370_2026春节 | 16579 | +1.12 | 4.890 | 17.036 | 8.083 | 17.297 | +3.194 |
+   61: | DSC_0371_2026春节 | 17052 | +1.11 | 5.099 | 19.490 | 7.987 | 19.243 | +2.888 |
+   62: | DSC_5236_raw | 14375 | +1.46 | 5.636 | 11.771 | 3.178 | 12.124 | -2.457 |
+   63: | DSC_5237_raw | 14987 | +1.50 | 5.253 | 10.360 | 2.612 | 9.497 | -2.641 |
+   64: | DSC_5238_raw | 15222 | +1.51 | 5.535 | 11.339 | 2.865 | 10.612 | -2.670 |
+   65: | DSC_5239_raw | 15071 | +1.50 | 5.630 | 11.509 | 2.867 | 10.874 | -2.763 |
+   66: | DSC_5240_raw | 4798 | +1.28 | 10.204 | 13.605 | 10.675 | 15.449 | +0.471 |
+   67: | DSC_5241_raw | 3693 | +1.50 | 8.454 | 13.591 | 11.942 | 17.361 | +3.488 |
+   68: | DSC_5242_raw | 4524 | +1.18 | 9.136 | 12.859 | 7.885 | 15.679 | -1.251 |
+   69: | DSC_5243_raw | 14307 | +1.14 | 10.618 | 17.135 | 6.550 | 17.778 | -4.067 |
+   70: | DSC_5244_raw | 16025 | +1.22 | 10.225 | 17.707 | 7.845 | 18.420 | -2.379 |
+   71: | DSC_5245_raw | 11825 | +1.45 | 10.676 | 16.307 | 6.157 | 16.445 | -4.520 |
+   72: | DSC_5250_raw | 13968 | +1.05 | 10.418 | 14.262 | 5.767 | 13.014 | -4.651 |
+   73: | DSC_5257_raw | 15729 | +1.45 | 7.116 | 11.920 | 10.399 | 14.738 | +3.283 |
+   74: | DSC_5260_raw | 11136 | +1.38 | 7.694 | 14.743 | 7.766 | 16.862 | +0.073 |
+   75: | DSC_5268_raw | 5923 | +1.81 | 4.558 | 8.833 | 6.037 | 11.141 | +1.479 |
+   76: 
+   77: 结论: B 轨 median 优于 A 轨的照片 22/54; 总体 ΔE2000 median 5.946 → 7.093。
+   78: 
+   79: > 纪律: 本报告仅作决策依据, **不切换运行时默认** (设计 §4); DCP 基线渲染与 configs 默认未被本脚本修改。
+--- 8/28 report tail (last 22) ---
+   57: | DSC_0367_2026春节 | 14837 | +1.40 | 6.716 | 19.586 | 6.443 | 19.279 | -0.272 |
+   58: | DSC_0368_2026春节 | 14981 | +1.39 | 6.456 | 19.318 | 6.140 | 19.241 | -0.316 |
+   59: | DSC_0369_2026春节 | 15580 | +1.41 | 5.891 | 18.261 | 5.747 | 18.632 | -0.143 |
+   60: | DSC_0370_2026春节 | 16631 | +1.11 | 5.445 | 17.271 | 4.142 | 17.402 | -1.303 |
+   61: | DSC_0371_2026春节 | 17114 | +1.10 | 5.563 | 19.515 | 4.001 | 19.921 | -1.563 |
+   62: | DSC_5236_raw | 14413 | +1.43 | 5.116 | 11.038 | 5.284 | 11.624 | +0.167 |
+   63: | DSC_5237_raw | 15036 | +1.44 | 3.863 | 9.125 | 5.352 | 10.119 | +1.489 |
+   64: | DSC_5238_raw | 15381 | +1.45 | 3.793 | 10.257 | 5.407 | 11.669 | +1.614 |
+   65: | DSC_5239_raw | 15293 | +1.44 | 3.861 | 10.427 | 5.445 | 11.813 | +1.584 |
+   66: | DSC_5240_raw | 4771 | +1.32 | 10.849 | 17.037 | 9.723 | 15.883 | -1.126 |
+   67: | DSC_5241_raw | 3666 | +1.55 | 13.724 | 18.783 | 10.936 | 15.835 | -2.787 |
+   68: | DSC_5242_raw | 4459 | +1.20 | 8.023 | 15.707 | 7.911 | 15.265 | -0.112 |
+   69: | DSC_5243_raw | 14201 | +1.16 | 6.843 | 17.153 | 9.048 | 17.455 | +2.205 |
+   70: | DSC_5244_raw | 15987 | +1.25 | 7.352 | 17.069 | 7.890 | 17.937 | +0.539 |
+   71: | DSC_5245_raw | 11685 | +1.48 | 7.308 | 16.780 | 8.329 | 17.346 | +1.021 |
+   72: | DSC_5250_raw | 13924 | +1.08 | 6.093 | 11.884 | 8.701 | 12.708 | +2.607 |
+   73: | DSC_5257_raw | 15715 | +1.49 | 9.407 | 14.546 | 6.500 | 11.960 | -2.907 |
+   74: | DSC_5260_raw | 10140 | +1.41 | 8.716 | 16.695 | 7.479 | 15.108 | -1.236 |
+   75: | DSC_5268_raw | 5772 | +1.82 | 4.789 | 10.867 | 3.440 | 10.433 | -1.349 |
+   76: 
+   77: 结论: B 轨 median 优于 A 轨的照片 45/54; 总体 ΔE2000 median 6.151 → 5.675。
+   78: 
+   79: > 纪律: 本报告仅作决策依据, **不切换运行时默认** (设计 §4); DCP 基线渲染与 configs 默认未被本脚本修改。
+--- src/pixo/service/app.py preview_long_edge refs ---
+--- src/pixo/service/runtime.py preview_long_edge refs ---
+   795: preview_long_edge: int = 1024,
+   814: preview_long_edge: preview 渲染长边（缺省 1024）。
+   868: int(preview_long_edge), prompts_tuple,
+   875: int(preview_long_edge), prompts_tuple,
+   929: preview_long_edge: int,
+   948: preview_long_edge=int(preview_long_edge),
+--- docs/tech_debt.md:126-140 ---
+   126:    - 高光预算哨兵 ev≤log2((1-τ)/p99)，highlight_budget=0.02（相机实测 1.74%+余量）；
+   127:      拟合目标中位 L→均值 L。验收：clip_hi 3.68→2.29%（≤2.5）、|dL| 8.94→1.0（≤4）、色度≈0。
+   128: 
+   129: 10. **跨包知识边须同组发布**：
+   130:     - 含跨包边的知识包必须同组提交、同组发布（见 `configs/knowledge/README.md`
+   131:       发布约定）；新增跨包边须在所在包 JSON 顶部声明 `_requires`，
+   132:       单包先行变更会制造悬空引用。
+   133: 
+   134: 10. **色彩规则执行位占位**：
+   135:     - 色彩规则决策键（vibrance/saturation.adjust）已通，下游 VibranceStage 为占位，
+   136:       参数暂不产生渲染差异；实装或映射至 huesat 待排期。
+   137: 
+   138: 11. **评分器权重部署**：
+   139:     - aesthetic_scorer.pt 就位后 make_default_scorer 自动切真模型（对照
+   140:       model_licenses.json 许可）；composition/overall 维度即可供 P2 规则消费。
+--- git show 3fbe56d --stat ---
+3fbe56d feat(calib): 新表入库正式 configs（阶段二终审路径1）+ cal_ev_weights 修复
+ .artifacts/stage2_adopt_eval_A.json              |  99 ++++
+ .artifacts/stage2_adopt_eval_A.md                | 238 +++++++++
+ .artifacts/stage2_adopt_eval_prev.json           |  99 ++++
+ .artifacts/stage2_adopt_eval_prev.md             | 238 +++++++++
+ .artifacts/stage2_adopt_perphoto.json            | 654 +++++++++++++++++++++++
+ .artifacts/stage2_adopt_report.md                | 104 ++++
+ .artifacts/stage2_adopt_verdict.md               | 138 +++++
+ configs/calibration/warmth_curve.json            |  30 +-
+ configs/color/calib_prev/README.md               |  20 +
+ configs/color/calib_prev/rp_ccm_nikon_z5_2.json  | 168 ++++++
+ configs/color/calib_prev/skin_oklab.json         | 260 +++++++++
+ configs/color/calib_prev/target_offset.json      |   1 +
+ configs/color/calib_prev/warmth_curve.json       |  94 ++++
+ configs/color/calib_prev/z5ii_neutral_trim.json  |  70 +++
+ configs/color/rp_ccm_nikon_z5_2.json             |  36 +-
+ resources/camera_profiles/z5ii_neutral_trim.json |  56 +-
+ scripts/calib/optimize.py                        |  35 +-
+ src/pixo/render/target_offset.json               |   2 +-
+ tests/regression/goldens/gate/manifest.json      |   2 +-
+ 19 files changed, 2263 insertions(+), 81 deletions(-)
+
+LIC name=aesthetic_scorer.pt publishable=True status=redistribution_allowed_with_license_notice files=['resources/models/aesthetic/aesthetic_scorer.pt']
+LIC name=openai/clip-vit-base-patch32 publishable=True status=redistribution_allowed_with_license_notice files=[]
+LIC name=uniface-face-parsing publishable=False status=internal_development_only files=[]
+LIC name=rfdetr-seg-2xl publishable=True status=redistribution_allowed_with_license_notice files=[]
+LIC name=segformer-b1-finetuned-ade-512-512 publishable=False status=redistribution_allowed_with_license_notice files=[]
+LIC name=facebook/sapiens-seg-0.3b publishable=False status=internal_development_only files=[]
+VM id=aesthetic-scorer license=需核验（来源 rsinema/aesthetic-scorer） publishable=False path_or_source=$GUANLAN_ROOT/models/aesthetic_scorer.pt pixo_status=adapter_in_pixo_vision_aesthetic keys=['id', 'license', 'name', 'notes', 'path_or_source', 'pixo_status', 'publishable', 'purpose', 'size', 'size_bytes']
+VM id=openai-clip-vit-base-patch32 license=MIT（OpenAI CLIP） publishable=True path_or_source=HuggingFace 缓存 openai/clip-vit-base-patch32 pixo_status=external_backbone_reference keys=['id', 'license', 'name', 'notes', 'path_or_source', 'pixo_status', 'publishable', 'purpose', 'size', 'size_bytes']
+license-ish files: ['model_licenses.json', 'THIRD_PARTY_NOTICES.md']

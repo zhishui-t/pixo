@@ -1,0 +1,86 @@
+# .r10b_ok — R10 第二批切换（skin+colorcal 缺省翻 oklch）专项门禁 + 全量回归
+
+审核人: qa
+覆盖: R10 第二批收口（落点纯度/断言修订 3 项/A1 复核/RAW 归因独立抽验/三组基线治理/性能口径/全量回归）
+ISO 时间戳: 2026-09-07T10:25:58+08:00
+结论: **PASS 放行**——六条全过；附 1 项**叙事修正要求**（RAW 定性措辞，见 §3b，非代码修复）与 1 项观察窗建议。
+
+## 六条门禁结论
+
+### 1. 落点纯度 ✅
+- skin.py / color_cal.py diff 逐行审：除 default_params `color_domain "hsv"→"oklch"`
+  与注释语义同步（skin 3 处 / colorcal 1 处）外**零行为改动**。
+- 断言修订 3 处审毕，均翻期望/指针显式化、零删除：
+  - test_skin 缺省表：全字典等值保持，仅 color_domain 期望翻转（t52 §3.4 预告的 skin 项）；
+  - test_native_colorcal 精度哨兵：cfg 显式钉 `"color_domain":"hsv"`（哨兵锁 Lab 链 W4 口径），
+    oklch 链精度由 dca189c 的 test_native_colorcal_oklch.py（6 用例：内核↔纯 Python 参考/掩码
+    隔离逐位/版本门）专属承接——职责分离清晰；
+  - test_theta_io：11.2485 = round(degrees(0.196323),4) **qa 复算相等**且与源文件
+    skin_oklab.json angle_deg 双源一致（dca189c 重拟合漏改断言的同步修复）。
+- F09 同源/parity 测试零修订自动绿（只翻 HslStage 的设计兑现）。
+
+### 2. A1 复核 ✅
+- r10_render_hashes_after_fix vs **双基线**（f10 dev manifest + tester manifest）：**23/23
+  float32 sha256 字节级全等**；钉域条目 69→70，film_pro_400h pinned=[skin, colorcal]。
+- film_pro_400h 卡 diff = 纯 `"skin":{"color_domain":"hsv"}` 单键插入（卡序沿约定）；
+  F07 计数 skin 22→23 同步且 docstring 注明 R10 裁决缘由——「无 skin 键卡单点补钉」口径
+  扩展合理（该卡是唯一切默认链暴露卡）。
+
+### 3. RAW 漂移归因——qa 独立抽验 ✅（并强于原证）
+**a) 归因铁证（独立复现+加严）**：qa 从 git 提取旧基线（dca189c 的 24 组 u8+manifest），
+进程内**仅回翻 skin**（colorcal 保持 oklch）逐 case 复染：
+**24/24 不仅阈值 PASS（≤1/255）而且 sha256 哈希逐位相等旧基线**——colorcal 翻转在 RAW
+默认链的贡献精确为 0（bitwise 级），skin 翻转 100% 驱动。dev-2 三组分离实验 A 组结论
+独立复现且加严（原证为阈值口径，qa 为哈希口径）。
+
+**b) 「缺陷修正」定性——qa 实测后要求修正措辞（非代码问题）**：
+黑板/任务书称「旧 Lab 椭圆无人像误判覆盖最高 79%（磨皮误伤风景），新 OKLab 椭圆修正」。
+qa 在 F11 同源输入（金样本基座渲染）实测**重拟合后**两椭圆：
+| 样本 | Lab(A) 覆盖 | OKLab(B, refit) 覆盖 | IoU | B∩A/A |
+|---|---:|---:|---:|---:|
+| night_lowlight | 88.9% | **90.2%（更高）** | 0.979 | 0.996 |
+| wide_angle | 56.2% | 56.4% | 0.997 | 1.000 |
+**结论：无人像样本上新椭圆覆盖未降反微升、空间近乎重合（B≈A 超集）——「修正风景误伤」
+对 RAW 样本不成立**。R10 翻转的真实依据是**人像域质量**（F11 意图级不劣于 + refit 三验收
+= 合成 GT P/R≈1.0、X1 低饱和肤色召回恢复、误伤闸门 0/0 维持），RAW 漂移机理为掩码边缘
+~2% 像素重分布（u8 2-33）。**要求**：DELIVERY/changelog 措辞改为「人像召回/精度修正驱动的
+预期掩码语义变化」；「无人像高覆盖磨皮」两代缺省同在（非 R10 引入），列观察窗项
+（根治方向：scene 门控覆盖率上限或 no-scene 3% 门限复核，下轮议题）。
+
+### 4. 基线治理 ✅（三组外科性）
+- RAW gate_defaults：24/24 sha256 变更（全链重染预期），**非 sha 字段零 diff**（params/refs/
+  exif/shape 原样）；reviewer=round10-regen（本门禁即其「待qa复验」的复验）。
+- gate 合成族：仅 default_dispatch（b3352650→ab12b0d4 v3）与 region_adjust（afbd7ebe→d354ff83
+  v2）两条目变更，**其余 18 条目字节未动**；reviewer 旧文前缀式追加 R10 批次记录。
+- region_adjust case 随缺省链漂移的归因（colorcal native 双内核域差，dev-2 进程内单翻实验）
+  与处置（v2 重生成）合理；其「params 显式钉上游涉域 stage」的中期建议（使该 case 只观测
+  自身内核）记入下轮建议。
+
+### 5. 性能证据 ✅（口径核对+独立复测）
+qa 独立计时（512 长边、stage.run 全程、median×32）：
+- 缺省（全零）：hsv 15.8ms / oklch 16.1ms → **1.02×**（与 dev-2 30.8/31.2 的比值完全一致）；
+- 意图（非零）：hsv 5.0ms / oklch 10.5ms → **2.08×**（对上 dev-2 1.99×，同量级同结论）；
+- native 量级 5-16ms 远低于 40ms 验收线；**F11 的 131ms Python 线确认消除**（oklch native 16ms）。
+此前「口径不一致」（r9 首测 15× vs r10 中测 2.6×）定性为**绝对毫秒随环境/首载漂移，比值与
+量级结论稳定**——建议后续计时报告一律附 med×N 口径与输入尺寸。
+
+### 6. 全量回归 ✅
+`python -m pytest tests -q -m "not e2e" -rs` →
+**1484 passed / 5 skipped / 1 xfailed / 0 failed（187.11s）**。
+- 对 R9 基线 1474：**+10 全部为新增测试**（git diff 计数逐一核对：test_native_colorcal_oklch
+  +6、JND 口径单源 +1、aesthetic wiring/公共适配器 +3）；
+- skip 5 项与 R9 基线 qa 清单**逐条相同**（RAW_PATH×2/learned_isolation/proxy_metrics/sapiens）；
+  xfailed 1 不变——无新增 skip、无 skip 复活、无 xfail 转移。
+
+## 修复记录
+- 代码修复：**0 处**（六条审核未发现代码级缺陷）。
+- 叙事修正要求 1 项（§3b，DELIVERY 措辞域——非本门禁可修文件，交队长/writer 执行）。
+
+## 放行清单与建议
+- R10 第二批批可提交：skin.py + color_cal.py + film_pro_400h.json + 三组基线（RAW 24 npy+manifest
+  / gate 2 npy+manifest）+ 4 测试文件修订。
+- 观察窗项：无人像高覆盖磨皮（两代同在，§3b）；双肤区强度尾部 9 张 B/A 0.85-1.41 亚 JND
+  （r10-stream-1 遗留 1）；region_adjust case 上游钉域（下轮）。
+
+> 门禁章：qa 2026-09-07T10:25:58+08:00 — R10 第二批 PASS 放行；归因铁证独立复现加严；
+> RAW 定性措辞修正要求 + 观察窗项随 DELIVERY 呈报。

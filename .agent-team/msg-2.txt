@@ -1,0 +1,18 @@
+feat(service): auto-loop 闭环生产入口 + 默认规则注入 + decide 口径修复 (R21 F01/F02/F03)
+
+- 新增 PixoServiceRuntime.run_auto_loop()、POST /api/photos/{id}/auto-loop
+  （202 + ThreadPoolExecutor(max_workers=1) 任务表 + 每 photo 单飞；sync=true → 200
+  与 GET 同构）、GET /api/auto-loop/{task_id}
+- 装配：RawRenderBackend(photo.path, profile) + 显式 segmenter（响应暴露
+  segmenter_type，mock 时额外 degraded 留痕）+ manual_on_unreliable=False
+  （库层缺省 True 会让有不可靠区域的首轮直接 MANUAL_REVIEW）
+- _load_auto_loop_rules()：注入 11 条 DEFAULT_RULES（PIXO_RULES=off/0/false/no 可关），
+  显式传 metric_keys=metric_universe(...)（否则 region_rules 的 sky_*/plant_* 抛
+  DecideError）；库层 SinglePhotoLoop(rules=None) 缺省仍为空
+- F03 接线：measure_session 顶层合并 compute_proxy_metrics；decide_photo 展平指标并
+  传 rules（响应字段集合不变，decision.params 由 {} 转非空）
+- 契约修订 R1：rule_ids 取全 trace decide 事件并集（首现序去重）+ 追加
+  rule_ids_by_iteration；不再取"最后一条"（末轮规则自然不命中时会漏掉早期命中，
+  真 RAW 上恒空）。口径纪律：iteration>=max_iterations 的末轮照跑规则
+  （engine.py:977-989），不得断言"终止轮必空"
+- 新增集成测试 20 例（含 TestClient 真实 HTTP 往返、单飞幂等、失败语义 404/400）

@@ -1,0 +1,112 @@
+[R21-F05] rules_count=11
+Loading weights:   0%|          | 0/208 [00:00<?, ?it/s]Loading weights: 100%|██████████| 208/208 [00:00<00:00, 11562.37it/s]
+[R21-F05] {"state": "ACCEPTED", "reason": "FINAL_QC 达标；preview 终止: 达到最大迭代轮数 (2)", "iteration": 2, "rules_count": 11, "params": {"colorcal": {"saturation": -0.15}}, "rule_ids": [], "trace_event_count": 12, "measurements": 2, "has_param_update": true, "highlight_clip_ratio": 0.025923, "colorfulness_proxy": 9.2987, "segmenter_last_degraded": []}
+F
+================================== FAILURES ===================================
+_____________________ test_real_raw_auto_loop_end_to_end ______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001F7692CDCA0>
+
+    @pytest.mark.gate_e2e
+    @pytest.mark.skipif(not _RAW, reason="PIXO_GATE_AUTOLOOP_RAW not set")
+    def test_real_raw_auto_loop_end_to_end(monkeypatch):
+        """真 RAW 闭环五条断言（design §4）。"""
+        # ---- 离线：禁止任何权重下载（权重已在本机缓存） ----
+        monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+        monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
+        # 显式关掉「关闭规则」开关：门禁必须跑在默认规则注入路径上。
+        monkeypatch.delenv("PIXO_RULES", raising=False)
+        # 不设 PIXO_ALLOW_RESTRICTED（sapiens 权重缺失）。
+    
+        from pixo.pipeline.loop import RawRenderBackend, SinglePhotoLoop
+        from pixo.render.core.calibration import load_dcp
+        from pixo.service.runtime import _load_auto_loop_rules
+        from pixo.vision.segmenters.multi_router import MultiModelSegmenter
+    
+        raw_path = Path(_RAW)
+        assert raw_path.exists(), f"PIXO_GATE_AUTOLOOP_RAW 指向的文件不存在: {raw_path}"
+        assert _DCP.exists(), f"DCP 不存在: {_DCP}"
+    
+        rules = _load_auto_loop_rules(_PROMPTS)
+        assert rules, "装配层默认规则集为空：F02 注入失效"
+        print(f"[R21-F05] rules_count={len(rules)}")
+    
+        segmenter = MultiModelSegmenter()
+        prof = load_dcp(_DCP)
+        # 同一 backend 对象既供 loop 渲染，也供「仅渲染基线」重渲。
+        backend = RawRenderBackend(raw_path, prof)
+    
+        loop = SinglePhotoLoop(
+            render_backend=backend,
+            segmenter=segmenter,
+            rules=rules,
+            preview_long_edge=1024,
+            max_iterations=_MAX_ITER,
+            prompts=list(_PROMPTS),
+            manual_on_unreliable=False,
+        )
+        result = loop.run(
+            "gate_autoloop_e2e", raw_path=str(raw_path), max_iterations=_MAX_ITER
+        )
+    
+        rule_ids = _last_decide_rule_ids(result)
+        decide_ev = _last_decide_event(result)
+        event_types = [
+            e.get("event_type") for e in (result.trace_events or [])
+            if isinstance(e, dict)
+        ]
+        global_m = (result.final_measurement or {}).get("global") or {}
+        print(
+            "[R21-F05] "
+            + json.dumps(
+                {
+                    "state": result.state,
+                    "reason": result.reason,
+                    "iteration": result.iteration,
+                    "rules_count": len(rules),
+                    "params": result.params,
+                    "rule_ids": rule_ids,
+                    "trace_event_count": len(result.trace_events or []),
+                    "measurements": len(result.measurements or []),
+                    "has_param_update": "param_update" in event_types,
+                    "highlight_clip_ratio": global_m.get("highlight_clip_ratio"),
+                    "colorfulness_proxy": (result.final_measurement or {}).get(
+                        "colorfulness_proxy"
+                    ),
+                    "segmenter_last_degraded": list(
+                        getattr(segmenter, "last_degraded", []) or []
+                    ),
+                },
+                ensure_ascii=False,
+                default=str,
+            )
+        )
+    
+        # ---- ① 状态必须 ACCEPTED（不放宽；MANUAL_REVIEW 时把证据带出来） ----
+        assert result.state == "ACCEPTED", (
+            f"闭环终态 {result.state!r} != 'ACCEPTED'（reason={result.reason!r}；"
+            f"最后一条 decide={decide_ev!r}；"
+            f"trace_event_types={event_types!r}）"
+        )
+    
+        # ---- ② params 非空 + rule_ids 非空（不钉死具体 rule_id） ----
+        assert result.params, f"决策参数为空：params={result.params!r}"
+>       assert rule_ids, (
+            "rule_ids 结构性为空：trace 中最后一条 decide 未命中任何规则"
+            f"（decide 事件={decide_ev!r}）"
+        )
+E       AssertionError: rule_ids 结构性为空：trace 中最后一条 decide 未命中任何规则（decide 事件={'iteration': 2, 'decision': 'adjust_and_continue', 'reasons': [], 'rule_ids': [], 'params': {'colorcal': {'saturation': -0.15}}, 'metrics': {'mean_luminance': 77.29, 'highlight_clip_ratio': 0.004198, 'shadow_clip_ratio': 0.002702, 'contrast': 0.5342, 'preview_highlight_clip_estimate': 0.005806, 'preview_overflow_ratio': 0.005806, 'haze_proxy': 0.1837, 'colorfulness_proxy': 5.8936, 'tonal_range': 0.4977, 'sky_luminance': None, 'sky_area_ratio': 0.0, 'sky_highlight_clip_ratio': 0.0, 'sky_reliable': False, 'plant_luminance': None, 'plant_area_ratio': 0.0, 'plant_highlight_clip_ratio': 0.0, 'plant_reliable': False, 'face_luminance': None, 'face_area_ratio': 0.0, 'face_highlight_clip_ratio': 0.0, 'face_reliable': False}, 'last_iteration': True}）
+E       assert []
+
+tests\regression\test_gate_auto_loop_e2e.py:177: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  pixo.vision.segmenters.multi_router:multi_router.py:114 [pixo.vision.segmenters] 后端 sapiens 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+WARNING  pixo.vision.segmenters.multi_router:multi_router.py:114 [pixo.vision.segmenters] 后端 uniface 许可为 internal_development_only，未注册进路由表；如需内部研发启用请设 PIXO_ALLOW_RESTRICTED=1
+WARNING  pixo.vision.segmenters.multi_router:multi_router.py:153 [pixo.vision.segmenters] prompt 'face' 无后端返回，零掩码降级
+============================= slowest 5 durations =============================
+102.81s call     tests/regression/test_gate_auto_loop_e2e.py::test_real_raw_auto_loop_end_to_end
+
+(2 durations < 0.005s hidden.  Use -vv to show these durations.)
+=========================== short test summary info ===========================
+FAILED tests/regression/test_gate_auto_loop_e2e.py::test_real_raw_auto_loop_end_to_end
+1 failed in 102.90s (0:01:42)

@@ -1,0 +1,74 @@
+# .r12_ok — R12 收口门禁通过签章
+
+- 审核人: qa (R12 收口门禁)
+- 覆盖: R12 全部交付 —— 观察窗扫尾 (gate 20→21 软边带探针 + 亚 JND 尾部记录) + color.py DNG SDK 痕迹清偿重写 (2 处 SDK 衍生重构 + 8 处注释改写 + 相邻清扫)
+- ISO 时间戳: 2026-09-07T04:27:58Z
+- 全量终态: 1481 passed / 5 skipped / 1 xfailed / 0 failed (含 qa 补强 1 测试)
+
+## 六条结论
+
+1. **重写等价性 — PASS**: 对拍脚本 (.agent-team/spike/_r12_bitdiff_check.py) 独立复跑,
+   git HEAD 原版 vs 现行重写版全函数逐位一致 (array_equal 含 dtype+shape;
+   覆盖 camera_white / cam_to_prophoto_matrix / cam_to_xyz_matrix /
+   cam_to_linear_srgb_matrix / prophoto_to_linear_srgb_matrix /
+   cam_wb_to_prophoto / cam_to_xyz / linear_prophoto_to_srgb;
+   语料 6 合成 DCP 变体 × 8 WB + 真 Nikon Z5 DCP × 8 WB, 含 "[real DCP]
+   全部逐位一致")。RAW 金样本 gate_defaults 复跑 24/24 PASS 全零漂
+   (max|Δ|=0)。gate --check 21 features 零漂 (committed 双路径:
+   test_current_output_matches_goldens + test_generator_check_mode_reports_no_drift)。
+2. **常数纪律 — PASS**: _PCS_D50_XY=(0.3457,0.3585) 为 ICC.1/ISO 15076-1
+   PCS 公开 4 位值; _ROMM_RGB_TO_XYZ_D50_4 与 ISO 22028-2 / Spaulding 2000
+   公布 4 位形逐项一致, 且与 git HEAD 原版数值同值 (仅常量上收换名);
+   「勿换 7 位」红线注释双处在位 (定义处 + cam_to_prophoto_matrix 函数头);
+   实测 4 位 vs 7 位 PCS 白 XYZ 差 8.4e-5, 与注释「~7e-5」量级声称吻合。
+3. **注释出处抽验 — PASS** (抽 4 处): B4 白点迭代 (章节名+子节名+pp.80-81,
+   colour-hdri 交叉核对声明在位); B5 ROMM/ISO (矩阵行和收敛 D50 白 XYZ,
+   数值自洽); B1 illuminant_cct (CIE 标准照明体, StdA 2856K→2850 工程整
+   近似如实标注); calibration.py tag 表 (6 处 tag 16↔10 进制互证全对)。
+   引用形式规范 (章节名+子节+页码), 无裸猜无歧义。
+4. **GPL 终态 — PASS**: grep -riE "dng sdk|dng_render|dng_color_spec|D50_xy_coord"
+   src/ 命中 7 处逐条核定全中性 (3 否定式声明 / 2 黑盒 oracle / 2 历史记录),
+   源码出处引用清零; docs/tech_debt.md #2 ✅ 终章关闭 (三段全清 + 等价实证
+   + grep 终态 + 遗留边界如实记录: git 历史仍含旧注释, 发布快照口径)。
+5. **观察窗扫尾 — PASS** (含 1 项补强, 见修复记录): skin_oklch_softband 探针
+   case 入 FEATURES (21 features) + manifest; 敏感性独立实证: 软带
+   SKIN_OKLAB_SOFT_BAND 0.31→0.25 (R10 原盲区触发场景) 探针掩码 1024px
+   变化 = 可观测, 盲区确认关闭; 过渡带 16 行掩码 ∈ (0,1) 开区间; 金样本
+   sha256 与 manifest 一致。.artifacts/skin_colorcal_oklch_ab.md §6 九张
+   (1 金样本 + 8 full_scan) 亚 JND 记录节在位, |B−A| ≤ 0.150 ΔE2000
+   (JND 2.3 的 6.5%), 数据列自洽, 复议触发条件记录在案。
+6. **全量回归 — PASS**: python -m pytest tests -q -m "not e2e" 终态复跑
+   (qa 修复落盘后) 1481 passed / 5 skipped / 1 xfailed / **0 failed**
+   (R11 基线 1478 + super-dev R12 新增 2 + qa 补强 1)。
+
+## 修复记录 (qa 最小修复, 均已复验)
+
+1. **manifest reviewer 清偿** (tests/regression/goldens/gate/manifest.json):
+   - 改了什么: 恢复 dev-1 覆盖丢失的 t38|F10|R10 历史复核链; 将
+     "pending | R12 批次(...待 qa/队长复核)" 的 pending 前缀替换为 qa
+     复核签章 (附独立实证结论); 补文件末尾换行符。
+   - 为什么: golden 红线「变更不得脱离复核静默合入」, pending 态基线
+     不得随门禁放行; 历史复核链被覆盖违反既有多批追加惯例。
+   - 验证: test_gate_golden.py 全文件 7 passed (schema 守卫含
+     reviewer != "pending" 断言)。
+2. **软带宽度维度 committed 测试补强** (tests/regression/test_gate_golden.py
+   新增 test_skin_oklch_softband_band_width_observable):
+   - 改了什么: 断言 SKIN_OKLAB_SOFT_BAND 0.31 vs 0.25 (R10 前旧值) 探针
+     输出必须变化, 并断言 committed compute 默认参数路径 == 现行软带
+     显式调用。
+   - 为什么: 任务书点名「0.25→0.31 软带可观测 committed 测试」; 原有
+     not_blind 测试仅断言半轴维度 (SKIN_OKLAB_SOFT_BAND 是默认参数,
+     定义时绑定, monkeypatch 模块常数不可达) —— 软带维度在 committed
+     层缺守护。显式传参与「源码改常数后跨进程重跑」数学等价。
+   - 验证: 单文件 7 passed; 独立实证 1024px 变化; 全量 1481 passed 0 failed。
+3. **临时产物清理**: 删除对拍脚本复跑再生的 .agent-team/spike/_color_head_r12.py
+   (r12 报告声称已删, qa 复跑重建, 复核完成后删除恢复既档状态)。
+
+## 遗留与升级 (不阻塞)
+
+- git 历史仍含旧 SDK 注释 —— 发布以快照为准, F18 处置选项 C 归队长/用户
+  (tech_debt #2 终章已记录)。
+- .agent-team/spike/_r12_bitdiff_check.py (对拍脚本) 保留 —— 等价性证据
+  可追溯, 处置归队长。
+- io.py H12 / white_balance M 系行为级 oracle 注释: 属 clean-room 允许的
+  黑盒对照, 如需进一步收敛措辞可另开低优先条目 (#2 终章已记录)。

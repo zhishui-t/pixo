@@ -1,0 +1,53 @@
+# .f10_ok — F10 专项门禁（oklch 第一批切换：hsl+split_tone 缺省翻转）
+
+审核人: qa
+覆盖: F10（切换落点/断言修订 7 项/A1 证据链/基线 v2 治理/全量回归）
+ISO 时间戳: 2026-09-07T02:58:55+08:00
+结论: **PASS**——四条门禁全过，F10 放行并已实证；F11（skin+colorcal 意图级 A/B，只出证据不切缺省）随之放行。
+
+## 门禁四条（对照 manifest「F10 专项门禁」定义）
+
+1. **F08 金样本先行落位 + 存量卡逐位不变断言** ✅
+   - 落点纯度：hsl.py/split_tone.py diff 逐一审——除 default_params
+     color_domain "hsv"→"oklch" 与 schema/docstring 注释语义更新外**零行为改动**。
+   - A1 卡级证据：`.artifacts/f10_render_hashes_after.json` vs F07 双基线——
+     **23/23 卡 sha256 字节级全等**（同 F07 验证过的渲染脚本口径）。
+   - A1 金样本证据：gate `card_portra_400` 零漂移（manifest 条目 vs ce92c73 字节未动 +
+     --check 全绿传递证明）；`default_dispatch` v2 与基线一致（观测点已切换，见 4）。
+2. **存量卡逐位不变断言** ✅（同上 23/23 + gate card golden；另 test_film_cards_oklch
+   合并等价测试转型后断言更强：diff_keys⊆{color_domain}+卡锚定覆盖+基线读同源）
+3. **RAW 金样本复跑绿** ✅——24/24 case **u8_max=0 且 u16_max=0**（逐位零漂移，
+   t52「默认路径不涉 hsl/split_tone 非零参数→零漂移」预测兑现）
+4. **缺省断言修订** ✅——7 项逐一审，全部为「翻转期望/指针显式化」**零删除**：
+   - design 4 项（hsl/split_tone 各 2）：逐位一致断言保留仅翻参考内核（oklch）；
+     dispatch 用例 hsv 对照组显式化，可区分性断言保留；default_params 全字典等值保 oklch。
+   - t52 口径 1 项：旧「缺省 hsv 不检」→「缺省 oklch 硬拒」+新增显式 hsv 戳恒不检第二组
+     断言（强度净增）；旧语义由 F09 parity 双缺省对照继续覆盖。
+   - F07 合并等价转型 1 项：no-op 等价→实义覆盖语义（见上，强度增强）。
+   - F09 两枚字面量断言（重点审）：`test_stage_default_color_domain_source` 改**源等式**
+     （读 default_params 同源比较）+`test_no_domain_band_attribution_follows_stage_default`
+     改**读当前缺省再翻转对照**（形态翻转无关）——原「钉具体值」强度由 split_tone
+     default_params 全字典等值 + hsl 缺省输出==oklch 内核逐位（行为级）补位承接，**无净弱化**。
+
+## 基线 v2 治理核验
+manifest vs ce92c73：**仅 default_dispatch 条目变更**（v2 sha256 = b3352650fc0a…，与队长
+预报逐位一致）；其余 19 条目字节未动；reviewer 为旧文案前缀式**追加**（含 v1(fb733245)→v2
+记录与「其余 18+card 零漂移」声明）；feature 数 20 不变。--check 全绿（20 features 一致）。
+
+## 回归复跑（qa 独立）
+- unit 全量 ×3（落定后连续）：**1286 passed / 3 skipped / 1 xfailed / 0 failed**（≈90s/次）
+- integration 非 e2e：**112 passed**；gate：**4 passed**；F10 核心四测试文件：**73 passed**
+- 计数对账：dev-2 报 1273 → 现 1286 = M1 评审流后续新增 13 测试（region_adjust 25→32 函数、
+  decide_region_wiring 17→21），账目吻合。
+
+## 过程透明记录（不阻断）
+qa 首三轮全量运行出现 2-4 个间歇失败（受害者全在 region 域、逐次不同、单文件独跑恒绿）。
+定位：**并行 M1 评审流编辑中途态碰撞**——region_adjust.py(02:26)/loop.py(02:34)/两测试
+文件(02:40-02:48) mtime 落在失败运行窗口内，02:48 落定后连续三跑零失败。非 F10 缺陷、
+非固有 flaky；M1 评审批门禁应对该域复跑确认（qa 三跑已代证）。
+
+## 附带放行
+F11（skin+colorcal 意图级 A/B）放行——证据产出型任务（.artifacts 报告），不切缺省；
+沿 design F11 口径（ab_intent「不劣于」意图级、金样本 6 张+合成代表图、结论 per 维度）。
+
+> 门禁章：qa 2026-09-07T02:58:55+08:00 — F10 四条全过，最高危动作实证放行。

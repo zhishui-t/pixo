@@ -1,0 +1,11 @@
+test(gate): F05 真 RAW 闭环门禁（并集口径 + 正负控）(R21 F05)
+
+- 文件级 pytestmark=gate + 用例级 gate_e2e 双 marker（前者才被 -m gate 选中，
+  后者才被 tests/regression/conftest.py 的 skip→fail 豁免）
+- 独立 env PIXO_GATE_AUTOLOOP_RAW（不复用 RAW_PATH，避免连带激活 30s 性能门禁）；
+  真路由 segmenter + manual_on_unreliable=False + 不设 PIXO_ALLOW_RESTRICTED
+- 断言：ACCEPTED / params 非空 / rule_ids 并集非空（不钉死 rule_id）/ 与仅渲染基线
+  存在像素差 / FINAL_QC 高光溢出 ≤3% / trace 含 param_update 且 measurements≥2
+- 正控：rule_ids == rule_ids_by_iteration 逐轮并集；负控（无 RAW）：空 trace→[]、
+  全空→[]、首轮命中+末轮空→返回首轮命中（证明不伪造命中、不丢早期命中）
+- 实测 DSC_5236：2 passed in ~124s；逐轮 [{1,[saturation_high_rule]},{2,[]}]

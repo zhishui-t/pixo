@@ -1,0 +1,49 @@
+cwd    = K:\work\project\pixo
+__file__ = K:\work\project\pixo\.agent-team\tmp-r22-f02-summary.py
+file   = K:\work\project\pixo\.agent-team\tmp-r22-f02-summary.py
+p0     = K:\work\project\pixo\.agent-team
+p1     = K:\work\project\pixo
+p2     = K:\work\project
+cand K:\work\project\pixo\.artifacts\r22-f02-spike\spike_report.json True
+decode_full_ms 3052.0 full_shape [4040, 6064, 3]
+== tier 512 shape=[341, 512, 3] timing_ms={'bilateral': 9.89, 'guided': 15.51, 'gaussian_ref': 5.85}
+   baseline                 noise=0.2770  detail=58.19
+   bilateral|preserve=0.0   noise=0.1863 ( 32.74%) detail=   75.04 ( -28.96%)
+   bilateral|preserve=0.25  noise=0.1960 ( 29.24%) detail=   70.27 ( -20.76%)
+   bilateral|preserve=0.5   noise=0.2122 ( 23.39%) detail=   65.89 ( -13.23%)
+   guided|preserve=0.0      noise=0.2269 ( 18.09%) detail=   50.89 (  12.55%)
+   guided|preserve=0.25     noise=0.2365 ( 14.62%) detail=   52.35 (  10.04%)
+   guided|preserve=0.5      noise=0.2491 ( 10.07%) detail=   54.16 (   6.93%)
+   gaussian_ref|preserve=0.0 noise=0.1275 ( 53.97%) detail=    5.39 (  90.74%)
+   gaussian_ref|preserve=0.25 noise=0.1522 ( 45.05%) detail=   10.28 (  82.33%)
+   gaussian_ref|preserve=0.5 noise=0.2120 ( 23.47%) detail=   20.89 (  64.10%)
+== tier 1024 shape=[682, 1024, 3] timing_ms={'bilateral': 22.9, 'guided': 56.27, 'gaussian_ref': 20.42}
+   baseline                 noise=0.5181  detail=18.47
+   bilateral|preserve=0.0   noise=0.1829 ( 64.70%) detail=   22.58 ( -22.25%)
+   bilateral|preserve=0.25  noise=0.2172 ( 58.08%) detail=   21.36 ( -15.65%)
+   bilateral|preserve=0.5   noise=0.3008 ( 41.94%) detail=   20.28 (  -9.80%)
+   guided|preserve=0.0      noise=0.2401 ( 53.66%) detail=   16.23 (  12.13%)
+   guided|preserve=0.25     noise=0.2827 ( 45.44%) detail=   16.70 (   9.58%)
+   guided|preserve=0.5      noise=0.3608 ( 30.36%) detail=   17.21 (   6.82%)
+   gaussian_ref|preserve=0.0 noise=0.4143 ( 20.03%) detail=    3.02 (  83.65%)
+   gaussian_ref|preserve=0.25 noise=0.4217 ( 18.61%) detail=    4.38 (  76.29%)
+   gaussian_ref|preserve=0.5 noise=0.4716 (  8.98%) detail=    7.40 (  59.94%)
+== tier full shape=[4040, 6064, 3] timing_ms={'bilateral': 774.47, 'guided': 2328.36, 'gaussian_ref': 529.47}
+   baseline                 noise=0.9700  detail=6.50
+   bilateral|preserve=0.0   noise=0.7410 ( 23.61%) detail=    2.18 (  66.46%)
+   bilateral|preserve=0.25  noise=0.9058 (  6.62%) detail=    2.67 (  58.92%)
+   bilateral|preserve=0.5   noise=0.9495 (  2.11%) detail=    3.53 (  45.69%)
+   guided|preserve=0.0      noise=0.8515 ( 12.22%) detail=    1.58 (  75.69%)
+   guided|preserve=0.25     noise=0.9295 (  4.18%) detail=    2.32 (  64.31%)
+   guided|preserve=0.5      noise=0.9553 (  1.52%) detail=    3.35 (  48.46%)
+   gaussian_ref|preserve=0.0 noise=0.6824 ( 29.65%) detail=    1.31 (  79.85%)
+   gaussian_ref|preserve=0.25 noise=0.8952 (  7.71%) detail=    1.88 (  71.08%)
+   gaussian_ref|preserve=0.5 noise=0.9498 (  2.08%) detail=    2.93 (  54.92%)
+== second(ISO8000) 1024 shape=[682, 1024, 3] timing_ms={'bilateral': 27.81, 'guided': 55.54, 'gaussian_ref': 16.49}
+   baseline                 noise=0.4384  detail=29.74
+   bilateral|preserve=0.0   noise=0.2495 ( 43.09%) detail=   38.56 ( -29.66%)
+   bilateral|preserve=0.25  noise=0.2714 ( 38.09%) detail=   36.01 ( -21.08%)
+   guided|preserve=0.0      noise=0.3205 ( 26.89%) detail=   25.36 (  14.73%)
+   guided|preserve=0.25     noise=0.3385 ( 22.79%) detail=   26.23 (  11.80%)
+   gaussian_ref|preserve=0.0 noise=0.3672 ( 16.24%) detail=    2.87 (  90.35%)
+   gaussian_ref|preserve=0.25 noise=0.3468 ( 20.89%) detail=    5.23 (  82.41%)

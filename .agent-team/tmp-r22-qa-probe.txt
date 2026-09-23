@@ -1,0 +1,228 @@
+P2 cube/3dl/look files: 0 []
+P2 dirs named *lut*: 0 []
+P2 configs json with lut_path: 0 []
+P2 films dir json count: 25
+P2 sample card keys: ['stages', 'params', 'output', 'metadata'] stylize= {}
+P2 app.py:338 @app.get("/api/styles")
+     app.py:339 def api_list_styles() -> dict[str, Any]:
+     app.py:340 """风格卡列表（降载）：style_id + metadata，不含 stages/params 大头。
+     app.py:341 
+     app.py:342 卡库为静态配置（configs/styles/films），from_films_dir 逐文件解析
+     app.py:343 耗时可忽略，不做缓存；metadata 缺省已由加载器补齐（family 必有落点）。
+     app.py:344 """
+P2 app.py:352 @app.get("/api/styles/{style_id}")
+     app.py:353 def api_get_style(style_id: str) -> dict[str, Any]:
+     app.py:354 """完整风格卡（stages/params/output + metadata）。"""
+     app.py:355 from pixo.know.cards import StyleCard
+     app.py:356 
+     app.py:357 for card in StyleCard.from_films_dir():
+     app.py:358 if card["style_id"] == style_id:
+P2 frontend/src/api/client.ts:139 export async function listStyles(): Promise<StyleSummary[]> {
+P2 frontend/src/store/useAppStore.ts:16 fetchStyleCards,
+P2 frontend/src/components/StyleAiPanel.tsx:5 import type { StyleCardDetail } from '../types';
+P8 test_tech_debt_invariants.py:86-105
+   86:     # 条目 8/10b: VibranceStage 废弃占位的强制守卫在位
+   87:     from pixo.render.modules.reshape import VibranceStage
+   88:     with pytest.raises(NotImplementedError, match="colorcal"):
+   89:         VibranceStage().process(None)
+   90: 
+   91: 
+   92: def test_model_license_registry_paths_resolve():
+   93:     """条目 3: model_licenses.json 登记的模型路径与当前路径同步 (无悬空)。"""
+   94:     data = json.loads((_REPO_ROOT / "model_licenses.json").read_text(
+   95:         encoding="utf-8"))
+   96:     dangling = []
+   97:     for entry in data.get("models", []):
+   98:         for key in ("path", "local_path", "file"):
+   99:             rel = entry.get(key)
+   100:             if rel and not (_REPO_ROOT / rel).exists():
+   101:                 dangling.append(f"{entry.get('name')}: {key}={rel}")
+   102:     assert not dangling, f"model_licenses.json 悬空路径 (登记未同步): {dangling}"
+P8 model_licenses.json: type=list entries=6 topkeys=['schema_version', 'models']
+     id=aesthetic_scorer.pt keys=['files']
+     id=openai/clip-vit-base-patch32 keys=['files']
+     id=uniface-face-parsing keys=['files']
+     id=rfdetr-seg-2xl keys=['files']
+     id=segformer-b1-finetuned-ade-512-512 keys=['files']
+     id=facebook/sapiens-seg-0.3b keys=['files']
+P8 src/pixo/manifests/vision_models.json: type=list entries=2 topkeys=['schema_version', 'updated', 'description', 'models']
+     id=aesthetic-scorer keys=[]
+     id=openai-clip-vit-base-patch32 keys=[]
+P4 test_skin_oklab.py:354 def test_skin_oklab_constants_bitwise_locked_to_fit_json():
+P4 test_skin_oklab.py:386 def test_skin_oklab_json_angle_deg_consistent_with_constant():
+P4 gate_cases FEATURES region:
+   gate_cases.py:25 FEATURES = (
+   gate_cases.py:28 "skin", "skin_oklch", "skin_oklch_softband", "stylize", "refine",
+   gate_cases.py:80 """skin_oklch_softband case 输入 (r12 观察窗清偿): OKLab 椭圆**软边带探针**。
+   gate_cases.py:82 背景: skin/skin_oklch case 输入为饱和经典肤色 (210,155,130, 核内 d≈0.85,
+   gate_cases.py:257 if feature == "skin_oklch":
+   gate_cases.py:264 if feature == "skin_oklch_softband":
+   gate_cases.py:267 # 与 skin_oklch (核内饱和锚) 互补, 关闭「改软带/半轴金样本零敏感」盲区
+   gate_cases.py:268 # (R10 实证: 重拟合改半轴+软带, skin/skin_oklch 两 case 输出零变化)。
+P4 gate_cases 'compose' hits: 0
+P4 gate_cases FEATURES count (approx): 42
+F09 compose.py:63 def compute_crop_rect(h: int, w: int, mode: str,
+F09 compose.py:205 "mode": {"type": "str", "choices": ["ratio", "free", "auto_level"]},
+F09 compose.py:219 def default_params(self) -> dict[str, Any]:
+F09 compose.py:222 "mode": "free",
+F09 compose.py:241 mode = self.p(ctx, "mode", "free")
+F09 compose.py:296 "mode": mode,
+F09/loop.py:265 def rect_px_to_norm(rect, width, height):
+F09/loop.py:278 def rect_norm_to_px(rect, width, height):
+F09/loop.py:1716 def _qc_outcome(
+rect_px_to_norm call sites in src: 1
+F09 region_masks.py:12 适配目标 shape 用 compute_crop_rect 从本渲染参数预测 post-compose 帧,
+F09 region_masks.py:36 def _post_compose_shape(shape: tuple[int, int],
+F09 region_masks.py:41 与 modules/compose.ComposeStage.process 同源 (compute_crop_rect 纯函数);
+F09 region_masks.py:48 from pixo.render.modules.compose import compute_crop_rect
+F09 region_masks.py:51 x0, y0, cw, ch = compute_crop_rect(
+F01 metrics.py:30-95
+   30: REGION_METRIC_SUFFIXES: tuple[str, str, str, str] = (
+   31:     "luminance",
+   32:     "area_ratio",
+   33:     "highlight_clip_ratio",
+   34:     "reliable",
+   35: )
+   36: 
+   37: # flatten **固定键**（对齐 loop.py:783-792 注册面）：6 个 global 键 +
+   38: # 3 个顶层代理键 + "crop_suggestion_applicable"。**不含区域键**。
+   39: METRIC_KEYS: frozenset[str] = frozenset(
+   40:     {
+   41:         # measurement["global"] / 顶层测量键（metrics_for_decide 固定键）
+   42:         "mean_luminance",
+   43:         "highlight_clip_ratio",
+   44:         "shadow_clip_ratio",
+   45:         "contrast",
+   46:         "preview_highlight_clip_estimate",
+   47:         "preview_overflow_ratio",
+   48:         # 顶层代理指标（measurement 直出）
+   49:         "haze_proxy",
+   50:         "colorfulness_proxy",
+   51:         "tonal_range",
+   52:         # loop 上下文指标（crop 建议链）
+   53:         "crop_suggestion_applicable",
+   54:     }
+   55: )
+   56: 
+   57: 
+   58: def metrics_for_decide(measurement: Mapping[str, Any]) -> dict[str, Any]:
+   59:     """完整测量报告 → 规则引擎可引用的扁平指标 dict。
+   60: 
+   61:     产出键 = 原 ``loop._metrics_for_decide``（loop.py:521-551）全部键：
+   62: 
+   63:     - ``measurement["global"]`` 的 6 键：``mean_luminance`` /
+   64:       ``highlight_clip_ratio`` / ``shadow_clip_ratio`` / ``contrast`` /
+   65:       ``preview_highlight_clip_estimate`` / ``preview_overflow_ratio``
+   66:       （末两键同源 preview_highlight_clip_estimate）；
+   67:     - 顶层代理键 ``haze_proxy`` / ``colorfulness_proxy`` / ``tonal_range``
+   68:       —— **仅当 measurement 顶层存在时**才产出（缺省不写空键）；
+   69:     - 各 region 的 ``{name}_{luminance,area_ratio,highlight_clip_ratio,reliable}``
+   70:       （``reliable`` 恒为 ``bool``）。
+   71: 
+   72:     非 Mapping 输入返回 ``{}``（与库层旧行为一致，防御非法调用）。
+   73:     """
+   74:     if not isinstance(measurement, Mapping):
+   75:         return {}
+   76:     global_metrics = measurement.get("global") or {}
+   77:     regions = measurement.get("regions") or {}
+   78:     metrics: dict[str, Any] = {
+   79:         "mean_luminance": global_metrics.get("mean_luminance"),
+   80:         "highlight_clip_ratio": global_metrics.get("highlight_clip_ratio"),
+   81:         "shadow_clip_ratio": global_metrics.get("shadow_clip_ratio"),
+   82:         "contrast": global_metrics.get("contrast"),
+   83:         "preview_highlight_clip_estimate": global_metrics.get(
+   84:             "preview_highlight_clip_estimate"
+   85:         ),
+   86:         "preview_overflow_ratio": global_metrics.get(
+   87:             "preview_highlight_clip_estimate"
+   88:         ),
+   89:     }
+   90:     for key in PROXY_METRIC_KEYS:
+   91:         if key in measurement:
+   92:             metrics[key] = measurement[key]
+   93:     for name, region in regions.items():
+   94:         if not isinstance(region, Mapping):
+   95:             continue
+F06/F07 engine.py:81 _QC_OVERFLOW_THRESHOLD = 0.03
+F06/F07 engine.py:222 for sub in cond.get("all") or []:
+F06/F07 engine.py:384 elif op == "between":
+F06/F07 engine.py:410 subs = condition.get("all")
+F06/F07 engine.py:1037 if ratio <= _QC_OVERFLOW_THRESHOLD:
+F06/F07 engine.py:1142 if float(qc_value) > _QC_OVERFLOW_THRESHOLD:
+F06 loop.py:31 from pixo.decide import decide, qc_rollback, register_metric_keys
+F06 loop.py:761 register_metric_keys({
+F06 loop.py:774 register_metric_keys(
+F06 runtime.py:807 ``targets={}``/``locked_params=[]``/``agent_suggest=False``/
+F06 runtime.py:951 targets={},
+F04 session.py:172-182
+   172:             self._executor = None
+   173: 
+   174:     # ---- 参数 / generation ----
+   175:     def update_params(self, new_params: dict) -> int:
+   176:         """递归合并更新参数并递增 generation，返回新 generation。"""
+   177:         with self._params_lock:
+   178:             _deep_merge(self.params, dict(new_params or {}))
+   179:             self.generation += 1
+   180:             return self.generation
+   181: 
+   182:     def _raw_version(self) -> tuple[int, int]:
+F10 tech_debt ^N. headings:
+   31: 1. **YOLOE AGPL-3.0 发布阻断**（已清偿，t110 移除 YOLOE，AGPL 依赖清零）：
+   45: 2. **DNG SDK clean-room 复审**（✅ **已清偿关闭，2026-09-07 R12 终章**）：
+   83: 3. **第三方许可登记**（NOTICES 已建，2026-09-07 F16；仓库根 `THIRD_PARTY_NOTICES.md`）：
+   93: 4. **未声明可选依赖**（已处置，2026-09-07 F17）：
+   103: 5. **目录/路径历史残留**：
+   106: 6. **命名空间迁移兼容层**（已解决）：
+   109: 7. **感知质量门禁缺失**：
+   115: 8. **WB 分桶标定与二维曝光分键**（已清偿，2026-08-25 组合批）：
+   125: 9. **0355 高光 cap**（已清偿 2026-08-25）：
+   129: 10. **跨包知识边须同组发布**：
+   134: 10. **色彩规则执行位占位**：
+   138: 11. **评分器权重部署**：
+   156: 12. **公式守卫日落条款**：
+   161: 13. **外部评审处置 backlog**（2026-09-04 登记，出处
+   190: 14. **FairFace 年龄/性别模型移除**（已清偿，2026-09-07 第九轮清债 F03）：
+   200: 15. **GroundedSAM（开放词汇分割）移除**（已清偿，2026-09-07 第九轮清债 F04）：
+   216: 16. **refine warm_sat HSV u8 往返精度**（记债，2026-09-07 第九轮 F05
+   240: 17. **compose free 模式像素矩形跨分辨率失准 × 掩码通道几何放大**（记债，
+   265: 18. **skin OKLab 椭圆常数双源（core/skin.py 单源 vs colorcal.cpp 硬编码副本）**
+   306: 19. ~~**标定覆盖缺口：warmth 曲线/曝光表与语料 wb_B 域错配**~~ **已清偿-日光段扩域落地（2026-09-08 R20，用户批准执行
+   325: 20. **auto-loop 与 `/decide` 缓存、`/timeline` 不联动**（记债，2026-09-10 R21 D3）：
+   333: 21. **auto-loop 无任务级超时/取消**（记债，2026-09-10 R21 D4）：渲染无中断点，单次真 RAW 闭环
+F09 test_region_masks_channel.py:637 def test_free_px_rect_cross_resolution_geometry_mismatch_recorded():
+   638:     """I-2 / tech_debt #17 —— 现状行为钉死 (已知记录, 非正确性断言)。
+   639: 
+   640:     free 模式 x/y/width/height 为全画布**像素**矩形: 同一 px-rect 在两个
+   641:     渲染分辨率下相对裁剪窗不同 (本例 x0 占比 50% vs 25%)。掩码适配只做
+   642:     shape 对齐不做坐标重映射 → 两线消费帧 shape 相同 (px-rect 裁出同尺寸
+   643:     窗) 时, 适配器给出**逐位相同**的掩码 —— 同一掩码坐标在两线对应不同
+   644:     场景内容, 区域效果落点错位 (tech_debt #17 登记的失配)。
+   645: 
+   646:     契约: 未来 compose px→相对坐标归一化或适配器坐标重映射清偿本债时,
+   647:     本用例应**有意翻转重写** (断言两线掩码不同/几何一致), 不得静默通过。
+   648:     """
+   649:     from pixo.render.modules.compose import compute_crop_rect
+   650: 
+   651:     compose = {"mode": "free", "x": 50.0, "y": 0.0, "width": 50.0,
+   652:                "height": 50.0}
+   653:     # 两线: preview tier (100×50 帧) 与导出 (200×100 帧), 同 px-rect 参数
+   654:     line_a = adapt_region_masks({"sky": _top_band_mask(50, 100)},
+   655:                                 (50, 100), compose)
+   656:     line_b = adapt_region_masks({"sky": _top_band_mask(100, 200)},
+   657:                                 (100, 200), compose)
+   658:     # 现状: px-rect 尺寸与入参分辨率解耦 → 两线消费帧 shape 相同,
+   659:     # 掩码被同构 resize → 逐位相同 (失配的可观测面)
+   660:     assert line_a["sky"].shape == line_b["sky"].shape == (50, 50)
+   661:     assert np.array_equal(line_a["sky"], line_b["sky"]), (
+   662:         "若本断言失败, 说明适配器/compose 已做坐标重映射 —— "
+   663:         "tech_debt #17 可能已清偿, 请翻转重写本用例")
+   664:     # 而两线真实相对裁剪窗不同 (同一掩码坐标 ≠ 同一场景内容)
+   665:     ra = compute_crop_rect(50, 100, "free", x=50.0, y=0.0,
+   666:                            width=50.0, height=50.0)
+   667:     rb = compute_crop_rect(100, 200, "free", x=50.0, y=0.0,
+   668:                            width=50.0, height=50.0)
+   669:     rel_a = ra[0] / 100.0
+   670:     rel_b = rb[0] / 200.0
+   671:     assert abs(rel_a - 0.5) < 1e-6 and abs(rel_b - 0.25) < 1e-6
+   672:     assert rel_a != rel_b
+F03 except Exception total: 132 [('src/pixo\\pipeline\\loop.py', 14), ('src/pixo\\meta\\exif.py', 10), ('src/pixo\\render\\modules\\exposure.py', 7), ('src/pixo\\service\\runtime.py', 7), ('src/pixo\\render\\modules\\refine.py', 6), ('src/pixo\\pipeline\\batch.py', 5)]

@@ -1,0 +1,5 @@
+{"rules_count": 11, "rules_ids": ["exposure_rule_001", "highlight_protect_rule_002", "crop_suggest_rule_003", "dehaze_rule_030", "clarity_flat_rule_031", "shadow_open_rule_032", "highlight_recover_rule_033", "vibrance_low_rule", "saturation_high_rule", "region_sky_exposure_001", "region_plant_exposure_002"]}
+{"rules_off_matrix": {"0": 0, "false": 0, "off": 0, "no": 0, "OFF": 0, "False": 0, " off ": 0}, "rules_on_again": 11}
+{"lib_default_rules": []}
+{"METRIC_KEYS_count": 10, "METRIC_KEYS": ["colorfulness_proxy", "contrast", "crop_suggestion_applicable", "haze_proxy", "highlight_clip_ratio", "mean_luminance", "preview_highlight_clip_estimate", "preview_overflow_ratio", "shadow_clip_ratio", "tonal_range"], "universe_count": 22}
+{"default_scorer_type": "_PixoScorerAdapter", "default_scorer_callable": true, "default_scorer_has_call_attr": true}

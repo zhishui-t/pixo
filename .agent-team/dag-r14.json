@@ -1,0 +1,100 @@
+{
+  "title": "Pixo 第十四轮：M1 前端暴露——region 控件 × 掩码状态 API",
+  "nodes": [
+    {
+      "id": "r14-gate",
+      "label": "用户「继续不要停」",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "region-api",
+      "label": "region状态API+patch确认",
+      "role": "dev-2",
+      "status": "done",
+      "deps": [
+        "r14-gate"
+      ],
+      "note": "双面方案/6测试"
+    },
+    {
+      "id": "region-ui",
+      "label": "前端Region控件",
+      "role": "dev-3",
+      "status": "done",
+      "deps": [
+        "r14-gate"
+      ],
+      "note": "17测试/三件套绿"
+    },
+    {
+      "id": "r14-test",
+      "label": "前端测试+e2e闭环",
+      "role": "tester",
+      "status": "done",
+      "deps": [
+        "region-api",
+        "region-ui"
+      ],
+      "note": "1515/0+B1/B2修复"
+    },
+    {
+      "id": "r14-qa",
+      "label": "门禁+全量回归",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "r14-test"
+      ],
+      "note": ".r14_ok 1515/0"
+    },
+    {
+      "id": "r14-commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "r14-qa"
+      ]
+    },
+    {
+      "id": "r14-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r14-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r14-gate",
+      "region-api"
+    ],
+    [
+      "r14-gate",
+      "region-ui"
+    ],
+    [
+      "region-api",
+      "r14-test"
+    ],
+    [
+      "region-ui",
+      "r14-test"
+    ],
+    [
+      "r14-test",
+      "r14-qa"
+    ],
+    [
+      "r14-qa",
+      "r14-commit"
+    ],
+    [
+      "r14-commit",
+      "r14-delivery"
+    ]
+  ]
+}

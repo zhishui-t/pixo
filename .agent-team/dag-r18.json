@@ -1,0 +1,65 @@
+{
+  "title": "Pixo 第十八轮：P3 实验轮——±1EV 压力 × 低频加权评估",
+  "nodes": [
+    {
+      "id": "r18-gate",
+      "label": "「不要停」延续",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "ev-stress",
+      "label": "#13.3 ±1EV压力实验",
+      "role": "researcher",
+      "status": "done",
+      "deps": [
+        "r18-gate"
+      ]
+    },
+    {
+      "id": "lowfreq-eval",
+      "label": "#13.4 低频加权评估",
+      "role": "researcher",
+      "status": "done",
+      "deps": [
+        "ev-stress"
+      ]
+    },
+    {
+      "id": "r18-commit",
+      "label": "报告入库+台账",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "lowfreq-eval"
+      ]
+    },
+    {
+      "id": "r18-delivery",
+      "label": "呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r18-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r18-gate",
+      "ev-stress"
+    ],
+    [
+      "ev-stress",
+      "lowfreq-eval"
+    ],
+    [
+      "lowfreq-eval",
+      "r18-commit"
+    ],
+    [
+      "r18-commit",
+      "r18-delivery"
+    ]
+  ]
+}

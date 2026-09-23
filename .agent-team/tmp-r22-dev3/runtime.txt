@@ -1,0 +1,42 @@
+﻿python : D:\Python\Python312\tools\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx
+` with `starlette.testclient` is deprecated; install `httpx2` instead.
+At line:1 char:173
++ ... \pixo\src"; python .agent-team\tmp-r22-dev3\probe_runtime.py 2>&1 | O ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\Python\Pytho...ttpx2` instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from starlette.testclient import TestClient as TestClient  # noqa
+File format not recognized.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and
+ faster downloads.
+style apply gen = 1
+  tone   = {'use_filmic': True, 'contrast': 0.14, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3}
+  refine = {'sharpen': 0.3, 'chroma_denoise': 0.9, 'highlight_desat': 0.5}
+  canonical.tone.contrast = 0.14
+scene portrait: gen=2 tone={'use_filmic': True, 'contrast': 0.08, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3} colorcal={'vibrance': 0.12, 'saturation': -0.06, 'color_domain': 'hsv'}
+scene landscape: gen=3 tone={'use_filmic': True, 'contrast': 0.18, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3} colorcal={'vibrance': 0.12, 'saturation': 0.15, 'color_domain': 'hsv'}
+scene night: gen=4 tone={'use_filmic': True, 'contrast': 0.06, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3} colorcal={'vibrance': 0.12, 'saturation': 0.15, 'color_domain': 'hsv'}
+scene street: gen=5 tone={'use_filmic': True, 'contrast': 0.12, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3} colorcal={'vibrance': 0.12, 'saturation': 0.15, 'color_domain': 'hsv'}
+scene food: gen=6 tone={'use_filmic': True, 'contrast': 0.1, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3} colorcal={'vibrance': 0.12, 'saturation': 0.1, 'color_domain': 'hsv'}
+scene mono: gen=7 tone={'use_filmic': True, 'contrast': 0.1, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3} colorcal={'vibrance': 0.12, 'saturation': -1.0, 'color_domain': 'hsv'}
+[OK 拒绝] 未知卡: HTTPException status=400 未知风格卡 'nope'（可用: ['agfa_vista_200', 'cinestill_50d', 'film_pro_400h', 'fujifilm_acros_100', 'fujifilm_astia', 'fujifilm_classic_chrome', 'fujifilm_community_lab_scan', 'fujifilm_pro_neg_hia', 'fujifilm_pro_neg_std', 'fujifilm_provia_100f', 'fujifilm_provia_400x', 'fujifilm_reala_100', 'fujifilm_velvia_50', 'kodak_colorplus_200', 'kodak_e100', 'kodak_ektar_100', 'kodak_gold_200', 'kodak_portra_160', 'kodak_portra_160nc', 'kodak_portra_400', 'kodak_portra_400nc', 'kodak_portra_800', 'kodak_ultramax_400', 'oklch_demo_cool_landscape', 'oklch_demo_warm_portrait']）
+[OK 拒绝] 未知场景: HTTPException status=400 未知场景预设 'nope'（可用: ['food', 'landscape', 'mono', 'night', 'portrait', 'street']）
+[OK 拒绝] 双控制键: HTTPException status=400 '__style' 与 '__scene' 不能同时提交（一次装配一个来源）
+[OK 拒绝] 越域: HTTPException status=400 参数 'tone.contrast' 越域：5 大于上限 1.0
+[OK 拒绝] lut_path: HTTPException status=400 参数 'stylize.lut_path' 属路径类参数，本轮一律拒绝（敏感面：防路径注入；见 docs/STYLE_CARDS_USAGE.md）
+[OK 拒绝] 未知 stage: HTTPException status=400 未知 stage 's1'（可用: ['calibration', 'clarity', 'colorcal', 'compose', 'dehaze', 'denoise', 'exposure', 'hsl', 'huesat', 'refine', 'region_adjust', 'sharpen', 'skin', 'split_tone', 'stylize', 'tone', 'vibrance', 'whitebalance']）
+既有参数正向 gen = 8 params.tone = {'use_filmic': True, 'contrast': 0.1, 'toe': 0.18, 'shoulder': 0.32, 'brightness': 0.3, 'highlights': -0.3}
+
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 398/398 [00:00<00:00, 13732.58it/s]
+[OK] PUT {'tone': {'highlights': -0.3}} -> 200 (期望 200) {'session_id': 'eb8c4925bab346d4', 'generation': 9, 'params': {'exposure': {'mode': 0.5}, 'whitebalance': {'mo
+[OK] PUT {'tone': {'contrast': 5}} -> 400 (期望 400) {'detail': "参数 'tone.contrast' 越域：5 大于上限 1.0"}
+[OK] PUT {'stylize': {'lut_path': '/x.cube'}} -> 400 (期望 400) {'detail': "参数 'stylize.lut_path' 属路径类参数，本轮一律拒绝（敏感面：防路径注入；见 docs/STYLE_CARDS_USAGE.md）"}
+[OK] PUT {'s1': {'x': 1}} -> 400 (期望 400) {'detail': "未知 stage 's1'（可用: ['calibration', 'clarity', 'colorcal', 'compose', 'dehaze', 'denoise', 'exposure
+[OK] PUT {'__style': 'fujifilm_astia'} -> 200 (期望 200) {'session_id': 'eb8c4925bab346d4', 'generation': 10, 'params': {'exposure': {'mode': 'auto'}, 'whitebalance': 
+[OK] PUT {'__scene': 'night'} -> 200 (期望 200) {'session_id': 'eb8c4925bab346d4', 'generation': 11, 'params': {'exposure': {'mode': 'auto'}, 'whitebalance': 
+[OK] PUT {'__scene': 'nope'} -> 400 (期望 400) {'detail': "未知场景预设 'nope'（可用: ['food', 'landscape', 'mono', 'night', 'portrait', 'street']）"}
+[OK] PUT {'__style': 'nope'} -> 400 (期望 400) {'detail': "未知风格卡 'nope'（可用: ['agfa_vista_200', 'cinestill_50d', 'film_pro_400h', 'fujifilm_acros_100', 'fujif
+[OK] PUT {'__style': 'x', '__scene': 'night'} -> 400 (期望 400) {'detail': "'__style' 与 '__scene' 不能同时提交（一次装配一个来源）"}
+生产工厂 validate_params = True

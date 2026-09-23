@@ -1,0 +1,18 @@
+# .design_ok — R22 设计门禁放行（第 4 阶段：设计审核 + 修复）
+
+审核人: QA-checker
+被审对象: .agent-team/design-r22.md（审核前 102 行 → 修订后 132 行）
+覆盖 F-ID: F01 / F02 / F03 / F04 / F05 / F06 / F07 / F08 / F09 / F10（全覆盖；CR-06~CR-15 逐条落点见 .agent-team/design-review-r22.md §2，task-brief 完成标准 1~6 已追溯）
+ISO 时间戳: 2026-09-10T23:23:49+08:00 (2026-09-10T15:23:49Z)
+结论: **审核通过（修复后通过）** —— design-r22.md 经 21 项最小修订（关键 8 项：① §0 P2 端点行号错（原写 app.py:292-314，实为 auto-loop/timeline/decide 端点；styles 端点实为 app.py:338/352）；② §0 P8 只改查 `files[]` 仍近乎空转（根台账 6 条中 5 条 `files: []`，`vision_models.json` 用 `path_or_source`）；③ §2.1「门禁与 A/B 一律全幅」字面会误废 F07 的 512-tier ΔE 证据（已收窄为噪声/细节类指标）；④ 闭环 decide 只吃 preview（loop.py:1322→:1371，`preview_long_edge` 缺省 1024）⇒ F01 噪声规则适用面必须写死；⑤ §4 金样本「零漂移」与 F09 新增 compose case 不自洽（已拆为「既有 21 features 逐位零漂移」+「新 case 首次基线须队长授权」）；⑥ §4 缺 F01/F05/F07/F08 判据（已补 4 行）；⑦ CR-15 #3 的 DCP×6 再分发要点丢失（已补）；⑧ §3 dev-3 的 `docs/` 域与 dev-2/队长域冲突（已收窄）、#25 build/lib 漂移未登记（已补 F10+§5）），并逐处复验落位后，满足：§0 前提 8/8 独立复核成立（P3 已完全复现：512 tier 排序非单调 / 全幅恢复 ISO 单调 / detail_score 26.6×）、三项裁决均补证伪条件与备选路径（§0.1）、CR 覆盖无遗漏、文件域同波次无交叠且跨波次有序、§4 每条判据可 pytest/脚本复跑判定、风险可执行。
+独立核验证据: `.agent-team/tmp-r22-qa-probe{,2,3,4,5,6,7}.{py,txt}`、`.agent-team/tmp-r22-qa-p1.txt`、`.agent-team/tmp-r22-qa-verify.txt`（7 个只读探针 + A/B 报告对拍 + `git status -- src tests frontend configs docs` 为空）
+范围声明: 门禁仅表示 QA 的设计审核结论（只审设计；QA 未改 `src/**`、`tests/**`、`frontend/**`、`configs/**`、`docs/**`；改动仅 `design-r22.md` + 本报告 + 本门禁 + `.agent-team/tmp-r22-qa-*` 探针）。
+卡点②声明: 本门禁**不含用户确认**。design-r22.md §7 的用户确认记录仍待队长请用户在卡点②填写（team-manifest.md:36 第 5 阶段）；**`.design_ok` + 用户确认齐备前不得开工第 6 阶段**。
+不阻塞项: **7 项需队长裁决/确认**（A1 裁决③ 适用范围收窄是否接受 / A2 F09 新增 gate case 的 baseline 首次生成授权 / A3 CR-15 #3 DCP×6 是否本轮做 / A4 #25 build/lib 漂移处置口径 / A5 update_params 白名单强度 / A6 F01 规则不承担闭环触发职责 / A7 降噪 A/B 全幅串行 ≈78min 排期），详见 design-review-r22.md §9。
+归档说明: 原 `.design_ok`（R21 内容）已另存 `.agent-team/.design_ok.r21` 以保留门禁证据链，本文件为 R22 签章。
+
+---
+
+## 阻塞项
+
+无（0 项）。

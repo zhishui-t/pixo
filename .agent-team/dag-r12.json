@@ -1,0 +1,114 @@
+{
+  "title": "Pixo 第十二轮：color.py SDK 痕迹清偿 × 观察窗扫尾",
+  "nodes": [
+    {
+      "id": "r12-gate",
+      "label": "用户「继续」",
+      "role": "用户",
+      "status": "done"
+    },
+    {
+      "id": "color-audit",
+      "label": "color.py 函数级定性",
+      "role": "researcher",
+      "status": "done",
+      "deps": [
+        "r12-gate"
+      ],
+      "note": "衍生仅2处/轻档"
+    },
+    {
+      "id": "color-rewrite",
+      "label": "SDK 衍生段重写",
+      "role": "super-dev",
+      "status": "done",
+      "deps": [
+        "color-audit"
+      ],
+      "note": "逐位等价/#2关闭"
+    },
+    {
+      "id": "probe-gate",
+      "label": "gate skin 软边带探针",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "r12-gate"
+      ],
+      "note": "21 features"
+    },
+    {
+      "id": "tail-note",
+      "label": "亚 JND 尾部记录",
+      "role": "dev-1",
+      "status": "done",
+      "deps": [
+        "probe-gate"
+      ],
+      "note": "记录即可"
+    },
+    {
+      "id": "r12-qa",
+      "label": "门禁+全量回归",
+      "role": "qa",
+      "status": "done",
+      "deps": [
+        "color-rewrite",
+        "tail-note"
+      ],
+      "note": ".r12_ok 1481/0"
+    },
+    {
+      "id": "r12-commit",
+      "label": "提交+changelog",
+      "role": "队长",
+      "status": "done",
+      "deps": [
+        "r12-qa"
+      ]
+    },
+    {
+      "id": "r12-delivery",
+      "label": "交付呈报",
+      "role": "队长/用户",
+      "status": "done",
+      "deps": [
+        "r12-commit"
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "r12-gate",
+      "color-audit"
+    ],
+    [
+      "r12-gate",
+      "probe-gate"
+    ],
+    [
+      "color-audit",
+      "color-rewrite"
+    ],
+    [
+      "probe-gate",
+      "tail-note"
+    ],
+    [
+      "color-rewrite",
+      "r12-qa"
+    ],
+    [
+      "tail-note",
+      "r12-qa"
+    ],
+    [
+      "r12-qa",
+      "r12-commit"
+    ],
+    [
+      "r12-commit",
+      "r12-delivery"
+    ]
+  ]
+}

@@ -1,0 +1,35 @@
+[skin] 未分类图掩码占比 68.3% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+[skin] 未分类图掩码占比 68.3% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+[whitebalance] wb_B=1.090 超出暖度标定适用域 [1.100, 2.398] (K:\work\project\pixo\configs\calibration\warmth_curve.json); 仍用曲线 (域外由端点垫片近似斜率模型,可设 fallback_outside_domain=true 回退)
+[skin] 未分类图掩码占比 68.3% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+[skin] 未分类图掩码占比 68.3% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+[skin] 未分类图掩码占比 70.9% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+[skin] 未分类图掩码占比 70.9% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+[skin] 未分类图掩码占比 68.3% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+[skin] 未分类图掩码占比 68.3% 超上限 50%, 判定场景误判(非人像高覆盖), 磨皮 no-op
+feature/sample                           u8_max  u16_max verdict
+wb_as_shot_default/night_lowlight             0        0 PASS
+wb_as_shot_default/day_normal                 0        0 PASS
+wb_as_shot_default/high_key_bright            0        0 PASS
+wb_as_shot_default/portrait_tele              0        0 PASS
+wb_as_shot_default/wide_angle                 0        0 PASS
+wb_as_shot_default/high_contrast              0        0 PASS
+exposure_auto_default/night_lowlight          0        0 PASS
+exposure_auto_default/day_normal              0        0 PASS
+exposure_auto_default/high_key_bright         0        0 PASS
+exposure_auto_default/portrait_tele           0        0 PASS
+exposure_auto_default/wide_angle              0        0 PASS
+exposure_auto_default/high_contrast           0        0 PASS
+compose_param/night_lowlight                  0        0 PASS
+compose_param/day_normal                      0        0 PASS
+compose_param/high_key_bright                 0        0 PASS
+compose_param/portrait_tele                   0        0 PASS
+compose_param/wide_angle                      0        0 PASS
+compose_param/high_contrast                   0        0 PASS
+clarity_default/night_lowlight                0        0 PASS
+clarity_default/day_normal                    0        0 PASS
+clarity_default/high_key_bright               0        0 PASS
+clarity_default/portrait_tele                 0        0 PASS
+clarity_default/wide_angle                    0        0 PASS
+clarity_default/high_contrast                 0        0 PASS
+RESULT: PASS

@@ -1,0 +1,39 @@
+full (4040, 6064, 3)
+FULL baseline {'laplacian_raw': 216.96, 'laplacian_denoised': 6.5, 'noise_ratio': 0.97, 'fft_high_ratio': 0.9374, 'detail_score': 6.5}
+bilateral d=5 sc=0.08 ss=3.0 p=0.0        132ms noise=0.7257 ( 25.19%) detail=    2.44 (  62.46%) fft=0.8442
+bilateral d=5 sc=0.08 ss=3.0 p=0.25       132ms noise=0.8774 (  9.55%) detail=    2.91 (  55.23%) fft=0.8774
+bilateral d=5 sc=0.08 ss=3.0 p=0.5        132ms noise=0.9414 (  2.95%) detail=    3.73 (  42.62%) fft=0.9065
+bilateral d=7 sc=0.1 ss=4.0  p=0.0        454ms noise=0.6759 ( 30.32%) detail=    2.05 (  68.46%) fft=0.8179
+bilateral d=7 sc=0.1 ss=4.0  p=0.25       454ms noise=0.8877 (  8.48%) detail=    2.47 (  62.00%) fft=0.864
+bilateral d=7 sc=0.1 ss=4.0  p=0.5        454ms noise=0.9465 (  2.42%) detail=    3.35 (  48.46%) fft=0.9013
+bilateral d=9 sc=0.12 ss=5.0 p=0.0        767ms noise=0.6652 ( 31.42%) detail=    1.86 (  71.38%) fft=0.8085
+bilateral d=9 sc=0.12 ss=5.0 p=0.25       767ms noise=0.8890 (  8.35%) detail=    2.33 (  64.15%) fft=0.8591
+bilateral d=9 sc=0.12 ss=5.0 p=0.5        767ms noise=0.9473 (  2.34%) detail=    3.24 (  50.15%) fft=0.8994
+bilateral d=9 sc=0.16 ss=6.0 p=0.0        696ms noise=0.6674 ( 31.20%) detail=    1.78 (  72.62%) fft=0.8062
+bilateral d=9 sc=0.16 ss=6.0 p=0.25       696ms noise=0.8871 (  8.55%) detail=    2.25 (  65.38%) fft=0.8564
+bilateral d=9 sc=0.16 ss=6.0 p=0.5        696ms noise=0.9473 (  2.34%) detail=    3.18 (  51.08%) fft=0.8984
+bilateral d=11 sc=0.2 ss=6.0 p=0.0       1597ms noise=0.6762 ( 30.29%) detail=    1.60 (  75.38%) fft=0.799
+bilateral d=11 sc=0.2 ss=6.0 p=0.25      1597ms noise=0.8895 (  8.30%) detail=    2.11 (  67.54%) fft=0.8536
+bilateral d=11 sc=0.2 ss=6.0 p=0.5       1597ms noise=0.9480 (  2.27%) detail=    3.09 (  52.46%) fft=0.8974
+bilateral d=13 sc=0.25 ss=8.0 p=0.0       1707ms noise=0.6995 ( 27.89%) detail=    1.41 (  78.31%) fft=0.7934
+bilateral d=13 sc=0.25 ss=8.0 p=0.25      1707ms noise=0.8966 (  7.57%) detail=    1.93 (  70.31%) fft=0.8512
+bilateral d=13 sc=0.25 ss=8.0 p=0.5       1707ms noise=0.9497 (  2.09%) detail=    2.97 (  54.31%) fft=0.8966
+bilateral d=15 sc=0.3 ss=10.0 p=0.0       1794ms noise=0.7190 ( 25.88%) detail=    1.26 (  80.62%) fft=0.788
+bilateral d=15 sc=0.3 ss=10.0 p=0.25      1794ms noise=0.9002 (  7.20%) detail=    1.83 (  71.85%) fft=0.8492
+bilateral d=15 sc=0.3 ss=10.0 p=0.5       1794ms noise=0.9504 (  2.02%) detail=    2.91 (  55.23%) fft=0.896
+guided r=8 eps=0.0025        p=0.0       2637ms noise=0.8515 ( 12.22%) detail=    1.58 (  75.69%) fft=0.8279
+guided r=8 eps=0.0025        p=0.25      2637ms noise=0.9295 (  4.18%) detail=    2.32 (  64.31%) fft=0.8746
+guided r=8 eps=0.0025        p=0.5       2637ms noise=0.9553 (  1.52%) detail=    3.35 (  48.46%) fft=0.9053
+guided r=8 eps=0.01          p=0.0       1561ms noise=0.7634 ( 21.30%) detail=    1.27 (  80.46%) fft=0.7958
+guided r=8 eps=0.01          p=0.25      1561ms noise=0.9108 (  6.10%) detail=    1.97 (  69.69%) fft=0.8573
+guided r=8 eps=0.01          p=0.5       1561ms noise=0.9518 (  1.88%) detail=    3.04 (  53.23%) fft=0.8989
+guided r=12 eps=0.01         p=0.0       1583ms noise=0.7858 ( 18.99%) detail=    1.28 (  80.31%) fft=0.7998
+guided r=12 eps=0.01         p=0.25      1583ms noise=0.9136 (  5.81%) detail=    1.98 (  69.54%) fft=0.8587
+guided r=12 eps=0.01         p=0.5       1583ms noise=0.9523 (  1.82%) detail=    3.05 (  53.08%) fft=0.8994
+guided r=16 eps=0.04         p=0.0       1627ms noise=0.7751 ( 20.09%) detail=    1.07 (  83.54%) fft=0.7788
+guided r=16 eps=0.04         p=0.25      1627ms noise=0.9103 (  6.15%) detail=    1.75 (  73.08%) fft=0.849
+guided r=16 eps=0.04         p=0.5       1627ms noise=0.9522 (  1.84%) detail=    2.87 (  55.85%) fft=0.8965
+guided r=24 eps=0.09         p=0.0       1738ms noise=0.7896 ( 18.60%) detail=    0.95 (  85.38%) fft=0.7672
+guided r=24 eps=0.09         p=0.25      1738ms noise=0.9135 (  5.82%) detail=    1.64 (  74.77%) fft=0.8461
+guided r=24 eps=0.09         p=0.5       1738ms noise=0.9532 (  1.73%) detail=    2.78 (  57.23%) fft=0.8964
+[done]

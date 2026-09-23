@@ -1,0 +1,4 @@
+[tier 512] shape=[341, 512, 3] base noise=0.277 detail=58.19 timing={'bilateral': 9.89, 'guided': 15.51, 'gaussian_ref': 5.85}
+[tier 1024] shape=[682, 1024, 3] base noise=0.5181 detail=18.47 timing={'bilateral': 22.9, 'guided': 56.27, 'gaussian_ref': 20.42}
+[tier full] shape=[4040, 6064, 3] base noise=0.97 detail=6.5 timing={'bilateral': 774.47, 'guided': 2328.36, 'gaussian_ref': 529.47}
+[done]

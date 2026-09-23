@@ -1,0 +1,34 @@
+﻿ M src/pixo/decide/engine.py
+ M src/pixo/decide/rules/__init__.py
+ M src/pixo/pipeline/loop.py
+ M src/pixo/pipeline/metrics.py
+ M src/pixo/render/core/lut3d.py
+ M src/pixo/render/modules/color_cal.py
+ M src/pixo/render/modules/exposure.py
+ M src/pixo/render/modules/refine.py
+ M src/pixo/render/modules/reshape.py
+ M src/pixo/render/modules/tone_map.py
+ M src/pixo/render/modules/white_balance.py
+ M src/pixo/render/web/session.py
+ M src/pixo/service/runtime.py
+ M src/pixo/vision/health.py
+?? src/pixo/decide/rules/noise_rules.yaml
+?? src/pixo/render/degradation.py
+?? tests/unit/test_noise_metric_keys.py
+?? tests/unit/test_qc_soft_warnings.py
+?? tests/unit/test_render_degradation.py
+ src/pixo/decide/engine.py                |   7 ++
+ src/pixo/decide/rules/__init__.py        |   6 ++
+ src/pixo/pipeline/loop.py                | 176 ++++++++++++++++++++++++++++++-
+ src/pixo/pipeline/metrics.py             |  36 ++++++-
+ src/pixo/render/core/lut3d.py            |   9 +-
+ src/pixo/render/modules/color_cal.py     |  12 ++-
+ src/pixo/render/modules/exposure.py      |   7 +-
+ src/pixo/render/modules/refine.py        |  32 +++++-
+ src/pixo/render/modules/reshape.py       |   7 +-
+ src/pixo/render/modules/tone_map.py      |   7 +-
+ src/pixo/render/modules/white_balance.py |  27 ++++-
+ src/pixo/render/web/session.py           |   9 +-
+ src/pixo/service/runtime.py              |  12 +++
+ src/pixo/vision/health.py                |  42 ++++++++
+ 14 files changed, 370 insertions(+), 19 deletions(-)

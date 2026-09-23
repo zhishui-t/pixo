@@ -1,0 +1,82 @@
+# .r15_ok — R15 收口门禁通过签章
+
+- 审核人: qa (R15 收口门禁)
+- 覆盖: R15 三件 —— 预览掩码供给 (dev-2, PIXO_REGION_SUPPLY 缺省关) +
+  分层复权 (dev-1, sky 全量/plant 续观察) + B1 修复 (dev-2 P1, 全零掩码
+  不虚报 available)
+- ISO 时间戳: 2026-09-07T20:11:56Z
+- 全量权威数: 1524 passed / 5 skipped / 1 xfailed / 0 failed
+
+## 四条结论
+
+1. **B1 修复复核 — PASS (含 1 项 qa 修复)**:
+   - 三分 reason 实现与测试齐: masks_not_injected (供给未开/未尝试/mock
+     环境, 双用例) / segmenter_no_masks (分割成功但全零/空, 三用例含真权重
+     e2e) / segmenter_error (分割异常, 一用例) —— _region_status_of 按
+     region_masks_source 分类, 语义不混。
+   - tester 四相位 e2e `_r15_supply_e2e.py` 独立复跑 **15/15 passed**
+     (含 B1 修复回归断言: 全零掩码不注入 source=segmenter masks={} /
+     patch 渲染逐位不变 meanΔ=0.00000 / 相位 D 合成掩码闭环变暗量级
+     2^(-0.5/2.2)±15% ratio=0.8532 + 非掩码区逐位不变)。
+   - **qa 修复 1 项 (见修复记录)**: _mask_has_signal 原带 try/except
+     Exception→恒 False —— 正是 dev-2 报告自述教训的机制载体 (初版漏
+     import numpy 被自身 except 吞成恒 False, 靠单测侥幸抓住)。任务书
+     明确「判定函数应裸奔让错误显象」: 已去 try/except, 坏掩码数据显式
+     上抛由外层供给路径归类 segmenter_error (而非伪装成
+     segmenter_no_masks) —— 三分 reason 的分类完整性恢复。修复后
+     test_region_supply.py 9 passed (含真权重 e2e)。
+2. **复权三要素 — PASS**: sky formula "-0.5 * (sky_luminance/150.0)"
+   (复权全量) / plant formula "0.2 * (...)" (维持试水) / 护栏
+   sky+plant area_ratio lt 0.70 双规则在位; 双镜像 sha256 逐字节一致
+   (4194f07f...); 钉死断言同步: sky 期望 -0.375→-0.75 + 系数串 "-0.5 *"
+   + R15 分层复权 docstring 依据 (54 张数据 region_trial_54.md);
+   test_decide_region_wiring.py 26 passed。回放抽验 9 张 (sky 复权×2
+   精确恢复 / plant 逐位不变 / 救回保持 / night 逐位零 / 护栏持续拦截)
+   已由 dev-1 落档 region_replay_spot.json。
+3. **供给成本语义 — PASS**: PIXO_REGION_SUPPLY 缺省关 ("1/true/on" 才开,
+   `_region_supply_enabled` 白名单解析); GET /region 懒触发, 每会话至多
+   一次 (region_masks 非 None 即已尝试, 空 dict = 分割完成无掩码不重试);
+   锁防重入 = runtime 级 `_region_supply_lock` + double-checked
+   (锁外快检 + 锁内二检)。**并发首请求竞态实证**: 8 线程并发首 GET →
+   segment 恰 1 次 / render 恰 1 次 / 8 响应全一致 available=True——
+   竞态无重入。缺省关的裁决依据 (冷启 17.7s ≫ 1s 线) 与热态 0.73s 运维
+   开启口径均在注释与报告留档; mock 环境永不尝试 (R14 契约不变)。
+   成本附注: GET /region 为 sync def 走 FastAPI 线程池不阻塞其他端点;
+   patch 快路径不触发供给 (测试钉死 stub.calls==1)。
+4. **全量权威对账 — PASS, 77 差异核清 (口径差异非掉测试)**:
+   - 权威口径 `python -m pytest tests -q -m "not e2e"` = **1524 passed /
+     0 failed** = R14 基线 1515 + R15 供给 9 (dev-2 初版 7 + P1 修复 +2)
+     —— 应增不减 ✓。
+   - tester 1522 = 同口径在 P1 修复前时点 (1515+7);
+     dev-2 1445 = 子集口径 `tests/unit tests/integration` (1436+9)。
+     1522 − 1445 = **77 = 范围差 79 (全 tests vs unit+integration, 即
+     tests/regression 等) − 时点差 2 (修复前 7 vs 修复后 9)**。
+     两口径逐项分解吻合 (R14 时点 1515−1436=79, R15 未动其他目录),
+     无测试丢失。
+
+## 修复记录 (qa 最小修复, 已复验)
+
+1. **_mask_has_signal 裸奔化** (src/pixo/service/runtime.py):
+   - 改了什么: 移除 try/except Exception→False 包裹, 判定体裸奔
+     (np.asarray + size 检查 + any(!=0)); docstring 记录教训与异常面
+     归宿 (外层 _ensure_session_region_masks 的 except 归类
+     segmenter_error)。
+   - 为什么: 带 except 的判定函数会 (a) 再次吞掉自身 bug (初版漏
+     import 即被吞成恒 False, dev-2 报告 §8 自述); (b) 把坏掩码数据
+     (不可数值化元素) 伪装成「成功但无掩码」segmenter_no_masks, 破坏
+     三分 reason 的分类完整性 —— 异常应显式归类 segmenter_error。
+     现有 9 用例无「不可数值化」语义依赖, 改动零破坏。
+   - 验证: test_region_supply.py 9 passed (含真权重 e2e 20.49s);
+     tester 四相位 e2e 15/15; 全量 1524/0。
+
+## 遗留与升级 (不阻塞)
+
+- plant 提亮的溢出负联动 (回退 DSC_5276/5277 主因) —— 规则层可表达,
+  留下轮议 (dev-1 §遗留 1); plant-only 层 15 张持续观察面。
+- S-4 引擎豁免与 plant 强耦合, 维持 R13 暂缓结论。
+- status 极窄瞬时窗口 (并发下 masks={} 已赋值而 source 未赋值的一瞬,
+  reason 暂报 masks_not_injected, 下次 GET 即正确) —— 最终一致,
+  不修 (修复最小化; GET /region 主路径先供给后读状态无此窗口)。
+- O1 (PUT 响应 region 节即时刷徽标) 与「缺省开+后台预热」升级路径
+  沿 R14/R15 报告留档。
+- 本轮未 commit (提交策略归队长)。

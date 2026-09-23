@@ -1,0 +1,214 @@
+﻿diff --git a/src/pixo/render/core/lut3d.py b/src/pixo/render/core/lut3d.py
+index 97d807b..0e29945 100644
+--- a/src/pixo/render/core/lut3d.py
++++ b/src/pixo/render/core/lut3d.py
+@@ -28,0 +29,2 @@ import numpy as np
++from ..degradation import record_degradation
++
+@@ -186,2 +188,5 @@ class LUT3D:
+-        except Exception:
+-            pass  # native 不可用/失败 → numpy 回退 (同式, 慢但正确)
++        except Exception as exc:
++            # F03 #12: 原为 `pass` (连变量都不记) → 结构化降级记录后走 numpy 回退
++            record_degradation(
++                "render.lut3d.native", exc,
++                detail="LUT3D native 内核不可用，回退 numpy lookup (慢 ~8×)")
+diff --git a/src/pixo/render/modules/color_cal.py b/src/pixo/render/modules/color_cal.py
+index 02640bf..c39dbac 100644
+--- a/src/pixo/render/modules/color_cal.py
++++ b/src/pixo/render/modules/color_cal.py
+@@ -34,0 +35 @@ from ..pipeline.graph import DOMAIN_GAMMA_RGB
++from ..degradation import classify_native_failure, record_degradation
+@@ -418 +419,10 @@ class ColorCalStage(Stage):
+-            except Exception:
++            except Exception as exc:
++                # F03 #11: native F32 内核不可用 → 纯 Python float Lab 域。
++                # **版本门拒绝不算 degraded**: DLL < 1.6.0 时 oklch 内核主动抛
++                # RuntimeError (设计好的分层回退), classify_native_failure 把它
++                # 归入 version_gate → 只进独立通道, 不产生误告警。
++                record_degradation(
++                    "render.color_cal.native_f32", exc,
++                    reason=classify_native_failure(exc),
++                    detail=f"colorcal {domain} 域 native F32 内核不可用，"
++                           f"回退纯 Python float Lab 域实现")
+diff --git a/src/pixo/render/modules/exposure.py b/src/pixo/render/modules/exposure.py
+index 131933b..840ece6 100644
+--- a/src/pixo/render/modules/exposure.py
++++ b/src/pixo/render/modules/exposure.py
+@@ -47,0 +48 @@ from ..core import calibration_store
++from ..degradation import record_degradation
+@@ -461 +462,5 @@ class ExposureStage(Stage):
+-        except Exception:
++        except Exception as exc:
++            # F03 #7: 曝光链 (所有照片必经) native 内核不可用 → 纯 Python 回退
++            record_degradation(
++                "render.exposure.native", exc,
++                detail="曝光链回退 vignette + 2^ev + soft_highlight_rolloff")
+diff --git a/src/pixo/render/modules/refine.py b/src/pixo/render/modules/refine.py
+index 99f783b..003a482 100644
+--- a/src/pixo/render/modules/refine.py
++++ b/src/pixo/render/modules/refine.py
+@@ -22,0 +23 @@ from ..pipeline.graph import DOMAIN_GAMMA_RGB
++from ..degradation import record_degradation
+@@ -207 +208,5 @@ class RefineStage(Stage):
+-        except Exception:
++        except Exception as exc:
++            # F03 #2: native 导入/可用性探测失败 → 整条 refine 退纯 Python
++            record_degradation(
++                "render.refine.native_import", exc,
++                detail="refine 全链回退纯 Python 实现 (~慢数倍)")
+@@ -213 +218,5 @@ class RefineStage(Stage):
+-            except Exception:
++            except Exception as exc:
++                # F03 #3: sat_protect 子步骤退纯 Python
++                record_degradation(
++                    "render.refine.sat_protect_native", exc,
++                    detail="sat_protection 回退纯 Python 实现")
+@@ -224 +233,5 @@ class RefineStage(Stage):
+-                except Exception:
++                except Exception as exc:
++                    # F03 #4: sharpen 子步骤退纯 Python
++                    record_degradation(
++                        "render.refine.sharpen_native", exc,
++                        detail="sharpen 回退纯 Python 实现")
+@@ -247 +260,6 @@ class RefineStage(Stage):
+-                except Exception:
++                except Exception as exc:
++                    # F03 #5: chroma(+highlight fused) 子步骤退纯 Python
++                    record_degradation(
++                        "render.refine.chroma_native", exc,
++                        detail="chroma(+highlight fused) 回退纯 Python "
++                               "_chroma_denoise_small")
+@@ -258 +276,5 @@ class RefineStage(Stage):
+-                except Exception:
++                except Exception as exc:
++                    # F03 #6: highlight 子步骤退纯 Python
++                    record_degradation(
++                        "render.refine.highlight_native", exc,
++                        detail="highlight 回退纯 Python 实现")
+diff --git a/src/pixo/render/modules/reshape.py b/src/pixo/render/modules/reshape.py
+index e697176..d324448 100644
+--- a/src/pixo/render/modules/reshape.py
++++ b/src/pixo/render/modules/reshape.py
+@@ -23,0 +24 @@ from ..core.enhance import dehaze as _dehaze
++from ..degradation import record_degradation
+@@ -104 +105,5 @@ class ClarityStage(Stage):
+-            except Exception:
++            except Exception as exc:
++                # F03 #1: native clarity 静默回退纯 Python (仅预览 + 降采样路径)
++                record_degradation(
++                    "render.reshape.clarity_native", exc,
++                    detail="预览 clarity 回退纯 Python _clarity")
+diff --git a/src/pixo/render/modules/tone_map.py b/src/pixo/render/modules/tone_map.py
+index 9b67d03..5ec9b2b 100644
+--- a/src/pixo/render/modules/tone_map.py
++++ b/src/pixo/render/modules/tone_map.py
+@@ -35,0 +36 @@ from ..core import calibration_store
++from ..degradation import record_degradation
+@@ -334 +335,5 @@ class ToneStage(Stage):
+-            except Exception:
++            except Exception as exc:
++                # F03 #8: LUT1D native 插值不可用 → apply_lut1d_fast (逐位差风险)
++                record_degradation(
++                    "render.tone_map.lut1d_native", exc,
++                    detail="LUT1D 插值回退 apply_lut1d_fast")
+diff --git a/src/pixo/render/modules/white_balance.py b/src/pixo/render/modules/white_balance.py
+index 4ec016e..ca2ceed 100644
+--- a/src/pixo/render/modules/white_balance.py
++++ b/src/pixo/render/modules/white_balance.py
+@@ -58,0 +59 @@ from ..core import calibration_store
++from ..degradation import record_degradation
+@@ -144,0 +146,12 @@ def _load_warm_cal(path):
++        # F03 #10a: 文件**存在**却读不出 (损坏 JSON/顶层非 object) = 真降级;
++        # 文件缺失是 calibration_store 明示的合法常态 (内置斜率模型兜底),
++        # 不记 degraded (对齐 store「缺失不告警」语义)。
++        try:
++            exists = Path(str(path)).is_file()
++        except Exception:  # pragma: no cover - path 类型异常时按缺失处理
++            exists = False
++        if exists:
++            record_degradation(
++                "render.white_balance.warmth_curve", None,
++                path=str(path), reason="calibration_unreadable",
++                detail="暖度分桶标定表损坏/顶层非 object，回退内置斜率模型")
+@@ -155 +168,7 @@ def _load_warm_cal(path):
+-        except Exception:
++        except Exception as exc:
++            # F03 #10b: 标定表结点校验失败 → 回退内置斜率模型 (R20 扩域后
++            # 静默失效危害最大, 必须可观测)。
++            record_degradation(
++                "render.white_balance.warmth_curve", exc,
++                path=str(path), reason="calibration_invalid",
++                detail="暖度标定结点校验失败，回退内置斜率模型")
+@@ -397 +416,5 @@ class WhiteBalanceStage(Stage):
+-        except Exception:
++        except Exception as exc:
++            # F03 #9: WB 矩阵 native 路径 → numpy matmul (色彩链关键)
++            record_degradation(
++                "render.white_balance.matrix_native", exc,
++                detail="WB 矩阵回退 numpy matmul")
+diff --git a/src/pixo/render/web/session.py b/src/pixo/render/web/session.py
+index 30a2c3a..ff9b5ad 100644
+--- a/src/pixo/render/web/session.py
++++ b/src/pixo/render/web/session.py
+@@ -32,0 +33 @@ from .encode import encode_image
++from ..degradation import record_degradation
+@@ -203 +204,7 @@ class RawPreviewSession:
+-                except Exception:
++                except Exception as exc:
++                    # F03 #13: native CFA 2×2 分箱解码失败 → rawpy AHD half
++                    # (像素级解码算法切换, 预览/导出一致性风险必须可观测)
++                    record_degradation(
++                        "render.io.decode_cfa_half", exc,
++                        path=str(self.raw_path),
++                        detail="CFA native 解码失败，回退 rawpy AHD half")
+diff --git a/src/pixo/vision/health.py b/src/pixo/vision/health.py
+index 5ad6455..10ab050 100644
+--- a/src/pixo/vision/health.py
++++ b/src/pixo/vision/health.py
+@@ -128,0 +129,22 @@ def _multi_router_health_info() -> dict[str, Any]:
++def _render_degradation_info() -> dict[str, Any]:
++    """render 侧关键路径降级汇总 (R22 F03, L2 暴露层)。
++
++    惰性 import ``pixo.render.degradation`` (该模块仅依赖标准库, 但
++    ``pixo.render.core`` 的包初始化会拉 numpy/cv2/rawpy, 故不在本模块顶层
++    import —— 与本模块「不直接 import 重依赖」的既有约定一致)。import 失败
++    (最小安装/裁剪环境) 时返回空汇总, 不影响 vision 侧任何状态。
++    """
++    try:
++        from ..render.degradation import render_degradation_report
++
++        return dict(render_degradation_report())
++    except Exception as exc:
++        return {
++            "count": 0,
++            "entries": [],
++            "version_gate_count": 0,
++            "version_gate_rejections": [],
++            "error": f"render 降级汇总不可用：{exc}",
++        }
++
++
+@@ -136,0 +159,7 @@ def vision_health(
++
++    R22 F03 追加 (纯增量, 不改既有 status/ready/available 语义):
++      ``render_degraded``（list，含 source/kind/path/reason/detail/
++      exception/count/first_seen/last_seen/timestamp）、
++      ``render_degraded_count``、``render_status``（"degraded"|"ok"）、
++      ``render_version_gate_rejections``（版本门**合法拒绝**独立通道,
++      不计入 degraded, 见 render/degradation.py 判定依据）。
+@@ -168,0 +198,12 @@ def vision_health(
++    render_info = _render_degradation_info()
++    render_extra: dict[str, Any] = {
++        "render_degraded": list(render_info.get("entries", [])),
++        "render_degraded_count": int(render_info.get("count", 0)),
++        "render_status": "degraded" if render_info.get("count") else "ok",
++        "render_version_gate_rejections": list(
++            render_info.get("version_gate_rejections", [])),
++        "render_version_gate_count": int(
++            render_info.get("version_gate_count", 0)),
++    }
++    if render_info.get("error"):
++        render_extra["render_degraded_error"] = render_info["error"]
+@@ -190,0 +232 @@ def vision_health(
++        **render_extra,

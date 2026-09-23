@@ -1,0 +1,13 @@
+bytes: 2006
+utf-8: BAD 1741 1742 b' graphify \xbb\xba\xb4\xe6\xd3\xeb arti'
+  not gbk: 'gbk' codec can't decode byte 0x80 in position 122: illegal multibyte sequence
+  not utf-16: 'utf-16-le' codec can't decode bytes in position 1878-1879: illegal UTF-16 surrogate
+  not cp1252: 'charmap' codec can't decode byte 0x8d in position 144: character maps to <undefined>
+--- lines 84-95 ---
+84: '.artifacts/*.pt'
+85: '.artifacts/_*'
+86: ''
+87: '# Agent team 本地协作状态（黑板）'
+88: '.agent-team/'
+89: '.zcode/'
+90: 'build/'

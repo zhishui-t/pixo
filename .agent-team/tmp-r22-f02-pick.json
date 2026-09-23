@@ -1,0 +1,293 @@
+{
+ "count": 32,
+ "rows": [
+  {
+   "name": "DSC_5314.NEF",
+   "iso": 12800,
+   "exp_s": 0.016666666666666666,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 3.8,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5314.NEF"
+  },
+  {
+   "name": "DSC_5315.NEF",
+   "iso": 12800,
+   "exp_s": 0.016666666666666666,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 3.3,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5315.NEF"
+  },
+  {
+   "name": "DSC_5278.NEF",
+   "iso": 8000,
+   "exp_s": 0.00625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 4.3,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5278.NEF"
+  },
+  {
+   "name": "DSC_5279.NEF",
+   "iso": 8000,
+   "exp_s": 0.00625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 2.7,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5279.NEF"
+  },
+  {
+   "name": "DSC_5290.NEF",
+   "iso": 6400,
+   "exp_s": 0.05,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 2.8,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5290.NEF"
+  },
+  {
+   "name": "DSC_5291.NEF",
+   "iso": 6400,
+   "exp_s": 0.05,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 3.3,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5291.NEF"
+  },
+  {
+   "name": "DSC_5292.NEF",
+   "iso": 6400,
+   "exp_s": 0.00125,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 4.8,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5292.NEF"
+  },
+  {
+   "name": "DSC_5293.NEF",
+   "iso": 6400,
+   "exp_s": 0.00125,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 3.7,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5293.NEF"
+  },
+  {
+   "name": "DSC_5294.NEF",
+   "iso": 6400,
+   "exp_s": 0.0015625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 2.7,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5294.NEF"
+  },
+  {
+   "name": "DSC_5295.NEF",
+   "iso": 6400,
+   "exp_s": 0.00125,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 3.7,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5295.NEF"
+  },
+  {
+   "name": "DSC_5309.NEF",
+   "iso": 6400,
+   "exp_s": 0.01,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 3.3,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5309.NEF"
+  },
+  {
+   "name": "DSC_5310.NEF",
+   "iso": 6400,
+   "exp_s": 0.01,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 3.5,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5310.NEF"
+  },
+  {
+   "name": "DSC_5311.NEF",
+   "iso": 6400,
+   "exp_s": 0.05,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.0,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5311.NEF"
+  },
+  {
+   "name": "DSC_5312.NEF",
+   "iso": 6400,
+   "exp_s": 0.05,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.1,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5312.NEF"
+  },
+  {
+   "name": "DSC_5313.NEF",
+   "iso": 6400,
+   "exp_s": 0.04,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.9,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5313.NEF"
+  },
+  {
+   "name": "DSC_5280.NEF",
+   "iso": 5000,
+   "exp_s": 0.008,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.6,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5280.NEF"
+  },
+  {
+   "name": "DSC_5281.NEF",
+   "iso": 5000,
+   "exp_s": 0.008,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.9,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5281.NEF"
+  },
+  {
+   "name": "DSC_5282.NEF",
+   "iso": 5000,
+   "exp_s": 0.008,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.5,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5282.NEF"
+  },
+  {
+   "name": "DSC_5283.NEF",
+   "iso": 5000,
+   "exp_s": 0.01,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.9,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5283.NEF"
+  },
+  {
+   "name": "DSC_5284.NEF",
+   "iso": 5000,
+   "exp_s": 0.01,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 15.2,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5284.NEF"
+  },
+  {
+   "name": "DSC_5258.NEF",
+   "iso": 3200,
+   "exp_s": 0.0025,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 17.4,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5258.NEF"
+  },
+  {
+   "name": "DSC_5259.NEF",
+   "iso": 3200,
+   "exp_s": 0.0025,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 17.3,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5259.NEF"
+  },
+  {
+   "name": "DSC_5260.NEF",
+   "iso": 3200,
+   "exp_s": 0.0015625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 12.6,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5260.NEF"
+  },
+  {
+   "name": "DSC_5261.NEF",
+   "iso": 3200,
+   "exp_s": 0.0015625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 14.5,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5261.NEF"
+  },
+  {
+   "name": "DSC_5262.NEF",
+   "iso": 3200,
+   "exp_s": 0.0015625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 15.5,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5262.NEF"
+  },
+  {
+   "name": "DSC_5263.NEF",
+   "iso": 3200,
+   "exp_s": 0.0015625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 15.2,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5263.NEF"
+  },
+  {
+   "name": "DSC_5264.NEF",
+   "iso": 3200,
+   "exp_s": 0.0015625,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 15.6,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5264.NEF"
+  },
+  {
+   "name": "DSC_5285.NEF",
+   "iso": 3200,
+   "exp_s": 0.008,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 12.9,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5285.NEF"
+  },
+  {
+   "name": "DSC_5286.NEF",
+   "iso": 3200,
+   "exp_s": 0.008,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.1,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5286.NEF"
+  },
+  {
+   "name": "DSC_5287.NEF",
+   "iso": 3200,
+   "exp_s": 0.008,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.4,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5287.NEF"
+  },
+  {
+   "name": "DSC_5288.NEF",
+   "iso": 3200,
+   "exp_s": 0.06666666666666667,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 12.7,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5288.NEF"
+  },
+  {
+   "name": "DSC_5289.NEF",
+   "iso": 3200,
+   "exp_s": 0.06666666666666667,
+   "f": null,
+   "thumb_ok": true,
+   "thumb_ms": 13.0,
+   "path": "K:\\data\\photo\\0711\\raw\\DSC_5289.NEF"
+  }
+ ]
+}

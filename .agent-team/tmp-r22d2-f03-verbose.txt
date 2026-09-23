@@ -1,0 +1,21 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- D:\Python\Python312\tools\python.exe
+cachedir: .pytest_cache
+rootdir: K:\work\project\pixo
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 10 items
+
+tests/unit/test_render_degradation.py::test_classify_native_failure_markers PASSED [ 10%]
+tests/unit/test_render_degradation.py::test_native_unavailable_is_degraded_not_version_gate PASSED [ 20%]
+tests/unit/test_render_degradation.py::test_corrupt_warmth_curve_copy_records_degraded PASSED [ 30%]
+tests/unit/test_render_degradation.py::test_corrupt_warmth_curve_via_stage_then_health_exposes_degraded PASSED [ 40%]
+tests/unit/test_render_degradation.py::test_missing_warmth_curve_copy_not_degraded PASSED [ 50%]
+tests/unit/test_render_degradation.py::test_version_gate_rejection_not_degraded PASSED [ 60%]
+tests/unit/test_render_degradation.py::test_native_exception_records_degraded PASSED [ 70%]
+tests/unit/test_render_degradation.py::test_dedup_and_warn_once PASSED   [ 80%]
+tests/unit/test_render_degradation.py::test_snapshot_returns_copies PASSED [ 90%]
+tests/unit/test_render_degradation.py::test_health_render_keys_neutral_when_clean PASSED [100%]
+
+============================= 10 passed in 17.56s =============================
