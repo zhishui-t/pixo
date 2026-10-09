@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-24 — R31 DNG 对齐线关闭（用户裁决）
+
+- 「我们用 RawTherapee 了」⇒ DNG 对齐线退役：候选 c 关闭为不接（default_look
+  保持 R30 形态，曲线留档）；dng_validate 参照发生器与批转产物退役（仓外随盘）；
+  后续 Adobe 系色彩实施（T8 P0#1 LookTable）验收改用 LR 双锚点 + RT 参照臂
+  弱化口径。R31 三臂测量数据与全链证据留档（.artifacts/R31_dng_alignment_closure.md）。
+  P0×3 实施轮本身不受影响照排。
+
 ## 2026-09-24 — 第三十二轮：RawTherapee 组件移植战役（T1-T8 八步串行，render-core-integration 分支）
 
 - **战役总况**：38 模块项裁决（吸收收编 8 / 具备保持 13 / 建议吸收 10〔P0×3〕/ 跳过 7）；

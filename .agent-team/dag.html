@@ -21,8 +21,8 @@
 </head>
 <body>
 <h1>Pixo R32：RT 组件移植战役（T1-T8 串行，T8=全模块清点兜底吸收）</h1>
-<div class="meta">更新于 2026-09-23 14:33:45 UTC · 每 8 秒自动刷新 · 布局与交互对齐 weave DagPanel</div>
-<div><span class="chip"><i style="background:#52c41a"></i>完成 5</span><span class="chip"><i style="background:#1677ff"></i>进行中 0</span><span class="chip"><i style="background:#8c8c8c"></i>待开始 10</span><span class="chip"><i style="background:#f5222d"></i>受阻/打回 0</span></div>
+<div class="meta">更新于 2026-09-23 19:40:19 UTC · 每 8 秒自动刷新 · 布局与交互对齐 weave DagPanel</div>
+<div><span class="chip"><i style="background:#52c41a"></i>完成 14</span><span class="chip"><i style="background:#1677ff"></i>进行中 0</span><span class="chip"><i style="background:#8c8c8c"></i>待开始 0</span><span class="chip"><i style="background:#f5222d"></i>受阻/打回 0</span></div>
 <div class="viewport">
 <svg width="2614" height="82" style="display:block;overflow:visible">
 <path data-from="roster" data-to="env" d="M150 64C164 64,162 18,176 18"/>
@@ -81,11 +81,11 @@
 </g>
 <g class="node" data-id="t1-impl" transform="translate(704,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T1 RCD native 移植+A/B <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">dev-1 实施中</text>
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">生产就绪: 伪彩0.944/…</text>
 </g>
 <g class="node" data-id="t1-qa" transform="translate(880,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
@@ -93,71 +93,71 @@
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T1 检视+回归 <tspan fill="#8c8c8c" font-weight="400">(reviewer+tester)</tspan></text>
   <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
   <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">reviewer 码检中</text>
 </g>
 <g class="node" data-id="t2" transform="translate(1056,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T2 DCP 对照吸收 <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">10差异/0吸收/V9 Lo…</text>
 </g>
 <g class="node" data-id="t3" transform="translate(1232,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T3 胶片 HaldCLUT 接入 <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">纯格式适配零吸收; 2.8e…</text>
 </g>
 <g class="node" data-id="t4" transform="translate(1408,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T4 曲线体系增强（插值/多域/分通道） <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">4模式+平段; akima双…</text>
 </g>
 <g class="node" data-id="t5" transform="translate(1584,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T5 直方图后端增强（parade/联动… <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">Lab L*模式+联动契约;…</text>
 </g>
 <g class="node" data-id="t6" transform="translate(1760,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T6 HSL 均衡器+分色调增强 <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">吸收2: rt施加数学+pr…</text>
 </g>
 <g class="node" data-id="t7" transform="translate(1936,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T7 曝光六项优化校准（RT 阴影高光恢… <tspan fill="#8c8c8c" font-weight="400">(dev-1)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">吸收1: mode=matc…</text>
 </g>
 <g class="node" data-id="t8" transform="translate(2112,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">T8 RT 全模块清点与吸收台账（小波/… <tspan fill="#8c8c8c" font-weight="400">(dev-1+队长)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">38项台账: P0x3 (L…</text>
 </g>
 <g class="node" data-id="push" transform="translate(2288,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
-  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#8c8c8c"/>
+  <path d="M0.5 6 A5.5 5.5 0 0 1 6 0.5 L3 0.5 L3 35.5 L6 35.5 A5.5 5.5 0 0 1 0.5 30 Z" fill="#52c41a"/>
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">分支推送+报告+changelog <tspan fill="#8c8c8c" font-weight="400">(junior-dev)</tspan></text>
-  <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
-  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <circle cx="13" cy="26" r="2.5" fill="#52c41a"/>
+  <text x="20" y="29" font-size="8.5" font-weight="600" fill="#52c41a">完成</text>
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">fdd9d6f 推送+tra…</text>
 </g>
 <g class="node" data-id="accept" transform="translate(2464,0)" tabindex="0">
   <rect width="150" height="36" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
@@ -165,7 +165,7 @@
   <text x="10" y="15" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="700" fill="#262626">交付验收（卡点④） <tspan fill="#8c8c8c" font-weight="400">(队长+用户)</tspan></text>
   <circle cx="13" cy="26" r="2.5" fill="#8c8c8c"/>
   <text x="20" y="29" font-size="8.5" font-weight="600" fill="#8c8c8c">待开始</text>
-  
+  <text x="144" y="29" text-anchor="end" font-size="8.5" fill="#8c8c8c">卡点④呈用户</text>
 </g>
 </svg>
 </div>

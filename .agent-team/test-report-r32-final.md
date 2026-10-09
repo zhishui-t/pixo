@@ -3,7 +3,7 @@
 日期：2026-09-23 ｜ 角色：tester-whitebox（delivery · 测试白盒路，T1 交棒后第二棒）｜ 对象：R32 战役 T1-T8 全收官态
 基线：分支 render-core-integration，HEAD=`bd40c37`（feat(exposure) R32-T7），campaign 累计 7 commits（`a8f7890..bd40c37`：T1 native / T2 docs / T3 lut / T4 curves / T5 histogram / T6 hsl+split / T7 exposure）
 
-**一句话：终检五项中 1-4 全绿（全量 1765P/0F、gate 金样本零漂移、四步抽验全过、GPL 面完整）；第 5 项「分支推送态」无法确证——本机无凭据核远端且本地无 origin 侧 tracking ref（证据指向未推送），按契约不予签绿，`.qa_ok_r32_final` 暂扣待推送闭环。**
+**一句话：终检五项全绿（2026-09-24 补核后定稿）——全量 1765P/0F、gate 金样本零漂移、四步抽验全过、GPL 面完整；第 5 项推送态于 2026-09-24 实证闭环（HEAD == origin tracking ref == fdd9d6f，同步零偏差），`.qa_ok_r32_final` 已补签，R32 战役收口。**
 
 ---
 
@@ -40,16 +40,15 @@
 - `THIRD_PARTY_NOTICES.md` **§8**（项目许可证变更节）末尾 R32-T1 条目完整：上游 URL（Beep6581/RawTherapee）+ commit `6c4cb59`（dev 分支）+ 版权人（Luis Sanz Rodriguez & Ingo Weyrich 2017-2020）+ 子组件溯源（rcd_demosaic.cc / demosaic_algos.cc border_interpolate © 2004-2010 Gabor Horvath / rt_math.h 垫片）+ 上游原始实现（LuisSR/RCD-Demosaicing）+ GPL-3.0-or-later 同源声明
 - `src/pixo/render/native/src/rcd_demosaic_native.cpp` 文件头 RT 原版权块**逐字存在**（"This file is part of RawTherapee" + GPLv3 声明全文）+ 移植来源标注段
 
-## 终检 5：分支推送态核验 → **未能确证（不予签绿项）**
+## 终检 5：分支推送态核验 → 通过（2026-09-24 补核闭环）
 
-声明核验目标：`origin/render-core-integration == bd40c37`。
+首次核验（2026-09-23）UNVERIFIED：本地无 `refs/remotes/origin/render-core-integration`（仅 origin/master）、分支无 upstream、`ls-remote` Permission denied (publickey)，证据指向未推送 → 签章暂扣，回流队长。
 
-实测证据（三条独立证据，均指向无法确证且本机证据偏向未推送）：
-1. 本地**不存在** `refs/remotes/origin/render-core-integration`（`git branch -r` 仅 `origin/HEAD -> origin/master` 与 `origin/master`；`git for-each-ref` 全量无该 remote ref）——本 clone 的最近一次 fetch 时点上，远端无此分支，或本 clone 从未 push/fetch 过该分支
-2. 本地分支无 upstream 配置（`git branch -vv` 无 `[origin/...]` 跟踪括号）
-3. `git ls-remote origin render-core-integration` 失败：`git@github.com: Permission denied (publickey)`——本环境无 SSH 凭据，远端真值不可达
-
-判定：**UNVERIFIED**。非代码缺陷，属流程/环境缺口：需队长在有凭据环境执行 `git push origin render-core-integration`（或确认他机已推 + 授予本机只读核验手段），随后终检棒补核 `remote ref == bd40c37` 即可补签。
+**闭环补核（2026-09-24，队长 HTTPS 推送 fdd9d6f 后）**：
+- `git status -sb` → `## render-core-integration...origin/render-core-integration`（无 ahead/behind，同步零偏差；工作树全净）
+- `git rev-parse HEAD refs/remotes/origin/render-core-integration` → 两者同指 **`fdd9d6f282bbaf84fb19d0c5abe3c250b2905548`**
+- fdd9d6f = docs(r32) 收官提交（dag.json 台账 + r32-t8-ledger.md + 本报告 + R32_rt_component_campaign.md，**零代码文件**）——条件 1-4 证据对分支尖端继续有效
+- **判定：UNVERIFIED → PASS**（原报告事实保留存档，见上方首次核验记录）
 
 ## 其余核验
 
@@ -64,7 +63,8 @@
 
 ## 签章判定
 
-`.qa_ok_r32_final` **暂未写入**：终检五项为签章前置整体，第 5 项未确证前不出全绿签章（契约：没有证据的状态必须显式标注，不许默认通过）。条件 1-4 证据已完备固化于本报告；推送态闭环（remote ref == bd40c37 实证）后补签一步可成。
+**2026-09-24 更新：条件 5 闭环补核通过（见终检 5），五项前置整体满足，`.qa_ok_r32_final` 已补签。**
+签章路径留档：2026-09-23 首检 1-4 全绿、第 5 项 UNVERIFIED 暂扣签章（契约：没有证据的状态必须显式标注，不许默认通过）；2026-09-24 推送态实证（HEAD == remote tracking ref == fdd9d6f，同步零偏差）后按本节闭环路径一步补签。
 
 ---
 *tester-whitebox · 2026-09-23 · 终检棒（宿主原生）· 命名证据批：72 passed in 26.42s（gate golden+native 等价+curves+T1/T4/T6/T7 定向面）*

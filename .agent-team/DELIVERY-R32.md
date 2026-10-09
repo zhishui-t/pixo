@@ -20,7 +20,7 @@
 
 ## 待用户裁决（卡点④随批）
 
-1. **R31 候选 c**（挂起）：DNG 对齐 default_look 中期改进（median 13.44→4.45）——接/不接；
+1. ~~R31 候选 c~~ **已裁决关闭（2026-09-24 用户：DNG 线退役，候选 c 不接）**，闭档 .artifacts/R31_dng_alignment_closure.md；
 2. **分支合并**：render-core-integration → master 时机（建议 P0×3 实施轮后合并，或现即合并）；
 3. **后续轮排队**：P0×3 实施（LookTable 消费 / guided-filter 局部恢复 / 预览线 flip bug）→
    S1 分割进引擎 → S2 Compositor 图层。

@@ -96,7 +96,7 @@
 
 - **模块/能力项 38**（A 8 + B 10 + C 14 + D 20 中去重合并口径，含 T1-T7 收编 8）；
 - **建议吸收 10 项**：P0×3（B1 LookTable/HSM 底座、B2 S/H 局部恢复、B3 预览线 flip 缺失 bug）、P1×4（B4 FlatCurve、B5 NURBS、B6 Lab 曲线、B7 动态 profile）、P2×3（B8 CA auto、B9 RL 锐化、B10 Fattal）；
-- **P0 首位 = B1（DCP LookTable/HueSatMap 底座零消费）**——T2 实测 Adobe v2 DCP 自带 90×16×16 观感表被 RT 施加而被我方整段跳过，为全部差异中渲染影响最大项；
+- **P0 首位 = B1（DCP LookTable/HueSatMap 底座零消费〔验收口径 2026-09-24 更新：LR 双锚点 + RT 参照臂（DNG 尺子随 R31 关线退役）〕）**——T2 实测 Adobe v2 DCP 自带 90×16×16 观感表被 RT 施加而被我方整段跳过，为全部差异中渲染影响最大项；
 - **跳过/不适用 7 组**（RAW 解码层由 rawpy 职责覆盖；编辑器几何/画笔类待前端画布轮；大件低 ROI 项登记不删）。
 
 > 台账由 dev1 依源码逐模块核实出具（rtengine @ 6c4cb59）；优先级与工作量为工程预估，供队长/用户逐项裁决后派单。

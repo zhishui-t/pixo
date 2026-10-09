@@ -87,19 +87,21 @@
       "id": "push",
       "label": "分支推送+报告+changelog",
       "role": "junior-dev",
-      "status": "pending",
+      "status": "done",
       "deps": [
         "t8"
-      ]
+      ],
+      "note": "fdd9d6f 推送+tracking 闭环+终检签章"
     },
     {
       "id": "accept",
       "label": "交付验收（卡点④）",
       "role": "队长+用户",
-      "status": "pending",
+      "status": "in_progress",
       "deps": [
         "push"
-      ]
+      ],
+      "note": "卡点④呈用户"
     },
     {
       "id": "t4",
@@ -145,11 +147,11 @@
       "id": "t8",
       "label": "T8 RT 全模块清点与吸收台账（小波/局部调整/Retinex/降噪/色差/镜头矫正…）",
       "role": "dev-1+队长",
-      "status": "in_progress",
+      "status": "done",
       "deps": [
         "t7"
       ],
-      "note": "dev-1 收官清点中"
+      "note": "38项台账: P0x3 (LookTable/guided-filter/flip)"
     }
   ]
 }
